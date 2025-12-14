@@ -68,10 +68,10 @@ def test_seed_data():
         zone_count = cursor.fetchone()[0]
         assert zone_count >= 2, "Should have at least 2 zones"
 
-        # Check furniture exists
-        cursor.execute("SELECT COUNT(*) FROM beach_furniture")
-        furniture_count = cursor.fetchone()[0]
-        assert furniture_count >= 10, "Should have at least 10 furniture items"
+        # Check furniture types exist (seed data)
+        cursor.execute("SELECT COUNT(*) FROM beach_furniture_types")
+        furniture_type_count = cursor.fetchone()[0]
+        assert furniture_type_count >= 2, "Should have at least 2 furniture types"
 
 
 if __name__ == '__main__':
