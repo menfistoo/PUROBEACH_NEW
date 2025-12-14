@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% set page_title = "Crear Tipo" if mode == 'create' else "Editar Tipo" %}
+
+{% block title %}{{ page_title }} - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fa-solid fa-shapes"></i>
+        {{ page_title }}
+    </h2>
+    <a href="{{ url_for('beach.beach_config.furniture_types') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="type_code" class="form-label">Codigo <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="type_code" name="type_code"
+                                       value="{{ furniture_type.type_code if furniture_type else '' }}"
+                                       {% if mode == 'edit' %}readonly{% endif %}
+                                       required maxlength="50" pattern="[a-z0-9_]+">
+                                <div class="form-text">Identificador unico (minusculas, sin espacios)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="display_name" class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="display_name" name="display_name"
+                                       value="{{ furniture_type.display_name if furniture_type else '' }}"
+                                       required maxlength="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="icon" class="form-label">Icono FontAwesome</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" id="icon-preview">
+                                        <i class="fa-solid {{ furniture_type.icon if furniture_type else 'fa-umbrella-beach' }}"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="icon" name="icon"
+                                           value="{{ furniture_type.icon if furniture_type else 'fa-umbrella-beach' }}"
+                                           placeholder="fa-umbrella-beach">
+                                </div>
+                                <div class="form-text">
+                                    Clase de icono FontAwesome (ej: fa-bed, fa-umbrella)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="default_color" class="form-label">Color por Defecto</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="default_color" name="default_color"
+                                           value="{{ furniture_type.default_color if furniture_type else '#A0522D' }}" style="width: 60px;">
+                                    <input type="text" class="form-control" id="color_text"
+                                           value="{{ furniture_type.default_color if furniture_type else '#A0522D' }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="min_capacity" class="form-label">Capacidad Minima</label>
+                                <input type="number" class="form-control" id="min_capacity" name="min_capacity"
+                                       value="{{ furniture_type.min_capacity if furniture_type else 1 }}"
+                                       min="0" max="20">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="max_capacity" class="form-label">Capacidad Maxima</label>
+                                <input type="number" class="form-control" id="max_capacity" name="max_capacity"
+                                       value="{{ furniture_type.max_capacity if furniture_type else 4 }}"
+                                       min="1" max="20">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notas</label>
+                        <textarea class="form-control" id="notes" name="notes"
+                                  rows="2" maxlength="500">{{ furniture_type.notes if furniture_type else '' }}</textarea>
+                    </div>
+
+                    {% if mode == 'edit' %}
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="active" name="active" value="1"
+                                   {% if furniture_type.active %}checked{% endif %}>
+                            <label class="form-check-label" for="active">Tipo activo</label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save"></i>
+                            {{ 'Crear Tipo' if mode == 'create' else 'Guardar Cambios' }}
+                        </button>
+                        <a href="{{ url_for('beach.beach_config.furniture_types') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Vista Previa</h5>
+            </div>
+            <div class="card-body text-center py-4">
+                <div id="preview-icon" style="font-size: 3rem; margin-bottom: 1rem;">
+                    <i class="fa-solid {{ furniture_type.icon if furniture_type else 'fa-umbrella-beach' }}"
+                       style="color: {{ furniture_type.default_color if furniture_type else '#A0522D' }}"></i>
+                </div>
+                <h5 id="preview-name">{{ furniture_type.display_name if furniture_type else 'Nombre del tipo' }}</h5>
+                <p class="text-muted" id="preview-capacity">
+                    {{ furniture_type.min_capacity if furniture_type else 1 }} -
+                    {{ furniture_type.max_capacity if furniture_type else 4 }} personas
+                </p>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Iconos Sugeridos</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% set icons = ['fa-umbrella-beach', 'fa-bed', 'fa-umbrella', 'fa-couch', 'fa-chair', 'fa-sun', 'fa-water'] %}
+                    {% for ic in icons %}
+                    <button type="button" class="btn btn-outline-secondary icon-btn" data-icon="{{ ic }}">
+                        <i class="fa-solid {{ ic }}"></i>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('default_color').addEventListener('input', function() {
+    document.getElementById('color_text').value = this.value;
+    updatePreview();
+});
+
+document.getElementById('icon').addEventListener('input', function() {
+    updatePreview();
+});
+
+document.getElementById('display_name').addEventListener('input', function() {
+    document.getElementById('preview-name').textContent = this.value || 'Nombre del tipo';
+});
+
+document.getElementById('min_capacity').addEventListener('input', updateCapacity);
+document.getElementById('max_capacity').addEventListener('input', updateCapacity);
+
+document.querySelectorAll('.icon-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('icon').value = this.dataset.icon;
+        updatePreview();
+    });
+});
+
+function updatePreview() {
+    const icon = document.getElementById('icon').value;
+    const color = document.getElementById('default_color').value;
+    document.getElementById('preview-icon').innerHTML =
+        `<i class="fa-solid ${icon}" style="color: ${color}"></i>`;
+    document.getElementById('icon-preview').innerHTML =
+        `<i class="fa-solid ${icon}"></i>`;
+}
+
+function updateCapacity() {
+    const min = document.getElementById('min_capacity').value;
+    const max = document.getElementById('max_capacity').value;
+    document.getElementById('preview-capacity').textContent = `${min} - ${max} personas`;
+}
+</script>
+{% endblock %}

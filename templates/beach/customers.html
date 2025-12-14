@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% set page_title = "Gestión de Clientes" %}
+
+{% block title %}Gestión de Clientes - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2><i class="fas fa-users"></i> Gestión de Clientes</h2>
+    <p class="text-muted">Administración de clientes internos y externos</p>
+</div>
+
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-users fa-5x text-muted mb-4"></i>
+        <h3>Módulo en Construcción</h3>
+        <p class="text-muted mb-4">
+            Este módulo estará disponible en la <strong>Fase 5</strong> del proyecto.
+        </p>
+        <div class="alert alert-info d-inline-block text-start">
+            <h6><i class="fas fa-clipboard-list"></i> Funcionalidades Planificadas:</h6>
+            <ul class="mb-0">
+                <li>Gestión de clientes internos (huéspedes) y externos</li>
+                <li>Integración con sistema de hotel (importación Excel)</li>
+                <li>Búsqueda y filtrado avanzado</li>
+                <li>Detección y fusión de duplicados</li>
+                <li>Gestión de preferencias y tags</li>
+                <li>Historial de reservas por cliente</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

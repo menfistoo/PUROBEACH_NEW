@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+
+{% set page_title = "Crear Mobiliario" if mode == 'create' else "Editar Mobiliario" %}
+
+{% block title %}{{ page_title }} - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fa-solid fa-couch"></i>
+        {{ page_title }}
+    </h2>
+    <a href="{{ url_for('beach.beach_config.furniture') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="furniture_type" class="form-label">Tipo <span class="text-danger">*</span></label>
+                                <select class="form-select" id="furniture_type" name="furniture_type"
+                                        {% if mode == 'edit' %}disabled{% endif %} required>
+                                    <option value="">Seleccionar tipo</option>
+                                    {% for t in types %}
+                                    <option value="{{ t.type_code }}"
+                                            data-id="{{ t['id'] }}"
+                                            data-min="{{ t['min_capacity'] or 0 }}"
+                                            data-max="{{ t['max_capacity'] or 10 }}"
+                                            data-default-capacity="{{ t['default_capacity'] or 2 }}"
+                                            data-default-width="{{ t['default_width'] or 60 }}"
+                                            data-default-height="{{ t['default_height'] or 40 }}"
+                                            data-fill-color="{{ t['fill_color'] or '#A0522D' }}"
+                                            {% if furniture and furniture.furniture_type == t.type_code %}selected{% endif %}>
+                                        {{ t.display_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% if mode == 'edit' %}
+                                <input type="hidden" name="furniture_type" value="{{ furniture.furniture_type }}">
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="number" class="form-label">Codigo <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control{% if mode == 'create' %} bg-light{% endif %}" id="number" name="number"
+                                       value="{{ furniture.number if furniture else '' }}"
+                                       required maxlength="20" placeholder="Seleccione un tipo..."
+                                       {% if mode == 'create' %}readonly{% endif %}>
+                                {% if mode == 'create' %}
+                                <div class="form-text">
+                                    <i class="fa-solid fa-info-circle"></i> Generado automaticamente segun el tipo
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="zone_id" class="form-label">Zona <span class="text-danger">*</span></label>
+                                <select class="form-select" id="zone_id" name="zone_id" required>
+                                    {% for z in zones %}
+                                    <option value="{{ z.id }}"
+                                            {% if furniture and furniture.zone_id == z.id %}selected{% endif %}
+                                            {% if not furniture and loop.first %}selected{% endif %}>
+                                        {{ z.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="capacity" class="form-label">Capacidad (personas)</label>
+                                <input type="number" class="form-control" id="capacity" name="capacity"
+                                       value="{{ furniture.capacity if furniture else 2 }}"
+                                       min="1" max="20">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h5 class="mb-3"><i class="fa-solid fa-map-location-dot"></i> Posicion en el Mapa</h5>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="position_x" class="form-label">Posicion X</label>
+                                <input type="number" class="form-control" id="position_x" name="position_x"
+                                       value="{{ furniture.position_x|round(0)|int if furniture else 0 }}"
+                                       min="0" max="2000" step="1">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="position_y" class="form-label">Posicion Y</label>
+                                <input type="number" class="form-control" id="position_y" name="position_y"
+                                       value="{{ furniture.position_y|round(0)|int if furniture else 0 }}"
+                                       min="0" max="2000" step="1">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="rotation" class="form-label">Rotacion (grados)</label>
+                                <input type="number" class="form-control" id="rotation" name="rotation"
+                                       value="{{ furniture.rotation if furniture else 0 }}"
+                                       min="0" max="359" step="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="width" class="form-label">Ancho (px)</label>
+                                <input type="number" class="form-control" id="width" name="width"
+                                       value="{{ furniture.width|round(0)|int if furniture else 60 }}"
+                                       min="20" max="200" step="1">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="height" class="form-label">Alto (px)</label>
+                                <input type="number" class="form-control" id="height" name="height"
+                                       value="{{ furniture.height|round(0)|int if furniture else 40 }}"
+                                       min="20" max="200" step="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h5 class="mb-3"><i class="fa-solid fa-tags"></i> Caracteristicas</h5>
+
+                    <div class="mb-3">
+                        <label for="features" class="form-label">Caracteristicas (separadas por coma)</label>
+                        <input type="text" class="form-control" id="features" name="features"
+                               value="{{ furniture.features if furniture else '' }}"
+                               placeholder="primera_linea, cerca_mar, sombra, vip">
+                        <div class="form-text">
+                            Caracteristicas para el algoritmo de sugerencias. Ejemplos: primera_linea, cerca_mar, sombra, tranquila, vip
+                        </div>
+                    </div>
+
+                    {% if mode == 'edit' %}
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="active" name="active" value="1"
+                                   {% if furniture.active %}checked{% endif %}>
+                            <label class="form-check-label" for="active">Mobiliario activo</label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+                    <h5 class="mb-3"><i class="fa-solid fa-clone"></i> Duplicacion</h5>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="copy_count" class="form-label">Numero de copias</label>
+                                <input type="number" class="form-control" id="copy_count" name="copy_count"
+                                       value="1" min="1" max="50" step="1">
+                                <div class="form-text">
+                                    {% if mode == 'create' %}
+                                    1 = solo este elemento
+                                    {% else %}
+                                    Crear copias adicionales de este elemento
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="copy_layout" class="form-label">Disposicion</label>
+                                <select class="form-select" id="copy_layout" name="copy_layout">
+                                    <option value="horizontal" selected>Horizontal (→)</option>
+                                    <option value="vertical">Vertical (↓)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="copy_spacing" class="form-label">Espacio entre (px)</label>
+                                <input type="number" class="form-control" id="copy_spacing" name="copy_spacing"
+                                       value="10" min="0" max="100" step="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save"></i>
+                            {{ 'Crear Mobiliario' if mode == 'create' else 'Guardar Cambios' }}
+                        </button>
+                        {% if mode == 'edit' %}
+                        <button type="submit" name="duplicate" value="1" class="btn btn-outline-primary">
+                            <i class="fa-solid fa-clone"></i> Duplicar
+                        </button>
+                        {% endif %}
+                        <a href="{{ url_for('beach.beach_config.furniture') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Position Preview -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Vista Previa Posicion</h5>
+            </div>
+            <div class="card-body">
+                <div id="position-preview" style="width: 100%; height: 200px; background: #e9ecef; position: relative; border-radius: 8px; overflow: hidden;">
+                    <!-- Preview items will be generated dynamically -->
+                </div>
+                <p class="text-muted small mt-2 mb-0">
+                    Usa el mapa interactivo para posicionar el mobiliario con precision.
+                </p>
+            </div>
+        </div>
+
+        {% if mode == 'edit' and furniture %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Informacion</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-1">
+                    <strong>Creado:</strong> {{ furniture.created_at | format_date }}
+                </p>
+                <p class="small mb-0">
+                    <strong>Zona:</strong> {{ furniture.zone_name }}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Current preview color
+let currentPreviewColor = '#A0522D';
+
+// Preview position and appearance with duplication support
+function updatePreview() {
+    const x = parseInt(document.getElementById('position_x').value) || 0;
+    const y = parseInt(document.getElementById('position_y').value) || 0;
+    const w = parseInt(document.getElementById('width').value) || 60;
+    const h = parseInt(document.getElementById('height').value) || 40;
+    const r = parseInt(document.getElementById('rotation').value) || 0;
+    const number = document.getElementById('number').value || 'X';
+
+    // Get duplication params (only in create mode)
+    const copyCountEl = document.getElementById('copy_count');
+    const copyLayoutEl = document.getElementById('copy_layout');
+    const copySpacingEl = document.getElementById('copy_spacing');
+
+    const copyCount = copyCountEl ? Math.min(parseInt(copyCountEl.value) || 1, 10) : 1; // Limit preview to 10
+    const copyLayout = copyLayoutEl ? copyLayoutEl.value : 'horizontal';
+    const copySpacing = copySpacingEl ? parseInt(copySpacingEl.value) || 10 : 10;
+
+    const container = document.getElementById('position-preview');
+
+    // Clear existing preview items
+    container.innerHTML = '';
+
+    // Scale to preview (assume 600x400 map -> 300x200 preview)
+    const scaleX = container.offsetWidth / 600;
+    const scaleY = 200 / 400;
+
+    // Extract prefix and base number for sequential numbering
+    let prefix = '';
+    let baseNum = 0;
+    const match = number.match(/^([A-Za-z]*)(\d+)$/);
+    if (match) {
+        prefix = match[1];
+        baseNum = parseInt(match[2]);
+    }
+
+    // Create preview items
+    for (let i = 0; i < copyCount; i++) {
+        // Calculate position for this copy
+        let currentX, currentY;
+        if (copyLayout === 'horizontal') {
+            currentX = x + i * (w + copySpacing);
+            currentY = y;
+        } else {
+            currentX = x;
+            currentY = y + i * (h + copySpacing);
+        }
+
+        // Generate number for this copy
+        let currentNumber;
+        if (i === 0) {
+            currentNumber = number;
+        } else if (prefix && baseNum > 0) {
+            currentNumber = prefix + (baseNum + i);
+        } else {
+            currentNumber = number + '_' + (i + 1);
+        }
+
+        // Create item element
+        const item = document.createElement('div');
+        item.style.cssText = `
+            position: absolute;
+            background: ${currentPreviewColor};
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 10px;
+            left: ${currentX * scaleX}px;
+            top: ${currentY * scaleY}px;
+            width: ${w * scaleX}px;
+            height: ${h * scaleY}px;
+            transform: rotate(${r}deg);
+        `;
+
+        // Create text span with inverse rotation
+        const textSpan = document.createElement('span');
+        textSpan.style.cssText = `display: inline-block; transform: rotate(${-r}deg);`;
+        textSpan.textContent = currentNumber;
+
+        item.appendChild(textSpan);
+        container.appendChild(item);
+    }
+}
+
+// Update preview color based on type
+function updatePreviewColor(color) {
+    currentPreviewColor = color || '#A0522D';
+    updatePreview();
+}
+
+// Fetch next number for furniture type
+async function fetchNextNumber(typeId) {
+    if (!typeId) return;
+
+    try {
+        const url = `/beach/config/furniture-types/${typeId}/next-number`;
+        const response = await fetch(url);
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (data.success && data.next_number) {
+            document.getElementById('number').value = data.next_number;
+            updatePreview();
+        }
+    } catch (error) {
+        console.error('Error fetching next number:', error);
+    }
+}
+
+// Event listeners for position preview
+document.getElementById('position_x').addEventListener('input', updatePreview);
+document.getElementById('position_y').addEventListener('input', updatePreview);
+document.getElementById('width').addEventListener('input', updatePreview);
+document.getElementById('height').addEventListener('input', updatePreview);
+document.getElementById('rotation').addEventListener('input', updatePreview);
+document.getElementById('number').addEventListener('input', updatePreview);
+
+// Event listeners for duplication fields (only in create mode)
+const copyCountEl = document.getElementById('copy_count');
+const copyLayoutEl = document.getElementById('copy_layout');
+const copySpacingEl = document.getElementById('copy_spacing');
+
+if (copyCountEl) {
+    copyCountEl.addEventListener('input', updatePreview);
+    copyCountEl.addEventListener('change', updatePreview);
+}
+if (copyLayoutEl) {
+    copyLayoutEl.addEventListener('change', updatePreview);
+}
+if (copySpacingEl) {
+    copySpacingEl.addEventListener('input', updatePreview);
+    copySpacingEl.addEventListener('change', updatePreview);
+}
+
+// Update everything based on type selection
+document.getElementById('furniture_type').addEventListener('change', function() {
+    const option = this.options[this.selectedIndex];
+    const isCreateMode = '{{ mode }}' === 'create';
+
+    if (option.value) {
+        // Update capacity constraints
+        if (option.dataset.min) {
+            document.getElementById('capacity').min = option.dataset.min;
+            document.getElementById('capacity').max = option.dataset.max;
+        }
+
+        // Update capacity to default for this type
+        if (option.dataset.defaultCapacity) {
+            document.getElementById('capacity').value = option.dataset.defaultCapacity;
+        }
+
+        // Update dimensions to defaults for this type
+        if (option.dataset.defaultWidth) {
+            document.getElementById('width').value = parseInt(option.dataset.defaultWidth);
+        }
+        if (option.dataset.defaultHeight) {
+            document.getElementById('height').value = parseInt(option.dataset.defaultHeight);
+        }
+
+        // Update preview color
+        if (option.dataset.fillColor) {
+            updatePreviewColor(option.dataset.fillColor);
+        }
+
+        // Fetch next available number for this type (only in create mode)
+        if (isCreateMode && option.dataset.id) {
+            fetchNextNumber(option.dataset.id);
+        }
+
+        updatePreview();
+    } else {
+        // No type selected, clear number
+        if (isCreateMode) {
+            document.getElementById('number').value = '';
+            document.getElementById('number').placeholder = 'Seleccione un tipo...';
+        }
+        updatePreview();
+    }
+});
+
+// Initial preview
+updatePreview();
+
+// If editing, set initial preview color from type
+{% if mode == 'edit' %}
+(function() {
+    const typeSelect = document.getElementById('furniture_type');
+    const option = typeSelect.options[typeSelect.selectedIndex];
+    if (option && option.dataset.fillColor) {
+        updatePreviewColor(option.dataset.fillColor);
+    }
+})();
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% set page_title = "Gestión de Usuarios" %}
+
+{% block title %}Gestión de Usuarios - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-users"></i> Gestión de Usuarios</h2>
+    <a href="{{ url_for('admin.users_create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nuevo Usuario
+    </a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('admin.users') }}" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Buscar por nombre, usuario o email" value="{{ search }}">
+            </div>
+            <div class="col-md-3">
+                <select name="role" class="form-select">
+                    <option value="">Todos los roles</option>
+                    {% for role in roles %}
+                    <option value="{{ role.id }}" {% if role_filter == role.id|string %}selected{% endif %}>
+                        {{ role.display_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="active" class="form-select">
+                    <option value="">Todos los estados</option>
+                    <option value="1" {% if active_filter == '1' %}selected{% endif %}>Activos</option>
+                    <option value="0" {% if active_filter == '0' %}selected{% endif %}>Inactivos</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="fas fa-search"></i> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Usuario</th>
+                    <th>Nombre Completo</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Creado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><strong>{{ user.username }}</strong></td>
+                    <td>{{ user.full_name or '-' }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        <span class="badge bg-primary">{{ user.role_display_name or 'Sin rol' }}</span>
+                    </td>
+                    <td>
+                        {% if user.active %}
+                        <span class="badge bg-success">Activo</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.created_at|format_date if user.created_at else '-' }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('admin.users_edit', user_id=user.id) }}" class="btn btn-outline-primary" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if user.username != 'admin' and user.id != current_user.id %}
+                            <form method="POST" action="{{ url_for('admin.users_delete', user_id=user.id) }}" class="d-inline"
+                                  onsubmit="return confirm('¿Está seguro de eliminar este usuario?')">
+                                <button type="submit" class="btn btn-outline-danger" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted">No se encontraron usuarios</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

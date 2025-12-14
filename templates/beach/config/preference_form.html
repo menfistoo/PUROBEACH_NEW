@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% set page_title = "Crear Preferencia" if mode == 'create' else "Editar Preferencia" %}
+
+{% block title %}{{ page_title }} - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fa-solid fa-heart"></i>
+        {{ page_title }}
+    </h2>
+    <a href="{{ url_for('beach.beach_config.preferences') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="code" class="form-label">Codigo <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="code" name="code"
+                                       value="{{ preference.code if preference else '' }}"
+                                       {% if mode == 'edit' %}readonly{% endif %}
+                                       required maxlength="50" pattern="[a-z0-9_]+"
+                                       placeholder="pref_sombra">
+                                <div class="form-text">Identificador unico (minusculas, sin espacios)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name"
+                                       value="{{ preference.name if preference else '' }}"
+                                       required maxlength="100" placeholder="Sombra">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripcion</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="2" maxlength="500">{{ preference.description if preference else '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="icon" class="form-label">Icono FontAwesome</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" id="icon-preview">
+                                        <i class="fa-solid {{ preference.icon if preference else 'fa-heart' }}"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="icon" name="icon"
+                                           value="{{ preference.icon if preference else '' }}"
+                                           placeholder="fa-tree">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="maps_to_feature" class="form-label">Mapea a Caracteristica</label>
+                                <input type="text" class="form-control" id="maps_to_feature" name="maps_to_feature"
+                                       value="{{ preference.maps_to_feature if preference else '' }}"
+                                       placeholder="sombra">
+                                <div class="form-text">Caracteristica del mobiliario que coincide</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if mode == 'edit' %}
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="active" name="active" value="1"
+                                   {% if preference.active %}checked{% endif %}>
+                            <label class="form-check-label" for="active">Preferencia activa</label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save"></i>
+                            {{ 'Crear Preferencia' if mode == 'create' else 'Guardar Cambios' }}
+                        </button>
+                        <a href="{{ url_for('beach.beach_config.preferences') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Iconos Sugeridos</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% set icons = ['fa-tree', 'fa-water', 'fa-anchor', 'fa-spa', 'fa-star', 'fa-sun', 'fa-umbrella-beach', 'fa-heart'] %}
+                    {% for ic in icons %}
+                    <button type="button" class="btn btn-outline-secondary icon-btn" data-icon="{{ ic }}">
+                        <i class="fa-solid {{ ic }}"></i>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Caracteristicas Disponibles</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-2">Caracteristicas del mobiliario para el mapeo:</p>
+                <ul class="small mb-0">
+                    <li><code>primera_linea</code> - Primera linea de playa</li>
+                    <li><code>cerca_mar</code> - Cerca del mar</li>
+                    <li><code>sombra</code> - Zona con sombra</li>
+                    <li><code>tranquila</code> - Zona tranquila</li>
+                    <li><code>vip</code> - Area VIP</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('icon').addEventListener('input', function() {
+    document.getElementById('icon-preview').innerHTML =
+        `<i class="fa-solid ${this.value || 'fa-heart'}"></i>`;
+});
+
+document.querySelectorAll('.icon-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('icon').value = this.dataset.icon;
+        document.getElementById('icon-preview').innerHTML =
+            `<i class="fa-solid ${this.dataset.icon}"></i>`;
+    });
+});
+</script>
+{% endblock %}

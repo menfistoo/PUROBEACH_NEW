@@ -1,0 +1,47 @@
+<aside class="sidebar">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+        <h3>PUROBEACH</h3>
+        <small style="color: rgba(255, 255, 255, 0.6); font-size: 11px; letter-spacing: 1px;">BEACH CLUB</small>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+        {% set menu_items = get_menu_items(current_user) %}
+
+        {% if menu_items %}
+            {% for parent in menu_items %}
+                {# Check if any child is active #}
+                {% set has_active_child = false %}
+                {% for child in parent.children %}
+                    {% if request.path == child.url or request.path.startswith(child.url) %}
+                        {% set has_active_child = true %}
+                    {% endif %}
+                {% endfor %}
+
+                <div class="nav-section">
+                    <a class="nav-parent {% if has_active_child %}active{% endif %}"
+                       data-bs-toggle="collapse"
+                       href="#menu-{{ parent.code | replace('.', '-') }}"
+                       role="button"
+                       aria-expanded="{{ 'true' if has_active_child else 'false' }}">
+                        <i class="fa-solid {{ parent.icon or 'fa-folder' }}"></i>
+                        <span>{{ parent.name }}</span>
+                        <i class="fa-solid fa-chevron-down nav-arrow"></i>
+                    </a>
+
+                    <div class="collapse {% if has_active_child %}show{% endif %}"
+                         id="menu-{{ parent.code | replace('.', '-') }}">
+                        {% for child in parent.children %}
+                            <a href="{{ child.url }}"
+                               class="nav-item nav-child {% if request.path == child.url or request.path.startswith(child.url + '/') %}active{% endif %}">
+                                <i class="fa-solid {{ child.icon or 'fa-circle' }}"></i>
+                                <span>{{ child.name }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </nav>
+</aside>

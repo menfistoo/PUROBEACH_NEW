@@ -1,0 +1,267 @@
+# Beach Club Management System
+
+## Overview
+Sistema profesional de gestión y reservas de beach club. Gestiona hamacas/balinesas, clientes internos (huéspedes) y externos, reservas multi-día, precios diferenciados, estados configurables, y mapa interactivo con disponibilidad en tiempo real.
+
+## Tech Stack
+- **Backend:** Flask 3.0+ (Python 3.11+), SQLite 3 (WAL mode)
+- **Architecture:** Modular blueprints
+- **Auth/Security:** Flask-Login, Flask-WTF CSRF, role-based permissions
+- **Frontend:** Jinja2, Bootstrap 5, FontAwesome 6, JavaScript ES6+
+- **Export:** openpyxl (Excel), ReportLab (PDF)
+
+## Language Convention
+
+**CRITICAL: Code in English, UI in Spanish**
+
+- **Code (English):** Variables, functions, classes, comments, docstrings, database columns
+- **UI (Spanish):** Labels, buttons, messages, errors, menus, tooltips, placeholders
+
+```python
+# Correct examples:
+def get_active_reservations(date: str) -> list:  # English function
+    pass
+
+flash('Reserva creada exitosamente', 'success')  # Spanish message
+
+# Database columns in English:
+# first_name, last_name, customer_type, room_number
+```
+
+## Project Structure
+
+```
+beach_club/
+├── app.py                      # Flask app factory (~100 lines)
+├── config.py                   # Configuration classes
+├── extensions.py               # Flask extensions
+├── database.py                 # Database connection & functions
+│
+├── blueprints/
+│   ├── auth/                   # Authentication
+│   ├── admin/                  # Users, roles, permissions
+│   ├── beach/                  # Main beach club module
+│   │   ├── routes/
+│   │   │   ├── map.py
+│   │   │   ├── reservations.py
+│   │   │   ├── customers.py
+│   │   │   ├── infrastructure.py
+│   │   │   └── reports.py
+│   │   └── services/
+│   │       ├── reservation_service.py
+│   │       ├── availability_service.py
+│   │       ├── customer_service.py
+│   │       └── suggestion_service.py
+│   └── api/                    # REST API endpoints
+│
+├── models/                     # Database queries
+├── utils/
+│   ├── decorators.py           # @login_required, @permission_required
+│   ├── permissions.py          # Permission checking & caching
+│   ├── cache.py                # TTL caching
+│   ├── validators.py           # Input validation
+│   └── messages.py             # Spanish UI messages (centralized)
+│
+├── templates/
+├── static/
+├── tests/
+│
+├── docs/
+│   └── DEVELOPMENT_PLAN.md     # Living document for plans & decisions
+│
+├── code-review/                # Code review standards
+├── security-review/            # Security review standards
+└── design-review/              # Design review standards
+```
+
+## Code Conventions
+
+### Python
+- **Indentation:** 4 spaces
+- **Type hints:** Required for function signatures
+- **Docstrings:** Required for public functions
+- **DB transactions:** `with get_db() as conn:`
+- **Multi-step ops:** Use `BEGIN IMMEDIATE`
+- **SQL:** Always parameterized queries (never f-strings)
+
+### Naming
+- **Tables:** plural, snake_case with prefix (`beach_*`)
+- **Columns:** snake_case, English
+- **Functions:** verb_noun (`get_all_customers`, `create_reservation`)
+- **Routes:** kebab-case URLs (`/beach/admin/furniture-types`)
+- **Permissions:** module.feature.action (`beach.reservations.create`)
+
+### Security Checklist
+- ✓ CSRF tokens on all forms
+- ✓ `@login_required` on protected routes
+- ✓ `@permission_required` for granular access
+- ✓ Parameterized SQL queries
+- ✓ No PII in logs
+- ✓ Rate limiting on login (5/min)
+- ✓ Session timeout (8h)
+
+## Database Schema Summary
+
+### Core Tables (22 total)
+1. **users** - System users with role_id
+2. **roles** - System and custom roles
+3. **permissions** - Granular permissions with menu support
+4. **role_permissions** - M2M role-permission assignments
+5. **beach_zones** - Hierarchical zones
+6. **beach_furniture_types** - Hamaca, balinesa, etc.
+7. **beach_furniture** - Individual furniture items with position
+8. **hotel_guests** - PMS integration via Excel import
+9. **beach_customers** - Interno/externo customers
+10. **beach_tags** - Customer/reservation tags
+11. **beach_customer_tags** - M2M
+12. **beach_preferences** - Customer preferences
+13. **beach_customer_preferences** - M2M
+14. **beach_reservation_states** - Configurable states
+15. **beach_reservations** - Main reservations
+16. **beach_reservation_furniture** - Per-day furniture assignments
+17. **beach_reservation_daily_states** - Per-day states
+18. **beach_reservation_tags** - M2M
+19. **beach_price_catalog** - Pricing rules
+20. **beach_minimum_consumption_policies** - Minimum spend rules
+21. **beach_config** - System configuration
+22. **audit_log** - Action audit trail
+
+### Key Indexes
+- `idx_res_furniture_date` - (assignment_date, furniture_id)
+- `idx_reservations_dates` - (start_date, end_date)
+- `idx_hotel_guests_room` - (room_number)
+- `idx_permissions_menu` - (is_menu_item) WHERE is_menu_item = 1
+
+## Critical Business Logic
+
+### Customer Types
+- **Interno:** Hotel guest, requires room_number, internal pricing
+- **Externo:** External visitor, requires email/phone, external pricing
+- **Deduplication:** phone + room (interno) / phone + name (externo)
+
+### Reservation States
+States with `is_availability_releasing` flag:
+- Releasing (frees furniture): Cancelada, No-Show, Liberada
+- Non-releasing: Pendiente, Confirmada, Check-in, Activa, Completada
+
+### Multi-day Reservations
+- Parent/child via `parent_reservation_id`
+- Furniture assignments per day in `beach_reservation_furniture`
+- Daily states in `beach_reservation_daily_states`
+
+### Furniture Suggestions Algorithm
+Weighted scoring: **40% contiguity + 35% preferences + 25% capacity**
+- Contiguity: Groups sit together (no gaps with occupied furniture)
+- Preferences: Match customer preferences to furniture features
+- Capacity: Penalize over/under-capacity
+
+### Hotel Guests Integration
+- Excel import from PMS (auto-detect column mappings)
+- Room number lookup for interno customer auto-fill
+- Upsert based on (room_number, arrival_date)
+
+## Development Workflow
+
+### Before Starting Any Task
+1. Check `docs/DEVELOPMENT_PLAN.md` for current phase and pending items
+2. Update the plan with your intended work
+3. Follow the phased implementation order
+
+### After Completing Work
+1. Update `docs/DEVELOPMENT_PLAN.md` with:
+   - Completed items
+   - Any decisions made
+   - New discoveries or issues
+   - Next steps
+2. Run tests: `python -m pytest`
+3. Check for security issues if touching auth/data
+
+### Reviews
+- **Code Review:** `/review` or see `code-review/README.md`
+- **Security Review:** `/security-review` for auth/data changes
+- **Design Review:** `/design-review` for UI changes
+
+## Quick Reference
+
+### Start Dev Server
+```bash
+python app.py
+```
+
+### Run Tests
+```bash
+python -m pytest                    # All tests
+python -m pytest tests/unit/        # Unit tests only
+python -m pytest -x                 # Stop on first failure
+```
+
+### Common Endpoints
+- `/` - Login
+- `/beach/map` - Interactive map
+- `/beach/reservations` - Reservations list
+- `/beach/customers` - Customer management
+- `/beach/config` - Configuration
+- `/admin/users` - User management
+- `/admin/roles` - Role & permission management
+- `/admin/hotel-guests` - Hotel guest import
+
+### Default Roles
+- **admin** - Full access (bypass permission checks)
+- **manager** - Beach club management
+- **staff** - Daily operations
+- **readonly** - View only
+
+## Maintaining This File
+
+### When to Update CLAUDE.md
+- Adding/modifying database tables
+- Creating new routes/endpoints
+- Changing code conventions
+- Adding configurations
+- Architectural changes
+
+### Update Format
+```
+SECTION: "Database Schema"
+CHANGE: Add "23. beach_waitlist"
+REASON: New waitlist feature
+```
+
+---
+
+## Design System
+
+**IMPORTANT:** When implementing any UI/frontend work, read `DESIGN_SYSTEM.md` for:
+- Color palette (Primary: #D4AF37, Secondary: #1A3A5C, Accent: #F5E6D3)
+- Typography (Inter font, type scale)
+- Component styles (buttons, cards, forms, tables, modals)
+- Beach map specific styles (furniture, zones, states)
+- CSS variables and Bootstrap 5 integration
+
+### Quick Color Reference
+```
+Primary Gold:     #D4AF37
+Deep Ocean:       #1A3A5C
+Warm Sand:        #F5E6D3
+Success:          #4A7C59
+Error:            #C1444F
+Warning:          #E5A33D
+```
+
+### Key Design Rules
+1. **Buttons:** Gold gradient for primary, white with gold border for secondary
+2. **Cards:** White background, 12px border-radius, subtle shadow
+3. **Tables:** Sand header (#F5E6D3), gold bottom border
+4. **Navigation:** Dark sidebar (#1A3A5C) with gold active states
+5. **States:** Use reservation state colors consistently (see DESIGN_SYSTEM.md)
+
+---
+
+## Extended Documentation
+
+- **Design System:** `DESIGN_SYSTEM.md` (colors, typography, components)
+- **Development Plan:** `docs/DEVELOPMENT_PLAN.md` (living document)
+- **Code Review Standards:** `code-review/README.md`
+- **Security Review Standards:** `security-review/README.md`
+- **Design Review Standards:** `design-review/README.md`
+- **Bootstrap Prompt:** `BEACH_CLUB_NEW_PROJECT_PROMPT.md`

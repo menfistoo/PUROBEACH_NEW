@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% set page_title = "Crear Zona" if mode == 'create' else "Editar Zona" %}
+
+{% block title %}{{ page_title }} - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fa-solid fa-layer-group"></i>
+        {{ page_title }}
+    </h2>
+    <a href="{{ url_for('beach.beach_config.zones') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nombre <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               value="{{ zone.name if zone else '' }}" required maxlength="100">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripcion</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="3" maxlength="500">{{ zone.description if zone else '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="parent_zone_id" class="form-label">Zona Padre</label>
+                                <select class="form-select" id="parent_zone_id" name="parent_zone_id">
+                                    <option value="">-- Sin zona padre --</option>
+                                    {% for pz in parent_zones %}
+                                    <option value="{{ pz.id }}"
+                                            {% if zone and zone.parent_zone_id == pz.id %}selected{% endif %}>
+                                        {{ pz.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Opcional. Seleccionar si esta es una subzona.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="color" class="form-label">Color</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="color" name="color"
+                                           value="{{ zone.color if zone else '#F5E6D3' }}" style="width: 60px;">
+                                    <input type="text" class="form-control" id="color_text"
+                                           value="{{ zone.color if zone else '#F5E6D3' }}" readonly>
+                                </div>
+                                <div class="form-text">Color para identificar la zona en el mapa.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if mode == 'edit' %}
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="active" name="active" value="1"
+                                   {% if zone.active %}checked{% endif %}>
+                            <label class="form-check-label" for="active">Zona activa</label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save"></i>
+                            {{ 'Crear Zona' if mode == 'create' else 'Guardar Cambios' }}
+                        </button>
+                        <a href="{{ url_for('beach.beach_config.zones') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Informacion</h5>
+            </div>
+            <div class="card-body">
+                <h6>Zonas del Beach Club</h6>
+                <p class="text-muted small">
+                    Las zonas representan areas del beach club donde se ubica el mobiliario.
+                </p>
+
+                <h6>Estructura Jerarquica</h6>
+                <p class="text-muted small">
+                    Puedes crear subzonas asignando una zona padre. Por ejemplo:
+                </p>
+                <ul class="small text-muted">
+                    <li>Primera Linea</li>
+                    <li class="ms-3">Primera Linea - VIP</li>
+                    <li class="ms-3">Primera Linea - Standard</li>
+                    <li>Segunda Linea</li>
+                </ul>
+
+                {% if mode == 'edit' and zone %}
+                <hr>
+                <h6>Estadisticas</h6>
+                <p class="small mb-1">
+                    <strong>Mobiliario activo:</strong> {{ zone.furniture_count or 0 }}
+                </p>
+                <p class="small mb-0">
+                    <strong>Creada:</strong> {{ zone.created_at | format_date }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('color').addEventListener('input', function() {
+    document.getElementById('color_text').value = this.value;
+});
+</script>
+{% endblock %}

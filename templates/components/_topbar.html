@@ -1,0 +1,35 @@
+<div class="topbar">
+    <!-- Page Title -->
+    <div class="topbar-title">
+        {% if page_title is defined %}{{ page_title }}{% else %}Dashboard{% endif %}
+    </div>
+
+    <!-- Actions -->
+    <div class="topbar-actions">
+        <!-- User Menu -->
+        <div class="dropdown">
+            <div class="user-menu" data-bs-toggle="dropdown" aria-expanded="false">
+                <div class="user-avatar">
+                    {{ current_user.full_name[0] if current_user.full_name else current_user.username[0] }}
+                </div>
+                <div class="user-info">
+                    <div class="user-name">{{ current_user.full_name or current_user.username }}</div>
+                </div>
+                <i class="fas fa-chevron-down" style="font-size: 12px; color: var(--color-medium-gray);"></i>
+            </div>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('auth.profile') }}">
+                        <i class="fas fa-user"></i> Mi Perfil
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

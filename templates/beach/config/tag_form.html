@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% set page_title = "Crear Etiqueta" if mode == 'create' else "Editar Etiqueta" %}
+
+{% block title %}{{ page_title }} - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fa-solid fa-tag"></i>
+        {{ page_title }}
+    </h2>
+    <a href="{{ url_for('beach.beach_config.tags') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name"
+                                       value="{{ tag.name if tag else '' }}"
+                                       required maxlength="50" placeholder="VIP">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="color" class="form-label">Color</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="color" name="color"
+                                           value="{{ tag.color if tag else '#6C757D' }}" style="width: 60px;">
+                                    <input type="text" class="form-control" id="color_text"
+                                           value="{{ tag.color if tag else '#6C757D' }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripcion</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="2" maxlength="500">{{ tag.description if tag else '' }}</textarea>
+                    </div>
+
+                    {% if mode == 'edit' %}
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="active" name="active" value="1"
+                                   {% if tag.active %}checked{% endif %}>
+                            <label class="form-check-label" for="active">Etiqueta activa</label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save"></i>
+                            {{ 'Crear Etiqueta' if mode == 'create' else 'Guardar Cambios' }}
+                        </button>
+                        <a href="{{ url_for('beach.beach_config.tags') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Vista Previa</h5>
+            </div>
+            <div class="card-body text-center py-4">
+                <span id="preview-tag" class="badge fs-5 px-3 py-2"
+                      style="background-color: {{ tag.color if tag else '#6C757D' }};">
+                    <i class="fa-solid fa-tag me-1"></i>
+                    <span id="preview-name">{{ tag.name if tag else 'Nombre' }}</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Colores Sugeridos</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% set colors = ['#DC3545', '#FD7E14', '#FFC107', '#28A745', '#17A2B8', '#007BFF', '#6610F2', '#6C757D'] %}
+                    {% for c in colors %}
+                    <button type="button" class="btn color-btn"
+                            style="background-color: {{ c }}; width: 36px; height: 36px; border: 2px solid white; border-radius: 50%;"
+                            data-color="{{ c }}">
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if mode == 'edit' and tag %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Estadisticas</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-1">
+                    <strong>Clientes con etiqueta:</strong> {{ tag.customer_count or 0 }}
+                </p>
+                <p class="small mb-0">
+                    <strong>Reservas con etiqueta:</strong> {{ tag.reservation_count or 0 }}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('color').addEventListener('input', function() {
+    document.getElementById('color_text').value = this.value;
+    document.getElementById('preview-tag').style.backgroundColor = this.value;
+});
+
+document.getElementById('name').addEventListener('input', function() {
+    document.getElementById('preview-name').textContent = this.value || 'Nombre';
+});
+
+document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const color = this.dataset.color;
+        document.getElementById('color').value = color;
+        document.getElementById('color_text').value = color;
+        document.getElementById('preview-tag').style.backgroundColor = color;
+    });
+});
+</script>
+{% endblock %}

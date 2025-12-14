@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% set page_title = "Panel de Administración" %}
+
+{% block title %}Panel de Administración - PuroBeach{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stats-card-icon gold">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stats-card-value">{{ stats.total_users }}</div>
+            <div class="stats-card-label">Usuarios Totales</div>
+            <div class="stats-card-trend">
+                <small style="color: var(--color-medium-gray);">{{ stats.active_users }} activos</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stats-card-icon green">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <div class="stats-card-value">{{ stats.total_roles }}</div>
+            <div class="stats-card-label">Roles del Sistema</div>
+            <div class="stats-card-trend">
+                <small style="color: var(--color-medium-gray);">Sistema activo</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stats-card-icon blue">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="stats-card-value">{{ stats.active_reservations }}</div>
+            <div class="stats-card-label">Reservas Activas</div>
+            <div class="stats-card-trend">
+                <small style="color: var(--color-medium-gray);">(Fase 6)</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stats-card-icon green">
+                <i class="fas fa-server"></i>
+            </div>
+            <div class="stats-card-value"><i class="fas fa-check"></i></div>
+            <div class="stats-card-label">Estado del Sistema</div>
+            <div class="stats-card-trend up">
+                <i class="fas fa-check-circle"></i> Funcionando
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">
+            <i class="fas fa-bolt"></i> Accesos Rápidos
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <a href="{{ url_for('admin.users') }}" class="text-decoration-none">
+                    <div class="p-4 border rounded hover-lift" style="transition: var(--transition-normal); cursor: pointer;">
+                        <div class="text-center">
+                            <i class="fas fa-users fa-2x" style="color: var(--color-primary); margin-bottom: 12px;"></i>
+                            <h6 style="color: var(--color-secondary);">Gestionar Usuarios</h6>
+                            <small style="color: var(--color-medium-gray);">Crear, editar y administrar usuarios</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4">
+                <a href="{{ url_for('admin.roles') }}" class="text-decoration-none">
+                    <div class="p-4 border rounded hover-lift" style="transition: var(--transition-normal); cursor: pointer;">
+                        <div class="text-center">
+                            <i class="fas fa-user-shield fa-2x" style="color: var(--color-success); margin-bottom: 12px;"></i>
+                            <h6 style="color: var(--color-secondary);">Gestionar Roles</h6>
+                            <small style="color: var(--color-medium-gray);">Configurar roles y permisos</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4">
+                <a href="{{ url_for('beach.map') }}" class="text-decoration-none">
+                    <div class="p-4 border rounded hover-lift" style="transition: var(--transition-normal); cursor: pointer;">
+                        <div class="text-center">
+                            <i class="fas fa-map fa-2x" style="color: var(--color-info); margin-bottom: 12px;"></i>
+                            <h6 style="color: var(--color-secondary);">Mapa del Beach Club</h6>
+                            <small style="color: var(--color-medium-gray);">Ver disponibilidad en tiempo real</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

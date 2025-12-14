@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% set page_title = "Tipos de Mobiliario" %}
+
+{% block title %}Tipos de Mobiliario - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fa-solid fa-shapes"></i> Tipos de Mobiliario</h2>
+    {% if not mode %}
+    <a href="{{ url_for('beach.beach_config.furniture_types_create') }}" class="btn btn-primary">
+        <i class="fa-solid fa-plus"></i> Nuevo Tipo
+    </a>
+    {% endif %}
+</div>
+
+<div class="row">
+    {# Left Panel: List (30%) #}
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-list"></i> Tipos</span>
+                <small class="text-muted">
+                    <i class="fa-solid fa-grip-vertical"></i> Arrastra para reordenar
+                </small>
+            </div>
+            <div class="card-body p-0">
+                {% if furniture_types %}
+                <ul class="list-group list-group-flush" id="furniture-types-list">
+                    {% for ft in furniture_types %}
+                    <li class="list-group-item list-group-item-action d-flex align-items-center {% if selected_type and selected_type.id == ft.id %}active{% endif %}"
+                        data-type-id="{{ ft.id }}">
+                        <span class="drag-handle me-2 text-muted" style="cursor: grab;">
+                            <i class="fa-solid fa-grip-vertical"></i>
+                        </span>
+                        <a href="{{ url_for('beach.beach_config.furniture_types_edit', type_id=ft.id) }}"
+                           class="d-flex align-items-center flex-grow-1 text-decoration-none {% if selected_type and selected_type.id == ft.id %}text-white{% else %}text-body{% endif %}">
+                            <span class="me-2" style="width: 28px; text-align: center;">
+                                <i class="fa-solid {{ ft.icon or 'fa-umbrella-beach' }}"
+                                   style="color: {% if selected_type and selected_type.id == ft.id %}#fff{% else %}{{ ft.default_color or '#A0522D' }}{% endif %};"></i>
+                            </span>
+                            <span class="flex-grow-1">
+                                <span class="fw-medium">{{ ft.display_name }}</span>
+                                <small class="d-block text-{% if selected_type and selected_type.id == ft.id %}white-50{% else %}muted{% endif %}">
+                                    {{ ft.type_code }}
+                                    {% if ft.is_decorative %}<i class="fa-solid fa-tree ms-1" title="Decorativo"></i>{% endif %}
+                                    {% if ft.is_suite_only %}<i class="fa-solid fa-crown ms-1" title="Solo Suites"></i>{% endif %}
+                                </small>
+                            </span>
+                            <span class="d-flex align-items-center gap-2">
+                                <span class="badge {% if ft.active %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {{ ft.furniture_count or 0 }}
+                                </span>
+                            </span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fa-solid fa-shapes fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">No hay tipos configurados</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Right Panel: Form or Empty State (70%) #}
+    <div class="col-lg-8">
+        {% if mode %}
+        <div class="card">
+            <div class="card-header">
+                {% if mode == 'create' %}
+                <i class="fa-solid fa-plus-circle"></i> Crear Nuevo Tipo
+                {% else %}
+                <i class="fa-solid fa-edit"></i> Editar: {{ selected_type.display_name }}
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% include 'beach/config/_furniture_type_form.html' %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fa-solid fa-hand-pointer fa-3x text-muted mb-3"></i>
+                <h5>Selecciona un tipo para editar</h5>
+                <p class="text-muted mb-4">
+                    Haz clic en un tipo de la lista o crea uno nuevo
+                </p>
+                <a href="{{ url_for('beach.beach_config.furniture_types_create') }}" class="btn btn-primary">
+                    <i class="fa-solid fa-plus"></i> Crear Nuevo Tipo
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Delete confirmation modal #}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa-solid fa-exclamation-triangle text-danger"></i> Confirmar Eliminacion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estas seguro de eliminar este tipo de mobiliario?</p>
+                <p class="text-muted small">
+                    <i class="fa-solid fa-info-circle"></i>
+                    Solo se puede eliminar si no hay mobiliario activo usando este tipo.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="delete-form" method="POST" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-trash"></i> Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{# Sortable.js for drag-drop reordering #}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+console.log('=== Furniture Types Script Loading ===');
+console.log('Mode:', '{{ mode }}');
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DOMContentLoaded fired ===');
+
+    // Initialize Sortable for drag-drop reordering
+    const listEl = document.getElementById('furniture-types-list');
+    if (listEl && typeof Sortable !== 'undefined') {
+        const sortable = new Sortable(listEl, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            filter: 'a',  // Prevent links from being dragged
+            preventOnFilter: false,  // Allow click on links
+            forceFallback: true,  // Use JS-based drag for better compatibility
+            onEnd: function(evt) {
+                console.log('Sortable onEnd - saving order...');
+                saveTypesOrder();
+            }
+        });
+        console.log('Sortable initialized successfully');
+
+        // Prevent drag handle clicks from triggering link navigation
+        document.querySelectorAll('.drag-handle').forEach(handle => {
+            handle.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        });
+    } else {
+        if (!listEl) console.warn('furniture-types-list element not found');
+        if (typeof Sortable === 'undefined') console.error('Sortable.js not loaded');
+    }
+
+    // Save types order via AJAX
+    function saveTypesOrder() {
+        const items = document.querySelectorAll('#furniture-types-list li');
+        const typeIds = Array.from(items).map(item => parseInt(item.dataset.typeId));
+
+        fetch('{{ url_for("beach.beach_config.furniture_types_reorder") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ type_ids: typeIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                console.error('Error reordering:', data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // Delete modal handling
+    const deleteBtn = document.getElementById('btn-delete');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function() {
+            const typeId = this.dataset.typeId;
+            const form = document.getElementById('delete-form');
+            form.action = '{{ url_for("beach.beach_config.furniture_types_delete", type_id=0) }}'.replace('/0/', '/' + typeId + '/');
+        });
+    }
+
+    {% if mode %}
+    // Icon picker
+    const iconBtns = document.querySelectorAll('.icon-btn');
+    console.log('Icon buttons found:', iconBtns.length);
+    iconBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const icon = this.dataset.icon;
+            console.log('Icon selected:', icon);
+            const iconInput = document.getElementById('icon');
+            const iconPreview = document.getElementById('icon-preview');
+            if (iconInput) {
+                iconInput.value = icon;
+                console.log('Icon input updated to:', iconInput.value);
+            }
+            if (iconPreview) {
+                iconPreview.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+                console.log('Icon preview updated');
+            }
+        });
+    });
+
+    // Color inputs sync
+    function syncColorInput(colorId, textId) {
+        const colorInput = document.getElementById(colorId);
+        const textInput = document.getElementById(textId);
+        if (colorInput && textInput) {
+            colorInput.addEventListener('input', function() {
+                textInput.value = this.value;
+                updateSvgPreview();
+            });
+        }
+    }
+    syncColorInput('default_color', 'default_color_text');
+    syncColorInput('fill_color', 'fill_color_text');
+    syncColorInput('stroke_color', 'stroke_color_text');
+
+    // Show/hide custom SVG field
+    const mapShapeSelect = document.getElementById('map_shape');
+    const customSvgWrapper = document.getElementById('custom_svg_wrapper');
+    if (mapShapeSelect) {
+        mapShapeSelect.addEventListener('change', function() {
+            customSvgWrapper.style.display = this.value === 'custom' ? 'block' : 'none';
+            updateSvgPreview();
+        });
+        // Initial state
+        if (mapShapeSelect.value === 'custom') {
+            customSvgWrapper.style.display = 'block';
+        }
+    }
+
+    // Update SVG preview with debounce
+    let previewTimeout;
+    function updateSvgPreview() {
+        clearTimeout(previewTimeout);
+        previewTimeout = setTimeout(doUpdateSvgPreview, 300);
+    }
+
+    function doUpdateSvgPreview() {
+        // Note: status_colors are NOT included - they come from reservation states config
+        const data = {
+            map_shape: document.getElementById('map_shape')?.value || 'rounded_rect',
+            default_width: parseFloat(document.getElementById('default_width')?.value) || 60,
+            default_height: parseFloat(document.getElementById('default_height')?.value) || 40,
+            border_radius: parseInt(document.getElementById('border_radius')?.value) || 5,
+            stroke_width: parseInt(document.getElementById('stroke_width')?.value) || 2,
+            fill_color: document.getElementById('fill_color')?.value || '#A0522D',
+            stroke_color: document.getElementById('stroke_color')?.value || '#654321',
+            custom_svg: document.getElementById('custom_svg')?.value || ''
+        };
+
+        fetch('{{ url_for("beach.beach_config.furniture_types_preview") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('svg-preview').innerHTML = data.preview;
+            }
+        })
+        .catch(error => console.error('Error updating preview:', error));
+    }
+
+    // Trigger preview update on relevant field changes
+    const previewFields = [
+        'map_shape', 'default_width', 'default_height', 'border_radius',
+        'stroke_width', 'fill_color', 'stroke_color', 'custom_svg'
+    ];
+    previewFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', updateSvgPreview);
+            field.addEventListener('change', updateSvgPreview);
+        }
+    });
+
+    // Initial preview load
+    updateSvgPreview();
+
+    {% if mode == 'edit' and selected_type %}
+    // Load next number for type
+    function loadNextNumber() {
+        fetch('{{ url_for("beach.beach_config.furniture_types_next_number", type_id=selected_type.id) }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('next-number-display').textContent = data.next_number;
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    const refreshBtn = document.getElementById('refresh-next-number');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadNextNumber);
+        loadNextNumber(); // Initial load
+    }
+    {% endif %}
+
+    // Decorative toggle: reset capacity when checked
+    const decorativeCheckbox = document.getElementById('is_decorative');
+    if (decorativeCheckbox) {
+        decorativeCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('min_capacity').value = 0;
+                document.getElementById('max_capacity').value = 0;
+                document.getElementById('default_capacity').value = 0;
+            }
+        });
+    }
+
+    // Capacity validation
+    const minCapInput = document.getElementById('min_capacity');
+    const maxCapInput = document.getElementById('max_capacity');
+    const defaultCapInput = document.getElementById('default_capacity');
+
+    function validateCapacity() {
+        const min = parseInt(minCapInput?.value) || 0;
+        const max = parseInt(maxCapInput?.value) || 0;
+        const def = parseInt(defaultCapInput?.value) || 0;
+
+        if (max > 0 && max < min) {
+            maxCapInput.classList.add('is-invalid');
+        } else {
+            maxCapInput.classList.remove('is-invalid');
+        }
+
+        if (def < min || (max > 0 && def > max)) {
+            defaultCapInput.classList.add('is-invalid');
+        } else {
+            defaultCapInput.classList.remove('is-invalid');
+        }
+    }
+
+    [minCapInput, maxCapInput, defaultCapInput].forEach(input => {
+        if (input) input.addEventListener('input', validateCapacity);
+    });
+    {% endif %}
+});
+</script>
+
+<style>
+#furniture-types-list .list-group-item {
+    padding: 0.5rem 0.75rem;
+    transition: background-color 0.15s;
+}
+#furniture-types-list .list-group-item:hover:not(.active) {
+    background-color: rgba(0,0,0,0.02);
+}
+#furniture-types-list .drag-handle {
+    opacity: 0.4;
+    transition: opacity 0.15s;
+    cursor: grab;
+    padding: 0.25rem;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+#furniture-types-list .drag-handle:active {
+    cursor: grabbing;
+}
+#furniture-types-list .list-group-item:hover .drag-handle {
+    opacity: 1;
+}
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #f8f9fa !important;
+}
+.sortable-chosen {
+    background-color: #e9ecef !important;
+}
+#svg-preview svg {
+    max-width: 100%;
+    height: auto;
+}
+.accordion-button:not(.collapsed) {
+    background-color: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary);
+}
+</style>
+{% endblock %}

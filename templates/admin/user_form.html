@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Crear' if mode == 'create' else 'Editar' }} Usuario - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-user{% if mode == 'create' %}-plus{% else %}-edit{% endif %}"></i>
+                    {{ 'Crear Nuevo Usuario' if mode == 'create' else 'Editar Usuario' }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">Nombre de Usuario *</label>
+                            <input type="text" name="username" class="form-control"
+                                   value="{{ user.username if user else '' }}"
+                                   {% if mode == 'edit' %}readonly{% endif %} required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Correo Electrónico *</label>
+                            <input type="email" name="email" class="form-control"
+                                   value="{{ user.email if user else '' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="full_name" class="form-label">Nombre Completo</label>
+                        <input type="text" name="full_name" class="form-control"
+                               value="{{ user.full_name if user else '' }}">
+                    </div>
+
+                    {% if mode == 'create' %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">Contraseña *</label>
+                            <input type="password" name="password" class="form-control" required minlength="6">
+                            <small class="text-muted">Mínimo 6 caracteres</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="confirm_password" class="form-label">Confirmar Contraseña *</label>
+                            <input type="password" name="confirm_password" class="form-control" required>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="role_id" class="form-label">Rol *</label>
+                            <select name="role_id" class="form-select" required>
+                                <option value="">Seleccione un rol</option>
+                                {% for role in roles %}
+                                <option value="{{ role.id }}"
+                                        {% if user and user.role_id == role.id %}selected{% endif %}>
+                                    {{ role.display_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% if mode == 'edit' %}
+                        <div class="col-md-6">
+                            <label for="active" class="form-label">Estado</label>
+                            <select name="active" class="form-select">
+                                <option value="1" {% if user.active %}selected{% endif %}>Activo</option>
+                                <option value="0" {% if not user.active %}selected{% endif %}>Inactivo</option>
+                            </select>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Guardar
+                        </button>
+                        <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

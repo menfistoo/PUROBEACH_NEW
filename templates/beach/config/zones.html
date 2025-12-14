@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% set page_title = "Zonas" %}
+
+{% block title %}Zonas - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fa-solid fa-layer-group"></i> Zonas del Beach Club</h2>
+    <a href="{{ url_for('beach.beach_config.zones_create') }}" class="btn btn-primary">
+        <i class="fa-solid fa-plus"></i> Nueva Zona
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if zones %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">Orden</th>
+                        <th>Nombre</th>
+                        <th>Descripcion</th>
+                        <th style="width: 80px;">Color</th>
+                        <th style="width: 100px;">Mobiliario</th>
+                        <th style="width: 80px;">Estado</th>
+                        <th style="width: 120px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for zone in zones %}
+                    <tr>
+                        <td class="text-center">{{ zone.display_order }}</td>
+                        <td>
+                            <strong>{{ zone.name }}</strong>
+                            {% if zone.parent_zone_id %}
+                            <small class="text-muted d-block">
+                                <i class="fa-solid fa-turn-up fa-rotate-90"></i> Subzona
+                            </small>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ zone.description or '-' }}</td>
+                        <td>
+                            <span class="color-badge" style="background-color: {{ zone.color }}; display: inline-block; width: 30px; height: 20px; border-radius: 4px; border: 1px solid #ccc;"></span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">{{ zone.furniture_count or 0 }}</span>
+                        </td>
+                        <td>
+                            {% if zone.active %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('beach.beach_config.zones_edit', zone_id=zone.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="Editar">
+                                <i class="fa-solid fa-edit"></i>
+                            </a>
+                            {% if zone.furniture_count == 0 and zone.child_count == 0 %}
+                            <form method="POST" action="{{ url_for('beach.beach_config.zones_delete', zone_id=zone.id) }}"
+                                  class="d-inline" onsubmit="return confirm('¿Eliminar zona {{ zone.name }}?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-secondary" disabled
+                                    title="{% if zone.furniture_count > 0 %}Tiene {{ zone.furniture_count }} mobiliario(s){% elif zone.child_count > 0 %}Tiene {{ zone.child_count }} subzona(s){% endif %}">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fa-solid fa-layer-group fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No hay zonas configuradas</p>
+            <a href="{{ url_for('beach.beach_config.zones_create') }}" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Crear primera zona
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% set page_title = "Huéspedes del Hotel" %}
+
+{% block title %}Huéspedes del Hotel - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fa-solid fa-hotel"></i> Huéspedes del Hotel</h2>
+    <a href="{{ url_for('admin.hotel_guests_import') }}" class="btn btn-primary">
+        <i class="fa-solid fa-file-import"></i> Importar Excel
+    </a>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stats-card-icon gold">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="stats-card-value">{{ stats.active }}</div>
+            <div class="stats-card-label">Huéspedes Activos</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stats-card-icon green">
+                <i class="fa-solid fa-plane-arrival"></i>
+            </div>
+            <div class="stats-card-value">{{ stats.arriving_today }}</div>
+            <div class="stats-card-label">Llegadas Hoy</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stats-card-icon blue">
+                <i class="fa-solid fa-plane-departure"></i>
+            </div>
+            <div class="stats-card-value">{{ stats.departing_today }}</div>
+            <div class="stats-card-label">Salidas Hoy</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="stats-card-icon" style="background: #E8E8E8; color: #6B7280;">
+                <i class="fa-solid fa-database"></i>
+            </div>
+            <div class="stats-card-value">{{ stats.total }}</div>
+            <div class="stats-card-label">Total Registros</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('admin.hotel_guests') }}" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control"
+                       placeholder="Buscar por nombre o habitación" value="{{ search }}">
+            </div>
+            <div class="col-md-3">
+                <select name="room" class="form-select">
+                    <option value="">Todas las habitaciones</option>
+                    {% for room in rooms %}
+                    <option value="{{ room }}" {% if room_filter == room %}selected{% endif %}>
+                        Hab. {{ room }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="active" class="form-select">
+                    <option value="1" {% if active_only %}selected{% endif %}>Solo activos</option>
+                    <option value="0" {% if not active_only %}selected{% endif %}>Todos</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="fa-solid fa-search"></i> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Guests Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Habitación</th>
+                    <th>Nombre</th>
+                    <th>Llegada</th>
+                    <th>Salida</th>
+                    <th>Nacionalidad</th>
+                    <th>Tipo</th>
+                    <th>VIP</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for guest in guests %}
+                <tr>
+                    <td>
+                        <span class="badge badge-gold">{{ guest.room_number }}</span>
+                    </td>
+                    <td><strong>{{ guest.guest_name }}</strong></td>
+                    <td>{{ guest.arrival_date }}</td>
+                    <td>{{ guest.departure_date }}</td>
+                    <td>{{ guest.nationality or '-' }}</td>
+                    <td>
+                        {% if guest.guest_type %}
+                        <span class="badge bg-secondary">{{ guest.guest_type }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if guest.vip_code %}
+                        <span class="badge badge-gold">{{ guest.vip_code }}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('admin.hotel_guest_detail', guest_id=guest.id) }}"
+                               class="btn btn-outline-primary" title="Ver detalles">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.hotel_guest_delete', guest_id=guest.id) }}"
+                                  class="d-inline"
+                                  onsubmit="return confirm('¿Está seguro de eliminar este registro?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-outline-danger" title="Eliminar">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                        No se encontraron huéspedes.
+                        <a href="{{ url_for('admin.hotel_guests_import') }}">Importar desde Excel</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if guests %}
+<div class="text-muted mt-3">
+    <small>Mostrando {{ guests|length }} huésped(es)</small>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles de Rol - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>
+        <i class="fas fa-user-shield"></i> {{ role.display_name }}
+        {% if role.is_system %}
+        <span class="badge bg-warning">Sistema</span>
+        {% endif %}
+    </h2>
+    <p class="text-muted">{{ role.description or 'Sin descripción' }}</p>
+    <a href="{{ url_for('admin.roles') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Volver a Roles
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-key"></i> Permisos Asignados ({{ role_permissions|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if role_permissions %}
+                <div class="row">
+                    {% for module, perms in permissions_by_module.items() %}
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-primary">
+                            <i class="fas fa-folder"></i> Módulo: {{ module.capitalize() }}
+                        </h6>
+                        <ul class="list-group list-group-flush">
+                            {% for perm in perms %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ perm.name }}
+                                <small class="text-muted">{{ perm.code }}</small>
+                                {% if perm.code in assigned_codes %}
+                                <span class="badge bg-success">Asignado</span>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">Este rol no tiene permisos asignados</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-3">
+    <i class="fas fa-info-circle"></i>
+    <strong>Fase 2:</strong> La edición de permisos se implementará en la siguiente fase del proyecto.
+</div>
+{% endblock %}

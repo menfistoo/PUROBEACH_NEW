@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% set page_title = "Importar Huéspedes" %}
+
+{% block title %}Importar Huéspedes - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fa-solid fa-file-import"></i> Importar Huéspedes</h2>
+    <a href="{{ url_for('admin.hotel_guests') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Cargar Archivo Excel</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('admin.hotel_guests_import') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-4">
+                        <label class="form-label">Seleccionar archivo Excel</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required
+                               id="fileInput">
+                        <div class="form-text">
+                            Formatos aceptados: .xlsx, .xls (Máximo 10MB)
+                        </div>
+                    </div>
+
+                    <!-- Preview Area -->
+                    <div id="previewArea" class="mb-4" style="display: none;">
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading"><i class="fa-solid fa-info-circle"></i> Vista previa</h6>
+                            <p class="mb-1"><strong>Registros encontrados:</strong> <span id="previewCount">0</span></p>
+                            <p class="mb-0"><strong>Columnas detectadas:</strong> <span id="previewColumns">-</span></p>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Habitación</th>
+                                        <th>Nombre</th>
+                                        <th>Llegada</th>
+                                        <th>Salida</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" id="importBtn">
+                            <i class="fa-solid fa-upload"></i> Importar Huéspedes
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="previewBtn">
+                            <i class="fa-solid fa-eye"></i> Vista Previa
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Información</h5>
+            </div>
+            <div class="card-body">
+                <h6>Formato esperado</h6>
+                <p class="text-muted small">
+                    El sistema detecta automáticamente las columnas del archivo Excel exportado desde el PMS.
+                </p>
+
+                <h6>Columnas reconocidas</h6>
+                <ul class="small text-muted">
+                    <li><strong>Nombre</strong> - Nombre del huésped</li>
+                    <li><strong>Apellidos</strong> - Apellidos</li>
+                    <li><strong>Háb.</strong> - Número de habitación</li>
+                    <li><strong>Llegada</strong> - Fecha de llegada</li>
+                    <li><strong>Salida</strong> - Fecha de salida</li>
+                    <li><strong>País</strong> - Nacionalidad</li>
+                    <li><strong>Tipo</strong> - Tipo de huésped (AD, CH)</li>
+                    <li><strong>Repetidor</strong> - Huésped repetidor</li>
+                </ul>
+
+                <hr>
+
+                <h6>Comportamiento</h6>
+                <ul class="small text-muted">
+                    <li>Los huéspedes existentes (misma habitación + fecha llegada) se actualizan</li>
+                    <li>Los nuevos huéspedes se crean</li>
+                    <li>Los huéspedes con 3+ visitas se marcan como VIP</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('fileInput');
+    const previewBtn = document.getElementById('previewBtn');
+    const previewArea = document.getElementById('previewArea');
+    const previewCount = document.getElementById('previewCount');
+    const previewColumns = document.getElementById('previewColumns');
+    const previewBody = document.getElementById('previewBody');
+
+    previewBtn.addEventListener('click', function() {
+        const file = fileInput.files[0];
+        if (!file) {
+            alert('Por favor seleccione un archivo primero');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        previewBtn.disabled = true;
+        previewBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cargando...';
+
+        fetch('{{ url_for("admin.hotel_guests_preview") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error: ' + data.error);
+                return;
+            }
+
+            previewCount.textContent = data.total_rows;
+            previewColumns.textContent = data.columns_found.join(', ');
+
+            previewBody.innerHTML = '';
+            data.preview.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.room}</td>
+                    <td>${row.name}</td>
+                    <td>${row.arrival || '-'}</td>
+                    <td>${row.departure || '-'}</td>
+                `;
+                previewBody.appendChild(tr);
+            });
+
+            previewArea.style.display = 'block';
+        })
+        .catch(error => {
+            alert('Error al procesar archivo: ' + error);
+        })
+        .finally(() => {
+            previewBtn.disabled = false;
+            previewBtn.innerHTML = '<i class="fa-solid fa-eye"></i> Vista Previa';
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,382 @@
+{# Partial template for furniture type form with collapsible sections #}
+{% set ft = selected_type or form_data or {} %}
+{% set is_edit = mode == 'edit' %}
+
+<form method="POST" id="furniture-type-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    {# Section 1: Identification #}
+    <div class="accordion" id="furnitureTypeAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseIdentity">
+                    <i class="fa-solid fa-tag me-2"></i> Identificacion
+                </button>
+            </h2>
+            <div id="collapseIdentity" class="accordion-collapse collapse show" data-bs-parent="#furnitureTypeAccordion">
+                <div class="accordion-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="type_code" class="form-label">Codigo <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="type_code" name="type_code"
+                                       value="{{ ft.type_code or '' }}"
+                                       {% if is_edit %}readonly{% endif %}
+                                       required maxlength="50" pattern="[a-z0-9_]+">
+                                <div class="form-text">Identificador unico (minusculas, sin espacios)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="display_name" class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="display_name" name="display_name"
+                                       value="{{ ft.display_name or '' }}"
+                                       required maxlength="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="icon" class="form-label">Icono FontAwesome</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" id="icon-preview">
+                                        <i class="fa-solid {{ ft.icon or 'fa-umbrella-beach' }}"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="icon" name="icon"
+                                           value="{{ ft.icon or 'fa-umbrella-beach' }}"
+                                           placeholder="fa-umbrella-beach">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% set icons = ['fa-umbrella-beach', 'fa-bed', 'fa-umbrella', 'fa-couch', 'fa-chair', 'fa-sun', 'fa-water', 'fa-tree'] %}
+                                    {% for ic in icons %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary icon-btn" data-icon="{{ ic }}">
+                                        <i class="fa-solid {{ ic }}"></i>
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="default_color" class="form-label">Color de Icono</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="default_color" name="default_color"
+                                           value="{{ ft.default_color or '#A0522D' }}" style="width: 60px;">
+                                    <input type="text" class="form-control" id="default_color_text"
+                                           value="{{ ft.default_color or '#A0522D' }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notas</label>
+                        <textarea class="form-control" id="notes" name="notes"
+                                  rows="2" maxlength="500">{{ ft.notes or '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Section 2: Visual Representation #}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVisual">
+                    <i class="fa-solid fa-palette me-2"></i> Representacion Visual
+                </button>
+            </h2>
+            <div id="collapseVisual" class="accordion-collapse collapse" data-bs-parent="#furnitureTypeAccordion">
+                <div class="accordion-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="map_shape" class="form-label">Forma SVG</label>
+                                <select class="form-select" id="map_shape" name="map_shape">
+                                    <option value="rounded_rect" {% if (ft.map_shape or 'rounded_rect') == 'rounded_rect' %}selected{% endif %}>Rectangulo redondeado</option>
+                                    <option value="rectangle" {% if ft.map_shape == 'rectangle' %}selected{% endif %}>Rectangulo</option>
+                                    <option value="circle" {% if ft.map_shape == 'circle' %}selected{% endif %}>Circulo</option>
+                                    <option value="ellipse" {% if ft.map_shape == 'ellipse' %}selected{% endif %}>Elipse</option>
+                                    <option value="custom" {% if ft.map_shape == 'custom' %}selected{% endif %}>Personalizado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="border_radius" class="form-label">Radio de Borde</label>
+                                <input type="number" class="form-control" id="border_radius" name="border_radius"
+                                       value="{{ ft.border_radius or 5 }}" min="0" max="50">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="default_width" class="form-label">Ancho (px)</label>
+                                <input type="number" class="form-control" id="default_width" name="default_width"
+                                       value="{{ ft.default_width or 60 }}" min="20" max="500">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="default_height" class="form-label">Alto (px)</label>
+                                <input type="number" class="form-control" id="default_height" name="default_height"
+                                       value="{{ ft.default_height or 40 }}" min="20" max="500">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="stroke_width" class="form-label">Grosor Borde</label>
+                                <input type="number" class="form-control" id="stroke_width" name="stroke_width"
+                                       value="{{ ft.stroke_width or 2 }}" min="0" max="10">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fill_color" class="form-label">Color de Relleno</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="fill_color" name="fill_color"
+                                           value="{{ ft.fill_color or '#A0522D' }}" style="width: 60px;">
+                                    <input type="text" class="form-control" id="fill_color_text"
+                                           value="{{ ft.fill_color or '#A0522D' }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stroke_color" class="form-label">Color de Borde</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" id="stroke_color" name="stroke_color"
+                                           value="{{ ft.stroke_color or '#654321' }}" style="width: 60px;">
+                                    <input type="text" class="form-control" id="stroke_color_text"
+                                           value="{{ ft.stroke_color or '#654321' }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="custom_svg_wrapper" class="mb-3" style="display: none;">
+                        <label for="custom_svg" class="form-label">Codigo SVG Personalizado</label>
+                        <textarea class="form-control font-monospace" id="custom_svg" name="custom_svg"
+                                  rows="4" placeholder="<rect ... /> o <path ... />">{{ ft.custom_svg or '' }}</textarea>
+                        <div class="form-text">Usa {{fill}} y {{stroke}} para colores dinamicos</div>
+                    </div>
+
+                    {# SVG Preview #}
+                    <div class="card bg-light mt-3">
+                        <div class="card-header py-2">
+                            <small class="text-muted"><i class="fa-solid fa-eye"></i> Vista Previa</small>
+                        </div>
+                        <div class="card-body text-center">
+                            <div id="svg-preview"></div>
+                            <small class="text-muted d-block mt-2">
+                                <i class="fa-solid fa-info-circle"></i>
+                                Los colores por estado se configuran en Estados de Reserva
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Section 3: Capacity #}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCapacity">
+                    <i class="fa-solid fa-users me-2"></i> Capacidad
+                </button>
+            </h2>
+            <div id="collapseCapacity" class="accordion-collapse collapse" data-bs-parent="#furnitureTypeAccordion">
+                <div class="accordion-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="min_capacity" class="form-label">Capacidad Minima</label>
+                                <input type="number" class="form-control" id="min_capacity" name="min_capacity"
+                                       value="{{ ft.min_capacity if ft.min_capacity is not none else 1 }}"
+                                       min="0" max="20">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="max_capacity" class="form-label">Capacidad Maxima</label>
+                                <input type="number" class="form-control" id="max_capacity" name="max_capacity"
+                                       value="{{ ft.max_capacity if ft.max_capacity is not none else 4 }}"
+                                       min="1" max="20">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="default_capacity" class="form-label">Capacidad por Defecto</label>
+                                <input type="number" class="form-control" id="default_capacity" name="default_capacity"
+                                       value="{{ ft.default_capacity if ft.default_capacity is not none else 2 }}"
+                                       min="0" max="20">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-text">
+                        <i class="fa-solid fa-info-circle"></i>
+                        La capacidad por defecto debe estar entre minima y maxima
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Section 4: Behavior #}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBehavior">
+                    <i class="fa-solid fa-cog me-2"></i> Comportamiento
+                </button>
+            </h2>
+            <div id="collapseBehavior" class="accordion-collapse collapse" data-bs-parent="#furnitureTypeAccordion">
+                <div class="accordion-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="default_rotation" name="default_rotation" value="1"
+                                       {% if ft.default_rotation %}checked{% endif %}>
+                                <label class="form-check-label" for="default_rotation">
+                                    <i class="fa-solid fa-rotate"></i> Permite Rotacion
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="is_decorative" name="is_decorative" value="1"
+                                       {% if ft.is_decorative %}checked{% endif %}>
+                                <label class="form-check-label" for="is_decorative">
+                                    <i class="fa-solid fa-tree"></i> Elemento Decorativo
+                                </label>
+                                <div class="form-text">Los decorativos no aceptan reservas</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="is_suite_only" name="is_suite_only" value="1"
+                                       {% if ft.is_suite_only %}checked{% endif %}>
+                                <label class="form-check-label" for="is_suite_only">
+                                    <i class="fa-solid fa-crown"></i> Solo para Suites
+                                </label>
+                            </div>
+                            {% if is_edit %}
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="active" name="active" value="1"
+                                       {% if ft.active %}checked{% endif %}>
+                                <label class="form-check-label" for="active">
+                                    <i class="fa-solid fa-check-circle"></i> Tipo Activo
+                                </label>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Section 5: Numbering #}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNumbering">
+                    <i class="fa-solid fa-hashtag me-2"></i> Numeracion
+                </button>
+            </h2>
+            <div id="collapseNumbering" class="accordion-collapse collapse" data-bs-parent="#furnitureTypeAccordion">
+                <div class="accordion-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="number_prefix" class="form-label">Prefijo de Numeracion</label>
+                                <input type="text" class="form-control" id="number_prefix" name="number_prefix"
+                                       value="{{ ft.number_prefix or '' }}" maxlength="5"
+                                       placeholder="H, B, S...">
+                                <div class="form-text">Prefijo para autonumeracion (ej: H1, H2, B1...)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="number_start" class="form-label">Numero Inicial</label>
+                                <input type="number" class="form-control" id="number_start" name="number_start"
+                                       value="{{ ft.number_start or 1 }}" min="1" max="9999">
+                            </div>
+                        </div>
+                    </div>
+                    {% if is_edit %}
+                    <div class="alert alert-info">
+                        <i class="fa-solid fa-info-circle"></i>
+                        Proximo numero disponible: <strong id="next-number-display">...</strong>
+                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="refresh-next-number">
+                            <i class="fa-solid fa-refresh"></i>
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Section 6: Configuration #}
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConfig">
+                    <i class="fa-solid fa-sliders me-2"></i> Configuracion Avanzada
+                </button>
+            </h2>
+            <div id="collapseConfig" class="accordion-collapse collapse" data-bs-parent="#furnitureTypeAccordion">
+                <div class="accordion-body">
+                    <div class="mb-3">
+                        <label for="default_features" class="form-label">Caracteristicas por Defecto</label>
+                        <input type="text" class="form-control" id="default_features" name="default_features"
+                               value="{{ ft.default_features or '' }}"
+                               placeholder="sombra, wifi, cargador...">
+                        <div class="form-text">Separadas por comas, se aplicaran a mobiliario nuevo</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Zonas Permitidas</label>
+                        <div class="row">
+                            {% set allowed = (ft.allowed_zones or '').split(',') %}
+                            {% for zone in zones %}
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="allowed_zones"
+                                           value="{{ zone.id }}" id="zone_{{ zone.id }}"
+                                           {% if zone.id|string in allowed %}checked{% endif %}>
+                                    <label class="form-check-label" for="zone_{{ zone.id }}">
+                                        {{ zone.name }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="form-text">Sin seleccion = permitido en todas las zonas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="d-flex gap-2 justify-content-between">
+        <a href="{{ url_for('beach.beach_config.furniture_types') }}" class="btn btn-secondary">
+            <i class="fa-solid fa-times"></i> Cancelar
+        </a>
+        <div class="d-flex gap-2">
+            {% if is_edit %}
+            <button type="button" class="btn btn-outline-danger" id="btn-delete"
+                    data-type-id="{{ ft.id }}" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+            {% endif %}
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-save"></i>
+                {{ 'Guardar Cambios' if is_edit else 'Crear Tipo' }}
+            </button>
+        </div>
+    </div>
+</form>
