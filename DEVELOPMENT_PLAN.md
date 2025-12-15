@@ -9,10 +9,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase 5: Customers |
-| **Last Updated** | 2025-12-14 |
-| **Last Session** | Customer CRUD with hotel guest integration, deduplication, merge |
-| **Next Priority** | Phase 6: Reservations |
+| **Current Phase** | Phase 6A: Reservations Core |
+| **Last Updated** | 2025-12-15 |
+| **Last Session** | Phase 6 planning - restructured into sub-phases |
+| **Next Priority** | DB migration + ticket number generation |
 
 ---
 
@@ -27,7 +27,9 @@
 | 4.5 | Enhanced Furniture Types | Complete | 100% |
 | 4.6 | Enhanced Furniture Management | Complete | 100% |
 | 5 | Customers | Complete | 100% |
-| 6 | Reservations | Not Started | 0% |
+| 6A | Reservations: Core CRUD + States | In Progress | 0% |
+| 6B | Reservations: Availability + Multi-day | Not Started | 0% |
+| 6C | Reservations: Pricing + PMS | Not Started | 0% |
 | 7 | Interactive Map | Not Started | 0% |
 | 8 | Smart Features | Not Started | 0% |
 | 9 | Reports & Polish | Not Started | 0% |
@@ -284,42 +286,100 @@
 
 ## Phase 6: Reservations
 
-### Objectives
-- [ ] Reservation CRUD
-- [ ] Multi-day support
-- [ ] State management
-- [ ] Availability checking
-- [ ] Double-booking prevention
-- [ ] Preferences integration
+> **Full specification:** See `docs/RESERVATIONS_SYSTEM_SPEC.md` for complete details
 
-### Tasks
+### Objectives
+- [ ] Reservation CRUD with SPEC schema
+- [ ] Ticket number generation (YYMMDDRR format)
+- [ ] Multi-state management (CSV-based)
+- [ ] Multi-day parent/child reservations
+- [ ] Availability checking with releasing states
+- [ ] Furniture suggestions with scoring algorithm
+- [ ] Price validation (anti-fraud)
+- [ ] PMS integration for consumption tracking
+
+---
+
+### Phase 6A: Core CRUD + State Management
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Reservation list | Pending | Date filter, search |
-| Reservation create modal | Pending | |
-| Customer selection | Pending | Search + create new |
-| Date range picker | Pending | |
-| Furniture selection | Pending | Available only |
-| Availability check | Pending | Per-day validation |
-| State management | Pending | Configurable states |
-| Multi-day logic | Pending | Parent/child |
-| Daily state tracking | Pending | |
-| Double-booking prevention | Pending | BEGIN IMMEDIATE |
-| Reservation edit | Pending | |
-| Reservation cancel | Pending | State change |
-| Status history | Pending | Audit trail |
-| Preferences field | Pending | CSV in beach_reservations.preferences |
-| Preference selector UI | Pending | Multi-select in reservation modal |
-| Auto-load from customer | Pending | Pre-populate if customer has prefs |
-| Sync to customer profile | Pending | sync_preferences_to_customer_profile() |
-| Preference display | Pending | Show tags/icons in reservation list |
+| DB migration (SPEC columns) | Pending | ticket_number, current_states, pricing fields |
+| generate_reservation_number() | Pending | Atomic YYMMDDRR format with retries |
+| create_beach_reservation() | Pending | Full creation with validations |
+| get/update/delete functions | Pending | Basic CRUD operations |
+| add_reservation_state() | Pending | CSV accumulative state management |
+| remove_reservation_state() | Pending | Remove from CSV, recalculate priority |
+| cancel_beach_reservation() | Pending | Shortcut to add Cancelada state |
+| calculate_reservation_color() | Pending | Priority-based color selection |
+| get_active_releasing_states() | Pending | States that free availability |
+| Reservation list route | Pending | GET /beach/reservations with filters |
+| Reservation create route | Pending | GET/POST /beach/reservations/create |
+| Reservation detail route | Pending | GET /beach/reservations/<id> |
+| Reservation edit route | Pending | GET/POST /beach/reservations/<id>/edit |
+| State toggle API | Pending | POST /beach/api/reservations/<id>/toggle-state |
+| Status history API | Pending | GET /beach/api/reservations/<id>/history |
+| Update templates | Pending | Connect forms to new model |
+
+---
+
+### Phase 6B: Availability + Multi-day + Suggestions
+
+| Task | Status | Notes |
+|------|--------|-------|
+| check_furniture_availability() | Pending | Single furniture/date check |
+| check_furniture_availability_bulk() | Pending | Multiple furniture/dates |
+| check_duplicate_reservation() | Pending | Same customer + date overlap detection |
+| create_linked_multiday_reservations() | Pending | Parent/child creation |
+| get_linked_reservations() | Pending | Get all related reservations |
+| suggest_furniture_for_reservation() | Pending | Smart suggestions with scoring |
+| build_furniture_occupancy_map() | Pending | Spatial mapping by rows |
+| validate_cluster_contiguity() | Pending | Gap detection in selection |
+| Availability check API | Pending | POST /beach/api/reservations/check-availability |
+| Duplicate check API | Pending | POST /beach/api/reservations/check-duplicate |
+| Suggestion API | Pending | POST /beach/api/reservations/suggest-furniture |
+| Multi-day creation API | Pending | POST /beach/api/reservations/create-multiday |
+
+**Suggestion Algorithm Weights:**
+- 40% Contiguity (no gaps between selected furniture)
+- 35% Preference matching (customer prefs → furniture features)
+- 25% Capacity fit (num_people vs furniture capacity)
+
+---
+
+### Phase 6C: Pricing + PMS Integration
+
+| Task | Status | Notes |
+|------|--------|-------|
+| validate_and_calculate_price() | Pending | Anti-fraud server-side validation |
+| get_applicable_consumption_policy() | Pending | Find policy by zone/type/customer |
+| mark_consumption_charged_to_pms() | Pending | Mark reservation as charged |
+| get_reservations_pending_pms_charge() | Pending | List pending charges |
+| update_beach_customer_statistics() | Pending | Auto-update on state changes |
+| PMS charge API | Pending | POST /beach/api/consumption/mark-charged/<id> |
+| Pending charges report | Pending | GET /beach/reports/pending-charges |
+
+**Customer Stats Auto-Update:**
+- total_reservations: Count excluding releasing states
+- total_visits: Reservations with 'Sentada' state
+- no_shows: Reservations with 'No-Show' state
+- cancellations: Reservations with 'Cancelada' state
+- last_visit_date: Most recent 'Sentada' date
+
+---
 
 ### Decisions Made
-- (None yet)
+- **Schema approach:** Single `reservation_date` per reservation + parent/child for multi-day (SPEC approach)
+- **Ticket number format:** YYMMDDRR (e.g., 25011601 = first reservation on Jan 16, 2025)
+- **State management:** CSV in `current_states` field, priority-based `current_state` for display
+- **Child numbering:** Parent ticket + suffix (-1, -2, etc.)
+- Split Phase 6 into sub-phases for manageable implementation
 
 ### Issues Discovered
-- (None yet)
+- Current schema uses start_date/end_date (different from SPEC)
+  - Resolution: Will migrate to SPEC approach with new columns
+- Phase 6 was incorrectly marked as Complete in previous version
+  - Resolution: Reset all tasks to Pending
 
 ---
 
@@ -507,6 +567,29 @@
   - Los tipos de mobiliario NO tienen campo `status_colors`
   - El mapa debe cargar estados antes de renderizar
   - Simplifica el formulario de tipos de mobiliario
+
+### ADR-007: Esquema de Reservas con Fecha Única y Parent/Child
+- **Date:** 2025-12-15
+- **Decision:** Usar esquema SPEC con `reservation_date` única por reserva + parent/child para multi-día
+- **Estructura:**
+  - Cada reserva tiene una sola `reservation_date`
+  - Reservas multi-día: primera fecha = parent, siguientes = children con `parent_reservation_id`
+  - Ticket number format: YYMMDDRR (parent) y YYMMDDRR-N (children)
+- **Campos clave:**
+  - `ticket_number` - Identificador único formato YYMMDDRR
+  - `reservation_date` - Fecha única de la reserva
+  - `current_states` - CSV de estados acumulados ("Confirmada, Sentada")
+  - `current_state` - Estado principal para display (prioridad)
+  - `parent_reservation_id` - Enlace a reserva parent (NULL si es parent o single-day)
+- **Rationale:**
+  - Gestión de estados más limpia por día individual
+  - Facilita cancelación/modificación de días específicos
+  - Compatible con estados que liberan disponibilidad
+  - Mejor trazabilidad de historial por día
+- **Consequences:**
+  - Requiere migración de esquema existente
+  - Lógica adicional para mantener consistencia parent/child
+  - Consultas más complejas para obtener grupo completo
 
 ---
 

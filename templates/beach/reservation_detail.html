@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% set page_title = "Reserva " ~ (reservation.ticket_number or '#' ~ reservation.id) %}
+
+{% block title %}{{ page_title }} - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('beach.reservations') }}">Reservas</a></li>
+            <li class="breadcrumb-item active">{{ reservation.ticket_number or '#' ~ reservation.id }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2><i class="fas fa-calendar-check"></i> {{ reservation.ticket_number or '#' ~ reservation.id }}</h2>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="badge fs-6" style="background-color: {{ reservation.display_color or '#6C757D' }}">
+                    {{ reservation.current_state or 'Sin estado' }}
+                </span>
+                {% if reservation.current_states and ',' in reservation.current_states %}
+                <small class="text-muted">
+                    Estados: {{ reservation.current_states }}
+                </small>
+                {% endif %}
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="{{ url_for('beach.reservations_edit', reservation_id=reservation.id) }}"
+               class="btn btn-outline-primary">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+            <form method="POST"
+                  action="{{ url_for('beach.reservations_cancel', reservation_id=reservation.id) }}"
+                  class="d-inline"
+                  onsubmit="return confirm('¿Está seguro de cancelar esta reserva?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-warning">
+                    <i class="fas fa-ban"></i> Cancelar
+                </button>
+            </form>
+            <form method="POST"
+                  action="{{ url_for('beach.reservations_delete', reservation_id=reservation.id) }}"
+                  class="d-inline"
+                  onsubmit="return confirm('¿Está seguro de eliminar esta reserva permanentemente?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Info -->
+    <div class="col-lg-8">
+        <!-- Customer & Dates -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="text-muted mb-2"><i class="fas fa-user"></i> Cliente</h5>
+                        <h4>{{ reservation.customer_name }}</h4>
+                        <p class="mb-1">
+                            {% if reservation.customer_type == 'interno' %}
+                            <span class="badge bg-info">
+                                <i class="fas fa-hotel"></i> Cliente Interno
+                            </span>
+                            {% if reservation.customer_room %}
+                            <span class="ms-2">Habitación: <strong>{{ reservation.customer_room }}</strong></span>
+                            {% endif %}
+                            {% else %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-user"></i> Cliente Externo
+                            </span>
+                            {% endif %}
+                        </p>
+                        {% if reservation.customer_email %}
+                        <p class="mb-1"><i class="fas fa-envelope text-muted"></i> {{ reservation.customer_email }}</p>
+                        {% endif %}
+                        {% if reservation.customer_phone %}
+                        <p class="mb-0"><i class="fas fa-phone text-muted"></i> {{ reservation.customer_phone }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="text-muted mb-2"><i class="fas fa-calendar"></i> Fecha</h5>
+                        <h5>{{ reservation.reservation_date or reservation.start_date }}</h5>
+                        {% if reservation.time_slot and reservation.time_slot != 'all_day' %}
+                        <p class="mb-2">
+                            <span class="badge bg-secondary">
+                                {% if reservation.time_slot == 'morning' %}
+                                <i class="fas fa-sun"></i> Mañana
+                                {% elif reservation.time_slot == 'afternoon' %}
+                                <i class="fas fa-cloud-sun"></i> Tarde
+                                {% else %}
+                                {{ reservation.time_slot }}
+                                {% endif %}
+                            </span>
+                        </p>
+                        {% endif %}
+                        <div class="mt-2">
+                            <span class="badge bg-secondary fs-6">
+                                <i class="fas fa-users"></i> {{ reservation.num_people }} personas
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Furniture Assignments -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-couch"></i> Mobiliario Asignado</h5>
+            </div>
+            <div class="card-body">
+                {% if reservation.furniture %}
+                <div class="d-flex flex-wrap gap-2">
+                    {% for f in reservation.furniture %}
+                    <span class="badge bg-primary fs-6">
+                        {{ f.number }}
+                        <small class="opacity-75">({{ f.zone_name or '-' }})</small>
+                    </span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No hay mobiliario asignado</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Notes -->
+        {% if reservation.notes or reservation.observations %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-sticky-note"></i> Notas</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{ reservation.notes or reservation.observations }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- State History -->
+        {% if history %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Historial de Estados</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                                <th>Usuario</th>
+                                <th>Notas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in history %}
+                            <tr>
+                                <td>
+                                    <small>{{ h.created_at }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">
+                                        {{ h.status_type or '-' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if h.action == 'added' %}
+                                    <span class="text-success"><i class="fas fa-plus"></i> Añadido</span>
+                                    {% elif h.action == 'removed' %}
+                                    <span class="text-danger"><i class="fas fa-minus"></i> Quitado</span>
+                                    {% elif h.action == 'changed' %}
+                                    <span class="text-info"><i class="fas fa-exchange-alt"></i> Cambiado</span>
+                                    {% else %}
+                                    {{ h.action or '-' }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ h.changed_by or '-' }}</td>
+                                <td>{{ h.notes or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Toggle States -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-flag"></i> Estados</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Click para añadir/quitar estados. Una reserva puede tener múltiples estados.
+                </p>
+                <div class="d-flex flex-wrap gap-2" id="state-buttons">
+                    {% set current_states_list = reservation.current_states.split(',') if reservation.current_states else [] %}
+                    {% for state in states %}
+                    <button type="button"
+                            class="btn btn-sm state-toggle {% if state.name in current_states_list %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            data-state="{{ state.name }}"
+                            style="{% if state.name in current_states_list %}background-color: {{ state.color }}; border-color: {{ state.color }};{% endif %}">
+                        {% if state.icon %}<i class="fas {{ state.icon }}"></i>{% endif %}
+                        {{ state.name }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Preferences -->
+        {% if reservation.preferences %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-heart"></i> Preferencias</h5>
+            </div>
+            <div class="card-body">
+                {% for pref in reservation.preferences.split(',') %}
+                {% if pref.strip() %}
+                <span class="badge bg-light text-dark me-1 mb-1">
+                    {{ pref.strip() }}
+                </span>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tags -->
+        {% if reservation.tags %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-tags"></i> Etiquetas</h5>
+            </div>
+            <div class="card-body">
+                {% for tag in reservation.tags %}
+                <span class="badge me-1" style="background-color: {{ tag.color }}">
+                    {{ tag.name }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Payment Info -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-credit-card"></i> Pago</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted">Estado pago:</td>
+                        <td>
+                            {% if reservation.payment_status == 'SÍ' or reservation.paid %}
+                            <span class="badge bg-success">Pagado</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Pendiente</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if reservation.charge_to_room %}
+                    <tr>
+                        <td class="text-muted">Cargo a habitación:</td>
+                        <td><span class="badge bg-info">Sí</span></td>
+                    </tr>
+                    {% if reservation.charge_reference %}
+                    <tr>
+                        <td class="text-muted">Referencia:</td>
+                        <td>{{ reservation.charge_reference }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endif %}
+                    {% if reservation.price %}
+                    <tr>
+                        <td class="text-muted">Precio:</td>
+                        <td>{{ "%.2f"|format(reservation.price) }} €</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Meta Info -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted">Origen:</td>
+                        <td>{{ reservation.source or 'directo' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Creado por:</td>
+                        <td>{{ reservation.created_by or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Creado:</td>
+                        <td><small>{{ reservation.created_at }}</small></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Actualizado:</td>
+                        <td><small>{{ reservation.updated_at }}</small></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // State toggle buttons
+    document.querySelectorAll('.state-toggle').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const state = this.dataset.state;
+            const isActive = this.classList.contains('btn-primary');
+
+            fetch('{{ url_for("beach.api_toggle_state", reservation_id=reservation.id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    state: state,
+                    action: isActive ? 'remove' : 'add'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to see updated state
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo cambiar el estado'));
+                }
+            })
+            .catch(err => {
+                alert('Error de conexión');
+                console.error(err);
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}
