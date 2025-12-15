@@ -13,7 +13,8 @@ from models.customer import (
     get_customers_filtered, get_customer_with_details, get_customer_by_id,
     create_customer, update_customer, delete_customer, get_customer_stats,
     set_customer_preferences, set_customer_tags, find_duplicates,
-    merge_customers, find_potential_duplicates_for_customer, search_customers
+    merge_customers, find_potential_duplicates_for_customer, search_customers,
+    search_customers_unified, create_customer_from_hotel_guest
 )
 from models.reservation import (
     get_reservations_filtered, get_reservation_with_details, get_reservation_by_id,
@@ -291,29 +292,49 @@ def customers_merge(customer_id):
 @login_required
 @permission_required('beach.customers.view')
 def api_customers_search():
-    """Search customers for autocomplete."""
+    """Search customers and hotel guests for autocomplete (unified search)."""
     query = request.args.get('q', '')
     customer_type = request.args.get('type', None)
 
     if len(query) < 2:
         return jsonify({'customers': []})
 
-    customers = search_customers(query, customer_type)
+    # Use unified search that includes both beach_customers and hotel_guests
+    results = search_customers_unified(query, customer_type)
 
-    return jsonify({
-        'customers': [{
-            'id': c['id'],
-            'first_name': c['first_name'],
-            'last_name': c['last_name'],
-            'customer_type': c['customer_type'],
-            'room_number': c['room_number'],
-            'phone': c['phone'],
-            'email': c['email'],
-            'vip_status': c['vip_status'],
-            'display_name': f"{c['first_name']} {c['last_name'] or ''}" +
-                           (f" (Hab. {c['room_number']})" if c['room_number'] else '')
-        } for c in customers[:20]]
-    })
+    formatted_results = []
+    for c in results:
+        if c.get('source') == 'hotel_guest':
+            # Hotel guest result
+            formatted_results.append({
+                'id': c['id'],
+                'source': 'hotel_guest',
+                'guest_name': c.get('guest_name', ''),
+                'display_name': f"{c.get('guest_name', '')} (Hab. {c['room_number']})",
+                'customer_type': 'interno',
+                'room_number': c['room_number'],
+                'phone': c.get('phone'),
+                'email': c.get('email'),
+                'vip_code': c.get('vip_code'),
+                'departure_date': c.get('departure_date')
+            })
+        else:
+            # Beach customer result
+            formatted_results.append({
+                'id': c['id'],
+                'source': 'customer',
+                'first_name': c['first_name'],
+                'last_name': c.get('last_name', ''),
+                'display_name': f"{c['first_name']} {c.get('last_name', '')}".strip() +
+                               (f" (Hab. {c['room_number']})" if c.get('room_number') else ''),
+                'customer_type': c['customer_type'],
+                'room_number': c.get('room_number'),
+                'phone': c.get('phone'),
+                'email': c.get('email'),
+                'vip_status': c.get('vip_status', 0)
+            })
+
+    return jsonify({'customers': formatted_results})
 
 
 @beach_bp.route('/api/customers/check-duplicates')
@@ -338,6 +359,98 @@ def api_customers_check_duplicates():
             'email': d['email']
         } for d in duplicates]
     })
+
+
+@beach_bp.route('/api/customers/from-hotel-guest', methods=['POST'])
+@login_required
+@permission_required('beach.customers.create')
+def api_customers_from_hotel_guest():
+    """Convert a hotel guest to a beach customer."""
+    data = request.get_json()
+    hotel_guest_id = data.get('hotel_guest_id')
+
+    if not hotel_guest_id:
+        return jsonify({'success': False, 'error': 'ID de huésped requerido'}), 400
+
+    try:
+        result = create_customer_from_hotel_guest(hotel_guest_id)
+        customer = result['customer']
+
+        return jsonify({
+            'success': True,
+            'action': result['action'],
+            'customer': {
+                'id': customer['id'],
+                'source': 'customer',
+                'first_name': customer['first_name'],
+                'last_name': customer.get('last_name', ''),
+                'display_name': f"{customer['first_name']} {customer.get('last_name', '')}".strip(),
+                'customer_type': customer['customer_type'],
+                'room_number': customer.get('room_number'),
+                'phone': customer.get('phone'),
+                'email': customer.get('email'),
+                'vip_status': customer.get('vip_status', 0)
+            }
+        })
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': 'Error al crear cliente'}), 500
+
+
+@beach_bp.route('/api/customers/create', methods=['POST'])
+@login_required
+@permission_required('beach.customers.create')
+def api_customers_create():
+    """Create a new customer via API (for modal form)."""
+    data = request.get_json()
+
+    # Validate required fields
+    customer_type = data.get('customer_type')
+    first_name = data.get('first_name', '').strip()
+
+    if not customer_type or customer_type not in ['interno', 'externo']:
+        return jsonify({'success': False, 'error': 'Tipo de cliente inválido'}), 400
+
+    if not first_name:
+        return jsonify({'success': False, 'error': 'El nombre es requerido'}), 400
+
+    room_number = data.get('room_number', '').strip() or None
+    if customer_type == 'interno' and not room_number:
+        return jsonify({'success': False, 'error': 'El número de habitación es requerido para clientes internos'}), 400
+
+    try:
+        customer_id = create_customer(
+            customer_type=customer_type,
+            first_name=first_name,
+            last_name=data.get('last_name', '').strip() or None,
+            email=data.get('email', '').strip() or None,
+            phone=data.get('phone', '').strip() or None,
+            room_number=room_number,
+            notes=data.get('notes', '').strip() or None
+        )
+
+        customer = get_customer_by_id(customer_id)
+
+        return jsonify({
+            'success': True,
+            'customer': {
+                'id': customer['id'],
+                'source': 'customer',
+                'first_name': customer['first_name'],
+                'last_name': customer.get('last_name', ''),
+                'display_name': f"{customer['first_name']} {customer.get('last_name', '')}".strip(),
+                'customer_type': customer['customer_type'],
+                'room_number': customer.get('room_number'),
+                'phone': customer.get('phone'),
+                'email': customer.get('email'),
+                'vip_status': customer.get('vip_status', 0)
+            }
+        })
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': 'Error al crear cliente'}), 500
 
 
 @beach_bp.route('/api/hotel-guests/lookup')

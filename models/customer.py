@@ -595,3 +595,144 @@ def find_potential_duplicates_for_customer(customer_id: int) -> list:
     cursor.execute(query, params)
     rows = cursor.fetchall()
     return [dict(row) for row in rows]
+
+
+def search_customers_unified(query: str, customer_type: str = None, limit: int = 20) -> list:
+    """
+    Search customers from both beach_customers and hotel_guests tables.
+
+    Args:
+        query: Search query string (name, phone, room number)
+        customer_type: Filter by type ('interno'/'externo'), None for all
+        limit: Maximum results to return
+
+    Returns:
+        List of dicts with 'source' field indicating origin:
+        - source='customer': from beach_customers table
+        - source='hotel_guest': from hotel_guests table
+    """
+    db = get_db()
+    cursor = db.cursor()
+    results = []
+    search_term = f'%{query}%'
+
+    # Search beach_customers
+    customer_query = '''
+        SELECT c.*, 'customer' as source
+        FROM beach_customers c
+        WHERE (c.first_name LIKE ? OR c.last_name LIKE ? OR
+               c.email LIKE ? OR c.phone LIKE ? OR c.room_number LIKE ?)
+    '''
+    params = [search_term] * 5
+
+    if customer_type:
+        customer_query += ' AND c.customer_type = ?'
+        params.append(customer_type)
+
+    customer_query += ' ORDER BY c.created_at DESC LIMIT ?'
+    params.append(limit)
+
+    cursor.execute(customer_query, params)
+    for row in cursor.fetchall():
+        customer = dict(row)
+        customer['display_name'] = f"{customer['first_name']} {customer['last_name'] or ''}".strip()
+        results.append(customer)
+
+    # Search hotel_guests (only if customer_type is not 'externo')
+    if customer_type != 'externo':
+        guest_query = '''
+            SELECT h.*, 'hotel_guest' as source
+            FROM hotel_guests h
+            WHERE (h.guest_name LIKE ? OR h.room_number LIKE ? OR
+                   h.email LIKE ? OR h.phone LIKE ?)
+              AND h.departure_date >= date('now')
+            ORDER BY h.room_number, h.guest_name
+            LIMIT ?
+        '''
+        cursor.execute(guest_query, [search_term, search_term, search_term, search_term, limit])
+
+        # Get existing customer room numbers to avoid duplicates
+        existing_rooms = {c['room_number'] for c in results if c.get('room_number') and c.get('customer_type') == 'interno'}
+
+        for row in cursor.fetchall():
+            guest = dict(row)
+            # Skip if already have a customer with this room number
+            if guest['room_number'] in existing_rooms:
+                continue
+            guest['display_name'] = guest['guest_name']
+            guest['customer_type'] = 'interno'  # Hotel guests are always interno
+            results.append(guest)
+
+    return results[:limit]
+
+
+def create_customer_from_hotel_guest(hotel_guest_id: int) -> dict:
+    """
+    Create a beach_customer from a hotel_guest record.
+    Parses guest_name into first_name/last_name and copies relevant fields.
+
+    Args:
+        hotel_guest_id: ID of the hotel guest to convert
+
+    Returns:
+        Dict with 'customer_id' and 'customer' data
+
+    Raises:
+        ValueError if hotel guest not found or customer already exists for room
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Get hotel guest
+    cursor.execute('SELECT * FROM hotel_guests WHERE id = ?', (hotel_guest_id,))
+    guest = cursor.fetchone()
+
+    if not guest:
+        raise ValueError('Huésped no encontrado')
+
+    guest = dict(guest)
+
+    # Check if customer already exists for this room
+    cursor.execute('''
+        SELECT id FROM beach_customers
+        WHERE customer_type = 'interno' AND room_number = ?
+    ''', (guest['room_number'],))
+    existing = cursor.fetchone()
+
+    if existing:
+        # Return existing customer instead of creating duplicate
+        return {
+            'customer_id': existing['id'],
+            'customer': get_customer_by_id(existing['id']),
+            'action': 'existing'
+        }
+
+    # Parse guest_name into first_name and last_name
+    name_parts = guest['guest_name'].strip().split(' ', 1) if guest['guest_name'] else ['', '']
+    first_name = name_parts[0] if name_parts else ''
+    last_name = name_parts[1] if len(name_parts) > 1 else ''
+
+    # Determine VIP status from vip_code
+    vip_status = 1 if guest.get('vip_code') else 0
+
+    # Create beach_customer
+    cursor.execute('''
+        INSERT INTO beach_customers
+        (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status)
+        VALUES ('interno', ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        first_name, last_name,
+        guest.get('email'), guest.get('phone'),
+        guest['room_number'],
+        f"Importado de huésped hotel (llegada: {guest.get('arrival_date')}, salida: {guest.get('departure_date')})",
+        vip_status
+    ))
+
+    db.commit()
+    customer_id = cursor.lastrowid
+
+    return {
+        'customer_id': customer_id,
+        'customer': get_customer_by_id(customer_id),
+        'action': 'created'
+    }
