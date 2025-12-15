@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Crear' if mode == 'create' else 'Editar' }} Cliente - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header card-header-primary">
+                <h4 class="mb-0">
+                    <i class="fas fa-user{% if mode == 'create' %}-plus{% else %}-edit{% endif %}"></i>
+                    {{ 'Crear Nuevo Cliente' if mode == 'create' else 'Editar Cliente' }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="customerForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if mode == 'create' %}
+                    <!-- Customer Type Tabs -->
+                    <ul class="nav nav-pills nav-fill mb-4" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="interno-tab" data-bs-toggle="pill"
+                                    data-bs-target="#interno-content" type="button" role="tab">
+                                <i class="fas fa-hotel me-2"></i> Cliente Interno (Huésped)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="externo-tab" data-bs-toggle="pill"
+                                    data-bs-target="#externo-content" type="button" role="tab">
+                                <i class="fas fa-user me-2"></i> Cliente Externo
+                            </button>
+                        </li>
+                    </ul>
+                    <input type="hidden" name="customer_type" id="customerType" value="interno">
+                    {% else %}
+                    <!-- Show customer type badge in edit mode -->
+                    <div class="mb-4">
+                        {% if customer.customer_type == 'interno' %}
+                        <span class="badge bg-info fs-6">
+                            <i class="fas fa-hotel"></i> Cliente Interno (Huésped)
+                        </span>
+                        {% else %}
+                        <span class="badge bg-success fs-6">
+                            <i class="fas fa-user"></i> Cliente Externo
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Hotel Guest Lookup (only for interno in create mode) -->
+                    {% if mode == 'create' %}
+                    <div id="hotelGuestLookup" class="mb-4">
+                        <div class="alert alert-info">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>Buscar huésped del hotel</strong>
+                            <p class="mb-2 small">Ingrese el número de habitación para autocompletar los datos del huésped.</p>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input type="text" id="roomSearch" class="form-control"
+                                           placeholder="Número de habitación">
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" id="searchRoomBtn" class="btn btn-outline-primary w-100">
+                                        <i class="fas fa-search"></i> Buscar
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="guestResults" class="mt-3" style="display: none;"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Basic Information -->
+                    <h6 class="text-muted mb-3"><i class="fas fa-user me-2"></i>Información Personal</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="first_name" class="form-label">Nombre *</label>
+                            <input type="text" name="first_name" id="first_name" class="form-control"
+                                   value="{{ customer.first_name if customer else (form_data.first_name if form_data else '') }}"
+                                   required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="last_name" class="form-label">Apellidos</label>
+                            <input type="text" name="last_name" id="last_name" class="form-control"
+                                   value="{{ customer.last_name if customer else (form_data.last_name if form_data else '') }}">
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-address-card me-2"></i>Información de Contacto</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Correo Electrónico</label>
+                            <input type="email" name="email" id="email" class="form-control"
+                                   value="{{ customer.email if customer else (form_data.email if form_data else '') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Teléfono</label>
+                            <input type="tel" name="phone" id="phone" class="form-control"
+                                   value="{{ customer.phone if customer else (form_data.phone if form_data else '') }}">
+                        </div>
+                    </div>
+
+                    <!-- Room Number (for interno) -->
+                    <div class="row mb-3" id="roomNumberSection">
+                        <div class="col-md-6">
+                            <label for="room_number" class="form-label">
+                                Número de Habitación
+                                <span id="roomRequired" class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="room_number" id="room_number" class="form-control"
+                                   value="{{ customer.room_number if customer else (form_data.room_number if form_data else '') }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="vip_status" class="form-label">Estado VIP</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="vip_status"
+                                       id="vip_status" value="1"
+                                       {% if customer and customer.vip_status %}checked{% endif %}>
+                                <label class="form-check-label" for="vip_status">Cliente VIP</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notas</label>
+                        <textarea name="notes" id="notes" class="form-control" rows="2">{{ customer.notes if customer else (form_data.notes if form_data else '') }}</textarea>
+                    </div>
+
+                    <!-- Preferences Section -->
+                    {% if preferences %}
+                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-sliders me-2"></i>Preferencias</h6>
+                    <div class="row mb-3">
+                        {% for pref in preferences %}
+                        <div class="col-md-4 col-lg-3 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="preferences"
+                                       value="{{ pref.id }}" id="pref_{{ pref.id }}"
+                                       {% if customer and customer.preferences %}
+                                           {% for cp in customer.preferences %}
+                                               {% if cp.id == pref.id %}checked{% endif %}
+                                           {% endfor %}
+                                       {% endif %}>
+                                <label class="form-check-label" for="pref_{{ pref.id }}">
+                                    {% if pref.icon %}<i class="fas {{ pref.icon }} me-1"></i>{% endif %}
+                                    {{ pref.name }}
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Tags Section -->
+                    {% if tags %}
+                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-tags me-2"></i>Etiquetas</h6>
+                    <div class="row mb-3">
+                        {% for tag in tags %}
+                        <div class="col-md-4 col-lg-3 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="tags"
+                                       value="{{ tag.id }}" id="tag_{{ tag.id }}"
+                                       {% if customer and customer.tags %}
+                                           {% for ct in customer.tags %}
+                                               {% if ct.id == tag.id %}checked{% endif %}
+                                           {% endfor %}
+                                       {% endif %}>
+                                <label class="form-check-label" for="tag_{{ tag.id }}">
+                                    <span class="badge" style="background-color: {{ tag.color }};">
+                                        {{ tag.name }}
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Duplicate Warning -->
+                    {% if duplicates %}
+                    <div class="alert alert-warning mt-4">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Posibles Duplicados Encontrados</h6>
+                        <p class="small mb-2">Se encontraron clientes similares en el sistema:</p>
+                        <ul class="mb-2">
+                            {% for dup in duplicates %}
+                            <li>
+                                <strong>{{ dup.first_name }} {{ dup.last_name or '' }}</strong>
+                                {% if dup.room_number %}- Hab. {{ dup.room_number }}{% endif %}
+                                {% if dup.phone %}- Tel. {{ dup.phone }}{% endif %}
+                                <a href="{{ url_for('beach.customers_detail', customer_id=dup.id) }}"
+                                   class="btn btn-sm btn-outline-info ms-2" target="_blank">
+                                    <i class="fas fa-eye"></i> Ver
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="ignore_duplicates"
+                                   id="ignoreDuplicates" value="1">
+                            <label class="form-check-label" for="ignoreDuplicates">
+                                Crear de todos modos (no es un duplicado)
+                            </label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Guardar
+                        </button>
+                        <a href="{{ url_for('beach.customers') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mode = '{{ mode }}';
+    const customerTypeInput = document.getElementById('customerType');
+    const hotelGuestLookup = document.getElementById('hotelGuestLookup');
+    const roomNumberSection = document.getElementById('roomNumberSection');
+    const roomRequired = document.getElementById('roomRequired');
+    const roomSearch = document.getElementById('roomSearch');
+    const searchRoomBtn = document.getElementById('searchRoomBtn');
+    const guestResults = document.getElementById('guestResults');
+
+    // Tab switching (only in create mode)
+    if (mode === 'create') {
+        document.getElementById('interno-tab').addEventListener('click', function() {
+            customerTypeInput.value = 'interno';
+            if (hotelGuestLookup) hotelGuestLookup.style.display = 'block';
+            if (roomNumberSection) roomNumberSection.style.display = 'flex';
+            roomRequired.style.display = 'inline';
+        });
+
+        document.getElementById('externo-tab').addEventListener('click', function() {
+            customerTypeInput.value = 'externo';
+            if (hotelGuestLookup) hotelGuestLookup.style.display = 'none';
+            if (roomNumberSection) roomNumberSection.style.display = 'none';
+            roomRequired.style.display = 'none';
+            // Clear room number when switching to externo
+            document.getElementById('room_number').value = '';
+        });
+
+        // Hotel guest lookup
+        if (searchRoomBtn) {
+            searchRoomBtn.addEventListener('click', lookupHotelGuest);
+            roomSearch.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    lookupHotelGuest();
+                }
+            });
+        }
+    } else {
+        // Edit mode: hide room number section for externo customers
+        const customerType = '{{ customer.customer_type if customer else "interno" }}';
+        if (customerType === 'externo' && roomNumberSection) {
+            roomNumberSection.style.display = 'none';
+        }
+    }
+
+    function lookupHotelGuest() {
+        const room = roomSearch.value.trim();
+        if (!room) return;
+
+        searchRoomBtn.disabled = true;
+        searchRoomBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        fetch(`/beach/api/hotel-guests/lookup?room=${encodeURIComponent(room)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.guests && data.guests.length > 0) {
+                    displayGuestResults(data.guests);
+                } else {
+                    guestResults.innerHTML = '<div class="alert alert-secondary mb-0">No se encontraron huéspedes en esta habitación.</div>';
+                    guestResults.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                guestResults.innerHTML = '<div class="alert alert-danger mb-0">Error al buscar huésped.</div>';
+                guestResults.style.display = 'block';
+            })
+            .finally(() => {
+                searchRoomBtn.disabled = false;
+                searchRoomBtn.innerHTML = '<i class="fas fa-search"></i> Buscar';
+            });
+    }
+
+    function displayGuestResults(guests) {
+        let html = '<div class="list-group">';
+        guests.forEach(guest => {
+            const nameParts = guest.guest_name.split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
+
+            html += `
+                <button type="button" class="list-group-item list-group-item-action"
+                        onclick="fillGuestData('${escapeHtml(firstName)}', '${escapeHtml(lastName)}',
+                                              '${escapeHtml(guest.room_number)}', '${escapeHtml(guest.email || '')}',
+                                              '${escapeHtml(guest.phone || '')}', ${guest.vip_code ? 'true' : 'false'})">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${escapeHtml(guest.guest_name)}</strong>
+                            <span class="badge bg-secondary ms-2">Hab. ${escapeHtml(guest.room_number)}</span>
+                            ${guest.vip_code ? '<span class="badge bg-warning text-dark ms-1"><i class="fas fa-star"></i> VIP</span>' : ''}
+                        </div>
+                        <small class="text-muted">${guest.arrival_date} - ${guest.departure_date}</small>
+                    </div>
+                </button>
+            `;
+        });
+        html += '</div>';
+
+        guestResults.innerHTML = html;
+        guestResults.style.display = 'block';
+    }
+
+    // Make fillGuestData available globally
+    window.fillGuestData = function(firstName, lastName, room, email, phone, isVip) {
+        document.getElementById('first_name').value = firstName;
+        document.getElementById('last_name').value = lastName;
+        document.getElementById('room_number').value = room;
+        document.getElementById('email').value = email;
+        document.getElementById('phone').value = phone;
+        document.getElementById('vip_status').checked = isVip;
+
+        guestResults.style.display = 'none';
+
+        // Highlight filled fields
+        ['first_name', 'last_name', 'room_number', 'email', 'phone'].forEach(field => {
+            const el = document.getElementById(field);
+            if (el.value) {
+                el.classList.add('is-valid');
+                setTimeout(() => el.classList.remove('is-valid'), 2000);
+            }
+        });
+    };
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Real-time duplicate check on phone/room change
+    let duplicateTimeout;
+    const phoneInput = document.getElementById('phone');
+    const roomInput = document.getElementById('room_number');
+
+    function checkDuplicates() {
+        clearTimeout(duplicateTimeout);
+        duplicateTimeout = setTimeout(() => {
+            const phone = phoneInput.value.trim();
+            const room = roomInput.value.trim();
+            const type = customerTypeInput ? customerTypeInput.value : '{{ customer.customer_type if customer else "externo" }}';
+
+            if (!phone && !room) return;
+
+            fetch(`/beach/api/customers/check-duplicates?phone=${encodeURIComponent(phone)}&type=${type}&room=${encodeURIComponent(room)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.duplicates && data.duplicates.length > 0 && mode === 'create') {
+                        // Show inline warning
+                        const existingWarning = document.getElementById('duplicateWarning');
+                        if (!existingWarning) {
+                            const warning = document.createElement('div');
+                            warning.id = 'duplicateWarning';
+                            warning.className = 'alert alert-warning alert-sm mt-2';
+                            warning.innerHTML = `<small><i class="fas fa-exclamation-triangle"></i> Posible duplicado encontrado</small>`;
+                            phoneInput.parentNode.appendChild(warning);
+                        }
+                    } else {
+                        const existingWarning = document.getElementById('duplicateWarning');
+                        if (existingWarning) existingWarning.remove();
+                    }
+                });
+        }, 500);
+    }
+
+    if (phoneInput) phoneInput.addEventListener('input', checkDuplicates);
+    if (roomInput) roomInput.addEventListener('input', checkDuplicates);
+});
+</script>
+{% endblock %}

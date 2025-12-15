@@ -9,10 +9,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase 4.6: Enhanced Furniture Management |
+| **Current Phase** | Phase 5: Customers |
 | **Last Updated** | 2025-12-14 |
-| **Last Session** | Enhanced furniture form with duplication & auto-numbering |
-| **Next Priority** | Phase 5: Customer CRUD with hotel guest integration |
+| **Last Session** | Customer CRUD with hotel guest integration, deduplication, merge |
+| **Next Priority** | Phase 6: Reservations |
 
 ---
 
@@ -26,7 +26,7 @@
 | 4 | Beach Infrastructure | Complete | 100% |
 | 4.5 | Enhanced Furniture Types | Complete | 100% |
 | 4.6 | Enhanced Furniture Management | Complete | 100% |
-| 5 | Customers | Not Started | 0% |
+| 5 | Customers | Complete | 100% |
 | 6 | Reservations | Not Started | 0% |
 | 7 | Interactive Map | Not Started | 0% |
 | 8 | Smart Features | Not Started | 0% |
@@ -243,37 +243,42 @@
 ## Phase 5: Customers
 
 ### Objectives
-- [ ] Customer CRUD (interno/externo)
-- [ ] Integration with hotel guests
-- [ ] Deduplication logic
-- [ ] Customer merge functionality
-- [ ] Customer preferences assignment
-- [ ] Bidirectional sync with reservations
+- [x] Customer CRUD (interno/externo)
+- [x] Integration with hotel guests
+- [x] Deduplication logic
+- [x] Customer merge functionality
+- [x] Customer preferences assignment
+- [ ] Bidirectional sync with reservations (Phase 6)
 
 ### Tasks
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Customer list with filters | Pending | Type, VIP, search |
-| Customer create form | Pending | Interno/externo tabs |
-| Hotel guest auto-fill | Pending | Room number lookup |
-| Customer edit form | Pending | |
-| Customer detail view | Pending | History, stats |
-| Deduplication check | Pending | On create |
-| Customer merge UI | Pending | |
-| Merge logic | Pending | Transfer reservations |
-| Customer search API | Pending | Autocomplete |
-| Customer preferences UI | Pending | Checkbox/tag selection in form |
-| beach_customer_preferences M2M | Pending | assign, remove, get functions |
-| Sync prefs from reservation | Pending | Auto-save customer prefs |
-| Load customer prefs | Pending | Auto-populate reservation form |
-| Preference history | Pending | Track when prefs added/removed |
+| Customer list with filters | Complete | Type, VIP, search with stats cards |
+| Customer create form | Complete | Interno/externo tabs with pill navigation |
+| Hotel guest auto-fill | Complete | Room number lookup via AJAX |
+| Customer edit form | Complete | Reuses same template as create |
+| Customer detail view | Complete | Full profile with preferences, tags, reservations |
+| Deduplication check | Complete | Real-time on phone/room change |
+| Customer merge UI | Complete | Source/target selection with search |
+| Merge logic | Complete | Transfers reservations, prefs, tags |
+| Customer search API | Complete | /beach/api/customers/search |
+| Customer preferences UI | Complete | Checkbox selection in form |
+| beach_customer_preferences M2M | Complete | Already existed in model |
+| Hotel guest lookup API | Complete | /beach/api/hotel-guests/lookup |
+| Sync prefs from reservation | Phase 6 | Will implement with reservations |
+| Load customer prefs | Phase 6 | Will implement with reservations |
+| Preference history | Future | Track when prefs added/removed |
 
 ### Decisions Made
-- (None yet)
+- Customer form uses Bootstrap 5 pill tabs for interno/externo selection
+- Hotel guest auto-fill parses guest_name into first_name/last_name
+- Duplicate detection happens in real-time via AJAX and on form submit
+- Customer merge transfers all related data then deletes source customer
+- Stats cards show total, interno, externo, VIP counts
 
 ### Issues Discovered
-- (None yet)
+- Template needed conditional check for stats variable (fixed with `{% if stats %}`)
 
 ---
 
@@ -545,6 +550,49 @@ DEFAULT_PREFERENCES = [
 - Priority 1
 - Priority 2
 ```
+
+---
+
+### Session: 2025-12-14 (Phase 5)
+**Duration:** Single session
+**Focus:** Phase 5 - Customer Management
+
+#### Completed
+- **Customer Model Enhancements** (`models/customer.py`)
+  - `get_customers_filtered()` - Advanced filtering with pagination
+  - `get_customer_with_details()` - Full customer with prefs, tags, reservations
+  - `get_customer_stats()` - Dashboard statistics
+  - `merge_customers()` - Full merge logic with transaction handling
+  - `find_potential_duplicates_for_customer()` - Find duplicates for merge
+
+- **Beach Blueprint Routes** (`blueprints/beach/__init__.py`)
+  - Customer CRUD routes (list, create, edit, delete, detail)
+  - Customer merge route
+  - API endpoints: search, check-duplicates, hotel-guest-lookup
+
+- **Templates Created**
+  - `customers.html` - List with stats cards, filters, table
+  - `customer_form.html` - Create/edit with interno/externo tabs, hotel guest auto-fill
+  - `customer_detail.html` - Full profile with preferences, tags, reservation history
+  - `customer_merge.html` - Source/target selection with search
+
+- **Test Suite** (`tests/test_customer.py`)
+  - 16 tests covering model functions and routes
+  - All tests passing
+
+#### Decisions
+- Interno/externo selection via Bootstrap 5 pills
+- Hotel guest auto-fill via AJAX lookup by room number
+- Real-time duplicate detection on phone/room change
+- Merge transfers reservations, preferences, tags then deletes source
+
+#### Issues Fixed
+- Template stats variable undefined (added `{% if stats %}` check)
+
+#### Next Session
+- Begin Phase 6: Reservations
+- Reservation CRUD with multi-day support
+- Availability checking and double-booking prevention
 
 ---
 

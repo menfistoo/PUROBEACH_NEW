@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Fusionar Cliente - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{{ url_for('beach.customers') }}">Clientes</a></li>
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('beach.customers_detail', customer_id=customer.id) }}">
+                        {{ customer.first_name }} {{ customer.last_name or '' }}
+                    </a>
+                </li>
+                <li class="breadcrumb-item active">Fusionar</li>
+            </ol>
+        </nav>
+
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">
+                    <i class="fas fa-compress-arrows-alt me-2"></i>Fusionar Cliente
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>Proceso de Fusión</h6>
+                    <p class="mb-0">
+                        Este proceso <strong>transferirá todas las reservas, preferencias y etiquetas</strong>
+                        del cliente origen al cliente destino. El cliente origen será <strong>eliminado</strong>
+                        después de la fusión.
+                    </p>
+                </div>
+
+                <form method="POST" onsubmit="return confirm('¿Está seguro de fusionar estos clientes? Esta acción no se puede deshacer.')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row">
+                        <!-- Source Customer (to be deleted) -->
+                        <div class="col-md-5">
+                            <div class="card border-danger h-100">
+                                <div class="card-header bg-danger text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-arrow-right me-2"></i>Cliente Origen
+                                        <small class="d-block mt-1">(Será eliminado)</small>
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <h4>{{ customer.first_name }} {{ customer.last_name or '' }}</h4>
+
+                                    {% if customer.customer_type == 'interno' %}
+                                    <span class="badge bg-info mb-3">
+                                        <i class="fas fa-hotel"></i> Interno
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-success mb-3">
+                                        <i class="fas fa-user"></i> Externo
+                                    </span>
+                                    {% endif %}
+
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <th class="text-muted">Teléfono</th>
+                                            <td>{{ customer.phone or '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-muted">Email</th>
+                                            <td>{{ customer.email or '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-muted">Habitación</th>
+                                            <td>{{ customer.room_number or '-' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-muted">Reservas</th>
+                                            <td>{{ customer.total_reservations or 0 }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-muted">Visitas</th>
+                                            <td>{{ customer.total_visits or 0 }}</td>
+                                        </tr>
+                                    </table>
+
+                                    {% if customer.preferences %}
+                                    <div class="mt-3">
+                                        <strong class="text-muted">Preferencias:</strong>
+                                        <div class="mt-1">
+                                            {% for pref in customer.preferences %}
+                                            <span class="badge bg-light text-dark me-1">{{ pref.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if customer.tags %}
+                                    <div class="mt-3">
+                                        <strong class="text-muted">Etiquetas:</strong>
+                                        <div class="mt-1">
+                                            {% for tag in customer.tags %}
+                                            <span class="badge me-1" style="background-color: {{ tag.color }};">{{ tag.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Arrow -->
+                        <div class="col-md-2 d-flex align-items-center justify-content-center">
+                            <div class="text-center">
+                                <i class="fas fa-arrow-right fa-3x text-muted"></i>
+                                <p class="mt-2 text-muted small">Se fusionará en</p>
+                            </div>
+                        </div>
+
+                        <!-- Target Customer Selection -->
+                        <div class="col-md-5">
+                            <div class="card border-success h-100">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-check-circle me-2"></i>Cliente Destino
+                                        <small class="d-block mt-1">(Recibirá los datos)</small>
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if duplicates %}
+                                    <p class="text-muted mb-3">Seleccione el cliente destino:</p>
+
+                                    <div class="list-group mb-3">
+                                        {% for dup in duplicates %}
+                                        <label class="list-group-item list-group-item-action">
+                                            <div class="d-flex">
+                                                <div class="form-check me-3">
+                                                    <input class="form-check-input" type="radio" name="target_id"
+                                                           value="{{ dup.id }}" id="target_{{ dup.id }}" required>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">{{ dup.first_name }} {{ dup.last_name or '' }}</h6>
+                                                    {% if dup.customer_type == 'interno' %}
+                                                    <span class="badge bg-info">Interno</span>
+                                                    {% else %}
+                                                    <span class="badge bg-success">Externo</span>
+                                                    {% endif %}
+                                                    <span class="badge bg-secondary ms-1">{{ dup.reservation_count or 0 }} reservas</span>
+                                                    <div class="small text-muted mt-1">
+                                                        {% if dup.phone %}Tel: {{ dup.phone }}{% endif %}
+                                                        {% if dup.email %} | {{ dup.email }}{% endif %}
+                                                        {% if dup.room_number %} | Hab: {{ dup.room_number }}{% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+
+                                    <!-- Search for other customers -->
+                                    <div class="border-top pt-3">
+                                        <p class="text-muted small mb-2">O buscar otro cliente:</p>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" id="customerSearch" class="form-control"
+                                                   placeholder="Buscar por nombre, teléfono...">
+                                            <button type="button" class="btn btn-outline-secondary" id="searchCustomerBtn">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                        <div id="searchResults" class="mt-2"></div>
+                                    </div>
+
+                                    {% else %}
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-search fa-3x mb-3 opacity-50"></i>
+                                        <p>No se encontraron duplicados automáticamente.</p>
+                                        <p class="small">Busque un cliente para fusionar:</p>
+                                    </div>
+
+                                    <div class="input-group">
+                                        <input type="text" id="customerSearch" class="form-control"
+                                               placeholder="Buscar por nombre, teléfono...">
+                                        <button type="button" class="btn btn-outline-secondary" id="searchCustomerBtn">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                    <div id="searchResults" class="mt-2"></div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{{ url_for('beach.customers_detail', customer_id=customer.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-compress-arrows-alt"></i> Fusionar Clientes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('customerSearch');
+    const searchBtn = document.getElementById('searchCustomerBtn');
+    const searchResults = document.getElementById('searchResults');
+    const sourceCustomerId = {{ customer.id }};
+
+    function searchCustomers() {
+        const query = searchInput.value.trim();
+        if (query.length < 2) {
+            searchResults.innerHTML = '<div class="alert alert-secondary alert-sm">Escriba al menos 2 caracteres</div>';
+            return;
+        }
+
+        searchBtn.disabled = true;
+        searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        fetch(`/beach/api/customers/search?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.customers && data.customers.length > 0) {
+                    let html = '<div class="list-group list-group-flush">';
+                    data.customers.forEach(c => {
+                        if (c.id !== sourceCustomerId) {
+                            html += `
+                                <label class="list-group-item list-group-item-action py-2">
+                                    <div class="d-flex">
+                                        <div class="form-check me-2">
+                                            <input class="form-check-input" type="radio" name="target_id"
+                                                   value="${c.id}" id="search_target_${c.id}">
+                                        </div>
+                                        <div>
+                                            <strong>${escapeHtml(c.first_name)} ${escapeHtml(c.last_name || '')}</strong>
+                                            <span class="badge ${c.customer_type === 'interno' ? 'bg-info' : 'bg-success'} ms-1">
+                                                ${c.customer_type === 'interno' ? 'Interno' : 'Externo'}
+                                            </span>
+                                            <div class="small text-muted">
+                                                ${c.phone ? 'Tel: ' + escapeHtml(c.phone) : ''}
+                                                ${c.room_number ? ' | Hab: ' + escapeHtml(c.room_number) : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                            `;
+                        }
+                    });
+                    html += '</div>';
+                    searchResults.innerHTML = html;
+                } else {
+                    searchResults.innerHTML = '<div class="alert alert-secondary alert-sm">No se encontraron clientes</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                searchResults.innerHTML = '<div class="alert alert-danger alert-sm">Error al buscar</div>';
+            })
+            .finally(() => {
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = '<i class="fas fa-search"></i>';
+            });
+    }
+
+    searchBtn.addEventListener('click', searchCustomers);
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchCustomers();
+        }
+    });
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+});
+</script>
+{% endblock %}

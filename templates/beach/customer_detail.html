@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}{{ customer.first_name }} {{ customer.last_name or '' }} - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{{ url_for('beach.customers') }}">Clientes</a></li>
+                <li class="breadcrumb-item active">{{ customer.first_name }} {{ customer.last_name or '' }}</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0">
+            {{ customer.first_name }} {{ customer.last_name or '' }}
+            {% if customer.vip_status %}
+            <span class="badge bg-warning text-dark ms-2">
+                <i class="fas fa-star"></i> VIP
+            </span>
+            {% endif %}
+        </h2>
+    </div>
+    <div class="btn-group">
+        <a href="{{ url_for('beach.customers_edit', customer_id=customer.id) }}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Editar
+        </a>
+        {% if duplicates %}
+        <a href="{{ url_for('beach.customers_merge', customer_id=customer.id) }}" class="btn btn-outline-warning">
+            <i class="fas fa-compress-arrows-alt"></i> Fusionar
+        </a>
+        {% endif %}
+        <form method="POST" action="{{ url_for('beach.customers_delete', customer_id=customer.id) }}"
+              class="d-inline" onsubmit="return confirm('¿Está seguro de eliminar este cliente?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="fas fa-trash"></i> Eliminar
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Info Column -->
+    <div class="col-lg-8">
+        <!-- Customer Info Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user me-2"></i>Información del Cliente
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless mb-0">
+                            <tr>
+                                <th class="text-muted" style="width: 40%;">Tipo</th>
+                                <td>
+                                    {% if customer.customer_type == 'interno' %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-hotel"></i> Interno (Huésped)
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-user"></i> Externo
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Email</th>
+                                <td>
+                                    {% if customer.email %}
+                                    <a href="mailto:{{ customer.email }}">{{ customer.email }}</a>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Teléfono</th>
+                                <td>
+                                    {% if customer.phone %}
+                                    <a href="tel:{{ customer.phone }}">{{ customer.phone }}</a>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless mb-0">
+                            <tr>
+                                <th class="text-muted" style="width: 40%;">Habitación</th>
+                                <td>
+                                    {% if customer.room_number %}
+                                    <span class="badge bg-secondary fs-6">
+                                        <i class="fas fa-door-open"></i> {{ customer.room_number }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Total Visitas</th>
+                                <td>{{ customer.total_visits or 0 }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Última Visita</th>
+                                <td>{{ customer.last_visit or '-' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                {% if customer.notes %}
+                <hr>
+                <h6 class="text-muted">Notas</h6>
+                <p class="mb-0">{{ customer.notes }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Preferences Card -->
+        {% if customer.preferences %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-sliders me-2"></i>Preferencias
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% for pref in customer.preferences %}
+                    <span class="badge bg-light text-dark border fs-6">
+                        {% if pref.icon %}<i class="fas {{ pref.icon }} me-1"></i>{% endif %}
+                        {{ pref.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tags Card -->
+        {% if customer.tags %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tags me-2"></i>Etiquetas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% for tag in customer.tags %}
+                    <span class="badge fs-6" style="background-color: {{ tag.color }};">
+                        {{ tag.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Reservations Card -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-check me-2"></i>Historial de Reservas
+                </h5>
+                <span class="badge bg-secondary">{{ customer.total_reservations }} total</span>
+            </div>
+            <div class="card-body p-0">
+                {% if customer.recent_reservations %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Personas</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for res in customer.recent_reservations %}
+                            <tr>
+                                <td>
+                                    <strong>{{ res.start_date }}</strong>
+                                    {% if res.start_date != res.end_date %}
+                                    - {{ res.end_date }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if res.state_name %}
+                                    <span class="badge" style="background-color: {{ res.state_color }};">
+                                        {{ res.state_name }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Sin estado</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ res.num_people }}</td>
+                                <td>
+                                    <a href="#" class="btn btn-sm btn-outline-primary" title="Ver reserva">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-calendar-times fa-3x mb-3 opacity-50"></i>
+                    <p class="mb-0">Este cliente no tiene reservas</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Column -->
+    <div class="col-lg-4">
+        <!-- Stats Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Estadísticas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                    <span class="text-muted">Total Reservas</span>
+                    <span class="badge bg-primary fs-6">{{ customer.total_reservations }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                    <span class="text-muted">Reservas Activas</span>
+                    <span class="badge bg-success fs-6">{{ customer.active_reservations }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                    <span class="text-muted">Total Visitas</span>
+                    <span class="badge bg-info fs-6">{{ customer.total_visits or 0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Total Gastado</span>
+                    <span class="badge bg-warning text-dark fs-6">{{ "%.2f"|format(customer.total_spent or 0) }} EUR</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Potential Duplicates Card -->
+        {% if duplicates %}
+        <div class="card mb-4 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Posibles Duplicados
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    Se encontraron {{ duplicates|length }} cliente(s) que podrían ser duplicados.
+                </p>
+                <div class="list-group list-group-flush">
+                    {% for dup in duplicates %}
+                    <a href="{{ url_for('beach.customers_detail', customer_id=dup.id) }}"
+                       class="list-group-item list-group-item-action px-0">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ dup.first_name }} {{ dup.last_name or '' }}</strong>
+                                {% if dup.customer_type == 'interno' %}
+                                <span class="badge bg-info ms-1">Interno</span>
+                                {% else %}
+                                <span class="badge bg-success ms-1">Externo</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">{{ dup.reservation_count or 0 }} reservas</small>
+                        </div>
+                        <small class="text-muted">
+                            {% if dup.phone %}Tel: {{ dup.phone }}{% endif %}
+                            {% if dup.room_number %}| Hab: {{ dup.room_number }}{% endif %}
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+                <a href="{{ url_for('beach.customers_merge', customer_id=customer.id) }}"
+                   class="btn btn-warning btn-sm w-100 mt-3">
+                    <i class="fas fa-compress-arrows-alt"></i> Fusionar Clientes
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Metadata Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Información del Sistema
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <th class="text-muted">ID</th>
+                        <td>{{ customer.id }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Creado</th>
+                        <td>{{ customer.created_at }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">Actualizado</th>
+                        <td>{{ customer.updated_at }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

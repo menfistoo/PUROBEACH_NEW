@@ -88,6 +88,93 @@
     --z-tooltip: 600;
 }
 
+/* ==================== Bootstrap Color Overrides ==================== */
+/* Align Bootstrap utilities with PuroBeach Design System */
+
+.bg-primary { background-color: var(--color-primary) !important; }
+.bg-secondary { background-color: var(--color-secondary) !important; }
+.bg-success { background-color: var(--color-success) !important; }
+.bg-danger { background-color: var(--color-error) !important; }
+.bg-warning { background-color: var(--color-warning) !important; }
+.bg-info { background-color: var(--color-info) !important; }
+
+.text-primary { color: var(--color-primary) !important; }
+.text-secondary { color: var(--color-secondary) !important; }
+.text-success { color: var(--color-success) !important; }
+.text-danger { color: var(--color-error) !important; }
+.text-warning { color: var(--color-warning) !important; }
+.text-info { color: var(--color-info) !important; }
+
+.border-primary { border-color: var(--color-primary) !important; }
+.border-secondary { border-color: var(--color-secondary) !important; }
+.border-success { border-color: var(--color-success) !important; }
+.border-danger { border-color: var(--color-error) !important; }
+.border-warning { border-color: var(--color-warning) !important; }
+.border-info { border-color: var(--color-info) !important; }
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%) !important;
+    border-color: var(--color-primary) !important;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%) !important;
+    border-color: var(--color-primary-dark) !important;
+}
+
+.btn-outline-primary {
+    color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--color-primary) !important;
+    color: var(--color-white) !important;
+}
+
+/* Nav Pills / Tabs */
+.nav-pills .nav-link {
+    color: var(--color-secondary) !important;
+    background-color: transparent;
+    border-radius: var(--border-radius-md);
+    transition: var(--transition-normal);
+}
+
+.nav-pills .nav-link:hover {
+    background-color: var(--color-accent) !important;
+    color: var(--color-secondary) !important;
+}
+
+.nav-pills .nav-link.active {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%) !important;
+    color: var(--color-white) !important;
+}
+
+/* Ensure sidebar links maintain their styles */
+.sidebar a,
+.sidebar a.nav-item,
+.sidebar a.nav-parent,
+.sidebar a.nav-child {
+    color: rgba(255, 255, 255, 0.7) !important;
+    text-decoration: none !important;
+}
+
+.sidebar a:hover,
+.sidebar a.nav-item:hover,
+.sidebar a.nav-parent:hover {
+    color: var(--color-white) !important;
+    text-decoration: none !important;
+}
+
+.sidebar a.nav-item.active,
+.sidebar a.nav-child.active {
+    color: var(--color-primary) !important;
+}
+
+.sidebar a.nav-parent.active {
+    color: var(--color-primary) !important;
+}
+
 /* ==================== Global Styles ==================== */
 * {
     margin: 0;
@@ -162,6 +249,12 @@ a:hover {
     color: var(--color-primary);
     font-size: 20px;
     font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.sidebar-subtitle {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 11px;
     letter-spacing: 1px;
 }
 
@@ -336,6 +429,11 @@ a:hover {
     color: var(--color-text);
 }
 
+.user-menu-arrow {
+    font-size: 12px;
+    color: var(--color-medium-gray);
+}
+
 /* ==================== Buttons ==================== */
 .btn {
     padding: 12px 24px;
@@ -414,6 +512,23 @@ a:hover {
     justify-content: space-between;
     align-items: center;
     background: transparent;
+}
+
+.card-header-primary {
+    background: linear-gradient(135deg, var(--color-secondary) 0%, #2A4A6C 100%);
+    color: var(--color-white);
+    padding: var(--space-5) var(--space-6);
+    margin: calc(var(--space-6) * -1);
+    margin-bottom: var(--space-6);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    border-bottom: none;
+}
+
+.card-header-primary h4,
+.card-header-primary h5,
+.card-header-primary .card-title {
+    color: var(--color-white);
+    margin: 0;
 }
 
 .card-title {
@@ -683,16 +798,8 @@ a:hover {
 }
 
 /* ==================== Utility Classes ==================== */
-.text-primary { color: var(--color-primary); }
-.text-secondary { color: var(--color-secondary); }
-.text-success { color: var(--color-success); }
-.text-danger { color: var(--color-error); }
-.text-warning { color: var(--color-warning); }
-.text-muted { color: var(--color-medium-gray); }
-
-.bg-primary { background-color: var(--color-primary); }
-.bg-secondary { background-color: var(--color-secondary); }
-.bg-light { background-color: var(--color-off-white); }
+.text-muted { color: var(--color-medium-gray) !important; }
+.bg-light { background-color: var(--color-off-white) !important; }
 
 .shadow-sm { box-shadow: var(--shadow-sm); }
 .shadow-md { box-shadow: var(--shadow-md); }
@@ -748,6 +855,23 @@ a:hover {
     justify-content: center;
     font-size: 36px;
     color: var(--color-white);
+}
+
+.login-actions {
+    margin-top: var(--space-8);
+}
+
+.login-hint {
+    margin-top: var(--space-6);
+    color: var(--color-medium-gray);
+    font-size: 12px;
+}
+
+.login-footer {
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-medium-gray);
 }
 
 /* ==================== Responsive ==================== */

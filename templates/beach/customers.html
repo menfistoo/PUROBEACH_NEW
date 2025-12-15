@@ -5,29 +5,214 @@
 {% block title %}Gestión de Clientes - PuroBeach{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <h2><i class="fas fa-users"></i> Gestión de Clientes</h2>
-    <p class="text-muted">Administración de clientes internos y externos</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-address-book"></i> Gestión de Clientes</h2>
+        <p class="text-muted mb-0">Administración de clientes internos y externos</p>
+    </div>
+    <a href="{{ url_for('beach.customers_create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nuevo Cliente
+    </a>
 </div>
 
-<div class="card">
-    <div class="card-body text-center py-5">
-        <i class="fas fa-users fa-5x text-muted mb-4"></i>
-        <h3>Módulo en Construcción</h3>
-        <p class="text-muted mb-4">
-            Este módulo estará disponible en la <strong>Fase 5</strong> del proyecto.
-        </p>
-        <div class="alert alert-info d-inline-block text-start">
-            <h6><i class="fas fa-clipboard-list"></i> Funcionalidades Planificadas:</h6>
-            <ul class="mb-0">
-                <li>Gestión de clientes internos (huéspedes) y externos</li>
-                <li>Integración con sistema de hotel (importación Excel)</li>
-                <li>Búsqueda y filtrado avanzado</li>
-                <li>Detección y fusión de duplicados</li>
-                <li>Gestión de preferencias y tags</li>
-                <li>Historial de reservas por cliente</li>
-            </ul>
+<!-- Stats Cards -->
+{% if stats %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50">Total Clientes</div>
+                        <div class="h3 mb-0">{{ stats.total }}</div>
+                    </div>
+                    <i class="fas fa-users fa-2x opacity-50"></i>
+                </div>
+            </div>
         </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50">Internos</div>
+                        <div class="h3 mb-0">{{ stats.interno }}</div>
+                    </div>
+                    <i class="fas fa-hotel fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50">Externos</div>
+                        <div class="h3 mb-0">{{ stats.externo }}</div>
+                    </div>
+                    <i class="fas fa-user-friends fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small">VIP</div>
+                        <div class="h3 mb-0">{{ stats.vip }}</div>
+                    </div>
+                    <i class="fas fa-star fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('beach.customers') }}" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control"
+                       placeholder="Buscar por nombre, teléfono, email o habitación"
+                       value="{{ search }}">
+            </div>
+            <div class="col-md-3">
+                <select name="type" class="form-select">
+                    <option value="">Todos los tipos</option>
+                    <option value="interno" {% if type_filter == 'interno' %}selected{% endif %}>
+                        Interno (Huésped)
+                    </option>
+                    <option value="externo" {% if type_filter == 'externo' %}selected{% endif %}>
+                        Externo
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" name="vip" value="1"
+                           id="vipFilter" {% if vip_filter == '1' %}checked{% endif %}>
+                    <label class="form-check-label" for="vipFilter">Solo VIP</label>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="fas fa-search"></i> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results count -->
+<div class="mb-3 text-muted">
+    <small>Mostrando {{ customers|length }} de {{ total }} clientes</small>
+</div>
+
+<!-- Customer Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Tipo</th>
+                    <th>Contacto</th>
+                    <th>Habitación</th>
+                    <th>VIP</th>
+                    <th>Reservas</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in customers %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('beach.customers_detail', customer_id=customer.id) }}"
+                           class="text-decoration-none">
+                            <strong>{{ customer.first_name }} {{ customer.last_name or '' }}</strong>
+                        </a>
+                    </td>
+                    <td>
+                        {% if customer.customer_type == 'interno' %}
+                        <span class="badge bg-info">
+                            <i class="fas fa-hotel"></i> Interno
+                        </span>
+                        {% else %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-user"></i> Externo
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if customer.phone %}
+                        <div><i class="fas fa-phone text-muted me-1"></i> {{ customer.phone }}</div>
+                        {% endif %}
+                        {% if customer.email %}
+                        <div><i class="fas fa-envelope text-muted me-1"></i> {{ customer.email }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if customer.room_number %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-door-open"></i> {{ customer.room_number }}
+                        </span>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if customer.vip_status %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-star"></i> VIP
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-outline-secondary">
+                            {{ customer.reservation_count or 0 }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('beach.customers_detail', customer_id=customer.id) }}"
+                               class="btn btn-outline-primary" title="Ver detalle">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('beach.customers_edit', customer_id=customer.id) }}"
+                               class="btn btn-outline-secondary" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST"
+                                  action="{{ url_for('beach.customers_delete', customer_id=customer.id) }}"
+                                  class="d-inline"
+                                  onsubmit="return confirm('¿Está seguro de eliminar este cliente?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-outline-danger" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-5">
+                        <i class="fas fa-users fa-3x mb-3 d-block opacity-50"></i>
+                        No se encontraron clientes
+                        {% if search or type_filter or vip_filter %}
+                        <br><small>Pruebe con otros filtros</small>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
