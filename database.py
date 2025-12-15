@@ -245,6 +245,7 @@ def create_tables(db):
             active INTEGER DEFAULT 1,
             theme_preference TEXT DEFAULT 'light',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP
         )
     ''')
