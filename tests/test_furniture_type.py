@@ -29,9 +29,15 @@ from models.furniture_type import (
 @pytest.fixture
 def app():
     """Create application for testing."""
-    app = create_app()
+    from database import init_db
+
+    app = create_app('test')
     app.config['TESTING'] = True
-    return app
+    app.config['WTF_CSRF_ENABLED'] = False
+
+    with app.app_context():
+        init_db()
+        yield app
 
 
 class TestFurnitureTypeModel:

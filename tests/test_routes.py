@@ -17,7 +17,11 @@ from app import create_app
 
 def test_public_routes():
     """Test public routes (no authentication required)."""
-    app = create_app()
+    from database import init_db
+
+    app = create_app('test')
+    with app.app_context():
+        init_db()
 
     with app.test_client() as client:
         # Test login page
@@ -37,7 +41,11 @@ def test_public_routes():
 
 def test_protected_routes():
     """Test that protected routes redirect to login."""
-    app = create_app()
+    from database import init_db
+
+    app = create_app('test')
+    with app.app_context():
+        init_db()
 
     protected_routes = [
         '/beach/map',

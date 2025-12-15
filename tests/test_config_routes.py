@@ -19,10 +19,15 @@ from database import get_db
 @pytest.fixture
 def app():
     """Create application for testing."""
-    app = create_app()
+    from database import init_db
+
+    app = create_app('test')
     app.config['TESTING'] = True
     app.config['WTF_CSRF_ENABLED'] = False
-    return app
+
+    with app.app_context():
+        init_db()
+        yield app
 
 
 @pytest.fixture

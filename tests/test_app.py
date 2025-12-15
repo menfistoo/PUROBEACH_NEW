@@ -16,8 +16,13 @@ def test_app():
     errors = []
 
     # Create app
-    app = create_app()
+    from database import init_db
+    app = create_app('test')
     app.config['TESTING'] = True
+
+    # Initialize test database
+    with app.app_context():
+        init_db()
 
     with app.test_client() as client:
         with app.app_context():

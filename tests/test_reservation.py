@@ -11,10 +11,15 @@ from database import get_db, init_db, migrate_reservations_v2, migrate_status_hi
 
 @pytest.fixture
 def app():
-    """Create test application."""
-    app = create_app()
+    """Create test application with migrations."""
+    import os
+    # Use conftest.py's test database path
+    test_db = os.environ.get('DATABASE_PATH', 'instance/test_beach_club.db')
+
+    app = create_app('test')
     app.config['TESTING'] = True
     app.config['WTF_CSRF_ENABLED'] = False
+    app.config['DATABASE_PATH'] = test_db
 
     with app.app_context():
         init_db()

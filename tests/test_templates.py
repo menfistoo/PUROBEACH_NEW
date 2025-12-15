@@ -18,10 +18,13 @@ from flask import render_template
 
 def test_all_templates():
     """Test that all templates render correctly."""
-    app = create_app()
+    from database import init_db
+
+    app = create_app('test')
     errors = []
 
     with app.app_context():
+        init_db()
         from models.zone import get_all_zones
         from models.furniture import get_all_furniture
         from models.user import get_all_users

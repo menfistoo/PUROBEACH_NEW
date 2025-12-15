@@ -18,9 +18,12 @@ from database import get_db
 
 def test_database_tables():
     """Test that all required tables exist."""
-    app = create_app()
+    from database import init_db
+
+    app = create_app('test')
 
     with app.app_context():
+        init_db()
         db = get_db()
         cursor = db.cursor()
 
@@ -42,9 +45,12 @@ def test_database_tables():
 
 def test_seed_data():
     """Test that seed data was created correctly."""
-    app = create_app()
+    from database import init_db
+
+    app = create_app('test')
 
     with app.app_context():
+        init_db()
         db = get_db()
         cursor = db.cursor()
 
