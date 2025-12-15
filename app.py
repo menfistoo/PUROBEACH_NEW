@@ -237,4 +237,5 @@ def configure_logging(app):
 # Create application instance for development server
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True)
+    # host='0.0.0.0' allows access from other devices on the network
+    app.run(host='0.0.0.0', debug=True)
