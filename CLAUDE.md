@@ -100,6 +100,52 @@ beach_club/
 - ✓ Rate limiting on login (5/min)
 - ✓ Session timeout (8h)
 
+### Code Maintainability
+
+**CRITICAL: Avoid monolithic files. Keep code modular and maintainable.**
+
+#### File Size Limits
+- **Target:** ~300-500 lines per module
+- **Warning:** >600 lines - consider splitting
+- **Critical:** >800 lines - must refactor before adding more code
+
+#### Module Organization Pattern
+When a file grows too large, split by responsibility:
+```
+models/
+├── reservation.py           # Re-exports for backward compatibility
+├── reservation_crud.py      # Create, read, update, delete
+├── reservation_state.py     # State transitions and logic
+└── reservation_queries.py   # Listing, filtering, statistics
+```
+
+#### Splitting Guidelines
+1. **By responsibility:** CRUD, queries, state management, utilities
+2. **By domain:** Keep related functions together
+3. **Backward compatible:** Use re-exports in main module
+4. **Clear sections:** Use header comments to organize within files
+
+```python
+# =============================================================================
+# SECTION NAME
+# =============================================================================
+```
+
+#### Proactive Maintenance
+- Split files **before** they become problematic
+- When adding new functionality, check if file is approaching limits
+- Prefer multiple focused modules over one large file
+- Each module should have a single, clear purpose
+
+#### Foreign Key Cascades
+Always verify CASCADE behavior when creating relationships:
+```sql
+-- Tables with user data should CASCADE on delete
+REFERENCES parent_table(id) ON DELETE CASCADE
+
+-- If no CASCADE, handle in application code before delete
+```
+
 ## Database Schema Summary
 
 ### Core Tables (22 total)
