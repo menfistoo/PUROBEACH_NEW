@@ -27,7 +27,7 @@
 | 4.5 | Enhanced Furniture Types | Complete | 100% |
 | 4.6 | Enhanced Furniture Management | Complete | 100% |
 | 5 | Customers | Complete | 100% |
-| 6A | Reservations: Core CRUD + States | In Progress | 60% |
+| 6A | Reservations: Core CRUD + States | Complete | 100% |
 | 6B | Reservations: Availability + Multi-day | Not Started | 0% |
 | 6C | Reservations: Pricing + PMS | Not Started | 0% |
 | 7 | Interactive Map | Not Started | 0% |
@@ -327,14 +327,17 @@
 | - sync_preferences_to_customer() | Complete | Bidirectional preference sync |
 | - update_customer_statistics() | Complete | Auto-update visits on state change |
 | - get_status_history() | Complete | State change audit trail |
-| **Routes & Templates** | Pending | Connect frontend to backend |
-| Reservation list route | Pending | GET /beach/reservations with filters |
-| Reservation create route | Pending | GET/POST /beach/reservations/create |
-| Reservation detail route | Pending | GET /beach/reservations/<id> |
-| Reservation edit route | Pending | GET/POST /beach/reservations/<id>/edit |
-| State toggle API | Pending | POST /beach/api/reservations/<id>/toggle-state |
-| Status history API | Pending | GET /beach/api/reservations/<id>/history |
-| Update templates | Pending | Connect forms to new model |
+| **Routes & Templates** | Complete | Connect frontend to backend |
+| - Reservation list route | Complete | GET /beach/reservations with filters |
+| - Reservation create route | Complete | GET/POST /beach/reservations/create |
+| - Reservation detail route | Complete | GET /beach/reservations/<id> |
+| - Reservation edit route | Complete | GET/POST /beach/reservations/<id>/edit |
+| - Reservation delete route | Complete | POST /beach/reservations/<id>/delete |
+| - Reservation cancel route | Complete | POST /beach/reservations/<id>/cancel |
+| - State toggle API | Complete | POST /beach/api/reservations/<id>/toggle-state |
+| - Status history API | Complete | GET /beach/api/reservations/<id>/history |
+| - Available furniture API | Complete | GET /beach/api/furniture/available |
+| - Templates | Complete | reservations.html, reservation_form.html, reservation_detail.html |
 
 ---
 
