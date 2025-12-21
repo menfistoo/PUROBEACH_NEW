@@ -7,8 +7,10 @@ This module re-exports all functions from the split modules for backward compati
 - reservation_state.py: State management and transitions
 - reservation_crud.py: Create, read, update, delete operations
 - reservation_queries.py: Listing, filtering, and availability
+- reservation_availability.py: Bulk availability and duplicate detection (Phase 6B)
 
 Phase 6A: Core CRUD + State Management
+Phase 6B: Availability + Multi-day + Suggestions
 """
 
 # =============================================================================
@@ -74,6 +76,14 @@ from .reservation_queries import (
     get_customer_reservation_history,
 )
 
+# Bulk availability operations (Phase 6B)
+from .reservation_availability import (
+    check_furniture_availability_bulk,
+    check_duplicate_reservation,
+    get_furniture_availability_map,
+    get_conflicting_reservations,
+)
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================
@@ -124,4 +134,10 @@ __all__ = [
     'get_reservation_furniture',
     'get_reservations_by_furniture',
     'get_customer_reservation_history',
+
+    # Bulk availability (Phase 6B)
+    'check_furniture_availability_bulk',
+    'check_duplicate_reservation',
+    'get_furniture_availability_map',
+    'get_conflicting_reservations',
 ]

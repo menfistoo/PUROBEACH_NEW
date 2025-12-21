@@ -1021,3 +1021,174 @@ def api_available_furniture():
             'position_y': f['position_y']
         } for f in furniture]
     })
+
+
+# ============================================================================
+# PHASE 6B: BULK AVAILABILITY API ENDPOINTS
+# ============================================================================
+
+@beach_bp.route('/api/reservations/check-availability', methods=['POST'])
+@login_required
+@permission_required('beach.reservations.view')
+def api_check_availability_bulk():
+    """
+    Check availability for multiple furniture items across multiple dates.
+
+    Request JSON:
+        {
+            "furniture_ids": [1, 2, 3],
+            "dates": ["2025-01-16", "2025-01-17"],
+            "exclude_reservation_id": 123  // optional
+        }
+
+    Response:
+        {
+            "all_available": true/false,
+            "unavailable": [...],
+            "availability_matrix": {...}
+        }
+    """
+    from models.reservation import check_furniture_availability_bulk
+
+    data = request.get_json()
+    furniture_ids = data.get('furniture_ids', [])
+    dates = data.get('dates', [])
+    exclude_reservation_id = data.get('exclude_reservation_id')
+
+    if not furniture_ids:
+        return jsonify({'error': 'furniture_ids requeridos'}), 400
+    if not dates:
+        return jsonify({'error': 'dates requeridos'}), 400
+
+    result = check_furniture_availability_bulk(
+        furniture_ids=furniture_ids,
+        dates=dates,
+        exclude_reservation_id=exclude_reservation_id
+    )
+
+    return jsonify(result)
+
+
+@beach_bp.route('/api/reservations/check-duplicate', methods=['POST'])
+@login_required
+@permission_required('beach.reservations.view')
+def api_check_duplicate():
+    """
+    Check for duplicate reservation (same customer + dates).
+
+    Request JSON:
+        {
+            "customer_id": 123,
+            "dates": ["2025-01-16", "2025-01-17"],
+            "exclude_reservation_id": 456  // optional
+        }
+
+    Response:
+        {
+            "is_duplicate": true/false,
+            "existing_reservation": {...} or null
+        }
+    """
+    from models.reservation import check_duplicate_reservation
+
+    data = request.get_json()
+    customer_id = data.get('customer_id')
+    dates = data.get('dates', [])
+    exclude_reservation_id = data.get('exclude_reservation_id')
+
+    if not customer_id:
+        return jsonify({'error': 'customer_id requerido'}), 400
+    if not dates:
+        return jsonify({'error': 'dates requeridos'}), 400
+
+    is_duplicate, existing = check_duplicate_reservation(
+        customer_id=customer_id,
+        dates=dates,
+        exclude_reservation_id=exclude_reservation_id
+    )
+
+    return jsonify({
+        'is_duplicate': is_duplicate,
+        'existing_reservation': existing
+    })
+
+
+@beach_bp.route('/api/reservations/availability-map')
+@login_required
+@permission_required('beach.reservations.view')
+def api_availability_map():
+    """
+    Get availability map for date range (calendar/grid view).
+
+    Query params:
+        date_from: Start date (required)
+        date_to: End date (required)
+        zone_id: Filter by zone (optional)
+        type: Filter by furniture type (optional)
+
+    Response:
+        {
+            "furniture": [...],
+            "dates": [...],
+            "availability": {...},
+            "summary": {...}
+        }
+    """
+    from models.reservation import get_furniture_availability_map
+
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    zone_id = request.args.get('zone_id', type=int)
+    furniture_type = request.args.get('type')
+
+    if not date_from or not date_to:
+        return jsonify({'error': 'date_from y date_to requeridos'}), 400
+
+    result = get_furniture_availability_map(
+        date_from=date_from,
+        date_to=date_to,
+        zone_id=zone_id,
+        furniture_type=furniture_type
+    )
+
+    return jsonify(result)
+
+
+@beach_bp.route('/api/reservations/conflicts')
+@login_required
+@permission_required('beach.reservations.view')
+def api_get_conflicts():
+    """
+    Get conflicting reservations for furniture on a date.
+
+    Query params:
+        furniture_ids: Comma-separated furniture IDs
+        date: Date to check
+        exclude_reservation_id: Reservation to exclude (optional)
+
+    Response:
+        {
+            "conflicts": [...]
+        }
+    """
+    from models.reservation import get_conflicting_reservations
+
+    furniture_ids_str = request.args.get('furniture_ids', '')
+    date_str = request.args.get('date')
+    exclude_reservation_id = request.args.get('exclude_reservation_id', type=int)
+
+    if not furniture_ids_str or not date_str:
+        return jsonify({'error': 'furniture_ids y date requeridos'}), 400
+
+    try:
+        furniture_ids = [int(x) for x in furniture_ids_str.split(',')]
+    except ValueError:
+        return jsonify({'error': 'furniture_ids debe ser lista de enteros'}), 400
+
+    conflicts = get_conflicting_reservations(
+        furniture_ids=furniture_ids,
+        date=date_str,
+        exclude_reservation_id=exclude_reservation_id
+    )
+
+    return jsonify({'conflicts': conflicts})
