@@ -204,7 +204,7 @@
                                 </td>
                                 <td>{{ res.num_people }}</td>
                                 <td>
-                                    <a href="#" class="btn btn-sm btn-outline-primary" title="Ver reserva">
+                                    <a href="{{ url_for('beach.reservations_detail', reservation_id=res.id) }}" class="btn btn-sm btn-outline-primary" title="Ver reserva">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                 </td>

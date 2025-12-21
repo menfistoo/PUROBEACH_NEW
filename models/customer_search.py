@@ -3,17 +3,59 @@ Customer search and integration functions.
 Handles unified search, hotel guest integration, and customer merging.
 """
 
+import unicodedata
 from database import get_db
 from .customer_crud import get_customer_by_id, set_customer_preferences
+
+
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
+
+def normalize_text(text: str) -> str:
+    """
+    Normalize text for accent-insensitive search.
+    Removes accents and converts to lowercase.
+
+    Examples:
+        'García' -> 'garcia'
+        'José María' -> 'jose maria'
+    """
+    if not text:
+        return ''
+    # Decompose unicode characters (é -> e + combining accent)
+    normalized = unicodedata.normalize('NFD', text)
+    # Remove combining diacritical marks (accents)
+    without_accents = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+    return without_accents.lower()
 
 
 # =============================================================================
 # UNIFIED SEARCH
 # =============================================================================
 
+def _matches_search(record: dict, search_words: list, fields: list) -> bool:
+    """
+    Check if a record matches all search words in any of the specified fields.
+    Uses accent-insensitive matching.
+    """
+    # Build searchable text from all fields
+    searchable_parts = []
+    for field in fields:
+        value = record.get(field)
+        if value:
+            searchable_parts.append(normalize_text(str(value)))
+
+    searchable_text = ' '.join(searchable_parts)
+
+    # All words must match somewhere
+    return all(word in searchable_text for word in search_words)
+
+
 def search_customers_unified(query: str, customer_type: str = None, limit: int = 20) -> list:
     """
     Search customers from both beach_customers and hotel_guests tables.
+    Supports accent-insensitive and multi-word search.
 
     Args:
         query: Search query string (name, phone, room number)
@@ -28,32 +70,42 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
     db = get_db()
     cursor = db.cursor()
     results = []
-    search_term = f'%{query}%'
 
-    # Search beach_customers
+    # Normalize the query for accent-insensitive search
+    normalized_query = normalize_text(query)
+    search_words = normalized_query.split()
+
+    if not search_words:
+        return []
+
+    # Search beach_customers - fetch more results for Python-side filtering
     customer_query = '''
         SELECT c.*, 'customer' as source
         FROM beach_customers c
-        WHERE (c.first_name LIKE ? OR c.last_name LIKE ? OR
-               c.email LIKE ? OR c.phone LIKE ? OR c.room_number LIKE ?)
+        WHERE 1=1
     '''
-    params = [search_term] * 5
+    params = []
 
     if customer_type:
         customer_query += ' AND c.customer_type = ?'
         params.append(customer_type)
 
-    customer_query += ' ORDER BY c.created_at DESC LIMIT ?'
-    params.append(limit)
+    customer_query += ' ORDER BY c.total_visits DESC, c.created_at DESC LIMIT ?'
+    params.append(limit * 10)  # Fetch more for filtering
 
     cursor.execute(customer_query, params)
+
+    customer_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number']
     for row in cursor.fetchall():
         customer = dict(row)
-        customer['display_name'] = f"{customer['first_name']} {customer['last_name'] or ''}".strip()
-        results.append(customer)
+        if _matches_search(customer, search_words, customer_fields):
+            customer['display_name'] = f"{customer['first_name']} {customer['last_name'] or ''}".strip()
+            results.append(customer)
+            if len(results) >= limit:
+                break
 
     # Search hotel_guests (only if customer_type is not 'externo')
-    if customer_type != 'externo':
+    if customer_type != 'externo' and len(results) < limit:
         guest_query = '''
             SELECT h.*,
                    'hotel_guest' as source,
@@ -62,25 +114,27 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                       AND h2.arrival_date = h.arrival_date
                       AND h2.departure_date >= date('now')) as room_guest_count
             FROM hotel_guests h
-            WHERE (h.guest_name LIKE ? OR h.room_number LIKE ? OR
-                   h.email LIKE ? OR h.phone LIKE ?)
-              AND h.departure_date >= date('now')
+            WHERE h.departure_date >= date('now')
             ORDER BY h.room_number, h.is_main_guest DESC, h.guest_name
             LIMIT ?
         '''
-        cursor.execute(guest_query, [search_term, search_term, search_term, search_term, limit])
+        cursor.execute(guest_query, [limit * 10])
 
         # Get existing customer room numbers to avoid duplicates
         existing_rooms = {c['room_number'] for c in results if c.get('room_number') and c.get('customer_type') == 'interno'}
 
+        guest_fields = ['guest_name', 'room_number', 'email', 'phone']
         for row in cursor.fetchall():
             guest = dict(row)
             # Skip if already have a customer with this room number
             if guest['room_number'] in existing_rooms:
                 continue
-            guest['display_name'] = guest['guest_name']
-            guest['customer_type'] = 'interno'  # Hotel guests are always interno
-            results.append(guest)
+            if _matches_search(guest, search_words, guest_fields):
+                guest['display_name'] = guest['guest_name']
+                guest['customer_type'] = 'interno'  # Hotel guests are always interno
+                results.append(guest)
+                if len(results) >= limit:
+                    break
 
     return results[:limit]
 
