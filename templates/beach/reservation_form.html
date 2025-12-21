@@ -12,685 +12,666 @@
             <li class="breadcrumb-item active">{{ page_title }}</li>
         </ol>
     </nav>
-    <h2><i class="fas fa-calendar-plus"></i> {{ page_title }}</h2>
+</div>
+
+<!-- Progress Steps -->
+<div class="reservation-steps mb-4">
+    <div class="step-container">
+        <div class="step active" id="step1Indicator">
+            <div class="step-number">1</div>
+            <div class="step-label">Cliente</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step2Indicator">
+            <div class="step-number">2</div>
+            <div class="step-label">Detalles</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step3Indicator">
+            <div class="step-number">3</div>
+            <div class="step-label">Confirmar</div>
+        </div>
+    </div>
 </div>
 
 <form method="POST" id="reservationForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="customer_id" id="customerId" value="">
 
     <div class="row">
-        <!-- Left Column: Main Form -->
+        <!-- Left Column: Customer + Reservation Details -->
         <div class="col-lg-8">
-            <!-- Customer Selection -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-user"></i> Cliente</h5>
+            <!-- ========== STEP 1: CUSTOMER ========== -->
+            <div class="card reservation-card mb-4" id="customerSection">
+                <div class="card-header card-header-primary">
+                    <div class="d-flex align-items-center">
+                        <div class="step-icon me-3">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">Paso 1: Cliente</h5>
+                            <small class="opacity-75">Busca un cliente existente o crea uno nuevo</small>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
                     {% if mode == 'create' %}
-                    <!-- Customer Type Filter -->
-                    <div class="mb-3">
-                        <label class="form-label">Tipo de Cliente</label>
-                        <select id="customerTypeFilter" class="form-select">
-                            <option value="">Todos los clientes</option>
-                            <option value="interno">Internos (Hotel)</option>
-                            <option value="externo">Externos</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Buscar Cliente <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <input type="text" id="customerSearch" class="form-control"
-                                   placeholder="Buscar por nombre, teléfono, habitación..."
+                    <!-- Unified Search Bar -->
+                    <div class="customer-search-section">
+                        <div class="search-input-wrapper">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="customerSearch" class="form-control form-control-lg ps-5"
+                                   placeholder="Buscar por nombre, habitacion o telefono..."
                                    autocomplete="off">
-                            <button type="button" class="btn btn-outline-secondary" id="clearCustomer"
-                                    style="display: none;">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        <div id="customerResults" class="list-group mt-1" style="display: none; position: absolute; z-index: 1000; width: calc(100% - 2rem);"></div>
-                        <small class="text-muted">Busca entre clientes registrados y huéspedes del hotel</small>
-                    </div>
-
-                    <input type="hidden" name="customer_id" id="customerId" value="">
-
-                    <div id="selectedCustomer" class="alert alert-info" style="display: none;">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <strong id="customerName"></strong>
-                                <div class="small" id="customerDetails"></div>
+                            <div class="search-loading" id="searchLoading" style="display: none;">
+                                <i class="fas fa-spinner fa-spin"></i>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newCustomerModal">
-                                <i class="fas fa-plus"></i> Nuevo Cliente
+                        </div>
+
+                        <!-- Search Results Container -->
+                        <div id="searchResults" class="search-results-container" style="display: none;">
+                            <!-- Beach Club Customers Section -->
+                            <div id="beachClubResults" class="results-section" style="display: none;">
+                                <div class="results-header">
+                                    <i class="fas fa-umbrella-beach"></i> Clientes Beach Club
+                                </div>
+                                <div id="beachClubList" class="results-list"></div>
+                            </div>
+
+                            <!-- Hotel Guests Section -->
+                            <div id="hotelGuestsResults" class="results-section" style="display: none;">
+                                <div class="results-header">
+                                    <i class="fas fa-hotel"></i> Huespedes Hotel
+                                </div>
+                                <div id="hotelGuestsList" class="results-list"></div>
+                            </div>
+
+                            <!-- No Results + Create Option -->
+                            <div id="noResultsSection" class="no-results-section" style="display: none;">
+                                <div class="no-results-message">
+                                    <i class="fas fa-search"></i>
+                                    <span>No se encontraron resultados para "<span id="searchQueryDisplay"></span>"</span>
+                                </div>
+                            </div>
+
+                            <!-- Create New Customer Option -->
+                            <div class="create-customer-option" id="createCustomerOption">
+                                <div class="divider-line"><span>o</span></div>
+                                <button type="button" class="btn btn-outline-primary w-100" id="showCreateFormBtn">
+                                    <i class="fas fa-plus-circle me-2"></i>Crear nuevo cliente externo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Inline Create Customer Form -->
+                    <div id="createCustomerForm" class="create-customer-form" style="display: none;">
+                        <div class="form-header">
+                            <h6><i class="fas fa-user-plus me-2"></i>Crear Cliente Externo</h6>
+                            <button type="button" class="btn btn-sm btn-link" id="cancelCreateBtn">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" id="newFirstName" class="form-control" placeholder="Nombre">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Apellidos</label>
+                                <input type="text" id="newLastName" class="form-control" placeholder="Apellidos">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefono <span class="text-danger">*</span></label>
+                                <div class="phone-input-group">
+                                    <select id="newCountryCode" class="form-select country-select">
+                                        <option value="+34" data-flag="ES">&#x1F1EA;&#x1F1F8; +34</option>
+                                        <option value="+49" data-flag="DE">&#x1F1E9;&#x1F1EA; +49</option>
+                                        <option value="+44" data-flag="GB">&#x1F1EC;&#x1F1E7; +44</option>
+                                        <option value="+33" data-flag="FR">&#x1F1EB;&#x1F1F7; +33</option>
+                                        <option value="+39" data-flag="IT">&#x1F1EE;&#x1F1F9; +39</option>
+                                        <option value="+31" data-flag="NL">&#x1F1F3;&#x1F1F1; +31</option>
+                                        <option value="+351" data-flag="PT">&#x1F1F5;&#x1F1F9; +351</option>
+                                        <option value="+41" data-flag="CH">&#x1F1E8;&#x1F1ED; +41</option>
+                                        <option value="+43" data-flag="AT">&#x1F1E6;&#x1F1F9; +43</option>
+                                        <option value="+7" data-flag="RU">&#x1F1F7;&#x1F1FA; +7</option>
+                                        <option value="+1" data-flag="US">&#x1F1FA;&#x1F1F8; +1</option>
+                                    </select>
+                                    <input type="tel" id="newPhone" class="form-control" placeholder="612 345 678">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" id="newEmail" class="form-control" placeholder="email@ejemplo.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Idioma</label>
+                                <select id="newLanguage" class="form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="ES">&#x1F1EA;&#x1F1F8; Espanol</option>
+                                    <option value="EN">&#x1F1EC;&#x1F1E7; Ingles</option>
+                                    <option value="DE">&#x1F1E9;&#x1F1EA; Aleman</option>
+                                    <option value="FR">&#x1F1EB;&#x1F1F7; Frances</option>
+                                    <option value="IT">&#x1F1EE;&#x1F1F9; Italiano</option>
+                                    <option value="PT">&#x1F1F5;&#x1F1F9; Portugues</option>
+                                    <option value="NL">&#x1F1F3;&#x1F1F1; Holandes</option>
+                                    <option value="RU">&#x1F1F7;&#x1F1FA; Ruso</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Preferencias</label>
+                                <div class="preferences-inline">
+                                    {% for pref in preferences %}
+                                    <label class="preference-chip-inline">
+                                        <input type="checkbox" class="new-customer-pref" value="{{ pref.id }}" data-code="{{ pref.code }}">
+                                        <span class="chip-content">
+                                            {% if pref.icon %}<i class="fas {{ pref.icon }}"></i>{% endif %}
+                                            {{ pref.name }}
+                                        </span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Notas</label>
+                                <textarea id="newNotes" class="form-control" rows="2" placeholder="Observaciones sobre el cliente..."></textarea>
+                            </div>
+                        </div>
+
+                        <div id="createCustomerError" class="alert alert-danger mt-3" style="display: none;"></div>
+
+                        <div class="form-actions mt-3">
+                            <button type="button" class="btn btn-secondary" id="cancelCreate2Btn">Cancelar</button>
+                            <button type="button" class="btn btn-primary" id="saveNewCustomerBtn">
+                                <i class="fas fa-check me-1"></i> Crear y Seleccionar
                             </button>
                         </div>
                     </div>
+
+                    <!-- Selected Customer Display -->
+                    <div id="selectedCustomer" class="selected-customer-card" style="display: none;">
+                        <div class="customer-header">
+                            <div class="customer-avatar" id="customerAvatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="customer-main-info">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <h4 class="mb-0" id="customerName">-</h4>
+                                    <span id="customerVipBadge" class="badge bg-warning text-dark" style="display: none;">
+                                        <i class="fas fa-star"></i> VIP
+                                    </span>
+                                    <span id="customerTypeBadge" class="badge bg-info">Interno</span>
+                                </div>
+                                <div class="customer-subtitle mt-1" id="customerSubtitle">
+                                    <span id="customerRoomInfo">
+                                        <i class="fas fa-door-open"></i> <span id="customerRoom">-</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="customer-actions">
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="clearCustomerBtn">
+                                    <i class="fas fa-times"></i> Cambiar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Hotel Guest Info -->
+                        <div id="hotelInfoSection" class="hotel-info-section" style="display: none;">
+                            <div class="row g-2">
+                                <div class="col-auto">
+                                    <div class="info-badge">
+                                        <i class="fas fa-calendar-check"></i>
+                                        <span>Check-in: <strong id="customerArrival">-</strong></span>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="info-badge">
+                                        <i class="fas fa-calendar-times"></i>
+                                        <span>Check-out: <strong id="customerDeparture">-</strong></span>
+                                    </div>
+                                </div>
+                                <div class="col-auto" id="bookingRefBadge" style="display: none;">
+                                    <div class="info-badge">
+                                        <i class="fas fa-ticket-alt"></i>
+                                        <span>Reserva: <strong id="customerBookingRef">-</strong></span>
+                                    </div>
+                                </div>
+                                <div class="col-auto" id="languageBadge" style="display: none;">
+                                    <div class="info-badge">
+                                        <i class="fas fa-globe"></i>
+                                        <span id="customerLanguage">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Guest Selector -->
+                        <div id="guestSelectorSection" class="guest-selector-section" style="display: none;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-user-friends text-primary"></i>
+                                <span class="text-muted small"><span id="guestCount">2</span> huespedes en habitacion:</span>
+                                <select id="guestSelector" class="form-select form-select-sm flex-grow-1"></select>
+                            </div>
+                        </div>
+
+                        <!-- Editable Fields -->
+                        <div class="customer-additional-fields mt-3">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">Telefono</label>
+                                    <div class="phone-input-group phone-input-small">
+                                        <select id="customerCountryCode" class="form-select form-select-sm country-select">
+                                            <option value="+34">&#x1F1EA;&#x1F1F8; +34</option>
+                                            <option value="+49">&#x1F1E9;&#x1F1EA; +49</option>
+                                            <option value="+44">&#x1F1EC;&#x1F1E7; +44</option>
+                                            <option value="+33">&#x1F1EB;&#x1F1F7; +33</option>
+                                            <option value="+39">&#x1F1EE;&#x1F1F9; +39</option>
+                                            <option value="+31">&#x1F1F3;&#x1F1F1; +31</option>
+                                            <option value="+351">&#x1F1F5;&#x1F1F9; +351</option>
+                                            <option value="+7">&#x1F1F7;&#x1F1FA; +7</option>
+                                            <option value="+1">&#x1F1FA;&#x1F1F8; +1</option>
+                                        </select>
+                                        <input type="tel" id="customerPhone" class="form-control form-control-sm" placeholder="Telefono">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">Email</label>
+                                    <input type="email" id="customerEmail" class="form-control form-control-sm" placeholder="Email">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes & Preferences -->
+                        <div id="customerPrefsNotesSection" class="customer-prefs-notes mt-3" style="display: none;">
+                            <div id="customerNotesDisplay" class="notes-display" style="display: none;">
+                                <i class="fas fa-sticky-note text-warning"></i>
+                                <span id="customerNotesText"></span>
+                            </div>
+                            <div id="customerPrefsDisplay" class="prefs-display" style="display: none;">
+                                <span class="prefs-label">Preferencias:</span>
+                                <span id="customerPrefsBadges"></span>
+                            </div>
+                        </div>
+
+                        <!-- History -->
+                        <div id="customerHistorySection" class="history-section mt-3" style="display: none;">
+                            <div class="history-header">
+                                <span><i class="fas fa-history text-primary"></i> <span id="customerVisitsCount">0</span> visitas anteriores</span>
+                                <button type="button" class="btn btn-link btn-sm p-0" id="toggleHistoryBtn">
+                                    Ver <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div id="customerHistoryList" class="history-list" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="emptyState" class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h5>Busca o crea un cliente</h5>
+                        <p class="text-muted mb-0">Escribe nombre, numero de habitacion o telefono</p>
+                    </div>
+
                     {% else %}
-                    <!-- Edit mode: Show customer info read-only -->
-                    <div class="alert alert-secondary">
-                        <strong>{{ reservation.customer_name }}</strong>
-                        <div class="small">
-                            {% if reservation.customer_type == 'interno' %}
-                            <i class="fas fa-hotel"></i> Hab. {{ reservation.customer_room or '-' }}
-                            {% else %}
-                            <i class="fas fa-user"></i> Externo
-                            {% endif %}
+                    <!-- Edit mode -->
+                    <div class="selected-customer-card">
+                        <div class="customer-header">
+                            <div class="customer-avatar {% if reservation.customer_type == 'interno' %}hotel{% endif %}">
+                                <i class="fas {% if reservation.customer_type == 'interno' %}fa-hotel{% else %}fa-user{% endif %}"></i>
+                            </div>
+                            <div class="customer-main-info">
+                                <h4 class="mb-0">{{ reservation.customer_name }}</h4>
+                                <div class="customer-subtitle mt-1">
+                                    {% if reservation.customer_type == 'interno' %}
+                                    <span class="badge bg-info">Huesped Hotel</span>
+                                    <span class="ms-2"><i class="fas fa-door-open"></i> Hab. {{ reservation.customer_room or '-' }}</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Cliente Externo</span>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Date & People -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-calendar"></i> Fecha y Personas</h5>
+            <!-- ========== STEP 2: RESERVATION DETAILS ========== -->
+            <div class="card reservation-card mb-4" id="reservationSection">
+                <div class="card-header card-header-gold">
+                    <div class="d-flex align-items-center">
+                        <div class="step-icon me-3">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">Paso 2: Detalles de la Reserva</h5>
+                            <small class="opacity-75">Fecha, horario y mobiliario</small>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label class="form-label">Fecha <span class="text-danger">*</span></label>
-                            <input type="date" name="reservation_date" id="reservationDate" class="form-control" required
-                                   value="{{ reservation.reservation_date if reservation else (selected_date or '') }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Horario</label>
-                            <select name="time_slot" class="form-select">
-                                <option value="all_day" {% if not reservation or reservation.time_slot == 'all_day' %}selected{% endif %}>Todo el día</option>
-                                <option value="morning" {% if reservation and reservation.time_slot == 'morning' %}selected{% endif %}>Mañana</option>
-                                <option value="afternoon" {% if reservation and reservation.time_slot == 'afternoon' %}selected{% endif %}>Tarde</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Personas <span class="text-danger">*</span></label>
-                            <input type="number" name="num_people" id="numPeople" class="form-control"
-                                   min="1" max="20" required
-                                   value="{{ reservation.num_people if reservation else 2 }}">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Furniture Selection -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-couch"></i> Mobiliario</h5>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="refreshFurniture">
-                        <i class="fas fa-sync"></i> Actualizar
-                    </button>
-                </div>
-                <div class="card-body">
-                    <!-- Filters -->
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <select id="furnitureZoneFilter" class="form-select form-select-sm">
-                                <option value="">Todas las zonas</option>
-                                {% for zone in zones %}
-                                <option value="{{ zone.id }}">{{ zone.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <select id="furnitureTypeFilter" class="form-select form-select-sm">
-                                <option value="">Todos los tipos</option>
-                                {% for ft in furniture_types %}
-                                <option value="{{ ft.type_code }}">{{ ft.display_name }}</option>
-                                {% endfor %}
-                            </select>
+                    <!-- Date & Time -->
+                    <div class="booking-basics mb-4">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-calendar text-primary me-1"></i> Fecha
+                                </label>
+                                <input type="date" name="reservation_date" id="reservationDate"
+                                       class="form-control form-control-lg" required
+                                       value="{{ reservation.reservation_date if reservation else (selected_date or '') }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-clock text-primary me-1"></i> Horario
+                                </label>
+                                <select name="time_slot" class="form-select form-select-lg">
+                                    <option value="all_day" {% if not reservation or reservation.time_slot == 'all_day' %}selected{% endif %}>Todo el dia</option>
+                                    <option value="morning" {% if reservation and reservation.time_slot == 'morning' %}selected{% endif %}>Manana</option>
+                                    <option value="afternoon" {% if reservation and reservation.time_slot == 'afternoon' %}selected{% endif %}>Tarde</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-users text-primary me-1"></i> Personas
+                                </label>
+                                <input type="number" name="num_people" id="numPeople"
+                                       class="form-control form-control-lg" min="1" max="20" required
+                                       value="{{ reservation.num_people if reservation else 2 }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-flag text-primary me-1"></i> Estado
+                                </label>
+                                <select name="state_id" id="reservationState" class="form-select form-select-lg">
+                                    {% for state in states %}
+                                    <option value="{{ state.id }}"
+                                            {% if reservation and reservation.state_id == state.id %}selected{% endif %}
+                                            {% if not reservation and state.code == 'pendiente' %}selected{% endif %}>
+                                        {{ state.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Furniture Grid -->
-                    <div id="furnitureGrid" class="row g-2">
-                        <div class="col-12 text-center py-5 text-muted">
-                            <i class="fas fa-calendar fa-2x mb-2"></i>
-                            <p>Seleccione una fecha para ver disponibilidad</p>
+                    <!-- Furniture -->
+                    <div class="furniture-selection mb-4">
+                        <div class="furniture-header">
+                            <div>
+                                <h6 class="mb-1"><i class="fas fa-umbrella-beach text-primary me-2"></i>Seleccionar Mobiliario</h6>
+                                <small class="text-muted">Haz clic para seleccionar</small>
+                            </div>
+                            <div class="furniture-filters">
+                                <select id="furnitureZoneFilter" class="form-select form-select-sm">
+                                    <option value="">Todas zonas</option>
+                                    {% for zone in zones %}
+                                    <option value="{{ zone.id }}">{{ zone.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select id="furnitureTypeFilter" class="form-select form-select-sm">
+                                    <option value="">Todos tipos</option>
+                                    {% for ft in furniture_types %}
+                                    <option value="{{ ft.type_code }}">{{ ft.display_name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="refreshFurniture">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="furnitureGrid" class="furniture-grid">
+                            <div class="furniture-placeholder">
+                                <i class="fas fa-calendar-day fa-3x mb-3 text-muted"></i>
+                                <p class="mb-0">Seleccione una fecha para ver disponibilidad</p>
+                            </div>
+                        </div>
+                        <div class="furniture-summary">
+                            <div class="summary-item">
+                                <span class="summary-label">Seleccionados:</span>
+                                <span class="summary-value" id="selectedCount">0</span>
+                            </div>
+                            <div class="summary-legend">
+                                <span class="legend-item"><span class="dot available"></span> Disponible</span>
+                                <span class="legend-item"><span class="dot selected"></span> Seleccionado</span>
+                                <span class="legend-item"><span class="dot occupied"></span> Ocupado</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Selected count -->
-                    <div class="mt-3 text-muted">
-                        <small>Seleccionados: <strong id="selectedCount">0</strong></small>
+                    <!-- Payment -->
+                    <div class="payment-section mb-4">
+                        <h6 class="section-title"><i class="fas fa-credit-card text-primary me-2"></i>Pago</h6>
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">Estado de Pago</label>
+                                <select name="payment_status" class="form-select">
+                                    <option value="NO" {% if not reservation or reservation.payment_status == 'NO' %}selected{% endif %}>Pendiente</option>
+                                    <option value="SI" {% if reservation and reservation.payment_status == 'SI' %}selected{% endif %}>Pagado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="charge_to_room"
+                                           id="chargeToRoom" value="1"
+                                           {% if reservation and reservation.charge_to_room %}checked{% endif %}>
+                                    <label class="form-check-label" for="chargeToRoom">
+                                        <i class="fas fa-hotel me-1"></i> Cargar a habitacion
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4" id="chargeRefContainer"
+                                 style="display: {% if reservation and reservation.charge_to_room %}block{% else %}none{% endif %};">
+                                <label class="form-label">Referencia</label>
+                                <input type="text" name="charge_reference" id="chargeReference" class="form-control"
+                                       value="{{ reservation.charge_reference if reservation else '' }}" placeholder="Ej: Hab. 205">
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Notes -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-sticky-note"></i> Notas</h5>
-                </div>
-                <div class="card-body">
-                    <textarea name="notes" class="form-control" rows="3"
-                              placeholder="Observaciones para la reserva...">{{ reservation.notes if reservation else '' }}</textarea>
+                    <!-- Preferences -->
+                    <div class="preferences-section mb-4">
+                        <h6 class="section-title"><i class="fas fa-heart text-primary me-2"></i>Preferencias para esta reserva</h6>
+                        <div class="preferences-grid">
+                            {% set current_prefs = (reservation.preferences or '').split(',') if reservation else [] %}
+                            {% for pref in preferences %}
+                            <label class="preference-chip">
+                                <input type="checkbox" class="preference-check" name="preferences" value="{{ pref.code }}"
+                                       id="pref_{{ pref.id }}" {% if pref.code in current_prefs %}checked{% endif %}>
+                                <span class="chip-content">
+                                    {% if pref.icon %}<i class="fas {{ pref.icon }}"></i>{% endif %}
+                                    {{ pref.name }}
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="notes-section">
+                        <h6 class="section-title"><i class="fas fa-sticky-note text-primary me-2"></i>Notas de esta reserva</h6>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="Observaciones...">{{ reservation.notes if reservation else '' }}</textarea>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Right Column: Sidebar -->
+        <!-- Right Column: Summary -->
         <div class="col-lg-4">
-            <!-- Payment -->
-            <div class="card mb-4">
+            <div class="card reservation-summary-card sticky-top" style="top: 20px;">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-credit-card"></i> Pago</h5>
+                    <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Resumen</h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label">Estado de Pago</label>
-                        <select name="payment_status" class="form-select">
-                            <option value="NO" {% if not reservation or reservation.payment_status == 'NO' %}selected{% endif %}>Pendiente</option>
-                            <option value="SÍ" {% if reservation and reservation.payment_status == 'SÍ' %}selected{% endif %}>Pagado</option>
-                        </select>
+                    <div class="summary-section">
+                        <div class="summary-row">
+                            <span class="summary-label">Cliente</span>
+                            <span class="summary-value" id="summaryCustomer">No seleccionado</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Fecha</span>
+                            <span class="summary-value" id="summaryDate">-</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Horario</span>
+                            <span class="summary-value" id="summaryTime">Todo el dia</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Personas</span>
+                            <span class="summary-value" id="summaryPeople">2</span>
+                        </div>
+                        <hr>
+                        <div class="summary-row">
+                            <span class="summary-label">Mobiliario</span>
+                            <span class="summary-value" id="summaryFurniture">0 items</span>
+                        </div>
+                        <div id="summaryFurnitureList" class="furniture-list mt-2"></div>
                     </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="charge_to_room" id="chargeToRoom"
-                               value="1" {% if reservation and reservation.charge_to_room %}checked{% endif %}>
-                        <label class="form-check-label" for="chargeToRoom">
-                            Cargar a habitación
-                        </label>
-                    </div>
-                    <div id="chargeRefContainer" style="display: {% if reservation and reservation.charge_to_room %}block{% else %}none{% endif %};">
-                        <label class="form-label">Referencia de cargo</label>
-                        <input type="text" name="charge_reference" class="form-control"
-                               value="{{ reservation.charge_reference if reservation else '' }}"
-                               placeholder="Ej: Habitación 205">
-                    </div>
-                </div>
-            </div>
 
-            <!-- Preferences -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-heart"></i> Preferencias</h5>
-                </div>
-                <div class="card-body">
-                    {% set current_prefs = (reservation.preferences or '').split(',') if reservation else [] %}
-                    {% for pref in preferences %}
-                    <div class="form-check mb-2">
-                        <input class="form-check-input preference-check" type="checkbox"
-                               name="preferences" value="{{ pref.code }}"
-                               id="pref_{{ pref.id }}"
-                               {% if pref.code in current_prefs %}checked{% endif %}>
-                        <label class="form-check-label" for="pref_{{ pref.id }}">
-                            {% if pref.icon %}<i class="fas {{ pref.icon }} me-1"></i>{% endif %}
-                            {{ pref.name }}
-                        </label>
+                    <div class="action-buttons mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
+                            <i class="fas fa-check me-2"></i>
+                            {% if mode == 'create' %}Crear Reserva{% else %}Guardar Cambios{% endif %}
+                        </button>
+                        <a href="{{ url_for('beach.reservations') }}" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-times me-1"></i> Cancelar
+                        </a>
                     </div>
-                    {% else %}
-                    <p class="text-muted mb-0">No hay preferencias configuradas</p>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="card">
-                <div class="card-body">
-                    <button type="submit" class="btn btn-primary w-100 mb-2">
-                        <i class="fas fa-save"></i>
-                        {% if mode == 'create' %}Crear Reserva{% else %}Guardar Cambios{% endif %}
-                    </button>
-                    <a href="{{ url_for('beach.reservations') }}" class="btn btn-secondary w-100">
-                        <i class="fas fa-times"></i> Cancelar
-                    </a>
                 </div>
             </div>
         </div>
     </div>
 </form>
+{% endblock %}
 
-<!-- Customer Creation Modal -->
-<div class="modal fade" id="newCustomerModal" tabindex="-1" aria-labelledby="newCustomerModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="newCustomerModalLabel">
-                    <i class="fas fa-user-plus"></i> Nuevo Cliente
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Tipo de Cliente <span class="text-danger">*</span></label>
-                    <select id="newCustomerType" class="form-select" required>
-                        <option value="interno">Interno (Hotel)</option>
-                        <option value="externo">Externo</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Nombre <span class="text-danger">*</span></label>
-                    <input type="text" id="newCustomerFirstName" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Apellidos</label>
-                    <input type="text" id="newCustomerLastName" class="form-control">
-                </div>
-                <div class="mb-3" id="roomNumberField">
-                    <label class="form-label">Habitación <span class="text-danger">*</span></label>
-                    <input type="text" id="newCustomerRoom" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Teléfono</label>
-                    <input type="text" id="newCustomerPhone" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" id="newCustomerEmail" class="form-control">
-                </div>
-                <div id="newCustomerError" class="alert alert-danger" style="display: none;"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="saveNewCustomer">
-                    <i class="fas fa-save"></i> Guardar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+{% block extra_css %}
+<style>
+.reservation-steps{background:var(--color-white);border-radius:var(--border-radius-lg);padding:20px 40px;box-shadow:var(--shadow-sm)}
+.step-container{display:flex;align-items:center;justify-content:center}
+.step{display:flex;flex-direction:column;align-items:center;gap:8px}
+.step-number{width:40px;height:40px;border-radius:50%;background:var(--color-light-gray);color:var(--color-medium-gray);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;transition:all .3s}
+.step.active .step-number,.step.completed .step-number{background:linear-gradient(135deg,var(--color-primary) 0%,var(--color-primary-dark) 100%);color:#fff;box-shadow:0 4px 12px rgba(212,175,55,.4)}
+.step.completed .step-number{background:var(--color-success)}
+.step-label{font-size:13px;font-weight:600;color:var(--color-medium-gray)}
+.step.active .step-label,.step.completed .step-label{color:var(--color-secondary)}
+.step-line{width:100px;height:3px;background:var(--color-light-gray);margin:0 20px;margin-bottom:28px;border-radius:2px}
+.reservation-card{border:none;border-radius:var(--border-radius-lg);overflow:hidden;box-shadow:var(--shadow-md)}
+.reservation-card .card-header{padding:20px 24px;border-bottom:none;display:flex;justify-content:space-between;align-items:center}
+.card-header-primary{background:linear-gradient(135deg,var(--color-secondary) 0%,#2A5A8C 100%);color:#fff}
+.card-header-gold{background:linear-gradient(135deg,var(--color-primary) 0%,var(--color-primary-dark) 100%);color:#fff}
+.card-header-gold h5{color:#fff}
+.step-icon{width:44px;height:44px;background:rgba(255,255,255,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.reservation-card .card-body{padding:24px}
+.search-input-wrapper{position:relative}
+.search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--color-medium-gray);font-size:18px;z-index:2}
+.search-input-wrapper .form-control{padding-left:48px;padding-right:48px;border-radius:var(--border-radius-lg);border:2px solid var(--color-border);transition:border-color .2s,box-shadow .2s}
+.search-input-wrapper .form-control:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(212,175,55,.15)}
+.search-loading{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--color-primary)}
+.search-results-container{margin-top:12px;background:#fff;border:1px solid var(--color-border);border-radius:var(--border-radius-lg);box-shadow:var(--shadow-lg);max-height:400px;overflow-y:auto}
+.results-section{border-bottom:1px solid var(--color-border)}
+.results-section:last-of-type{border-bottom:none}
+.results-header{padding:12px 16px;background:var(--color-off-white);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--color-text-muted);display:flex;align-items:center;gap:8px}
+.result-item{padding:14px 16px;border-bottom:1px solid var(--color-border);cursor:pointer;transition:background .2s;display:flex;align-items:center;gap:12px}
+.result-item:last-child{border-bottom:none}
+.result-item:hover{background:var(--color-accent)}
+.result-avatar{width:40px;height:40px;border-radius:50%;background:var(--color-light-gray);display:flex;align-items:center;justify-content:center;color:var(--color-medium-gray);flex-shrink:0}
+.result-avatar.hotel{background:#e3f2fd;color:#1976d2}
+.result-avatar.vip{background:#fff8e1;color:#f9a825}
+.result-info{flex:1;min-width:0}
+.result-name{font-weight:600;color:var(--color-text);display:flex;align-items:center;gap:8px}
+.result-details{font-size:13px;color:var(--color-text-muted);margin-top:2px}
+.result-action{color:var(--color-primary);font-size:14px}
+.no-results-section{padding:20px;text-align:center}
+.no-results-message{color:var(--color-text-muted);display:flex;align-items:center;justify-content:center;gap:8px}
+.create-customer-option{padding:16px;border-top:1px solid var(--color-border)}
+.divider-line{text-align:center;position:relative;margin-bottom:12px}
+.divider-line::before{content:'';position:absolute;left:0;top:50%;width:100%;height:1px;background:var(--color-border)}
+.divider-line span{background:#fff;padding:0 12px;position:relative;color:var(--color-text-muted);font-size:12px}
+.create-customer-form{background:linear-gradient(135deg,#f8f9fa 0%,#fff 100%);border:2px solid var(--color-primary);border-radius:var(--border-radius-lg);padding:20px;margin-top:16px}
+.create-customer-form .form-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border)}
+.create-customer-form .form-header h6{margin:0;color:var(--color-secondary)}
+.form-actions{display:flex;justify-content:flex-end;gap:12px}
+.phone-input-group{display:flex;gap:8px}
+.country-select{width:110px;flex-shrink:0}
+.phone-input-small .country-select{width:95px}
+.preferences-inline{display:flex;flex-wrap:wrap;gap:8px}
+.preference-chip-inline{cursor:pointer}
+.preference-chip-inline input{display:none}
+.preference-chip-inline .chip-content{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:var(--color-off-white);border:1px solid var(--color-border);border-radius:var(--border-radius-full);font-size:12px;transition:all .2s}
+.preference-chip-inline input:checked+.chip-content{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.selected-customer-card{background:linear-gradient(135deg,#f8f9fa 0%,#fff 100%);border:2px solid var(--color-success);border-radius:var(--border-radius-lg);padding:20px}
+.customer-header{display:flex;align-items:center;gap:16px}
+.customer-avatar{width:56px;height:56px;background:linear-gradient(135deg,var(--color-primary) 0%,var(--color-primary-dark) 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;flex-shrink:0}
+.customer-avatar.hotel{background:linear-gradient(135deg,#1976d2 0%,#1565c0 100%)}
+.customer-main-info{flex:1;min-width:0}
+.customer-main-info h4{font-size:18px;margin:0}
+.customer-subtitle{color:var(--color-text-secondary);font-size:14px}
+.hotel-info-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--color-border)}
+.info-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--color-accent);border-radius:var(--border-radius-full);font-size:13px;color:var(--color-text-secondary)}
+.info-badge i{color:var(--color-primary)}
+.guest-selector-section{background:var(--color-accent);border-radius:var(--border-radius-md);padding:12px 16px;margin-top:16px}
+.customer-additional-fields{padding-top:16px;border-top:1px solid var(--color-border)}
+.customer-prefs-notes{padding-top:12px;border-top:1px solid var(--color-border)}
+.notes-display{background:#fff8e1;padding:10px 14px;border-radius:var(--border-radius-md);font-size:14px;display:flex;align-items:flex-start;gap:10px}
+.prefs-display{margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.prefs-label{font-size:13px;color:var(--color-text-muted)}
+.history-section{padding-top:12px;border-top:1px solid var(--color-border)}
+.history-header{display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.history-list{margin-top:12px;padding:12px;background:var(--color-off-white);border-radius:var(--border-radius-md)}
+.empty-state{text-align:center;padding:48px 24px;background:var(--color-off-white);border-radius:var(--border-radius-lg);border:2px dashed var(--color-border)}
+.empty-icon{width:80px;height:80px;background:var(--color-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px;color:var(--color-primary)}
+.booking-basics{background:var(--color-accent);border-radius:var(--border-radius-lg);padding:20px}
+.furniture-selection{border:1px solid var(--color-border);border-radius:var(--border-radius-lg);overflow:hidden}
+.furniture-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:var(--color-off-white);border-bottom:1px solid var(--color-border)}
+.furniture-filters{display:flex;gap:8px}
+.furniture-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px;padding:20px;min-height:200px;max-height:350px;overflow-y:auto;background:#fff}
+.furniture-placeholder{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;color:var(--color-medium-gray)}
+.furniture-item{aspect-ratio:1;border-radius:var(--border-radius-md);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;border:2px solid transparent;background:var(--color-off-white)}
+.furniture-item:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.furniture-item.available{background:var(--color-accent);border-color:var(--color-primary)}
+.furniture-item.selected{background:linear-gradient(135deg,var(--color-primary) 0%,var(--color-primary-dark) 100%);border-color:var(--color-primary-dark);color:#fff}
+.furniture-item.selected .furniture-type{color:rgba(255,255,255,.8)}
+.furniture-item.occupied{background:#f0f0f0;border-color:#ccc;cursor:not-allowed;opacity:.6}
+.furniture-number{font-weight:700;font-size:16px}
+.furniture-type{font-size:11px;color:var(--color-text-muted);margin-top:2px}
+.furniture-capacity{font-size:10px;color:var(--color-text-muted);margin-top:4px}
+.furniture-summary{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--color-off-white);border-top:1px solid var(--color-border)}
+.summary-item{font-size:14px}
+.summary-label{color:var(--color-text-muted)}
+.summary-value{font-weight:700;color:var(--color-primary);margin-left:8px}
+.summary-legend{display:flex;gap:16px;font-size:12px}
+.legend-item{display:flex;align-items:center;gap:6px;color:var(--color-text-muted)}
+.legend-item .dot{width:12px;height:12px;border-radius:3px}
+.dot.available{background:var(--color-accent);border:1px solid var(--color-primary)}
+.dot.selected{background:var(--color-primary)}
+.dot.occupied{background:#ccc}
+.section-title{font-size:14px;font-weight:600;color:var(--color-secondary);margin-bottom:12px;display:flex;align-items:center}
+.payment-section{background:var(--color-off-white);border-radius:var(--border-radius-lg);padding:20px}
+.preferences-grid{display:flex;flex-wrap:wrap;gap:10px}
+.preference-chip{cursor:pointer}
+.preference-chip input{display:none}
+.chip-content{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--color-off-white);border:2px solid var(--color-border);border-radius:var(--border-radius-full);font-size:13px;transition:all .2s}
+.preference-chip input:checked+.chip-content{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.chip-content:hover{border-color:var(--color-primary)}
+.reservation-summary-card{border:none;border-radius:var(--border-radius-lg);box-shadow:var(--shadow-lg);border-top:4px solid var(--color-primary)}
+.reservation-summary-card .card-header{background:transparent;padding:20px 24px 16px;border-bottom:1px solid var(--color-border)}
+.reservation-summary-card .card-body{padding:24px}
+.summary-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0}
+.summary-row .summary-label{color:var(--color-text-muted);font-size:14px}
+.summary-row .summary-value{font-weight:600;color:var(--color-text);margin-left:0}
+.furniture-list{display:flex;flex-wrap:wrap;gap:6px}
+.furniture-tag{background:var(--color-accent);padding:4px 10px;border-radius:var(--border-radius-full);font-size:12px;font-weight:500}
+@media(max-width:768px){.step-line{width:40px;margin:0 10px}.furniture-header{flex-direction:column;gap:12px}.furniture-filters{width:100%;flex-wrap:wrap}.furniture-grid{grid-template-columns:repeat(auto-fill,minmax(70px,1fr))}.customer-header{flex-wrap:wrap}}
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('reservationForm');
-    const customerSearch = document.getElementById('customerSearch');
-    const customerResults = document.getElementById('customerResults');
-    const customerId = document.getElementById('customerId');
-    const selectedCustomer = document.getElementById('selectedCustomer');
-    const clearCustomerBtn = document.getElementById('clearCustomer');
-    const customerTypeFilter = document.getElementById('customerTypeFilter');
-    const reservationDate = document.getElementById('reservationDate');
-    const furnitureGrid = document.getElementById('furnitureGrid');
-    const selectedCount = document.getElementById('selectedCount');
-    const refreshBtn = document.getElementById('refreshFurniture');
-    const zoneFilter = document.getElementById('furnitureZoneFilter');
-    const typeFilter = document.getElementById('furnitureTypeFilter');
-    const chargeToRoom = document.getElementById('chargeToRoom');
-    const chargeRefContainer = document.getElementById('chargeRefContainer');
-    const csrfToken = '{{ csrf_token() }}';
-
-    let selectedFurniture = new Set();
-    let furnitureData = [];
-
-    // Initialize with existing furniture if editing
-    {% if mode == 'edit' and reservation.furniture %}
-    {% for f in reservation.furniture %}
-    selectedFurniture.add({{ f.furniture_id }});
-    {% endfor %}
-    {% endif %}
-
-    // Helper function to select a customer
-    function selectCustomer(customer) {
-        customerId.value = customer.id;
-        customerSearch.value = '';
-        customerResults.style.display = 'none';
-
-        const displayName = customer.display_name || `${customer.first_name} ${customer.last_name || ''}`.trim();
-        document.getElementById('customerName').textContent = displayName;
-        document.getElementById('customerDetails').innerHTML = `
-            ${customer.customer_type === 'interno' ? '<i class="fas fa-hotel"></i> Hab. ' + (customer.room_number || '-') : '<i class="fas fa-user"></i> Externo'}
-            ${customer.phone ? ' | <i class="fas fa-phone"></i> ' + customer.phone : ''}
-        `;
-        selectedCustomer.style.display = 'block';
-        clearCustomerBtn.style.display = 'block';
-    }
-
-    // Customer search (create mode only)
-    {% if mode == 'create' %}
-    let searchTimeout;
-    if (customerSearch) {
-        customerSearch.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            const query = this.value.trim();
-
-            if (query.length < 2) {
-                customerResults.style.display = 'none';
-                return;
-            }
-
-            searchTimeout = setTimeout(() => {
-                const typeParam = customerTypeFilter ? customerTypeFilter.value : '';
-                let url = `{{ url_for('beach.api_customers_search') }}?q=${encodeURIComponent(query)}`;
-                if (typeParam) url += `&type=${typeParam}`;
-
-                fetch(url)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.customers.length > 0) {
-                            customerResults.innerHTML = data.customers.map(c => {
-                                const isHotelGuest = c.source === 'hotel_guest';
-                                const displayName = isHotelGuest ? c.guest_name : `${c.first_name} ${c.last_name || ''}`;
-                                const vipBadge = (c.vip_status || c.vip_code) ? '<span class="badge bg-warning text-dark ms-1"><i class="fas fa-star"></i></span>' : '';
-                                const sourceBadge = isHotelGuest ? '<span class="badge bg-info ms-1">Huésped</span>' : '';
-
-                                return `
-                                    <button type="button" class="list-group-item list-group-item-action"
-                                            data-id="${c.id}"
-                                            data-source="${c.source}"
-                                            data-name="${displayName}"
-                                            data-type="${c.customer_type}"
-                                            data-room="${c.room_number || ''}"
-                                            data-phone="${c.phone || ''}">
-                                        <strong>${displayName}</strong>
-                                        ${vipBadge}
-                                        ${sourceBadge}
-                                        <br>
-                                        <small class="text-muted">
-                                            ${c.customer_type === 'interno' ? '<i class="fas fa-hotel"></i> Hab. ' + (c.room_number || '-') : '<i class="fas fa-user"></i> Externo'}
-                                            ${c.phone ? ' | <i class="fas fa-phone"></i> ' + c.phone : ''}
-                                            ${isHotelGuest && c.departure_date ? ' | Salida: ' + c.departure_date : ''}
-                                        </small>
-                                    </button>
-                                `;
-                            }).join('');
-                            customerResults.style.display = 'block';
-                        } else {
-                            customerResults.innerHTML = `
-                                <div class="list-group-item text-muted">
-                                    No se encontraron clientes
-                                    <button type="button" class="btn btn-sm btn-link p-0 ms-2" data-bs-toggle="modal" data-bs-target="#newCustomerModal">
-                                        <i class="fas fa-plus"></i> Crear nuevo
-                                    </button>
-                                </div>
-                            `;
-                            customerResults.style.display = 'block';
-                        }
-                    });
-            }, 300);
-        });
-
-        // Customer type filter change clears search and re-searches if query exists
-        if (customerTypeFilter) {
-            customerTypeFilter.addEventListener('change', function() {
-                if (customerSearch.value.trim().length >= 2) {
-                    customerSearch.dispatchEvent(new Event('input'));
-                }
-            });
-        }
-
-        customerResults.addEventListener('click', function(e) {
-            const btn = e.target.closest('button[data-id]');
-            if (btn) {
-                const id = btn.dataset.id;
-                const source = btn.dataset.source;
-                const name = btn.dataset.name;
-                const type = btn.dataset.type;
-                const room = btn.dataset.room;
-                const phone = btn.dataset.phone;
-
-                // If it's a hotel guest, convert to customer first
-                if (source === 'hotel_guest') {
-                    fetch('{{ url_for("beach.api_customers_from_hotel_guest") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrfToken
-                        },
-                        body: JSON.stringify({ hotel_guest_id: parseInt(id) })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            selectCustomer(data.customer);
-                        } else {
-                            alert('Error: ' + (data.error || 'No se pudo crear el cliente'));
-                        }
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        alert('Error al convertir huésped a cliente');
-                    });
-                } else {
-                    // Regular customer - just select it
-                    selectCustomer({
-                        id: id,
-                        display_name: name,
-                        customer_type: type,
-                        room_number: room,
-                        phone: phone
-                    });
-                }
-            }
-        });
-
-        if (clearCustomerBtn) {
-            clearCustomerBtn.addEventListener('click', function() {
-                customerId.value = '';
-                selectedCustomer.style.display = 'none';
-                clearCustomerBtn.style.display = 'none';
-                customerSearch.value = '';
-            });
-        }
-    }
-
-    // New Customer Modal
-    const newCustomerModal = document.getElementById('newCustomerModal');
-    const newCustomerType = document.getElementById('newCustomerType');
-    const roomNumberField = document.getElementById('roomNumberField');
-    const newCustomerError = document.getElementById('newCustomerError');
-
-    // Toggle room number field based on customer type
-    if (newCustomerType) {
-        newCustomerType.addEventListener('change', function() {
-            roomNumberField.style.display = this.value === 'interno' ? 'block' : 'none';
-        });
-    }
-
-    // Save new customer
-    const saveNewCustomerBtn = document.getElementById('saveNewCustomer');
-    if (saveNewCustomerBtn) {
-        saveNewCustomerBtn.addEventListener('click', function() {
-            const data = {
-                customer_type: document.getElementById('newCustomerType').value,
-                first_name: document.getElementById('newCustomerFirstName').value.trim(),
-                last_name: document.getElementById('newCustomerLastName').value.trim(),
-                room_number: document.getElementById('newCustomerRoom').value.trim(),
-                phone: document.getElementById('newCustomerPhone').value.trim(),
-                email: document.getElementById('newCustomerEmail').value.trim()
-            };
-
-            // Basic validation
-            if (!data.first_name) {
-                newCustomerError.textContent = 'El nombre es requerido';
-                newCustomerError.style.display = 'block';
-                return;
-            }
-            if (data.customer_type === 'interno' && !data.room_number) {
-                newCustomerError.textContent = 'El número de habitación es requerido para clientes internos';
-                newCustomerError.style.display = 'block';
-                return;
-            }
-
-            newCustomerError.style.display = 'none';
-            saveNewCustomerBtn.disabled = true;
-            saveNewCustomerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-
-            fetch('{{ url_for("beach.api_customers_create") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(result => {
-                saveNewCustomerBtn.disabled = false;
-                saveNewCustomerBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
-
-                if (result.success) {
-                    // Close modal and select customer
-                    bootstrap.Modal.getInstance(newCustomerModal).hide();
-                    selectCustomer(result.customer);
-
-                    // Clear modal fields
-                    document.getElementById('newCustomerFirstName').value = '';
-                    document.getElementById('newCustomerLastName').value = '';
-                    document.getElementById('newCustomerRoom').value = '';
-                    document.getElementById('newCustomerPhone').value = '';
-                    document.getElementById('newCustomerEmail').value = '';
-                } else {
-                    newCustomerError.textContent = result.error || 'Error al crear cliente';
-                    newCustomerError.style.display = 'block';
-                }
-            })
-            .catch(err => {
-                saveNewCustomerBtn.disabled = false;
-                saveNewCustomerBtn.innerHTML = '<i class="fas fa-save"></i> Guardar';
-                newCustomerError.textContent = 'Error de conexión';
-                newCustomerError.style.display = 'block';
-            });
-        });
-    }
-
-    // Reset modal on close
-    if (newCustomerModal) {
-        newCustomerModal.addEventListener('hidden.bs.modal', function() {
-            newCustomerError.style.display = 'none';
-            document.getElementById('newCustomerFirstName').value = '';
-            document.getElementById('newCustomerLastName').value = '';
-            document.getElementById('newCustomerRoom').value = '';
-            document.getElementById('newCustomerPhone').value = '';
-            document.getElementById('newCustomerEmail').value = '';
-        });
-    }
-    {% endif %}
-
-    // Charge to room toggle
-    if (chargeToRoom) {
-        chargeToRoom.addEventListener('change', function() {
-            chargeRefContainer.style.display = this.checked ? 'block' : 'none';
-        });
-    }
-
-    // Date change handler
-    reservationDate.addEventListener('change', loadFurnitureAvailability);
-
-    // Furniture availability
-    function loadFurnitureAvailability() {
-        const dateVal = reservationDate.value;
-        if (!dateVal) return;
-
-        const params = new URLSearchParams({ date: dateVal });
-        if (zoneFilter.value) params.append('zone_id', zoneFilter.value);
-        if (typeFilter.value) params.append('type', typeFilter.value);
-
-        furnitureGrid.innerHTML = '<div class="col-12 text-center py-3"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
-
-        fetch(`{{ url_for('beach.api_available_furniture') }}?${params}`)
-            .then(response => response.json())
-            .then(data => {
-                furnitureData = data.furniture || [];
-                renderFurnitureGrid();
-            })
-            .catch(err => {
-                furnitureGrid.innerHTML = '<div class="col-12 text-center py-3 text-danger">Error al cargar mobiliario</div>';
-            });
-    }
-
-    function renderFurnitureGrid() {
-        let html = '';
-
-        furnitureData.forEach(f => {
-            const isSelected = selectedFurniture.has(f.id);
-            const bgClass = isSelected ? 'bg-primary text-white' : 'bg-light';
-
-            html += `
-                <div class="col-4 col-md-3 col-lg-2">
-                    <div class="card furniture-item ${bgClass} cursor-pointer"
-                         data-id="${f.id}"
-                         style="border: 2px solid ${isSelected ? '#0d6efd' : '#dee2e6'}">
-                        <div class="card-body p-2 text-center">
-                            <div class="fw-bold">${f.number}</div>
-                            <small>${f.type_name || f.furniture_type}</small>
-                            <div class="small opacity-75">
-                                <i class="fas fa-users"></i> ${f.capacity}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        if (furnitureData.length === 0) {
-            html = '<div class="col-12 text-center py-3 text-muted">No hay mobiliario disponible</div>';
-        }
-
-        furnitureGrid.innerHTML = html;
-        updateSelectedCount();
-
-        // Add click handlers
-        document.querySelectorAll('.furniture-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const id = parseInt(this.dataset.id);
-                if (selectedFurniture.has(id)) {
-                    selectedFurniture.delete(id);
-                } else {
-                    selectedFurniture.add(id);
-                }
-                renderFurnitureGrid();
-            });
-        });
-    }
-
-    function updateSelectedCount() {
-        selectedCount.textContent = selectedFurniture.size;
-    }
-
-    // Filter handlers
-    refreshBtn.addEventListener('click', loadFurnitureAvailability);
-    zoneFilter.addEventListener('change', loadFurnitureAvailability);
-    typeFilter.addEventListener('change', loadFurnitureAvailability);
-
-    // Form submission
-    form.addEventListener('submit', function(e) {
-        // Add selected furniture as hidden inputs
-        document.querySelectorAll('input[name="furniture_ids"]').forEach(el => el.remove());
-
-        selectedFurniture.forEach(id => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'furniture_ids';
-            input.value = id;
-            form.appendChild(input);
-        });
-
-        // Validate
-        {% if mode == 'create' %}
-        if (!customerId.value) {
-            e.preventDefault();
-            alert('Debe seleccionar un cliente');
-            return;
-        }
-        {% endif %}
-
-        if (selectedFurniture.size === 0) {
-            e.preventDefault();
-            alert('Debe seleccionar al menos un mobiliario');
-            return;
-        }
-    });
-
-    // Initial load if date is set
-    if (reservationDate.value) {
-        loadFurnitureAvailability();
-    }
-});
+document.addEventListener('DOMContentLoaded',function(){const form=document.getElementById('reservationForm'),customerSearch=document.getElementById('customerSearch'),searchResults=document.getElementById('searchResults'),customerId=document.getElementById('customerId'),selectedCustomer=document.getElementById('selectedCustomer'),emptyState=document.getElementById('emptyState'),createCustomerForm=document.getElementById('createCustomerForm'),reservationDate=document.getElementById('reservationDate'),furnitureGrid=document.getElementById('furnitureGrid'),chargeToRoom=document.getElementById('chargeToRoom'),chargeRefContainer=document.getElementById('chargeRefContainer'),csrfToken='{{ csrf_token() }}';let selectedFurniture=new Set,furnitureData=[],currentCustomerData=null,roomGuestsData=[],lastSearchQuery='';const languageNames={'ES':'Espanol','EN':'Ingles','DE':'Aleman','FR':'Frances','IT':'Italiano','PT':'Portugues','NL':'Holandes','RU':'Ruso'},nationalityToLanguage={'DE':'DE','AT':'DE','CH':'DE','GB':'EN','US':'EN','AU':'EN','UK':'EN','ES':'ES','MX':'ES','AR':'ES','FR':'FR','IT':'IT','PT':'PT','BR':'PT','NL':'NL','RU':'RU'};function formatDate(d){if(!d)return'-';try{return new Date(d).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'})}catch{return d}}function updateStepIndicators(){const s1=document.getElementById('step1Indicator'),s2=document.getElementById('step2Indicator'),s3=document.getElementById('step3Indicator');customerId.value?(s1.classList.add('completed'),s2.classList.add('active')):(s1.classList.remove('completed'),s2.classList.remove('active'));selectedFurniture.size>0?s3.classList.add('active'):s3.classList.remove('active')}function updateSummary(){const sc=document.getElementById('summaryCustomer');currentCustomerData?sc.textContent=currentCustomerData.display_name||currentCustomerData.guest_name||`${currentCustomerData.first_name||''} ${currentCustomerData.last_name||''}`.trim()||'No seleccionado':sc.textContent='No seleccionado';document.getElementById('summaryDate').textContent=reservationDate.value?formatDate(reservationDate.value):'-';const ts=document.querySelector('select[name="time_slot"]').value;document.getElementById('summaryTime').textContent={'all_day':'Todo el dia','morning':'Manana','afternoon':'Tarde'}[ts]||'Todo el dia';document.getElementById('summaryPeople').textContent=document.getElementById('numPeople').value||'2';document.getElementById('summaryFurniture').textContent=`${selectedFurniture.size} items`;const sfl=document.getElementById('summaryFurnitureList');sfl.innerHTML=selectedFurniture.size>0?furnitureData.filter(f=>selectedFurniture.has(f.id)).map(f=>`<span class="furniture-tag">${f.number}</span>`).join(''):'';updateStepIndicators()}
+{% if mode == 'create' %}let searchTimeout;customerSearch&&customerSearch.addEventListener('input',function(){clearTimeout(searchTimeout);const q=this.value.trim();lastSearchQuery=q;if(q.length<2){searchResults.style.display='none';return}document.getElementById('searchLoading').style.display='block';searchTimeout=setTimeout(()=>{fetch(`{{ url_for('beach.api_customers_search') }}?q=${encodeURIComponent(q)}`).then(r=>r.json()).then(d=>{document.getElementById('searchLoading').style.display='none';displaySearchResults(d.customers||[],q)}).catch(()=>{document.getElementById('searchLoading').style.display='none'})},300)});function displaySearchResults(customers,query){const bcs=document.getElementById('beachClubResults'),hs=document.getElementById('hotelGuestsResults'),nrs=document.getElementById('noResultsSection'),bcl=document.getElementById('beachClubList'),hgl=document.getElementById('hotelGuestsList'),bc=customers.filter(c=>c.source==='customer'),hg=customers.filter(c=>c.source==='hotel_guest');bcl.innerHTML='';hgl.innerHTML='';if(bc.length>0){bcs.style.display='block';bc.forEach(c=>{const vip=c.vip_status||c.vip_code;bcl.innerHTML+=`<div class="result-item" data-id="${c.id}" data-source="customer"><div class="result-avatar ${vip?'vip':''}"><i class="fas ${vip?'fa-star':'fa-user'}"></i></div><div class="result-info"><div class="result-name">${c.display_name||c.first_name+' '+(c.last_name||'')} ${vip?'<span class="badge bg-warning text-dark">VIP</span>':''}</div><div class="result-details">${c.customer_type==='interno'?'<i class="fas fa-door-open"></i> Hab. '+(c.room_number||'-'):'<i class="fas fa-user"></i> Externo'}${c.phone?' - '+c.phone:''}</div></div><div class="result-action"><i class="fas fa-chevron-right"></i></div></div>`})}else bcs.style.display='none';if(hg.length>0){hs.style.display='block';hg.forEach(g=>{const vip=g.vip_code;hgl.innerHTML+=`<div class="result-item" data-id="${g.id}" data-source="hotel_guest"><div class="result-avatar hotel"><i class="fas fa-hotel"></i></div><div class="result-info"><div class="result-name">${g.guest_name} ${g.is_main_guest?'<span class="badge bg-primary">Principal</span>':''} ${vip?'<span class="badge bg-warning text-dark">VIP</span>':''}</div><div class="result-details"><i class="fas fa-door-open"></i> Hab. ${g.room_number} - <i class="fas fa-calendar"></i> ${formatDate(g.arrival_date)} - ${formatDate(g.departure_date)}${g.booking_reference?' - #'+g.booking_reference:''}</div></div><div class="result-action"><i class="fas fa-chevron-right"></i></div></div>`})}else hs.style.display='none';if(bc.length===0&&hg.length===0){nrs.style.display='block';document.getElementById('searchQueryDisplay').textContent=query}else nrs.style.display='none';searchResults.style.display='block'}searchResults&&searchResults.addEventListener('click',function(e){const item=e.target.closest('.result-item');if(!item)return;const id=item.dataset.id,source=item.dataset.source;if(source==='hotel_guest'){fetch('{{ url_for("beach.api_customers_from_hotel_guest") }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify({hotel_guest_id:parseInt(id)})}).then(r=>r.json()).then(data=>{if(data.success){fetch(`{{ url_for('beach.api_hotel_guest_lookup') }}?room=${encodeURIComponent(data.customer.room_number)}`).then(r=>r.json()).then(gd=>{const g=gd.guests.find(x=>x.id==id)||gd.guests[0];roomGuestsData=gd.guests;selectCustomer({...data.customer,arrival_date:g?.arrival_date,departure_date:g?.departure_date,nationality:g?.nationality,booking_reference:g?.booking_reference,room_guest_count:gd.guest_count,source:'hotel_guest'})})}})}else{fetch(`{{ url_for('beach.api_customers_search') }}?q=${encodeURIComponent(lastSearchQuery)}`).then(r=>r.json()).then(data=>{const c=data.customers.find(x=>x.id==id&&x.source==='customer');if(c)selectCustomer(c)})}});function selectCustomer(c){if(!c||!c.id)return;currentCustomerData=c;customerId.value=c.id;customerSearch.value='';searchResults.style.display='none';createCustomerForm.style.display='none';emptyState.style.display='none';selectedCustomer.style.display='block';const dn=c.display_name||c.guest_name||`${c.first_name||''} ${c.last_name||''}`.trim();document.getElementById('customerName').textContent=dn;const av=document.getElementById('customerAvatar');if(c.customer_type==='interno'||c.source==='hotel_guest'){av.classList.add('hotel');av.innerHTML='<i class="fas fa-hotel"></i>'}else{av.classList.remove('hotel');av.innerHTML='<i class="fas fa-user"></i>'}document.getElementById('customerVipBadge').style.display=(c.vip_status||c.vip_code)?'inline':'none';const tb=document.getElementById('customerTypeBadge');if(c.customer_type==='interno'||c.source==='hotel_guest'){tb.className='badge bg-info';tb.textContent='Huesped Hotel'}else{tb.className='badge bg-success';tb.textContent='Cliente Externo'}const ri=document.getElementById('customerRoomInfo');if(c.room_number){document.getElementById('customerRoom').textContent=`Hab. ${c.room_number}`;ri.style.display='inline'}else ri.style.display='none';const his=document.getElementById('hotelInfoSection');if(c.arrival_date||c.departure_date){document.getElementById('customerArrival').textContent=formatDate(c.arrival_date);document.getElementById('customerDeparture').textContent=formatDate(c.departure_date);his.style.display='block';const brb=document.getElementById('bookingRefBadge');if(c.booking_reference){document.getElementById('customerBookingRef').textContent='#'+c.booking_reference;brb.style.display='block'}else brb.style.display='none';const lb=document.getElementById('languageBadge');const lc=c.language||nationalityToLanguage[c.nationality?.toUpperCase()];if(lc){document.getElementById('customerLanguage').textContent=languageNames[lc]||lc;lb.style.display='block'}else lb.style.display='none'}else his.style.display='none';const gss=document.getElementById('guestSelectorSection'),gc=c.room_guest_count||1;if(gc>1&&roomGuestsData.length>1){document.getElementById('guestCount').textContent=gc;const gs=document.getElementById('guestSelector');gs.innerHTML=roomGuestsData.map(g=>`<option value="${g.id}" ${g.guest_name===c.display_name||g.id==c.id?'selected':''}>${g.guest_name} ${g.is_main_guest?'(Principal)':''}</option>`).join('');gss.style.display='block';document.getElementById('numPeople').value=gc}else gss.style.display='none';if(c.phone)document.getElementById('customerPhone').value=c.phone;if(c.email)document.getElementById('customerEmail').value=c.email;if(c.country_code)document.getElementById('customerCountryCode').value=c.country_code;const pns=document.getElementById('customerPrefsNotesSection');let hc=false;if(c.notes){document.getElementById('customerNotesText').textContent=c.notes;document.getElementById('customerNotesDisplay').style.display='flex';hc=true}else document.getElementById('customerNotesDisplay').style.display='none';if(c.preferences&&c.preferences.length>0){const bgs=c.preferences.map(code=>{const cb=document.querySelector(`.preference-check[value="${code}"]`);if(cb){cb.checked=true;const ch=cb.parentElement.querySelector('.chip-content');return`<span class="badge bg-primary me-1">${ch?.textContent?.trim()||code}</span>`}return''}).join('');document.getElementById('customerPrefsBadges').innerHTML=bgs;document.getElementById('customerPrefsDisplay').style.display='flex';hc=true}else document.getElementById('customerPrefsDisplay').style.display='none';pns.style.display=hc?'block':'none';if(chargeToRoom&&c.customer_type==='interno'){chargeToRoom.checked=true;chargeRefContainer.style.display='block';document.getElementById('chargeReference').value=`Hab. ${c.room_number}`}loadCustomerHistory(c.id);updateSummary()}function loadCustomerHistory(cid){const hs=document.getElementById('customerHistorySection'),hl=document.getElementById('customerHistoryList');fetch(`/beach/api/customers/${cid}/history`).then(r=>r.json()).then(d=>{const h=d.history||[];if(h.length>0){document.getElementById('customerVisitsCount').textContent=h.length;hl.innerHTML=h.slice(0,5).map(x=>`<div class="small mb-1"><span class="text-muted">-</span> <strong>${formatDate(x.date)}</strong> - ${x.furniture_numbers||'Sin mobiliario'} <span class="text-muted">(${x.furniture_types||'-'})</span></div>`).join('');hs.style.display='block'}else hs.style.display='none'}).catch(()=>{hs.style.display='none'})}document.getElementById('toggleHistoryBtn')?.addEventListener('click',function(){const l=document.getElementById('customerHistoryList'),h=l.style.display==='none';l.style.display=h?'block':'none';this.innerHTML=h?'Ocultar <i class="fas fa-chevron-up"></i>':'Ver <i class="fas fa-chevron-down"></i>'});document.getElementById('guestSelector')?.addEventListener('change',function(){const gid=parseInt(this.value),g=roomGuestsData.find(x=>x.id===gid);if(g){fetch('{{ url_for("beach.api_customers_from_hotel_guest") }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify({hotel_guest_id:gid})}).then(r=>r.json()).then(d=>{if(d.success)selectCustomer({...d.customer,arrival_date:g.arrival_date,departure_date:g.departure_date,nationality:g.nationality,booking_reference:g.booking_reference,room_guest_count:roomGuestsData.length,source:'hotel_guest'})})}});document.getElementById('clearCustomerBtn')?.addEventListener('click',function(){customerId.value='';currentCustomerData=null;roomGuestsData=[];selectedCustomer.style.display='none';emptyState.style.display='block';customerSearch.value='';document.querySelectorAll('.preference-check').forEach(cb=>cb.checked=false);if(chargeToRoom){chargeToRoom.checked=false;chargeRefContainer.style.display='none'}updateSummary()});document.getElementById('showCreateFormBtn')?.addEventListener('click',function(){searchResults.style.display='none';createCustomerForm.style.display='block';emptyState.style.display='none';if(lastSearchQuery&&!/^\d+$/.test(lastSearchQuery)){const p=lastSearchQuery.split(' ');document.getElementById('newFirstName').value=p[0]||'';document.getElementById('newLastName').value=p.slice(1).join(' ')||''}});document.getElementById('cancelCreateBtn')?.addEventListener('click',hideCreateForm);document.getElementById('cancelCreate2Btn')?.addEventListener('click',hideCreateForm);function hideCreateForm(){createCustomerForm.style.display='none';emptyState.style.display='block';customerSearch.value=''}document.getElementById('saveNewCustomerBtn')?.addEventListener('click',function(){const fn=document.getElementById('newFirstName').value.trim(),ln=document.getElementById('newLastName').value.trim(),cc=document.getElementById('newCountryCode').value,ph=document.getElementById('newPhone').value.trim(),em=document.getElementById('newEmail').value.trim(),lg=document.getElementById('newLanguage').value,nt=document.getElementById('newNotes').value.trim(),err=document.getElementById('createCustomerError');if(!fn){err.textContent='El nombre es requerido';err.style.display='block';return}if(!ph&&!em){err.textContent='Se requiere telefono o email';err.style.display='block';return}err.style.display='none';this.disabled=true;const prefs=[];document.querySelectorAll('.new-customer-pref:checked').forEach(cb=>prefs.push(cb.value));fetch('{{ url_for("beach.api_customers_create") }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify({customer_type:'externo',first_name:fn,last_name:ln,phone:ph,email:em,country_code:cc,language:lg,notes:nt,preferences:prefs})}).then(r=>r.json()).then(d=>{this.disabled=false;if(d.success){createCustomerForm.style.display='none';selectCustomer(d.customer)}else{err.textContent=d.error||'Error al crear cliente';err.style.display='block'}}).catch(()=>{this.disabled=false;err.textContent='Error de conexion';err.style.display='block'})});{% endif %}reservationDate.addEventListener('change',function(){loadFurnitureAvailability();updateSummary()});function loadFurnitureAvailability(){const dv=reservationDate.value;if(!dv)return;const zf=document.getElementById('furnitureZoneFilter'),tf=document.getElementById('furnitureTypeFilter'),params=new URLSearchParams({date:dv});if(zf.value)params.append('zone_id',zf.value);if(tf.value)params.append('type',tf.value);furnitureGrid.innerHTML='<div class="furniture-placeholder"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><p class="mb-0">Cargando disponibilidad...</p></div>';fetch(`{{ url_for('beach.api_available_furniture') }}?${params}`).then(r=>r.json()).then(d=>{furnitureData=d.furniture||[];renderFurnitureGrid()}).catch(()=>{furnitureGrid.innerHTML='<div class="furniture-placeholder text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p class="mb-0">Error al cargar mobiliario</p></div>'})}function renderFurnitureGrid(){if(furnitureData.length===0){furnitureGrid.innerHTML='<div class="furniture-placeholder"><i class="fas fa-umbrella-beach fa-2x mb-2"></i><p class="mb-0">No hay mobiliario disponible</p></div>';return}furnitureGrid.innerHTML=furnitureData.map(f=>`<div class="furniture-item ${selectedFurniture.has(f.id)?'selected':'available'}" data-id="${f.id}"><div class="furniture-number">${f.number}</div><div class="furniture-type">${f.type_name||f.furniture_type}</div><div class="furniture-capacity"><i class="fas fa-users"></i> ${f.capacity}</div></div>`).join('');document.getElementById('selectedCount').textContent=selectedFurniture.size;document.querySelectorAll('.furniture-item').forEach(item=>{item.addEventListener('click',function(){const id=parseInt(this.dataset.id);selectedFurniture.has(id)?selectedFurniture.delete(id):selectedFurniture.add(id);renderFurnitureGrid();updateSummary()})})}document.getElementById('refreshFurniture')?.addEventListener('click',loadFurnitureAvailability);document.getElementById('furnitureZoneFilter')?.addEventListener('change',loadFurnitureAvailability);document.getElementById('furnitureTypeFilter')?.addEventListener('change',loadFurnitureAvailability);chargeToRoom?.addEventListener('change',function(){chargeRefContainer.style.display=this.checked?'block':'none'});document.querySelector('select[name="time_slot"]')?.addEventListener('change',updateSummary);document.getElementById('numPeople')?.addEventListener('change',updateSummary);form.addEventListener('submit',function(e){document.querySelectorAll('input[name="furniture_ids"]').forEach(el=>el.remove());selectedFurniture.forEach(id=>{const inp=document.createElement('input');inp.type='hidden';inp.name='furniture_ids';inp.value=id;form.appendChild(inp)});{% if mode == 'create' %}if(!customerId.value){e.preventDefault();alert('Debe seleccionar un cliente');return}{% endif %}if(selectedFurniture.size===0){e.preventDefault();alert('Debe seleccionar al menos un mobiliario');return}});{% if mode == 'edit' and reservation.furniture %}{% for f in reservation.furniture %}selectedFurniture.add({{ f.furniture_id }});{% endfor %}{% endif %}if(reservationDate.value)loadFurnitureAvailability();updateSummary()});
 </script>
-
-<style>
-.furniture-item {
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-.furniture-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-#customerResults {
-    max-height: 300px;
-    overflow-y: auto;
-}
-</style>
 {% endblock %}

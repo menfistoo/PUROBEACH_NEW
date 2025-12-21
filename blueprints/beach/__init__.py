@@ -14,14 +14,14 @@ from models.customer import (
     create_customer, update_customer, delete_customer, get_customer_stats,
     set_customer_preferences, set_customer_tags, find_duplicates,
     merge_customers, find_potential_duplicates_for_customer, search_customers,
-    search_customers_unified, create_customer_from_hotel_guest
+    search_customers_unified, create_customer_from_hotel_guest, get_customer_preferences
 )
 from models.reservation import (
     get_reservations_filtered, get_reservation_with_details, get_reservation_by_id,
     get_reservation_stats, get_reservation_states, get_available_furniture,
     create_reservation_with_furniture, update_reservation_with_furniture,
     change_reservation_state, delete_reservation, sync_preferences_to_customer,
-    get_customer_preference_codes
+    get_customer_preference_codes, get_customer_reservation_history
 )
 from models.preference import get_all_preferences
 from models.tag import get_all_tags
@@ -305,7 +305,7 @@ def api_customers_search():
     formatted_results = []
     for c in results:
         if c.get('source') == 'hotel_guest':
-            # Hotel guest result
+            # Hotel guest result - includes all available fields
             formatted_results.append({
                 'id': c['id'],
                 'source': 'hotel_guest',
@@ -316,11 +316,22 @@ def api_customers_search():
                 'phone': c.get('phone'),
                 'email': c.get('email'),
                 'vip_code': c.get('vip_code'),
-                'departure_date': c.get('departure_date')
+                'departure_date': c.get('departure_date'),
+                'arrival_date': c.get('arrival_date'),
+                'nationality': c.get('nationality'),
+                'num_adults': c.get('num_adults', 1),
+                'num_children': c.get('num_children', 0),
+                'notes': c.get('notes'),
+                'is_main_guest': c.get('is_main_guest', 0),
+                'room_guest_count': c.get('room_guest_count', 1),
+                'booking_reference': c.get('booking_reference')
             })
         else:
-            # Beach customer result
-            formatted_results.append({
+            # Beach customer result - include preferences
+            preferences = get_customer_preferences(c['id'])
+            pref_codes = [p['code'] for p in preferences]
+
+            customer_data = {
                 'id': c['id'],
                 'source': 'customer',
                 'first_name': c['first_name'],
@@ -331,8 +342,36 @@ def api_customers_search():
                 'room_number': c.get('room_number'),
                 'phone': c.get('phone'),
                 'email': c.get('email'),
-                'vip_status': c.get('vip_status', 0)
-            })
+                'vip_status': c.get('vip_status', 0),
+                'notes': c.get('notes'),
+                'total_visits': c.get('total_visits', 0),
+                'last_visit': c.get('last_visit'),
+                'preferences': pref_codes
+            }
+
+            # For interno customers, enrich with hotel guest data
+            if c['customer_type'] == 'interno' and c.get('room_number'):
+                hotel_guests = get_guests_by_room(c['room_number'], date.today())
+                if hotel_guests:
+                    # Find matching guest by name or use main guest
+                    full_name = f"{c['first_name']} {c.get('last_name', '')}".strip().upper()
+                    matching_guest = None
+                    for hg in hotel_guests:
+                        if hg['guest_name'].upper() == full_name:
+                            matching_guest = hg
+                            break
+                    if not matching_guest:
+                        matching_guest = next((hg for hg in hotel_guests if hg.get('is_main_guest')), hotel_guests[0])
+
+                    # Add hotel guest fields
+                    customer_data['arrival_date'] = matching_guest.get('arrival_date')
+                    customer_data['departure_date'] = matching_guest.get('departure_date')
+                    customer_data['nationality'] = matching_guest.get('nationality')
+                    customer_data['booking_reference'] = matching_guest.get('booking_reference')
+                    customer_data['room_guest_count'] = len(hotel_guests)
+                    customer_data['vip_code'] = matching_guest.get('vip_code')
+
+            formatted_results.append(customer_data)
 
     return jsonify({'customers': formatted_results})
 
@@ -365,16 +404,35 @@ def api_customers_check_duplicates():
 @login_required
 @permission_required('beach.customers.create')
 def api_customers_from_hotel_guest():
-    """Convert a hotel guest to a beach customer."""
+    """Convert a hotel guest to a beach customer with optional additional data."""
     data = request.get_json()
     hotel_guest_id = data.get('hotel_guest_id')
 
     if not hotel_guest_id:
         return jsonify({'success': False, 'error': 'ID de huésped requerido'}), 400
 
+    # Extract additional data that can be provided during conversion
+    additional_data = {}
+    if data.get('phone'):
+        additional_data['phone'] = data['phone'].strip()
+    if data.get('email'):
+        additional_data['email'] = data['email'].strip()
+    if data.get('language'):
+        additional_data['language'] = data['language'].strip()
+    if data.get('country_code'):
+        additional_data['country_code'] = data['country_code'].strip()
+    if data.get('notes'):
+        additional_data['notes'] = data['notes'].strip()
+    if data.get('preferences'):
+        additional_data['preferences'] = [int(p) for p in data['preferences'] if p]
+
     try:
-        result = create_customer_from_hotel_guest(hotel_guest_id)
+        result = create_customer_from_hotel_guest(hotel_guest_id, additional_data)
         customer = result['customer']
+
+        # Get customer preferences
+        preferences = get_customer_preferences(customer['id'])
+        pref_codes = [p['code'] for p in preferences]
 
         return jsonify({
             'success': True,
@@ -389,7 +447,11 @@ def api_customers_from_hotel_guest():
                 'room_number': customer.get('room_number'),
                 'phone': customer.get('phone'),
                 'email': customer.get('email'),
-                'vip_status': customer.get('vip_status', 0)
+                'vip_status': customer.get('vip_status', 0),
+                'language': customer.get('language'),
+                'country_code': customer.get('country_code'),
+                'notes': customer.get('notes'),
+                'preferences': pref_codes
             }
         })
     except ValueError as e:
@@ -402,7 +464,7 @@ def api_customers_from_hotel_guest():
 @login_required
 @permission_required('beach.customers.create')
 def api_customers_create():
-    """Create a new customer via API (for modal form)."""
+    """Create a new customer via API (for inline form)."""
     data = request.get_json()
 
     # Validate required fields
@@ -419,18 +481,35 @@ def api_customers_create():
     if customer_type == 'interno' and not room_number:
         return jsonify({'success': False, 'error': 'El número de habitación es requerido para clientes internos'}), 400
 
+    # For external customers, require at least phone or email
+    phone = data.get('phone', '').strip() or None
+    email = data.get('email', '').strip() or None
+    if customer_type == 'externo' and not (phone or email):
+        return jsonify({'success': False, 'error': 'Se requiere teléfono o email para clientes externos'}), 400
+
     try:
         customer_id = create_customer(
             customer_type=customer_type,
             first_name=first_name,
             last_name=data.get('last_name', '').strip() or None,
-            email=data.get('email', '').strip() or None,
-            phone=data.get('phone', '').strip() or None,
+            email=email,
+            phone=phone,
             room_number=room_number,
-            notes=data.get('notes', '').strip() or None
+            notes=data.get('notes', '').strip() or None,
+            language=data.get('language', '').strip() or None,
+            country_code=data.get('country_code', '+34').strip()
         )
 
+        # Set preferences if provided
+        preference_ids = data.get('preferences', [])
+        if preference_ids:
+            set_customer_preferences(customer_id, [int(p) for p in preference_ids if p])
+
         customer = get_customer_by_id(customer_id)
+
+        # Get preference codes
+        preferences = get_customer_preferences(customer_id)
+        pref_codes = [p['code'] for p in preferences]
 
         return jsonify({
             'success': True,
@@ -444,7 +523,11 @@ def api_customers_create():
                 'room_number': customer.get('room_number'),
                 'phone': customer.get('phone'),
                 'email': customer.get('email'),
-                'vip_status': customer.get('vip_status', 0)
+                'vip_status': customer.get('vip_status', 0),
+                'language': customer.get('language'),
+                'country_code': customer.get('country_code'),
+                'notes': customer.get('notes'),
+                'preferences': pref_codes
             }
         })
     except ValueError as e:
@@ -457,14 +540,15 @@ def api_customers_create():
 @login_required
 @permission_required('beach.customers.view')
 def api_hotel_guest_lookup():
-    """Lookup hotel guest by room number for auto-fill."""
+    """Lookup hotel guests by room number for auto-fill and guest selection."""
     room_number = request.args.get('room', '')
     if not room_number:
-        return jsonify({'guests': []})
+        return jsonify({'guests': [], 'guest_count': 0})
 
     guests = get_guests_by_room(room_number, date.today())
 
     return jsonify({
+        'guest_count': len(guests),
         'guests': [{
             'id': g['id'],
             'guest_name': g['guest_name'],
@@ -474,7 +558,12 @@ def api_hotel_guest_lookup():
             'vip_code': g['vip_code'],
             'nationality': g['nationality'],
             'email': g['email'],
-            'phone': g['phone']
+            'phone': g['phone'],
+            'notes': g.get('notes'),
+            'num_adults': g.get('num_adults', 1),
+            'num_children': g.get('num_children', 0),
+            'is_main_guest': g.get('is_main_guest', 0),
+            'booking_reference': g.get('booking_reference')
         } for g in guests]
     })
 
@@ -498,6 +587,21 @@ def api_hotel_guest_search():
             'arrival_date': g['arrival_date'],
             'departure_date': g['departure_date']
         } for g in guests]
+    })
+
+
+@beach_bp.route('/api/customers/<int:customer_id>/history')
+@login_required
+@permission_required('beach.customers.view')
+def api_customer_history(customer_id):
+    """Get reservation history for a customer."""
+    limit = request.args.get('limit', 5, type=int)
+    history = get_customer_reservation_history(customer_id, limit=min(limit, 20))
+
+    return jsonify({
+        'customer_id': customer_id,
+        'history': history,
+        'count': len(history)
     })
 
 

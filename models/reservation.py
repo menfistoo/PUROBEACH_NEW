@@ -1380,3 +1380,48 @@ def get_reservations_by_furniture(furniture_id: int, date: str) -> list:
         ORDER BY r.created_at
     ''', (furniture_id, date))
     return [dict(row) for row in cursor.fetchall()]
+
+
+def get_customer_reservation_history(customer_id: int, limit: int = 5) -> list:
+    """
+    Get recent reservation history for a customer.
+
+    Args:
+        customer_id: Customer ID
+        limit: Maximum number of reservations to return
+
+    Returns:
+        list: Recent reservations with furniture details
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Get recent reservations with furniture
+    cursor.execute('''
+        SELECT r.id, r.reservation_date, r.num_people, r.current_state,
+               GROUP_CONCAT(f.number, ', ') as furniture_numbers,
+               GROUP_CONCAT(DISTINCT ft.display_name) as furniture_types,
+               COUNT(rf.id) as furniture_count
+        FROM beach_reservations r
+        LEFT JOIN beach_reservation_furniture rf ON rf.reservation_id = r.id
+        LEFT JOIN beach_furniture f ON rf.furniture_id = f.id
+        LEFT JOIN beach_furniture_types ft ON f.furniture_type = ft.type_code
+        WHERE r.customer_id = ?
+        GROUP BY r.id
+        ORDER BY r.reservation_date DESC
+        LIMIT ?
+    ''', (customer_id, limit))
+
+    results = []
+    for row in cursor.fetchall():
+        results.append({
+            'id': row['id'],
+            'date': row['reservation_date'],
+            'num_people': row['num_people'],
+            'state': row['current_state'],
+            'furniture_numbers': row['furniture_numbers'],
+            'furniture_types': row['furniture_types'],
+            'furniture_count': row['furniture_count']
+        })
+
+    return results

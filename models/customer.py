@@ -97,7 +97,7 @@ def create_customer(customer_type: str, first_name: str, last_name: str = None, 
         customer_type: 'interno' or 'externo'
         first_name: First name (required)
         last_name: Last name
-        **kwargs: Optional fields (email, phone, room_number, notes, vip_status)
+        **kwargs: Optional fields (email, phone, room_number, notes, vip_status, language, country_code)
 
     Returns:
         New customer ID
@@ -113,11 +113,12 @@ def create_customer(customer_type: str, first_name: str, last_name: str = None, 
 
     cursor.execute('''
         INSERT INTO beach_customers
-        (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status, language, country_code)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (customer_type, first_name, last_name,
           kwargs.get('email'), kwargs.get('phone'), kwargs.get('room_number'),
-          kwargs.get('notes'), kwargs.get('vip_status', 0)))
+          kwargs.get('notes'), kwargs.get('vip_status', 0),
+          kwargs.get('language'), kwargs.get('country_code', '+34')))
 
     db.commit()
     return cursor.lastrowid
@@ -137,7 +138,8 @@ def update_customer(customer_id: int, **kwargs) -> bool:
     db = get_db()
 
     allowed_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number',
-                      'notes', 'vip_status', 'total_visits', 'total_spent', 'last_visit']
+                      'notes', 'vip_status', 'total_visits', 'total_spent', 'last_visit',
+                      'language', 'country_code']
     updates = []
     values = []
 
@@ -641,12 +643,17 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
     # Search hotel_guests (only if customer_type is not 'externo')
     if customer_type != 'externo':
         guest_query = '''
-            SELECT h.*, 'hotel_guest' as source
+            SELECT h.*,
+                   'hotel_guest' as source,
+                   (SELECT COUNT(*) FROM hotel_guests h2
+                    WHERE h2.room_number = h.room_number
+                      AND h2.arrival_date = h.arrival_date
+                      AND h2.departure_date >= date('now')) as room_guest_count
             FROM hotel_guests h
             WHERE (h.guest_name LIKE ? OR h.room_number LIKE ? OR
                    h.email LIKE ? OR h.phone LIKE ?)
               AND h.departure_date >= date('now')
-            ORDER BY h.room_number, h.guest_name
+            ORDER BY h.room_number, h.is_main_guest DESC, h.guest_name
             LIMIT ?
         '''
         cursor.execute(guest_query, [search_term, search_term, search_term, search_term, limit])
@@ -666,13 +673,14 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
     return results[:limit]
 
 
-def create_customer_from_hotel_guest(hotel_guest_id: int) -> dict:
+def create_customer_from_hotel_guest(hotel_guest_id: int, additional_data: dict = None) -> dict:
     """
     Create a beach_customer from a hotel_guest record.
     Parses guest_name into first_name/last_name and copies relevant fields.
 
     Args:
         hotel_guest_id: ID of the hotel guest to convert
+        additional_data: Optional dict with additional fields (phone, email, language, notes, preferences)
 
     Returns:
         Dict with 'customer_id' and 'customer' data
@@ -682,6 +690,7 @@ def create_customer_from_hotel_guest(hotel_guest_id: int) -> dict:
     """
     db = get_db()
     cursor = db.cursor()
+    additional_data = additional_data or {}
 
     # Get hotel guest
     cursor.execute('SELECT * FROM hotel_guests WHERE id = ?', (hotel_guest_id,))
@@ -692,11 +701,12 @@ def create_customer_from_hotel_guest(hotel_guest_id: int) -> dict:
 
     guest = dict(guest)
 
-    # Check if customer already exists for this room
+    # Check if customer already exists for this room with this name
     cursor.execute('''
         SELECT id FROM beach_customers
         WHERE customer_type = 'interno' AND room_number = ?
-    ''', (guest['room_number'],))
+          AND (first_name || ' ' || COALESCE(last_name, '')) LIKE ?
+    ''', (guest['room_number'], f"%{guest['guest_name']}%"))
     existing = cursor.fetchone()
 
     if existing:
@@ -715,21 +725,47 @@ def create_customer_from_hotel_guest(hotel_guest_id: int) -> dict:
     # Determine VIP status from vip_code
     vip_status = 1 if guest.get('vip_code') else 0
 
+    # Map nationality to language
+    nationality_to_language = {
+        'DE': 'DE', 'AT': 'DE', 'CH': 'DE',
+        'GB': 'EN', 'US': 'EN', 'AU': 'EN', 'UK': 'EN', 'IE': 'EN',
+        'ES': 'ES', 'MX': 'ES', 'AR': 'ES', 'CO': 'ES',
+        'FR': 'FR', 'BE': 'FR',
+        'IT': 'IT',
+        'PT': 'PT', 'BR': 'PT',
+        'NL': 'NL',
+        'RU': 'RU',
+    }
+    nationality = guest.get('nationality', '').upper().strip() if guest.get('nationality') else None
+    language = additional_data.get('language') or nationality_to_language.get(nationality)
+
+    # Use additional data if provided, otherwise use hotel guest data
+    email = additional_data.get('email') or guest.get('email')
+    phone = additional_data.get('phone') or guest.get('phone')
+    country_code = additional_data.get('country_code', '+34')
+    notes = additional_data.get('notes') or f"Huésped hotel (llegada: {guest.get('arrival_date')}, salida: {guest.get('departure_date')})"
+
     # Create beach_customer
     cursor.execute('''
         INSERT INTO beach_customers
-        (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status)
-        VALUES ('interno', ?, ?, ?, ?, ?, ?, ?)
+        (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status, language, country_code)
+        VALUES ('interno', ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         first_name, last_name,
-        guest.get('email'), guest.get('phone'),
+        email, phone,
         guest['room_number'],
-        f"Importado de huésped hotel (llegada: {guest.get('arrival_date')}, salida: {guest.get('departure_date')})",
-        vip_status
+        notes,
+        vip_status,
+        language,
+        country_code
     ))
 
     db.commit()
     customer_id = cursor.lastrowid
+
+    # Set preferences if provided
+    if additional_data.get('preferences'):
+        set_customer_preferences(customer_id, additional_data['preferences'])
 
     return {
         'customer_id': customer_id,

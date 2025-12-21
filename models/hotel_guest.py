@@ -81,7 +81,7 @@ def get_guests_by_room(room_number: str, check_date: date = None) -> List[Dict[s
         check_date: Optional date to filter active guests
 
     Returns:
-        List of hotel guest dicts for the room
+        List of hotel guest dicts for the room (main guest first)
     """
     db = get_db()
     cursor = db.cursor()
@@ -92,17 +92,47 @@ def get_guests_by_room(room_number: str, check_date: date = None) -> List[Dict[s
             WHERE room_number = ?
               AND arrival_date <= ?
               AND departure_date >= ?
-            ORDER BY arrival_date DESC
+            ORDER BY is_main_guest DESC, guest_name
         ''', (room_number, check_date.isoformat(), check_date.isoformat()))
     else:
         cursor.execute('''
             SELECT * FROM hotel_guests
             WHERE room_number = ?
-            ORDER BY arrival_date DESC
+            ORDER BY is_main_guest DESC, guest_name
         ''', (room_number,))
 
     rows = cursor.fetchall()
     return [dict(row) for row in rows]
+
+
+def get_room_guest_count(room_number: str, check_date: date = None) -> int:
+    """
+    Get the count of guests in a room.
+
+    Args:
+        room_number: Room number
+        check_date: Optional date to filter active guests
+
+    Returns:
+        Number of guests in the room
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    if check_date:
+        cursor.execute('''
+            SELECT COUNT(*) as count FROM hotel_guests
+            WHERE room_number = ?
+              AND arrival_date <= ?
+              AND departure_date >= ?
+        ''', (room_number, check_date.isoformat(), check_date.isoformat()))
+    else:
+        cursor.execute('''
+            SELECT COUNT(*) as count FROM hotel_guests
+            WHERE room_number = ?
+        ''', (room_number,))
+
+    return cursor.fetchone()['count']
 
 
 def search_guests(query: str, limit: int = 10) -> List[Dict[str, Any]]:
@@ -145,7 +175,9 @@ def create_hotel_guest(
     email: str = None,
     phone: str = None,
     notes: str = None,
-    source_file: str = None
+    source_file: str = None,
+    is_main_guest: int = 0,
+    booking_reference: str = None
 ) -> int:
     """
     Create new hotel guest record.
@@ -164,6 +196,8 @@ def create_hotel_guest(
         phone: Phone number
         notes: Additional notes
         source_file: Source file name if imported
+        is_main_guest: Whether this is the main guest (1) or additional guest (0)
+        booking_reference: Hotel PMS reservation number
 
     Returns:
         New hotel guest ID
@@ -175,14 +209,14 @@ def create_hotel_guest(
         INSERT INTO hotel_guests (
             room_number, guest_name, arrival_date, departure_date,
             num_adults, num_children, vip_code, guest_type,
-            nationality, email, phone, notes, source_file
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            nationality, email, phone, notes, source_file, is_main_guest, booking_reference
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         room_number, guest_name,
         arrival_date.isoformat() if isinstance(arrival_date, date) else arrival_date,
         departure_date.isoformat() if isinstance(departure_date, date) else departure_date,
         num_adults, num_children, vip_code, guest_type,
-        nationality, email, phone, notes, source_file
+        nationality, email, phone, notes, source_file, is_main_guest, booking_reference
     ))
 
     db.commit()
@@ -197,17 +231,20 @@ def upsert_hotel_guest(
     **kwargs
 ) -> Dict[str, Any]:
     """
-    Insert or update hotel guest based on room_number + arrival_date.
+    Insert or update hotel guest based on room_number + arrival_date + guest_name.
+
+    Supports multiple guests per room - uniqueness is by (room, date, name).
+    First guest in a room is marked as main guest.
 
     Args:
         room_number: Room number
         guest_name: Guest full name
         arrival_date: Check-in date
         departure_date: Check-out date
-        **kwargs: Additional fields to update
+        **kwargs: Additional fields to update (including is_main_guest)
 
     Returns:
-        Dict with 'id', 'action' ('created' or 'updated')
+        Dict with 'id', 'action' ('created' or 'updated'), 'is_main_guest'
     """
     db = get_db()
     cursor = db.cursor()
@@ -215,22 +252,23 @@ def upsert_hotel_guest(
     arrival_str = arrival_date.isoformat() if isinstance(arrival_date, date) else arrival_date
     departure_str = departure_date.isoformat() if isinstance(departure_date, date) else departure_date
 
-    # Check if guest exists
+    # Check if this exact guest exists (room + date + name)
     cursor.execute('''
-        SELECT id FROM hotel_guests
-        WHERE room_number = ? AND arrival_date = ?
-    ''', (room_number, arrival_str))
+        SELECT id, is_main_guest FROM hotel_guests
+        WHERE room_number = ? AND arrival_date = ? AND guest_name = ?
+    ''', (room_number, arrival_str, guest_name))
 
     existing = cursor.fetchone()
 
     if existing:
         # Update existing record
         guest_id = existing['id']
-        update_fields = ['guest_name = ?', 'departure_date = ?', 'updated_at = CURRENT_TIMESTAMP']
-        update_values = [guest_name, departure_str]
+        is_main = existing['is_main_guest']
+        update_fields = ['departure_date = ?', 'updated_at = CURRENT_TIMESTAMP']
+        update_values = [departure_str]
 
         for field, value in kwargs.items():
-            if value is not None:
+            if value is not None and field != 'is_main_guest':
                 update_fields.append(f'{field} = ?')
                 update_values.append(value)
 
@@ -243,17 +281,28 @@ def upsert_hotel_guest(
         ''', update_values)
 
         db.commit()
-        return {'id': guest_id, 'action': 'updated'}
+        return {'id': guest_id, 'action': 'updated', 'is_main_guest': is_main}
     else:
+        # Check if this is the first guest for this room+date
+        cursor.execute('''
+            SELECT COUNT(*) as count FROM hotel_guests
+            WHERE room_number = ? AND arrival_date = ?
+        ''', (room_number, arrival_str))
+        existing_count = cursor.fetchone()['count']
+
+        # First guest becomes main guest, others are additional
+        is_main_guest = 1 if existing_count == 0 else kwargs.get('is_main_guest', 0)
+
         # Create new record
         guest_id = create_hotel_guest(
             room_number=room_number,
             guest_name=guest_name,
             arrival_date=arrival_date,
             departure_date=departure_date,
-            **kwargs
+            is_main_guest=is_main_guest,
+            **{k: v for k, v in kwargs.items() if k != 'is_main_guest'}
         )
-        return {'id': guest_id, 'action': 'created'}
+        return {'id': guest_id, 'action': 'created', 'is_main_guest': is_main_guest}
 
 
 def delete_hotel_guest(guest_id: int) -> bool:

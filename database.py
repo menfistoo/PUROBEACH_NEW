@@ -316,6 +316,198 @@ def migrate_status_history_v2():
         raise
 
 
+def migrate_hotel_guests_multi_guest():
+    """
+    Migration: Support multiple guests per room.
+
+    Changes:
+    - Adds `is_main_guest` column (BOOLEAN DEFAULT 0)
+    - Changes UNIQUE constraint from (room_number, arrival_date)
+      to (room_number, arrival_date, guest_name)
+
+    This allows storing all family members in the same room:
+    - Room 301: John Smith (main guest)
+    - Room 301: Johanne Smith (additional guest)
+
+    Safe to run multiple times - checks if column already exists.
+
+    Returns:
+        bool: True if migration applied, False if already applied
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if migration already applied
+    cursor.execute("PRAGMA table_info(hotel_guests)")
+    existing_columns = [row['name'] for row in cursor.fetchall()]
+
+    if 'is_main_guest' in existing_columns:
+        print("Migration already applied - is_main_guest column exists.")
+        return False
+
+    print("Applying hotel_guests_multi_guest migration...")
+
+    try:
+        # SQLite doesn't support modifying constraints directly,
+        # so we need to recreate the table
+
+        # 1. Create new table with updated schema
+        db.execute('''
+            CREATE TABLE hotel_guests_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                room_number TEXT NOT NULL,
+                guest_name TEXT NOT NULL,
+                arrival_date DATE,
+                departure_date DATE,
+                num_adults INTEGER DEFAULT 1,
+                num_children INTEGER DEFAULT 0,
+                vip_code TEXT,
+                guest_type TEXT,
+                nationality TEXT,
+                email TEXT,
+                phone TEXT,
+                notes TEXT,
+                source_file TEXT,
+                is_main_guest INTEGER DEFAULT 0,
+                imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(room_number, arrival_date, guest_name)
+            )
+        ''')
+        print("  Created new table with is_main_guest column")
+
+        # 2. Copy existing data (all existing guests become main guests)
+        db.execute('''
+            INSERT INTO hotel_guests_new
+            (id, room_number, guest_name, arrival_date, departure_date,
+             num_adults, num_children, vip_code, guest_type, nationality,
+             email, phone, notes, source_file, is_main_guest, imported_at, updated_at)
+            SELECT
+                id, room_number, guest_name, arrival_date, departure_date,
+                num_adults, num_children, vip_code, guest_type, nationality,
+                email, phone, notes, source_file, 1, imported_at, updated_at
+            FROM hotel_guests
+        ''')
+        print("  Migrated existing data (marked as main guests)")
+
+        # 3. Drop old table
+        db.execute('DROP TABLE hotel_guests')
+        print("  Dropped old table")
+
+        # 4. Rename new table
+        db.execute('ALTER TABLE hotel_guests_new RENAME TO hotel_guests')
+        print("  Renamed new table to hotel_guests")
+
+        # 5. Recreate indexes
+        db.execute('CREATE INDEX IF NOT EXISTS idx_hotel_guests_room ON hotel_guests(room_number)')
+        db.execute('CREATE INDEX IF NOT EXISTS idx_hotel_guests_dates ON hotel_guests(arrival_date, departure_date)')
+        db.execute('CREATE INDEX IF NOT EXISTS idx_hotel_guests_active ON hotel_guests(departure_date)')
+        db.execute('CREATE INDEX IF NOT EXISTS idx_hotel_guests_main ON hotel_guests(room_number, is_main_guest)')
+        print("  Recreated indexes")
+
+        db.commit()
+        print("Migration hotel_guests_multi_guest applied successfully!")
+        return True
+
+    except Exception as e:
+        db.rollback()
+        print(f"Migration failed: {e}")
+        raise
+
+
+def migrate_hotel_guests_booking_reference():
+    """
+    Migration: Add booking_reference column to hotel_guests.
+
+    This stores the hotel PMS reservation number (from "Reserva" column in Excel).
+
+    Safe to run multiple times - checks if column already exists.
+
+    Returns:
+        bool: True if migration applied, False if already applied
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if migration already applied
+    cursor.execute("PRAGMA table_info(hotel_guests)")
+    existing_columns = [row['name'] for row in cursor.fetchall()]
+
+    if 'booking_reference' in existing_columns:
+        print("Migration already applied - booking_reference column exists.")
+        return False
+
+    print("Applying hotel_guests_booking_reference migration...")
+
+    try:
+        # Add the new column
+        db.execute('ALTER TABLE hotel_guests ADD COLUMN booking_reference TEXT')
+        print("  Added booking_reference column")
+
+        db.commit()
+        print("Migration hotel_guests_booking_reference applied successfully!")
+        return True
+
+    except Exception as e:
+        db.rollback()
+        print(f"Migration failed: {e}")
+        raise
+
+
+def migrate_customers_language_phone():
+    """
+    Migration: Add language and country_code columns to beach_customers.
+
+    These fields support the enhanced customer creation flow with:
+    - Language selector (ES, EN, DE, FR, etc.)
+    - Phone with country code (+34, +49, etc.)
+
+    Safe to run multiple times - checks if columns already exist.
+
+    Returns:
+        bool: True if migration applied, False if already applied
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if migration already applied
+    cursor.execute("PRAGMA table_info(beach_customers)")
+    existing_columns = [row['name'] for row in cursor.fetchall()]
+
+    if 'language' in existing_columns:
+        print("Migration already applied - language column exists.")
+        return False
+
+    print("Applying customers_language_phone migration...")
+
+    try:
+        columns_to_add = [
+            ("ALTER TABLE beach_customers ADD COLUMN language TEXT", 'language'),
+            ("ALTER TABLE beach_customers ADD COLUMN country_code TEXT DEFAULT '+34'", 'country_code'),
+        ]
+
+        for sql, col_name in columns_to_add:
+            if col_name not in existing_columns:
+                db.execute(sql)
+                print(f"  Added column: {col_name}")
+
+        # Create index for language
+        try:
+            db.execute('CREATE INDEX IF NOT EXISTS idx_customers_language ON beach_customers(language)')
+            print("  Created index: idx_customers_language")
+        except Exception:
+            pass
+
+        db.commit()
+        print("Migration customers_language_phone applied successfully!")
+        return True
+
+    except Exception as e:
+        db.rollback()
+        print(f"Migration failed: {e}")
+        raise
+
+
 def migrate_add_furniture_types_menu():
     """
     Migration: Add 'Tipos de Mobiliario' menu permission.
@@ -559,7 +751,7 @@ def create_tables(db):
         )
     ''')
 
-    # 3. Hotel Guests Table
+    # 3. Hotel Guests Table (supports multiple guests per room)
     db.execute('''
         CREATE TABLE hotel_guests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -576,9 +768,10 @@ def create_tables(db):
             phone TEXT,
             notes TEXT,
             source_file TEXT,
+            is_main_guest INTEGER DEFAULT 0,
             imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(room_number, arrival_date)
+            UNIQUE(room_number, arrival_date, guest_name)
         )
     ''')
 
@@ -591,7 +784,9 @@ def create_tables(db):
             last_name TEXT,
             email TEXT,
             phone TEXT,
+            country_code TEXT DEFAULT '+34',
             room_number TEXT,
+            language TEXT,
             notes TEXT,
             vip_status INTEGER DEFAULT 0,
             total_visits INTEGER DEFAULT 0,
@@ -802,6 +997,7 @@ def create_indexes(db):
     db.execute('CREATE INDEX idx_hotel_guests_room ON hotel_guests(room_number)')
     db.execute('CREATE INDEX idx_hotel_guests_dates ON hotel_guests(arrival_date, departure_date)')
     db.execute('CREATE INDEX idx_hotel_guests_active ON hotel_guests(departure_date)')
+    db.execute('CREATE INDEX idx_hotel_guests_main ON hotel_guests(room_number, is_main_guest)')
 
 
 def seed_database(db):
