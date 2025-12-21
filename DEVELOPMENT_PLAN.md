@@ -10,9 +10,9 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase 6A: Reservations Core |
-| **Last Updated** | 2025-12-15 |
-| **Last Session** | Phase 6 planning - restructured into sub-phases |
-| **Next Priority** | DB migration + ticket number generation |
+| **Last Updated** | 2025-12-21 |
+| **Last Session** | Reservation form customer section enhancements |
+| **Next Priority** | Complete reservation creation flow + state management |
 
 ---
 
@@ -27,7 +27,7 @@
 | 4.5 | Enhanced Furniture Types | Complete | 100% |
 | 4.6 | Enhanced Furniture Management | Complete | 100% |
 | 5 | Customers | Complete | 100% |
-| 6A | Reservations: Core CRUD + States | In Progress | 0% |
+| 6A | Reservations: Core CRUD + States | In Progress | 25% |
 | 6B | Reservations: Availability + Multi-day | Not Started | 0% |
 | 6C | Reservations: Pricing + PMS | Not Started | 0% |
 | 7 | Interactive Map | Not Started | 0% |
@@ -304,6 +304,14 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
+| **Customer Section Enhancements** | Complete | Reservation form customer section |
+| - Unified customer/hotel guest search | Complete | Accent-insensitive, multi-word |
+| - Customer notes & preferences display | Complete | Show in reservation form |
+| - Profile link button | Complete | Quick access to full details |
+| - Customer stats (language, visits, spent) | Complete | Real-time display |
+| - Check-in/check-out badges | Complete | Visual indicators in search |
+| - Hide expired hotel stays | Complete | Filter interno customers after checkout |
+| - Single guest per room in search | Complete | Show main guest + count |
 | DB migration (SPEC columns) | Pending | ticket_number, current_states, pricing fields |
 | generate_reservation_number() | Pending | Atomic YYMMDDRR format with retries |
 | create_beach_reservation() | Pending | Full creation with validations |
@@ -633,6 +641,55 @@ DEFAULT_PREFERENCES = [
 - Priority 1
 - Priority 2
 ```
+
+---
+
+### Session: 2025-12-21 (Phase 6A)
+**Duration:** Single session
+**Focus:** Reservation Form Customer Section Enhancements
+
+#### Completed
+- **Customer Search Enhancements** (`models/customer_search.py`)
+  - Unified search for beach_customers and hotel_guests with accent-insensitive matching
+  - Check-in/check-out today detection with visual badges
+  - Filter expired hotel stays (interno customers after checkout not shown)
+  - Single guest per room in search results (main guest + count in parentheses)
+  - Date comparison fix: handle both date objects and ISO format strings
+
+- **Reservation Form UI** (`templates/beach/reservation_form.html`)
+  - Fixed hotel guest notes display (was hidden by `selectHotelGuest()`)
+  - Added profile link button for quick access to full customer details
+  - Added customer stats section (language, visits, total spent)
+  - Added check-in badge (green) and check-out badge (red) in search results
+  - Fixed room info display for external customers (hide "Hab. None")
+
+- **API Updates** (`blueprints/beach/__init__.py`)
+  - Added `is_checkin_today` and `is_checkout_today` flags to search response
+  - Added `total_spent` to customer data
+  - Fixed room_number to return null instead of "None" string
+
+- **Customer List Fix** (`templates/beach/customers.html`)
+  - Fixed reservation count badge contrast (changed from invalid `bg-outline-secondary` to `bg-secondary`)
+
+#### Decisions
+- Check-in/check-out detection uses hotel_guests table for both new hotel guests AND existing interno customers
+- Interno customers without active hotel stay are filtered from search (prevents stale data)
+- Date comparison handles both Python date objects and ISO format strings for compatibility
+
+#### Issues Fixed
+- Date comparison returning False: `datetime.date` vs string comparison issue
+  - Resolution: Check `isinstance(arrival, str)` and compare appropriately
+- API not passing check-in/check-out flags to frontend
+  - Resolution: Added flags to API response dict
+- "Hab. None" showing for external customers
+  - Resolution: Check for "None" string in API and JavaScript
+- Wrong guest returned for check-in today
+  - Resolution: Added `(h.arrival_date = date('now')) DESC` to ORDER BY
+
+#### Next Session
+- Begin Phase 6A core: DB migration, reservation CRUD, state management
+- Implement ticket number generation (YYMMDDRR format)
+- Complete reservation creation flow
 
 ---
 
