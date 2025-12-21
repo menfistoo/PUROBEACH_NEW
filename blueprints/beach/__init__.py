@@ -1192,3 +1192,197 @@ def api_get_conflicts():
     )
 
     return jsonify({'conflicts': conflicts})
+
+
+# ============================================================================
+# PHASE 6B: MULTI-DAY RESERVATION API ENDPOINTS
+# ============================================================================
+
+@beach_bp.route('/api/reservations/create-multiday', methods=['POST'])
+@login_required
+@permission_required('beach.reservations.create')
+def api_create_multiday():
+    """
+    Create multi-day linked reservations.
+
+    Request JSON:
+        {
+            "customer_id": 123,
+            "dates": ["2025-01-16", "2025-01-17", "2025-01-18"],
+            "num_people": 2,
+            "furniture_ids": [1, 2],  // Same furniture all days
+            // OR
+            "furniture_by_date": {    // Different furniture per day
+                "2025-01-16": [1, 2],
+                "2025-01-17": [3, 4]
+            },
+            "time_slot": "all_day",
+            "payment_status": "NO",
+            "charge_to_room": 0,
+            "preferences": "pref_sombra,pref_primera_linea",
+            "observations": "Notes here"
+        }
+
+    Response:
+        {
+            "success": true,
+            "parent_id": 123,
+            "parent_ticket": "25011601",
+            "children": [...],
+            "total_created": 3
+        }
+    """
+    from models.reservation import create_linked_multiday_reservations
+
+    data = request.get_json()
+
+    customer_id = data.get('customer_id')
+    dates = data.get('dates', [])
+    num_people = data.get('num_people', 1)
+    furniture_ids = data.get('furniture_ids')
+    furniture_by_date = data.get('furniture_by_date')
+
+    if not customer_id:
+        return jsonify({'success': False, 'error': 'customer_id requerido'}), 400
+    if not dates:
+        return jsonify({'success': False, 'error': 'dates requerido'}), 400
+    if not furniture_ids and not furniture_by_date:
+        return jsonify({'success': False, 'error': 'furniture_ids o furniture_by_date requerido'}), 400
+
+    try:
+        result = create_linked_multiday_reservations(
+            customer_id=customer_id,
+            dates=dates,
+            num_people=num_people,
+            furniture_ids=furniture_ids,
+            furniture_by_date=furniture_by_date,
+            time_slot=data.get('time_slot', 'all_day'),
+            payment_status=data.get('payment_status', 'NO'),
+            charge_to_room=1 if data.get('charge_to_room') else 0,
+            charge_reference=data.get('charge_reference', ''),
+            price=data.get('price', 0.0),
+            preferences=data.get('preferences', ''),
+            observations=data.get('observations', ''),
+            created_by=current_user.username if current_user else None,
+            check_in_date=data.get('check_in_date'),
+            check_out_date=data.get('check_out_date'),
+            hamaca_included=data.get('hamaca_included', 1)
+        )
+
+        return jsonify(result)
+
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Error interno: {str(e)}'}), 500
+
+
+@beach_bp.route('/api/reservations/<int:reservation_id>/multiday-summary')
+@login_required
+@permission_required('beach.reservations.view')
+def api_multiday_summary(reservation_id):
+    """
+    Get summary of multi-day reservation group.
+
+    Response:
+        {
+            "is_multiday": true,
+            "is_parent": true,
+            "parent_id": 123,
+            "parent_ticket": "25011601",
+            "total_days": 3,
+            "date_range": {"start": "2025-01-16", "end": "2025-01-18"},
+            "reservations": [...],
+            "customer_id": 456,
+            "customer_name": "John Smith"
+        }
+    """
+    from models.reservation import get_multiday_summary
+
+    summary = get_multiday_summary(reservation_id)
+
+    if not summary:
+        return jsonify({'error': 'Reserva no encontrada'}), 404
+
+    return jsonify(summary)
+
+
+@beach_bp.route('/api/reservations/<int:reservation_id>/cancel-multiday', methods=['POST'])
+@login_required
+@permission_required('beach.reservations.change_state')
+def api_cancel_multiday(reservation_id):
+    """
+    Cancel all reservations in a multi-day group.
+
+    Request JSON:
+        {
+            "notes": "Cancellation reason",
+            "cancel_children": true  // default true
+        }
+
+    Response:
+        {
+            "success": true,
+            "cancelled_count": 3,
+            "cancelled_ids": [1, 2, 3]
+        }
+    """
+    from models.reservation import cancel_multiday_reservations
+
+    data = request.get_json() or {}
+
+    try:
+        result = cancel_multiday_reservations(
+            parent_id=reservation_id,
+            cancelled_by=current_user.username if current_user else 'system',
+            notes=data.get('notes', ''),
+            cancel_children=data.get('cancel_children', True)
+        )
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@beach_bp.route('/api/reservations/<int:reservation_id>/update-multiday', methods=['POST'])
+@login_required
+@permission_required('beach.reservations.edit')
+def api_update_multiday(reservation_id):
+    """
+    Update common fields across all linked reservations.
+
+    Request JSON:
+        {
+            "num_people": 3,
+            "time_slot": "morning",
+            "preferences": "pref_sombra",
+            "update_children": true  // default true
+        }
+
+    Response:
+        {
+            "success": true,
+            "updated_count": 3,
+            "updated_ids": [1, 2, 3]
+        }
+    """
+    from models.reservation import update_multiday_reservations
+
+    data = request.get_json() or {}
+    update_children = data.pop('update_children', True)
+
+    # Remove non-field keys
+    data.pop('reservation_id', None)
+
+    try:
+        result = update_multiday_reservations(
+            parent_id=reservation_id,
+            update_children=update_children,
+            **data
+        )
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

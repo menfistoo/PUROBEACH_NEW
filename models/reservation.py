@@ -84,6 +84,16 @@ from .reservation_availability import (
     get_conflicting_reservations,
 )
 
+# Multi-day reservation operations (Phase 6B)
+from .reservation_multiday import (
+    create_linked_multiday_reservations,
+    update_multiday_reservations,
+    cancel_multiday_reservations,
+    get_multiday_summary,
+    is_parent_reservation,
+    get_child_reservations,
+)
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================
@@ -140,4 +150,12 @@ __all__ = [
     'check_duplicate_reservation',
     'get_furniture_availability_map',
     'get_conflicting_reservations',
+
+    # Multi-day reservations (Phase 6B)
+    'create_linked_multiday_reservations',
+    'update_multiday_reservations',
+    'cancel_multiday_reservations',
+    'get_multiday_summary',
+    'is_parent_reservation',
+    'get_child_reservations',
 ]
