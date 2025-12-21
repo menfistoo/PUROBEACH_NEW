@@ -94,6 +94,16 @@ from .reservation_multiday import (
     get_child_reservations,
 )
 
+# Smart suggestions (Phase 6B)
+from .reservation_suggestions import (
+    SUGGESTION_WEIGHTS,
+    build_furniture_occupancy_map,
+    validate_cluster_contiguity,
+    suggest_furniture_for_reservation,
+    score_preference_match,
+    get_customer_preferred_furniture,
+)
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================
@@ -158,4 +168,12 @@ __all__ = [
     'get_multiday_summary',
     'is_parent_reservation',
     'get_child_reservations',
+
+    # Smart suggestions (Phase 6B)
+    'SUGGESTION_WEIGHTS',
+    'build_furniture_occupancy_map',
+    'validate_cluster_contiguity',
+    'suggest_furniture_for_reservation',
+    'score_preference_match',
+    'get_customer_preferred_furniture',
 ]

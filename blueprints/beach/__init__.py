@@ -1386,3 +1386,163 @@ def api_update_multiday(reservation_id):
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# PHASE 6B: SMART SUGGESTIONS API ENDPOINTS
+# ============================================================================
+
+@beach_bp.route('/api/reservations/suggest-furniture', methods=['POST'])
+@login_required
+@permission_required('beach.reservations.view')
+def api_suggest_furniture():
+    """
+    Get smart furniture suggestions for a reservation.
+
+    Scoring weights: 40% contiguity + 35% preferences + 25% capacity
+
+    Request JSON:
+        {
+            "dates": ["2025-01-16"],  // or multiple dates for multi-day
+            "num_people": 2,
+            "preferences": "pref_sombra,pref_primera_linea",  // optional
+            "customer_id": 123,  // optional - for history-based suggestions
+            "zone_id": 1,  // optional - filter by zone
+            "limit": 5  // optional - max suggestions (default 5)
+        }
+
+    Response:
+        {
+            "success": true,
+            "suggestions": [
+                {
+                    "furniture_ids": [1, 2],
+                    "furniture_numbers": ["H1", "H2"],
+                    "zone_name": "Primera Línea",
+                    "total_capacity": 4,
+                    "scores": {
+                        "contiguity": 1.0,
+                        "preferences": 0.8,
+                        "capacity": 0.9,
+                        "total": 0.89
+                    },
+                    "reasons": ["Alta contigüidad", "Coincide preferencia: Sombra"]
+                }
+            ],
+            "strategy": "preference_based",
+            "total_available": 15
+        }
+    """
+    from models.reservation import suggest_furniture_for_reservation
+
+    data = request.get_json()
+
+    dates = data.get('dates', [])
+    num_people = data.get('num_people', 1)
+    preferences = data.get('preferences', '')
+    customer_id = data.get('customer_id')
+    zone_id = data.get('zone_id')
+    limit = data.get('limit', 5)
+
+    if not dates:
+        return jsonify({'success': False, 'error': 'dates requerido'}), 400
+
+    try:
+        result = suggest_furniture_for_reservation(
+            dates=dates,
+            num_people=num_people,
+            preferences_csv=preferences,
+            customer_id=customer_id,
+            zone_id=zone_id,
+            limit=limit
+        )
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@beach_bp.route('/api/reservations/validate-contiguity', methods=['POST'])
+@login_required
+@permission_required('beach.reservations.view')
+def api_validate_contiguity():
+    """
+    Validate if selected furniture forms a contiguous cluster.
+
+    Request JSON:
+        {
+            "furniture_ids": [1, 2, 3],
+            "date": "2025-01-16"
+        }
+
+    Response:
+        {
+            "is_contiguous": true,
+            "contiguity_score": 1.0,
+            "gaps": [],
+            "rows": [
+                {"y": 100, "furniture_ids": [1, 2, 3], "occupied_gaps": []}
+            ]
+        }
+    """
+    from models.reservation import build_furniture_occupancy_map, validate_cluster_contiguity
+
+    data = request.get_json()
+
+    furniture_ids = data.get('furniture_ids', [])
+    date_str = data.get('date')
+
+    if not furniture_ids:
+        return jsonify({'error': 'furniture_ids requerido'}), 400
+    if not date_str:
+        return jsonify({'error': 'date requerido'}), 400
+
+    try:
+        # Build occupancy map for the date
+        occupancy_map = build_furniture_occupancy_map(date_str)
+
+        # Validate contiguity
+        result = validate_cluster_contiguity(furniture_ids, occupancy_map)
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@beach_bp.route('/api/customers/<int:customer_id>/preferred-furniture')
+@login_required
+@permission_required('beach.customers.view')
+def api_customer_preferred_furniture(customer_id):
+    """
+    Get customer's preferred furniture based on history.
+
+    Query params:
+        limit: Max items to return (default 5)
+
+    Response:
+        {
+            "preferred_furniture": [
+                {
+                    "furniture_id": 1,
+                    "furniture_number": "H1",
+                    "zone_name": "Primera Línea",
+                    "times_used": 5
+                }
+            ]
+        }
+    """
+    from models.reservation import get_customer_preferred_furniture
+
+    limit = request.args.get('limit', 5, type=int)
+
+    try:
+        preferred = get_customer_preferred_furniture(customer_id, limit=limit)
+
+        return jsonify({
+            'preferred_furniture': preferred
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
