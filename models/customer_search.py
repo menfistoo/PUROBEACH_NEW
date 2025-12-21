@@ -144,7 +144,11 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
             guest_params.extend([pattern, pattern, pattern, pattern])
 
         guest_query += '''
-            ORDER BY h.room_number, h.is_main_guest DESC, h.guest_name
+            ORDER BY h.room_number,
+                     (h.arrival_date = date('now')) DESC,
+                     (h.departure_date = date('now')) DESC,
+                     h.is_main_guest DESC,
+                     h.guest_name
             LIMIT ?
         '''
         guest_params.append(limit * 5)
