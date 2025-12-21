@@ -291,6 +291,7 @@ def import_hotel_guests_from_excel(
                 nationality = get_value('nationality')
                 guest_type = get_value('guest_type')
                 repeat_count = get_value('repeat_guest')
+                booking_reference = get_value('reservation_code')  # "Reserva" column from PMS
 
                 # Determine VIP code based on repeat guest
                 vip_code = None
@@ -306,7 +307,8 @@ def import_hotel_guests_from_excel(
                     guest_type=guest_type,
                     nationality=nationality,
                     vip_code=vip_code,
-                    source_file=source_name
+                    source_file=source_name,
+                    booking_reference=booking_reference
                 )
 
                 if upsert_result['action'] == 'created':

@@ -78,7 +78,10 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
     if not search_words:
         return []
 
-    # Search beach_customers - fetch more results for Python-side filtering
+    # Build SQL LIKE patterns for pre-filtering (improves performance)
+    like_patterns = [f'%{word}%' for word in search_words]
+
+    # Search beach_customers with SQL pre-filtering
     customer_query = '''
         SELECT c.*, 'customer' as source
         FROM beach_customers c
@@ -86,18 +89,29 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
     '''
     params = []
 
+    # Add SQL-level filtering for each word
+    for pattern in like_patterns:
+        customer_query += '''
+            AND (LOWER(c.first_name || ' ' || COALESCE(c.last_name, '')) LIKE ?
+                 OR LOWER(c.email) LIKE ?
+                 OR c.phone LIKE ?
+                 OR c.room_number LIKE ?)
+        '''
+        params.extend([pattern, pattern, pattern, pattern])
+
     if customer_type:
         customer_query += ' AND c.customer_type = ?'
         params.append(customer_type)
 
     customer_query += ' ORDER BY c.total_visits DESC, c.created_at DESC LIMIT ?'
-    params.append(limit * 10)  # Fetch more for filtering
+    params.append(limit * 5)
 
     cursor.execute(customer_query, params)
 
     customer_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number']
     for row in cursor.fetchall():
         customer = dict(row)
+        # Python-side filtering for accent-insensitive matching
         if _matches_search(customer, search_words, customer_fields):
             customer['display_name'] = f"{customer['first_name']} {customer['last_name'] or ''}".strip()
             results.append(customer)
@@ -115,10 +129,27 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                       AND h2.departure_date >= date('now')) as room_guest_count
             FROM hotel_guests h
             WHERE h.departure_date >= date('now')
+              AND h.arrival_date <= date('now')
+        '''
+        guest_params = []
+
+        # Add SQL-level filtering for each word
+        for pattern in like_patterns:
+            guest_query += '''
+                AND (LOWER(h.guest_name) LIKE ?
+                     OR h.room_number LIKE ?
+                     OR LOWER(h.email) LIKE ?
+                     OR h.phone LIKE ?)
+            '''
+            guest_params.extend([pattern, pattern, pattern, pattern])
+
+        guest_query += '''
             ORDER BY h.room_number, h.is_main_guest DESC, h.guest_name
             LIMIT ?
         '''
-        cursor.execute(guest_query, [limit * 10])
+        guest_params.append(limit * 5)
+
+        cursor.execute(guest_query, guest_params)
 
         # Get existing customer room numbers to avoid duplicates
         existing_rooms = {c['room_number'] for c in results if c.get('room_number') and c.get('customer_type') == 'interno'}
@@ -129,6 +160,7 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
             # Skip if already have a customer with this room number
             if guest['room_number'] in existing_rooms:
                 continue
+            # Python-side filtering for accent-insensitive matching
             if _matches_search(guest, search_words, guest_fields):
                 guest['display_name'] = guest['guest_name']
                 guest['customer_type'] = 'interno'  # Hotel guests are always interno
