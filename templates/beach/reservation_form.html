@@ -447,11 +447,16 @@
                                     <option value="{{ ft.type_code }}">{{ ft.display_name }}</option>
                                     {% endfor %}
                                 </select>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="refreshFurniture">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="refreshFurniture" title="Actualizar">
                                     <i class="fas fa-sync-alt"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-primary" id="suggestFurnitureBtn" title="Sugerir mobiliario">
+                                    <i class="fas fa-magic me-1"></i>Sugerir
                                 </button>
                             </div>
                         </div>
+                        <!-- Alerts for duplicates, contiguity, etc. -->
+                        <div id="furnitureAlerts" class="furniture-alerts mb-2"></div>
                         <div id="furnitureGrid" class="furniture-grid">
                             <div class="furniture-placeholder">
                                 <i class="fas fa-calendar-day fa-3x mb-3 text-muted"></i>
@@ -659,6 +664,11 @@
 .furniture-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:var(--color-off-white);border-bottom:1px solid var(--color-border)}
 .furniture-filters{display:flex;gap:8px}
 .furniture-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px;padding:20px;min-height:200px;max-height:350px;overflow-y:auto;background:#fff}
+.furniture-alerts{padding:0 15px}.furniture-alerts .alert{margin-bottom:8px;padding:10px 15px;font-size:0.9rem;display:flex;align-items:center;gap:10px}.furniture-alerts .alert i{font-size:1.1rem}.furniture-alerts .alert-dismissible .btn-close{padding:12px}
+.suggestion-modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1050}.suggestion-content{background:#fff;border-radius:12px;max-width:500px;width:90%;max-height:80vh;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.2)}
+.suggestion-header{padding:15px 20px;background:linear-gradient(135deg,#D4AF37,#B8962E);color:#fff;display:flex;justify-content:space-between;align-items:center}.suggestion-header h5{margin:0}.suggestion-header .btn-close{filter:brightness(0) invert(1)}
+.suggestion-list{max-height:400px;overflow-y:auto;padding:15px}.suggestion-item{padding:12px 15px;border:2px solid #e9ecef;border-radius:8px;margin-bottom:10px;cursor:pointer;transition:all 0.2s}.suggestion-item:hover{border-color:#D4AF37;background:#fffbf0}
+.suggestion-item.selected{border-color:#D4AF37;background:#fff8e6}.suggestion-score{font-size:1.2rem;font-weight:600;color:#D4AF37}.suggestion-furniture{font-weight:500}.suggestion-reasons{font-size:0.85rem;color:#6c757d;margin-top:5px}
 .furniture-placeholder{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;color:var(--color-medium-gray)}
 .furniture-item{aspect-ratio:1;border-radius:var(--border-radius-md);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;border:2px solid transparent;background:var(--color-off-white)}
 .furniture-item:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
@@ -865,6 +875,7 @@ function selectHotelGuest(g,guestCount){
 
     if(chargeToRoom){chargeToRoom.checked=true;chargeRefContainer.style.display='block';document.getElementById('chargeReference').value=`Hab. ${g.room_number}`}
     updateSummary();
+    checkDuplicateReservation(); // Phase 6B: Check for existing reservations
 }
 
 function selectCustomer(c){
@@ -959,6 +970,7 @@ function selectCustomer(c){
     if(chargeToRoom&&c.customer_type==='interno'){chargeToRoom.checked=true;chargeRefContainer.style.display='block';document.getElementById('chargeReference').value=`Hab. ${c.room_number}`}
     loadCustomerHistory(c.id);
     updateSummary();
+    checkDuplicateReservation(); // Phase 6B: Check for existing reservations
 }
 
 function loadCustomerHistory(cid){
@@ -1063,6 +1075,153 @@ document.getElementById('furnitureTypeFilter')?.addEventListener('change',loadFu
 chargeToRoom?.addEventListener('change',function(){chargeRefContainer.style.display=this.checked?'block':'none'});
 document.querySelector('select[name="time_slot"]')?.addEventListener('change',updateSummary);
 document.getElementById('numPeople')?.addEventListener('change',updateSummary);
+
+// ============================================================================
+// PHASE 6B: SMART FEATURES
+// ============================================================================
+
+const furnitureAlerts=document.getElementById('furnitureAlerts');
+
+function showAlert(type,message,dismissible=true){
+    const id='alert-'+Date.now();
+    const alertHtml=`<div id="${id}" class="alert alert-${type} ${dismissible?'alert-dismissible':''} fade show" role="alert">
+        <i class="fas fa-${type==='warning'?'exclamation-triangle':type==='danger'?'times-circle':type==='success'?'check-circle':'info-circle'}"></i>
+        <span>${message}</span>
+        ${dismissible?'<button type="button" class="btn-close" data-bs-dismiss="alert"></button>':''}
+    </div>`;
+    furnitureAlerts.insertAdjacentHTML('beforeend',alertHtml);
+    return id;
+}
+
+function clearAlerts(type){
+    if(type){furnitureAlerts.querySelectorAll(`.alert-${type}`).forEach(a=>a.remove())}
+    else{furnitureAlerts.innerHTML=''}
+}
+
+// Check for duplicate reservation when customer + date selected
+async function checkDuplicateReservation(){
+    const cid=customerId.value||hotelGuestId.value;
+    const dv=reservationDate.value;
+    if(!cid||!dv)return;
+    clearAlerts('warning');
+    try{
+        const resp=await fetch('{{ url_for("beach.api_check_duplicate") }}',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
+            body:JSON.stringify({customer_id:parseInt(cid),dates:[dv]})
+        });
+        const data=await resp.json();
+        if(data.is_duplicate){
+            showAlert('warning',`<strong>Reserva existente:</strong> Este cliente ya tiene reserva el ${data.existing_reservation.date} (Ticket: ${data.existing_reservation.ticket_number})`);
+        }
+    }catch(e){console.error('Error checking duplicate:',e)}
+}
+
+// Validate furniture contiguity when selection changes
+async function validateContiguity(){
+    if(selectedFurniture.size<2)return clearAlerts('info');
+    clearAlerts('info');
+    const dv=reservationDate.value;
+    if(!dv)return;
+    try{
+        const resp=await fetch('{{ url_for("beach.api_validate_contiguity") }}',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
+            body:JSON.stringify({furniture_ids:Array.from(selectedFurniture),date:dv})
+        });
+        const data=await resp.json();
+        if(!data.is_contiguous){
+            showAlert('info',`<strong>Aviso:</strong> El mobiliario seleccionado no es contiguo (hay huecos ocupados entre ellos)`);
+        }
+    }catch(e){console.error('Error validating contiguity:',e)}
+}
+
+// Suggest furniture button handler
+document.getElementById('suggestFurnitureBtn')?.addEventListener('click',async function(){
+    const dv=reservationDate.value;
+    if(!dv){alert('Seleccione una fecha primero');return}
+    const numPeople=parseInt(document.getElementById('numPeople').value)||2;
+    const cid=customerId.value||hotelGuestId.value;
+    const zoneId=document.getElementById('furnitureZoneFilter').value;
+    const prefs=[];document.querySelectorAll('.reservation-pref:checked').forEach(cb=>prefs.push(cb.value));
+
+    this.disabled=true;this.innerHTML='<i class="fas fa-spinner fa-spin me-1"></i>Buscando...';
+    try{
+        const resp=await fetch('{{ url_for("beach.api_suggest_furniture") }}',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
+            body:JSON.stringify({dates:[dv],num_people:numPeople,preferences:prefs.join(','),customer_id:cid?parseInt(cid):null,zone_id:zoneId?parseInt(zoneId):null,limit:5})
+        });
+        const data=await resp.json();
+        if(data.success&&data.suggestions?.length>0){
+            showSuggestionModal(data.suggestions);
+        }else{
+            alert(data.error||'No se encontraron sugerencias');
+        }
+    }catch(e){console.error('Error getting suggestions:',e);alert('Error al obtener sugerencias')}
+    finally{this.disabled=false;this.innerHTML='<i class="fas fa-magic me-1"></i>Sugerir'}
+});
+
+function showSuggestionModal(suggestions){
+    const modal=document.createElement('div');
+    modal.className='suggestion-modal';
+    modal.id='suggestionModal';
+    modal.innerHTML=`
+        <div class="suggestion-content">
+            <div class="suggestion-header">
+                <h5><i class="fas fa-magic me-2"></i>Sugerencias de Mobiliario</h5>
+                <button type="button" class="btn-close" onclick="closeSuggestionModal()"></button>
+            </div>
+            <div class="suggestion-list">
+                ${suggestions.map((s,i)=>`
+                    <div class="suggestion-item" data-ids="${s.furniture_ids.join(',')}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="suggestion-furniture">${s.furniture_numbers.join(', ')}</div>
+                                <div class="text-muted small">${s.zone_name||'Zona no especificada'} - Capacidad: ${s.total_capacity}</div>
+                                ${s.reasons?.length?`<div class="suggestion-reasons"><i class="fas fa-check-circle text-success me-1"></i>${s.reasons.slice(0,2).join(' | ')}</div>`:''}
+                            </div>
+                            <div class="suggestion-score">${Math.round((s.scores?.total||0)*100)}%</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="p-3 bg-light border-top">
+                <small class="text-muted"><i class="fas fa-info-circle me-1"></i>Haz clic en una sugerencia para seleccionarla</small>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click',function(e){
+        const item=e.target.closest('.suggestion-item');
+        if(item){
+            const ids=item.dataset.ids.split(',').map(Number);
+            selectedFurniture.clear();
+            ids.forEach(id=>selectedFurniture.add(id));
+            renderFurnitureGrid();
+            updateSummary();
+            closeSuggestionModal();
+            showAlert('success','Mobiliario seleccionado automaticamente',true);
+        }
+        if(e.target===modal)closeSuggestionModal();
+    });
+}
+
+window.closeSuggestionModal=function(){
+    document.getElementById('suggestionModal')?.remove();
+};
+
+// Trigger duplicate check when date changes (if customer already selected)
+reservationDate.addEventListener('change',function(){
+    checkDuplicateReservation();
+});
+
+// Override renderFurnitureGrid to add contiguity check
+const originalRenderFurnitureGrid=renderFurnitureGrid;
+renderFurnitureGrid=function(){
+    originalRenderFurnitureGrid();
+    validateContiguity();
+};
 
 form.addEventListener('submit',function(e){
     document.querySelectorAll('input[name="furniture_ids"]').forEach(el=>el.remove());
