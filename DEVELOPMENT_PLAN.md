@@ -27,7 +27,7 @@
 | 4.5 | Enhanced Furniture Types | Complete | 100% |
 | 4.6 | Enhanced Furniture Management | Complete | 100% |
 | 5 | Customers | Complete | 100% |
-| 6A | Reservations: Core CRUD + States | In Progress | 25% |
+| 6A | Reservations: Core CRUD + States | In Progress | 60% |
 | 6B | Reservations: Availability + Multi-day | Not Started | 0% |
 | 6C | Reservations: Pricing + PMS | Not Started | 0% |
 | 7 | Interactive Map | Not Started | 0% |
@@ -312,15 +312,22 @@
 | - Check-in/check-out badges | Complete | Visual indicators in search |
 | - Hide expired hotel stays | Complete | Filter interno customers after checkout |
 | - Single guest per room in search | Complete | Show main guest + count |
-| DB migration (SPEC columns) | Pending | ticket_number, current_states, pricing fields |
-| generate_reservation_number() | Pending | Atomic YYMMDDRR format with retries |
-| create_beach_reservation() | Pending | Full creation with validations |
-| get/update/delete functions | Pending | Basic CRUD operations |
-| add_reservation_state() | Pending | CSV accumulative state management |
-| remove_reservation_state() | Pending | Remove from CSV, recalculate priority |
-| cancel_beach_reservation() | Pending | Shortcut to add Cancelada state |
-| calculate_reservation_color() | Pending | Priority-based color selection |
-| get_active_releasing_states() | Pending | States that free availability |
+| **Database & Model Layer** | Complete | Core reservation infrastructure |
+| - DB migration (SPEC columns) | Complete | ticket_number, current_states, pricing fields |
+| - generate_reservation_number() | Complete | Atomic YYMMDDRR format with retries |
+| - generate_child_reservation_number() | Complete | Parent-N format for multi-day |
+| - create_beach_reservation() | Complete | Full creation with furniture assignment |
+| - get/update/delete functions | Complete | Basic CRUD operations |
+| - add_reservation_state() | Complete | CSV accumulative state management |
+| - remove_reservation_state() | Complete | Remove from CSV, recalculate priority |
+| - change_reservation_state() | Complete | Replace current state |
+| - cancel_beach_reservation() | Complete | Shortcut to add Cancelada state |
+| - calculate_reservation_color() | Complete | Priority-based color selection |
+| - get_active_releasing_states() | Complete | States that free availability |
+| - sync_preferences_to_customer() | Complete | Bidirectional preference sync |
+| - update_customer_statistics() | Complete | Auto-update visits on state change |
+| - get_status_history() | Complete | State change audit trail |
+| **Routes & Templates** | Pending | Connect frontend to backend |
 | Reservation list route | Pending | GET /beach/reservations with filters |
 | Reservation create route | Pending | GET/POST /beach/reservations/create |
 | Reservation detail route | Pending | GET /beach/reservations/<id> |
