@@ -1,21 +1,17 @@
 """
-Database module facade.
-Re-exports all database functions from the database package for backwards compatibility.
+Database package for Beach Club Management System.
 
-The actual implementation is split into:
-- database/connection.py - Connection management (get_db, close_db, init_db)
-- database/migrations.py - Schema migrations
-- database/schema.py - Table creation and indexes
-- database/seed.py - Initial seed data
+This package provides modular database operations:
+- connection: Database connection management (get_db, close_db, init_db)
+- migrations: Schema migration functions
+- schema: Table creation and indexes
+- seed: Initial seed data
+
+For backwards compatibility, all functions are re-exported from this module.
 """
 
-# Re-export all functions from the database package
-from database import (
-    # Connection
-    get_db,
-    close_db,
-    init_db,
-    # Migrations
+from database.connection import get_db, close_db, init_db
+from database.migrations import (
     migrate_furniture_types_v2,
     migrate_reservations_v2,
     migrate_status_history_v2,
@@ -25,18 +21,16 @@ from database import (
     migrate_add_sentada_state,
     migrate_customers_extended_stats,
     migrate_add_furniture_types_menu,
-    # Schema
-    drop_tables,
-    create_tables,
-    create_indexes,
-    # Seed
-    seed_database,
 )
+from database.schema import drop_tables, create_tables, create_indexes
+from database.seed import seed_database
 
 __all__ = [
+    # Connection
     'get_db',
     'close_db',
     'init_db',
+    # Migrations
     'migrate_furniture_types_v2',
     'migrate_reservations_v2',
     'migrate_status_history_v2',
@@ -46,8 +40,10 @@ __all__ = [
     'migrate_add_sentada_state',
     'migrate_customers_extended_stats',
     'migrate_add_furniture_types_menu',
+    # Schema
     'drop_tables',
     'create_tables',
     'create_indexes',
+    # Seed
     'seed_database',
 ]
