@@ -1546,3 +1546,44 @@ def api_customer_preferred_furniture(customer_id):
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@beach_bp.route('/api/customers/create-from-guest', methods=['POST'])
+@login_required
+@permission_required('beach.customers.create')
+def api_create_customer_from_guest():
+    """
+    Create a beach customer from a hotel guest.
+
+    Request JSON:
+        {
+            "hotel_guest_id": 123
+        }
+
+    Response:
+        {
+            "success": true,
+            "customer_id": 456,
+            "customer": {...}
+        }
+    """
+    data = request.get_json()
+    hotel_guest_id = data.get('hotel_guest_id')
+
+    if not hotel_guest_id:
+        return jsonify({'success': False, 'error': 'hotel_guest_id requerido'}), 400
+
+    try:
+        result = create_customer_from_hotel_guest(hotel_guest_id)
+
+        if result:
+            return jsonify({
+                'success': True,
+                'customer_id': result['id'],
+                'customer': result
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Error al crear cliente'}), 500
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

@@ -384,13 +384,33 @@
                     <!-- Date & Time -->
                     <div class="booking-basics mb-4">
                         <div class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold">
-                                    <i class="fas fa-calendar text-primary me-1"></i> Fecha
+                                    <i class="fas fa-calendar text-primary me-1"></i> Fecha(s)
                                 </label>
-                                <input type="date" name="reservation_date" id="reservationDate"
-                                       class="form-control form-control-lg" required
-                                       value="{{ reservation.reservation_date if reservation else (selected_date or '') }}">
+                                <!-- Hidden input for form submission -->
+                                <input type="hidden" name="reservation_date" id="reservationDate" value="{{ reservation.reservation_date if reservation else (selected_date or '') }}">
+
+                                <!-- Date selector with expandable calendar -->
+                                <div class="date-picker-container">
+                                    <!-- Collapsed view: show selected dates -->
+                                    <div id="datePickerCollapsed" class="date-picker-collapsed" onclick="toggleCalendar(true)">
+                                        <div class="selected-dates-preview">
+                                            <i class="fas fa-calendar-alt text-primary me-2"></i>
+                                            <span id="datesPreviewText">Seleccionar fechas...</span>
+                                        </div>
+                                        <i class="fas fa-chevron-down text-muted"></i>
+                                    </div>
+
+                                    <!-- Expanded calendar -->
+                                    <div id="calendarExpanded" class="calendar-expanded" style="display:none;">
+                                        <div id="multiCalendar" class="multi-calendar"></div>
+                                        <div class="calendar-footer">
+                                            <div class="selected-dates-tags" id="selectedDatesList"></div>
+                                            <small class="text-muted mt-2 d-block"><span id="selectedDatesCount">0</span> días seleccionados</small>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-semibold">
@@ -669,6 +689,27 @@
 .suggestion-header{padding:15px 20px;background:linear-gradient(135deg,#D4AF37,#B8962E);color:#fff;display:flex;justify-content:space-between;align-items:center}.suggestion-header h5{margin:0}.suggestion-header .btn-close{filter:brightness(0) invert(1)}
 .suggestion-list{max-height:400px;overflow-y:auto;padding:15px}.suggestion-item{padding:12px 15px;border:2px solid #e9ecef;border-radius:8px;margin-bottom:10px;cursor:pointer;transition:all 0.2s}.suggestion-item:hover{border-color:#D4AF37;background:#fffbf0}
 .suggestion-item.selected{border-color:#D4AF37;background:#fff8e6}.suggestion-score{font-size:1.2rem;font-weight:600;color:#D4AF37}.suggestion-furniture{font-weight:500}.suggestion-reasons{font-size:0.85rem;color:#6c757d;margin-top:5px}
+.date-picker-container{position:relative}
+.date-picker-collapsed{display:flex;justify-content:space-between;align-items:center;padding:12px 15px;background:#fff;border:1px solid #dee2e6;border-radius:8px;cursor:pointer;transition:all 0.2s}
+.date-picker-collapsed:hover{border-color:#D4AF37;background:#fffbf0}
+.selected-dates-preview{display:flex;align-items:center;font-size:0.95rem}
+.calendar-expanded{position:absolute;top:100%;left:0;right:0;z-index:100;margin-top:5px;background:#fff;border:1px solid #dee2e6;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:15px}
+.calendar-footer{border-top:1px solid #eee;margin-top:10px;padding-top:10px;text-align:center}
+.multi-calendar{background:#fff;user-select:none}
+.cal-header{display:flex;justify-content:space-between;align-items:center;padding:8px 5px;margin-bottom:10px}
+.cal-header .cal-title{font-weight:600;font-size:0.95rem}
+.cal-header button{background:none;border:none;padding:5px 10px;cursor:pointer;border-radius:4px}.cal-header button:hover{background:#f0f0f0}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:0.75rem;font-weight:600;color:#6c757d;margin-bottom:5px}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:0.85rem;border-radius:6px;cursor:pointer;transition:all 0.15s}
+.cal-day:hover:not(.disabled):not(.selected){background:#f0f0f0}
+.cal-day.today{font-weight:700;color:#D4AF37}
+.cal-day.selected{background:#D4AF37;color:#fff;font-weight:600}
+.cal-day.disabled{color:#ccc;cursor:not-allowed}
+.cal-day.other-month{color:#aaa}
+.selected-dates-tags{display:flex;flex-wrap:wrap;gap:5px}
+.selected-dates-tags .date-tag{background:#e9ecef;padding:2px 8px;border-radius:4px;font-size:0.8rem;display:inline-flex;align-items:center;gap:5px}
+.selected-dates-tags .date-tag .remove{cursor:pointer;color:#dc3545;font-weight:bold}
 .furniture-placeholder{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;color:var(--color-medium-gray)}
 .furniture-item{aspect-ratio:1;border-radius:var(--border-radius-md);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;border:2px solid transparent;background:var(--color-off-white)}
 .furniture-item:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
@@ -1216,6 +1257,161 @@ reservationDate.addEventListener('change',function(){
     checkDuplicateReservation();
 });
 
+// ============================================================================
+// DATE PICKER WITH MULTI-DAY SUPPORT
+// ============================================================================
+
+const datePickerCollapsed=document.getElementById('datePickerCollapsed');
+const calendarExpanded=document.getElementById('calendarExpanded');
+const multiCalendar=document.getElementById('multiCalendar');
+const datesPreviewText=document.getElementById('datesPreviewText');
+let selectedDates=new Set();
+let calendarMonth=new Date().getMonth();
+let calendarYear=new Date().getFullYear();
+let calendarOpen=false;
+
+const monthNames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const dayNames=['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+
+window.toggleCalendar=function(open){
+    calendarOpen=open;
+    if(open){
+        calendarExpanded.style.display='block';
+        datePickerCollapsed.querySelector('.fa-chevron-down').classList.replace('fa-chevron-down','fa-chevron-up');
+        renderCalendar();
+    }else{
+        calendarExpanded.style.display='none';
+        datePickerCollapsed.querySelector('.fa-chevron-up').classList.replace('fa-chevron-up','fa-chevron-down');
+        updatePreviewText();
+        // Update hidden input with first selected date
+        const sorted=getSelectedDates();
+        if(sorted.length>0){
+            reservationDate.value=sorted[0];
+            loadFurnitureAvailability();
+        }
+        updateSummary();
+    }
+};
+
+function renderCalendar(){
+    const today=new Date();today.setHours(0,0,0,0);
+    const firstDay=new Date(calendarYear,calendarMonth,1);
+    const lastDay=new Date(calendarYear,calendarMonth+1,0);
+    let startDay=firstDay.getDay();startDay=startDay===0?6:startDay-1;
+
+    let html=`
+        <div class="cal-header">
+            <button type="button" onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+            <span class="cal-title">${monthNames[calendarMonth]} ${calendarYear}</span>
+            <button type="button" onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="cal-weekdays">${dayNames.map(d=>`<div>${d}</div>`).join('')}</div>
+        <div class="cal-days">
+    `;
+
+    for(let i=0;i<startDay;i++){
+        const prevMonth=new Date(calendarYear,calendarMonth,0-startDay+i+1);
+        html+=`<div class="cal-day other-month disabled">${prevMonth.getDate()}</div>`;
+    }
+
+    for(let d=1;d<=lastDay.getDate();d++){
+        const date=new Date(calendarYear,calendarMonth,d);
+        const dateStr=date.toISOString().split('T')[0];
+        const isToday=date.getTime()===today.getTime();
+        const isPast=date<today;
+        const isSelected=selectedDates.has(dateStr);
+
+        let classes=['cal-day'];
+        if(isToday)classes.push('today');
+        if(isPast)classes.push('disabled');
+        if(isSelected)classes.push('selected');
+
+        html+=`<div class="${classes.join(' ')}" data-date="${dateStr}" onclick="toggleDate('${dateStr}',${isPast})">${d}</div>`;
+    }
+
+    html+=`</div>`;
+    multiCalendar.innerHTML=html;
+    updateSelectedDisplay();
+}
+
+let calendarInteracting=false;
+
+window.changeMonth=function(delta){
+    calendarInteracting=true;
+    calendarMonth+=delta;
+    if(calendarMonth>11){calendarMonth=0;calendarYear++}
+    if(calendarMonth<0){calendarMonth=11;calendarYear--}
+    renderCalendar();
+    setTimeout(()=>{calendarInteracting=false},50);
+};
+
+window.toggleDate=function(dateStr,isPast){
+    if(isPast)return;
+    calendarInteracting=true;
+    if(selectedDates.has(dateStr)){
+        selectedDates.delete(dateStr);
+    }else{
+        selectedDates.add(dateStr);
+    }
+    renderCalendar();
+    setTimeout(()=>{calendarInteracting=false},50);
+};
+
+window.removeDate=function(dateStr,e){
+    if(e)e.stopPropagation();
+    selectedDates.delete(dateStr);
+    renderCalendar();
+    updatePreviewText();
+};
+
+function updateSelectedDisplay(){
+    const count=selectedDates.size;
+    document.getElementById('selectedDatesCount').textContent=count;
+    const list=document.getElementById('selectedDatesList');
+    const sorted=Array.from(selectedDates).sort();
+    list.innerHTML=sorted.map(d=>`<span class="date-tag">${formatDate(d)}<span class="remove" onclick="removeDate('${d}',event)">&times;</span></span>`).join('');
+}
+
+function updatePreviewText(){
+    const sorted=getSelectedDates();
+    const count=sorted.length;
+    if(count===0){
+        datesPreviewText.textContent='Seleccionar fechas...';
+    }else if(count===1){
+        datesPreviewText.textContent=formatDate(sorted[0]);
+    }else{
+        datesPreviewText.innerHTML=`<strong>${count} días:</strong> ${sorted.slice(0,3).map(formatDate).join(', ')}${count>3?' ...':''}`;
+    }
+    // Update summary
+    if(count>0){
+        document.getElementById('summaryDate').textContent=count===1?formatDate(sorted[0]):`${formatDate(sorted[0])} - ${formatDate(sorted[count-1])} (${count})`;
+    }
+}
+
+function getSelectedDates(){
+    return Array.from(selectedDates).sort();
+}
+
+function isMultiday(){
+    return selectedDates.size>1;
+}
+
+// Initialize with existing date if in edit mode or pre-selected
+{% if mode == 'edit' and reservation %}
+selectedDates.add('{{ reservation.reservation_date }}');
+updatePreviewText();
+{% elif selected_date %}
+selectedDates.add('{{ selected_date }}');
+updatePreviewText();
+{% endif %}
+
+// Close calendar when clicking outside
+document.addEventListener('click',function(e){
+    if(calendarOpen && !calendarInteracting && !e.target.closest('.date-picker-container')){
+        toggleCalendar(false);
+    }
+});
+
 // Override renderFurnitureGrid to add contiguity check
 const originalRenderFurnitureGrid=renderFurnitureGrid;
 renderFurnitureGrid=function(){
@@ -1223,13 +1419,79 @@ renderFurnitureGrid=function(){
     validateContiguity();
 };
 
-form.addEventListener('submit',function(e){
-    document.querySelectorAll('input[name="furniture_ids"]').forEach(el=>el.remove());
-    selectedFurniture.forEach(id=>{const inp=document.createElement('input');inp.type='hidden';inp.name='furniture_ids';inp.value=id;form.appendChild(inp)});
+form.addEventListener('submit',async function(e){
     {% if mode == 'create' %}
     if(!customerId.value && !hotelGuestId.value){e.preventDefault();alert('Debe seleccionar un cliente');return}
     {% endif %}
     if(selectedFurniture.size===0){e.preventDefault();alert('Debe seleccionar al menos un mobiliario');return}
+
+    // Handle multi-day reservations via API
+    if(isMultiday() && selectedDates.size>1){
+        e.preventDefault();
+        const dates=getSelectedDates();
+        if(dates.length<2){alert('Seleccione al menos 2 días para multi-día');return}
+
+        const submitBtn=form.querySelector('button[type="submit"]');
+        submitBtn.disabled=true;
+        submitBtn.innerHTML='<i class="fas fa-spinner fa-spin me-2"></i>Creando reservas...';
+
+        // Get customer ID (create from hotel guest if needed)
+        let cid=customerId.value;
+        if(!cid && hotelGuestId.value){
+            // Create customer from hotel guest first
+            try{
+                const resp=await fetch('{{ url_for("beach.api_create_customer_from_guest") }}',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
+                    body:JSON.stringify({hotel_guest_id:parseInt(hotelGuestId.value)})
+                });
+                const data=await resp.json();
+                if(data.success)cid=data.customer_id;
+                else{alert(data.error||'Error creando cliente');submitBtn.disabled=false;submitBtn.innerHTML='Crear Reserva';return}
+            }catch(err){alert('Error de conexión');submitBtn.disabled=false;submitBtn.innerHTML='Crear Reserva';return}
+        }
+
+        // Collect preferences
+        const prefs=[];document.querySelectorAll('.reservation-pref:checked').forEach(cb=>prefs.push(cb.value));
+
+        try{
+            const resp=await fetch('{{ url_for("beach.api_create_multiday") }}',{
+                method:'POST',
+                headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
+                body:JSON.stringify({
+                    customer_id:parseInt(cid),
+                    dates:dates,
+                    num_people:parseInt(document.getElementById('numPeople').value)||2,
+                    furniture_ids:Array.from(selectedFurniture),
+                    time_slot:document.querySelector('select[name="time_slot"]').value,
+                    payment_status:document.querySelector('select[name="payment_status"]').value,
+                    charge_to_room:document.getElementById('chargeToRoom')?.checked?1:0,
+                    charge_reference:document.getElementById('chargeReference')?.value||'',
+                    preferences:prefs.join(','),
+                    observations:document.querySelector('textarea[name="notes"]')?.value||''
+                })
+            });
+            const data=await resp.json();
+            if(data.success){
+                alert(`Reserva multi-día creada: ${data.parent_ticket} (${data.total_created} días)`);
+                window.location.href='{{ url_for("beach.reservations") }}';
+            }else{
+                alert(data.error||'Error al crear reserva');
+                submitBtn.disabled=false;
+                submitBtn.innerHTML='Crear Reserva';
+            }
+        }catch(err){
+            console.error(err);
+            alert('Error de conexión');
+            submitBtn.disabled=false;
+            submitBtn.innerHTML='Crear Reserva';
+        }
+        return;
+    }
+
+    // Normal single-day submission
+    document.querySelectorAll('input[name="furniture_ids"]').forEach(el=>el.remove());
+    selectedFurniture.forEach(id=>{const inp=document.createElement('input');inp.type='hidden';inp.name='furniture_ids';inp.value=id;form.appendChild(inp)});
 });
 
 {% if mode == 'edit' and reservation.furniture %}{% for f in reservation.furniture %}selectedFurniture.add({{ f.furniture_id }});{% endfor %}{% endif %}
