@@ -802,7 +802,7 @@ customerSearch&&customerSearch.addEventListener('input',function(){
     if(q.length<2){searchResults.style.display='none';return}
     document.getElementById('searchLoading').style.display='block';
     searchTimeout=setTimeout(()=>{
-        fetch(`{{ url_for('beach.api_customers_search') }}?q=${encodeURIComponent(q)}`).then(r=>r.json()).then(d=>{
+        fetch(`{{ url_for('beach.api.customers_search') }}?q=${encodeURIComponent(q)}`).then(r=>r.json()).then(d=>{
             document.getElementById('searchLoading').style.display='none';
             searchResultsCache=d.customers||[];
             displaySearchResults(searchResultsCache,q);
@@ -844,7 +844,7 @@ searchResults&&searchResults.addEventListener('click',function(e){
         const guest=searchResultsCache.find(x=>x.id===id&&x.source==='hotel_guest');
         if(guest){
             // Load room guests for selector
-            fetch(`{{ url_for('beach.api_hotel_guest_lookup') }}?room=${encodeURIComponent(guest.room_number)}`).then(r=>r.json()).then(gd=>{
+            fetch(`{{ url_for('beach.api.hotel_guest_lookup') }}?room=${encodeURIComponent(guest.room_number)}`).then(r=>r.json()).then(gd=>{
                 roomGuestsData=gd.guests||[];
                 selectHotelGuest(guest,gd.guest_count);
             }).catch(()=>selectHotelGuest(guest,1));
@@ -1076,7 +1076,7 @@ document.getElementById('saveNewCustomerBtn')?.addEventListener('click',function
     if(!ph&&!em){err.textContent='Se requiere telefono o email';err.style.display='block';return}
     err.style.display='none';this.disabled=true;
     const prefs=[];document.querySelectorAll('.new-customer-pref:checked').forEach(cb=>prefs.push(cb.value));
-    fetch('{{ url_for("beach.api_customers_create") }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify({customer_type:'externo',first_name:fn,last_name:ln,phone:ph,email:em,country_code:cc,language:lg,notes:nt,preferences:prefs})})
+    fetch('{{ url_for("beach.api.customers_create") }}',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify({customer_type:'externo',first_name:fn,last_name:ln,phone:ph,email:em,country_code:cc,language:lg,notes:nt,preferences:prefs})})
     .then(r=>r.json()).then(d=>{
         this.disabled=false;
         if(d.success){createCustomerForm.style.display='none';selectCustomer(d.customer)}
@@ -1093,7 +1093,7 @@ function loadFurnitureAvailability(){
     if(zf.value)params.append('zone_id',zf.value);
     if(tf.value)params.append('type',tf.value);
     furnitureGrid.innerHTML='<div class="furniture-placeholder"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><p class="mb-0">Cargando disponibilidad...</p></div>';
-    fetch(`{{ url_for('beach.api_available_furniture') }}?${params}`).then(r=>r.json()).then(d=>{furnitureData=d.furniture||[];renderFurnitureGrid()})
+    fetch(`{{ url_for('beach.api.available_furniture') }}?${params}`).then(r=>r.json()).then(d=>{furnitureData=d.furniture||[];renderFurnitureGrid()})
     .catch(()=>{furnitureGrid.innerHTML='<div class="furniture-placeholder text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p class="mb-0">Error al cargar mobiliario</p></div>'});
 }
 
@@ -1146,7 +1146,7 @@ async function checkDuplicateReservation(){
     if(!cid||!dv)return;
     clearAlerts('warning');
     try{
-        const resp=await fetch('{{ url_for("beach.api_check_duplicate") }}',{
+        const resp=await fetch('{{ url_for("beach.api.check_duplicate") }}',{
             method:'POST',
             headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
             body:JSON.stringify({customer_id:parseInt(cid),dates:[dv]})
@@ -1165,7 +1165,7 @@ async function validateContiguity(){
     const dv=reservationDate.value;
     if(!dv)return;
     try{
-        const resp=await fetch('{{ url_for("beach.api_validate_contiguity") }}',{
+        const resp=await fetch('{{ url_for("beach.api.validate_contiguity") }}',{
             method:'POST',
             headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
             body:JSON.stringify({furniture_ids:Array.from(selectedFurniture),date:dv})
@@ -1188,7 +1188,7 @@ document.getElementById('suggestFurnitureBtn')?.addEventListener('click',async f
 
     this.disabled=true;this.innerHTML='<i class="fas fa-spinner fa-spin me-1"></i>Buscando...';
     try{
-        const resp=await fetch('{{ url_for("beach.api_suggest_furniture") }}',{
+        const resp=await fetch('{{ url_for("beach.api.suggest_furniture") }}',{
             method:'POST',
             headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
             body:JSON.stringify({dates:[dv],num_people:numPeople,preferences:prefs.join(','),customer_id:cid?parseInt(cid):null,zone_id:zoneId?parseInt(zoneId):null,limit:5})
@@ -1440,7 +1440,7 @@ form.addEventListener('submit',async function(e){
         if(!cid && hotelGuestId.value){
             // Create customer from hotel guest first
             try{
-                const resp=await fetch('{{ url_for("beach.api_create_customer_from_guest") }}',{
+                const resp=await fetch('{{ url_for("beach.api.create_customer_from_guest") }}',{
                     method:'POST',
                     headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
                     body:JSON.stringify({hotel_guest_id:parseInt(hotelGuestId.value)})
@@ -1455,7 +1455,7 @@ form.addEventListener('submit',async function(e){
         const prefs=[];document.querySelectorAll('.reservation-pref:checked').forEach(cb=>prefs.push(cb.value));
 
         try{
-            const resp=await fetch('{{ url_for("beach.api_create_multiday") }}',{
+            const resp=await fetch('{{ url_for("beach.api.create_multiday") }}',{
                 method:'POST',
                 headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
                 body:JSON.stringify({

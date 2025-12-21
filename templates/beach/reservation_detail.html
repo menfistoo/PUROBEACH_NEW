@@ -333,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const state = this.dataset.state;
             const isActive = this.classList.contains('btn-primary');
 
-            fetch('{{ url_for("beach.api_toggle_state", reservation_id=reservation.id) }}', {
+            fetch('{{ url_for("beach.api.toggle_state", reservation_id=reservation.id) }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

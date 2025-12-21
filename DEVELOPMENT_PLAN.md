@@ -11,7 +11,7 @@
 |-------|-------|
 | **Current Phase** | Phase 6C: Reservations Pricing + PMS |
 | **Last Updated** | 2025-12-21 |
-| **Last Session** | Phase 6B complete - Availability, Multi-day, Suggestions |
+| **Last Session** | Phase 6B frontend integration + Collapsible calendar |
 | **Next Priority** | Pricing validation + PMS integration |
 
 ---
@@ -375,6 +375,12 @@
 | POST /api/reservations/suggest-furniture | Complete | Smart suggestions |
 | POST /api/reservations/validate-contiguity | Complete | Contiguity check |
 | GET /api/customers/<id>/preferred-furniture | Complete | Customer history |
+| POST /api/customers/create-from-guest | Complete | Convert hotel guest to customer |
+| **Frontend Integration** | Complete | Reservation form enhancements |
+| Duplicate detection warning | Complete | Alert when customer has existing reservation |
+| Smart suggestions modal | Complete | Show weighted suggestions with scores |
+| Contiguity validation warning | Complete | Warn when furniture not contiguous |
+| Collapsible calendar picker | Complete | Multi-day date selection UI |
 
 **Suggestion Algorithm Weights:**
 - 40% Contiguity (no gaps between selected furniture)
@@ -669,6 +675,50 @@ DEFAULT_PREFERENCES = [
 - Priority 1
 - Priority 2
 ```
+
+---
+
+### Session: 2025-12-21 (Phase 6B Frontend + Calendar)
+**Duration:** Single session
+**Focus:** Phase 6B Frontend Integration + Collapsible Calendar
+
+#### Completed
+- **Frontend Integration** (`templates/beach/reservation_form.html`)
+  - Duplicate detection: Alert when customer already has reservation on selected date
+  - Smart suggestions modal: Show weighted suggestions with scores and reasons
+  - Contiguity validation: Warning when selected furniture has gaps
+  - Alert container for real-time warnings
+
+- **Collapsible Calendar Picker**
+  - Replaced date input with collapsible calendar
+  - Click to expand, click outside to close
+  - Click dates to select/deselect (gold highlight)
+  - Calendar stays open during date selection (fixed interaction bug)
+  - Selected dates shown as removable tags
+  - Month navigation (left/right arrows)
+  - Past dates disabled
+  - Preview text: "3 dias: 22/12, 23/12, 24/12"
+  - Form submission handles single-day (POST) and multi-day (AJAX API)
+
+- **API Endpoint** (`blueprints/beach/__init__.py`)
+  - Added `/api/customers/create-from-guest` for multi-day hotel guest reservations
+
+#### Decisions
+- Calendar closes only on click outside (not on date selection)
+- No "Listo" button - simpler UX with outside click
+- `calendarInteracting` flag prevents close during date/month clicks
+
+#### Issues Fixed
+- Calendar closing on every date click
+  - Resolution: Added `calendarInteracting` flag with 50ms timeout
+  - Flag set during toggleDate() and changeMonth() to prevent click-outside handler
+
+#### Commits
+- `ccfc69a` - Add collapsible calendar for multi-day reservation selection
+
+#### Next Session
+- Begin Phase 6C: Pricing + PMS Integration
+- Or proceed to Phase 7: Interactive Map
 
 ---
 
