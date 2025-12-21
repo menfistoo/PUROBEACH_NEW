@@ -671,6 +671,7 @@ def reservations_create():
 
     if request.method == 'POST':
         customer_id = request.form.get('customer_id', type=int)
+        hotel_guest_id = request.form.get('hotel_guest_id', type=int)
         reservation_date = request.form.get('reservation_date')
         num_people = request.form.get('num_people', 1, type=int)
         time_slot = request.form.get('time_slot', 'all_day')
@@ -680,6 +681,29 @@ def reservations_create():
         payment_status = request.form.get('payment_status', 'NO')
         charge_to_room = 1 if request.form.get('charge_to_room') else 0
         charge_reference = request.form.get('charge_reference', '').strip()
+
+        # If hotel_guest_id is provided but no customer_id, create customer now
+        if hotel_guest_id and not customer_id:
+            try:
+                # Get additional data from form for customer creation
+                additional_data = {}
+                customer_phone = request.form.get('customer_phone', '').strip()
+                customer_email = request.form.get('customer_email', '').strip()
+                customer_country_code = request.form.get('customer_country_code', '+34').strip()
+                if customer_phone:
+                    additional_data['phone'] = customer_phone
+                if customer_email:
+                    additional_data['email'] = customer_email
+                if customer_country_code:
+                    additional_data['country_code'] = customer_country_code
+
+                result = create_customer_from_hotel_guest(hotel_guest_id, additional_data)
+                customer_id = result['customer_id']
+            except ValueError as e:
+                flash(f'Error al crear cliente: {str(e)}', 'error')
+                return render_template('beach/reservation_form.html',
+                                       mode='create', zones=zones, furniture_types=furniture_types,
+                                       preferences=preferences, tags=tags, states=states)
 
         # Validation
         if not customer_id:
