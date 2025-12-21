@@ -337,9 +337,9 @@ def api_customers_search():
                 'first_name': c['first_name'],
                 'last_name': c.get('last_name', ''),
                 'display_name': f"{c['first_name']} {c.get('last_name', '')}".strip() +
-                               (f" (Hab. {c['room_number']})" if c.get('room_number') else ''),
+                               (f" (Hab. {c['room_number']})" if c.get('room_number') and c['room_number'] != 'None' else ''),
                 'customer_type': c['customer_type'],
-                'room_number': c.get('room_number'),
+                'room_number': c.get('room_number') if c.get('room_number') != 'None' else None,
                 'phone': c.get('phone'),
                 'email': c.get('email'),
                 'vip_status': c.get('vip_status', 0),

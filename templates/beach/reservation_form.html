@@ -886,7 +886,7 @@ function selectCustomer(c){
     if(c.customer_type==='interno'){tb.className='badge bg-info';tb.textContent='Huesped Hotel'}
     else{tb.className='badge bg-success';tb.textContent='Cliente Externo'}
     const ri=document.getElementById('customerRoomInfo');
-    if(c.room_number){document.getElementById('customerRoom').textContent=`Hab. ${c.room_number}`;ri.style.display='inline'}else ri.style.display='none';
+    if(c.room_number&&c.room_number!=='None'&&c.room_number!=='null'){document.getElementById('customerRoom').textContent=`Hab. ${c.room_number}`;ri.style.display='inline'}else ri.style.display='none';
 
     const his=document.getElementById('hotelInfoSection');
     if(c.arrival_date||c.departure_date){
