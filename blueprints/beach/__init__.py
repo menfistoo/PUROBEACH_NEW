@@ -345,6 +345,7 @@ def api_customers_search():
                 'vip_status': c.get('vip_status', 0),
                 'notes': c.get('notes'),
                 'total_visits': c.get('total_visits', 0),
+                'total_spent': c.get('total_spent', 0),
                 'last_visit': c.get('last_visit'),
                 'preferences': pref_codes
             }

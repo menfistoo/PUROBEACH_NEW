@@ -211,6 +211,9 @@
                                 </div>
                             </div>
                             <div class="customer-actions">
+                                <a href="#" class="btn btn-sm btn-outline-primary me-1" id="viewCustomerProfileBtn" style="display: none;" target="_blank" title="Ver perfil completo">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
                                 <button type="button" class="btn btn-sm btn-outline-danger" id="clearCustomerBtn">
                                     <i class="fas fa-times"></i> Cambiar
                                 </button>
@@ -242,6 +245,30 @@
                                     <div class="info-badge">
                                         <i class="fas fa-globe"></i>
                                         <span id="customerLanguage">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Stats (for all customers) -->
+                        <div id="customerStatsSection" class="customer-stats-section mt-2" style="display: none;">
+                            <div class="row g-2">
+                                <div class="col-auto" id="customerLanguageBadge" style="display: none;">
+                                    <div class="info-badge">
+                                        <i class="fas fa-globe"></i>
+                                        <span id="customerLanguageText">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto" id="customerVisitsBadge" style="display: none;">
+                                    <div class="info-badge">
+                                        <i class="fas fa-chart-line"></i>
+                                        <span><span id="customerTotalVisits">0</span> visitas</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto" id="customerSpentBadge" style="display: none;">
+                                    <div class="info-badge">
+                                        <i class="fas fa-euro-sign"></i>
+                                        <span><span id="customerTotalSpent">0</span> EUR</span>
                                     </div>
                                 </div>
                             </div>
@@ -830,6 +857,10 @@ function selectHotelGuest(g,guestCount){
     document.getElementById('customerPrefsDisplay').style.display='none'; // Hotel guests have no preferences yet
     document.getElementById('customerHistorySection').style.display='none';
 
+    // Hide profile button and stats for hotel guests (they don't have a customer record yet)
+    document.getElementById('viewCustomerProfileBtn').style.display='none';
+    document.getElementById('customerStatsSection').style.display='none';
+
     if(chargeToRoom){chargeToRoom.checked=true;chargeRefContainer.style.display='block';document.getElementById('chargeReference').value=`Hab. ${g.room_number}`}
     updateSummary();
 }
@@ -873,6 +904,41 @@ function selectCustomer(c){
     if(c.phone)document.getElementById('customerPhone').value=c.phone;
     if(c.email)document.getElementById('customerEmail').value=c.email;
     if(c.country_code)document.getElementById('customerCountryCode').value=c.country_code;
+
+    // Show profile link for beach customers
+    const profileBtn=document.getElementById('viewCustomerProfileBtn');
+    profileBtn.href=`{{ url_for('beach.customers_detail', customer_id=0) }}`.replace('0',c.id);
+    profileBtn.style.display='inline-block';
+
+    // Show customer stats section
+    const statsSection=document.getElementById('customerStatsSection');
+    let hasStats=false;
+
+    // Language (for customers without hotel info showing)
+    const langBadge=document.getElementById('customerLanguageBadge');
+    if(!his.style.display||his.style.display==='none'){
+        const lang=c.language||nationalityToLanguage[(c.nationality||'').toUpperCase()];
+        if(lang){
+            document.getElementById('customerLanguageText').textContent=languageNames[lang]||lang;
+            langBadge.style.display='block';hasStats=true;
+        }else langBadge.style.display='none';
+    }else langBadge.style.display='none';
+
+    // Total visits
+    const visitsBadge=document.getElementById('customerVisitsBadge');
+    if(c.total_visits>0){
+        document.getElementById('customerTotalVisits').textContent=c.total_visits;
+        visitsBadge.style.display='block';hasStats=true;
+    }else visitsBadge.style.display='none';
+
+    // Total spent
+    const spentBadge=document.getElementById('customerSpentBadge');
+    if(c.total_spent>0){
+        document.getElementById('customerTotalSpent').textContent=parseFloat(c.total_spent).toFixed(2);
+        spentBadge.style.display='block';hasStats=true;
+    }else spentBadge.style.display='none';
+
+    statsSection.style.display=hasStats?'block':'none';
 
     const pns=document.getElementById('customerPrefsNotesSection');
     let hc=false;
@@ -926,6 +992,8 @@ document.getElementById('clearCustomerBtn')?.addEventListener('click',function()
     customerSearch.value='';
     document.querySelectorAll('.preference-check').forEach(cb=>cb.checked=false);
     if(chargeToRoom){chargeToRoom.checked=false;chargeRefContainer.style.display='none'}
+    document.getElementById('viewCustomerProfileBtn').style.display='none';
+    document.getElementById('customerStatsSection').style.display='none';
     updateSummary();
 });
 
