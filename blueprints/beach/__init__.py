@@ -324,7 +324,9 @@ def api_customers_search():
                 'notes': c.get('notes'),
                 'is_main_guest': c.get('is_main_guest', 0),
                 'room_guest_count': c.get('room_guest_count', 1),
-                'booking_reference': c.get('booking_reference')
+                'booking_reference': c.get('booking_reference'),
+                'is_checkin_today': c.get('is_checkin_today', False),
+                'is_checkout_today': c.get('is_checkout_today', False)
             })
         else:
             # Beach customer result - include preferences

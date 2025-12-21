@@ -171,6 +171,20 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                 guest_count = guest.get('room_guest_count', 1)
                 guest['display_name'] = guest['guest_name'] + (f" ({guest_count} huéspedes)" if guest_count > 1 else "")
                 guest['customer_type'] = 'interno'  # Hotel guests are always interno
+                # Check-in/Check-out today flags (compare date objects or strings)
+                from datetime import date
+                today = date.today()
+                arrival = guest.get('arrival_date')
+                departure = guest.get('departure_date')
+                # Handle both date objects and strings
+                if isinstance(arrival, str):
+                    guest['is_checkin_today'] = arrival == today.isoformat()
+                else:
+                    guest['is_checkin_today'] = arrival == today
+                if isinstance(departure, str):
+                    guest['is_checkout_today'] = departure == today.isoformat()
+                else:
+                    guest['is_checkout_today'] = departure == today
                 results.append(guest)
                 added_rooms.add(room)
                 if len(results) >= limit:

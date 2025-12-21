@@ -775,7 +775,9 @@ function displaySearchResults(customers,query){
         hs.style.display='block';
         hg.forEach(g=>{
             const vip=g.vip_code;
-            hgl.innerHTML+=`<div class="result-item" data-id="${g.id}" data-source="hotel_guest"><div class="result-avatar hotel"><i class="fas fa-hotel"></i></div><div class="result-info"><div class="result-name">${g.guest_name} ${g.is_main_guest?'<span class="badge bg-primary">Principal</span>':''} ${vip?'<span class="badge bg-warning text-dark">VIP</span>':''}</div><div class="result-details"><i class="fas fa-door-open"></i> Hab. ${g.room_number} - <i class="fas fa-calendar"></i> ${formatDate(g.arrival_date)} - ${formatDate(g.departure_date)}${g.booking_reference?' - #'+g.booking_reference:''}</div></div><div class="result-action"><i class="fas fa-chevron-right"></i></div></div>`;
+            const checkinBadge=g.is_checkin_today?'<span class="badge bg-success">Check-in</span>':'';
+            const checkoutBadge=g.is_checkout_today?'<span class="badge bg-danger">Check-out</span>':'';
+            hgl.innerHTML+=`<div class="result-item" data-id="${g.id}" data-source="hotel_guest"><div class="result-avatar hotel"><i class="fas fa-hotel"></i></div><div class="result-info"><div class="result-name">${g.guest_name} ${g.is_main_guest?'<span class="badge bg-primary">Principal</span>':''} ${vip?'<span class="badge bg-warning text-dark">VIP</span>':''} ${checkinBadge} ${checkoutBadge}</div><div class="result-details"><i class="fas fa-door-open"></i> Hab. ${g.room_number} - <i class="fas fa-calendar"></i> ${formatDate(g.arrival_date)} - ${formatDate(g.departure_date)}${g.booking_reference?' - #'+g.booking_reference:''}</div></div><div class="result-action"><i class="fas fa-chevron-right"></i></div></div>`;
         });
     }else hs.style.display='none';
     if(bc.length===0&&hg.length===0){nrs.style.display='block';document.getElementById('searchQueryDisplay').textContent=query}else nrs.style.display='none';
