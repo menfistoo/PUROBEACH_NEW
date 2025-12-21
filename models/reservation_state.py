@@ -11,12 +11,15 @@ from database import get_db
 # =============================================================================
 
 RESERVATION_STATE_DISPLAY_PRIORITY = {
-    'Cobrada': 5,      # Highest priority
-    'Sentada': 4,
-    'Confirmada': 3,
-    'Cancelada': 2,
-    'No-Show': 1,
-    'Liberada': 0      # Lowest priority
+    'Activa': 6,       # Highest priority - customer is present
+    'Cobrada': 5,      # Payment received
+    'Check-in': 4,     # Customer arrived
+    'Confirmada': 3,   # Confirmed reservation
+    'Pendiente': 2,    # Pending confirmation
+    'Completada': 1,   # Session completed
+    'Cancelada': 0,    # Cancelled
+    'No-Show': 0,      # No show
+    'Liberada': 0      # Released/freed
 }
 
 
