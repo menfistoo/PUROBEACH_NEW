@@ -349,7 +349,9 @@ def api_customers_search():
                 'total_visits': c.get('total_visits', 0),
                 'total_spent': c.get('total_spent', 0),
                 'last_visit': c.get('last_visit'),
-                'preferences': pref_codes
+                'preferences': pref_codes,
+                'is_checkin_today': c.get('is_checkin_today', False),
+                'is_checkout_today': c.get('is_checkout_today', False)
             }
 
             # For interno customers, enrich with hotel guest data

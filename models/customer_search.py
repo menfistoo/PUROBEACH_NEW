@@ -109,11 +109,45 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
     cursor.execute(customer_query, params)
 
     customer_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number']
+    from datetime import date
+    today = date.today()
+
     for row in cursor.fetchall():
         customer = dict(row)
         # Python-side filtering for accent-insensitive matching
         if _matches_search(customer, search_words, customer_fields):
             customer['display_name'] = f"{customer['first_name']} {customer['last_name'] or ''}".strip()
+
+            # For interno customers, check hotel guest data for check-in/check-out today
+            customer['is_checkin_today'] = False
+            customer['is_checkout_today'] = False
+            if customer.get('customer_type') == 'interno' and customer.get('room_number'):
+                cursor.execute('''
+                    SELECT arrival_date, departure_date
+                    FROM hotel_guests
+                    WHERE room_number = ?
+                      AND departure_date >= date('now')
+                      AND arrival_date <= date('now')
+                    ORDER BY (arrival_date = date('now')) DESC,
+                             (departure_date = date('now')) DESC
+                    LIMIT 1
+                ''', (customer['room_number'],))
+                hotel_row = cursor.fetchone()
+                if hotel_row:
+                    arrival = hotel_row['arrival_date']
+                    departure = hotel_row['departure_date']
+                    if isinstance(arrival, str):
+                        customer['is_checkin_today'] = arrival == today.isoformat()
+                    else:
+                        customer['is_checkin_today'] = arrival == today
+                    if isinstance(departure, str):
+                        customer['is_checkout_today'] = departure == today.isoformat()
+                    else:
+                        customer['is_checkout_today'] = departure == today
+                else:
+                    # No active hotel stay - skip this interno customer
+                    continue
+
             results.append(customer)
             if len(results) >= limit:
                 break
