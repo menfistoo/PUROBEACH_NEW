@@ -508,6 +508,105 @@ def migrate_customers_language_phone():
         raise
 
 
+def migrate_add_sentada_state():
+    """
+    Migration: Add 'Sentada' state for tracking when customers are at the beach.
+
+    Safe to run multiple times - checks if state already exists.
+
+    Returns:
+        bool: True if migration applied, False if already applied
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if state already exists
+    cursor.execute("SELECT id FROM beach_reservation_states WHERE code = 'sentada'")
+    if cursor.fetchone():
+        print("Migration already applied - Sentada state exists.")
+        return False
+
+    print("Applying add_sentada_state migration...")
+
+    try:
+        # Get max display_order
+        cursor.execute("SELECT MAX(display_order) as max_order FROM beach_reservation_states")
+        row = cursor.fetchone()
+        next_order = (row['max_order'] or 0) + 1
+
+        # Insert Sentada state (non-releasing, active state)
+        cursor.execute('''
+            INSERT INTO beach_reservation_states
+            (code, name, color, icon, is_availability_releasing, display_order, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', ('sentada', 'Sentada', '#28A745', 'fa-couch', 0, next_order, 1))
+
+        db.commit()
+        print("Migration add_sentada_state applied successfully!")
+        return True
+
+    except Exception as e:
+        db.rollback()
+        print(f"Migration failed: {e}")
+        raise
+
+
+def migrate_customers_extended_stats():
+    """
+    Migration: Add extended statistics columns to beach_customers.
+
+    Adds:
+    - no_shows: Count of No-Show reservations
+    - cancellations: Count of cancelled reservations
+    - total_reservations: Total reservation count (excluding cancelled/no-show)
+
+    Safe to run multiple times - checks if columns already exist.
+
+    Returns:
+        bool: True if migration applied, False if already applied
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if migration already applied
+    cursor.execute("PRAGMA table_info(beach_customers)")
+    existing_columns = [row['name'] for row in cursor.fetchall()]
+
+    if 'no_shows' in existing_columns:
+        print("Migration already applied - extended stats columns exist.")
+        return False
+
+    print("Applying customers_extended_stats migration...")
+
+    try:
+        columns_to_add = [
+            ('ALTER TABLE beach_customers ADD COLUMN no_shows INTEGER DEFAULT 0', 'no_shows'),
+            ('ALTER TABLE beach_customers ADD COLUMN cancellations INTEGER DEFAULT 0', 'cancellations'),
+            ('ALTER TABLE beach_customers ADD COLUMN total_reservations INTEGER DEFAULT 0', 'total_reservations'),
+        ]
+
+        for sql, col_name in columns_to_add:
+            if col_name not in existing_columns:
+                db.execute(sql)
+                print(f"  Added column: {col_name}")
+
+        # Create index for stats lookup
+        try:
+            db.execute('CREATE INDEX IF NOT EXISTS idx_customers_stats ON beach_customers(total_visits, no_shows, total_reservations)')
+            print("  Created index: idx_customers_stats")
+        except Exception:
+            pass
+
+        db.commit()
+        print("Migration customers_extended_stats applied successfully!")
+        return True
+
+    except Exception as e:
+        db.rollback()
+        print(f"Migration failed: {e}")
+        raise
+
+
 def migrate_add_furniture_types_menu():
     """
     Migration: Add 'Tipos de Mobiliario' menu permission.
@@ -792,6 +891,9 @@ def create_tables(db):
             total_visits INTEGER DEFAULT 0,
             total_spent REAL DEFAULT 0,
             last_visit DATE,
+            no_shows INTEGER DEFAULT 0,
+            cancellations INTEGER DEFAULT 0,
+            total_reservations INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -1235,10 +1337,11 @@ def seed_database(db):
         ('confirmada', 'Confirmada', '#0066CC', 'fa-check-circle', 0, 2),
         ('checkin', 'Check-in', '#17A2B8', 'fa-user-check', 0, 3),
         ('activa', 'Activa', '#28A745', 'fa-play-circle', 0, 4),
-        ('completada', 'Completada', '#6C757D', 'fa-check-double', 0, 5),
-        ('cancelada', 'Cancelada', '#DC3545', 'fa-times-circle', 1, 6),
-        ('noshow', 'No-Show', '#FD7E14', 'fa-user-times', 1, 7),
-        ('liberada', 'Liberada', '#6C757D', 'fa-unlock', 1, 8)
+        ('sentada', 'Sentada', '#28A745', 'fa-couch', 0, 5),
+        ('completada', 'Completada', '#6C757D', 'fa-check-double', 0, 6),
+        ('cancelada', 'Cancelada', '#DC3545', 'fa-times-circle', 1, 7),
+        ('noshow', 'No-Show', '#FD7E14', 'fa-user-times', 1, 8),
+        ('liberada', 'Liberada', '#6C757D', 'fa-unlock', 1, 9)
     ]
 
     for code, name, color, icon, is_releasing, display_order in states_data:

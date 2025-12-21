@@ -9,10 +9,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase 6C: Reservations Pricing + PMS |
+| **Current Phase** | Phase 7: Interactive Map |
 | **Last Updated** | 2025-12-21 |
-| **Last Session** | Phase 6B frontend integration + Collapsible calendar |
-| **Next Priority** | Pricing validation + PMS integration |
+| **Last Session** | Phase 6C Sentada State + Customer Statistics |
+| **Next Priority** | Interactive map implementation |
 
 ---
 
@@ -29,7 +29,7 @@
 | 5 | Customers | Complete | 100% |
 | 6A | Reservations: Core CRUD + States | Complete | 100% |
 | 6B | Reservations: Availability + Multi-day + Suggestions | Complete | 100% |
-| 6C | Reservations: Pricing + PMS | Not Started | 0% |
+| 6C | Sentada State + Customer Stats | Complete | 100% |
 | 7 | Interactive Map | Not Started | 0% |
 | 8 | Smart Features | Not Started | 0% |
 | 9 | Reports & Polish | Not Started | 0% |
@@ -389,24 +389,27 @@
 
 ---
 
-### Phase 6C: Pricing + PMS Integration
+### Phase 6C: Sentada State + Customer Statistics
+
+**Note:** PMS integration deferred - prices are informational only for employees.
 
 | Task | Status | Notes |
 |------|--------|-------|
-| validate_and_calculate_price() | Pending | Anti-fraud server-side validation |
-| get_applicable_consumption_policy() | Pending | Find policy by zone/type/customer |
-| mark_consumption_charged_to_pms() | Pending | Mark reservation as charged |
-| get_reservations_pending_pms_charge() | Pending | List pending charges |
-| update_beach_customer_statistics() | Pending | Auto-update on state changes |
-| PMS charge API | Pending | POST /beach/api/consumption/mark-charged/<id> |
-| Pending charges report | Pending | GET /beach/reports/pending-charges |
+| migrate_add_sentada_state() | Complete | New state for tracking beach presence |
+| migrate_customers_extended_stats() | Complete | Added no_shows, cancellations, total_reservations columns |
+| Update seed_database() | Complete | Added 'Sentada' state to states_data |
+| Update create_tables() | Complete | Added new columns to beach_customers |
+| RESERVATION_STATE_DISPLAY_PRIORITY | Complete | Added Sentada at priority 6 |
+| update_customer_statistics() | Complete | Calculates all extended stats on state changes |
+| customer_crud.py allowed_fields | Complete | Added new stat fields |
+| customer_detail.html | Complete | Display extended stats with icons |
 
-**Customer Stats Auto-Update:**
-- total_reservations: Count excluding releasing states
+**Customer Stats Auto-Update (Implemented):**
+- total_reservations: Count excluding Cancelada and No-Show states
 - total_visits: Reservations with 'Sentada' state
 - no_shows: Reservations with 'No-Show' state
 - cancellations: Reservations with 'Cancelada' state
-- last_visit_date: Most recent 'Sentada' date
+- last_visit: Most recent 'Sentada' date
 
 ---
 
@@ -717,8 +720,47 @@ DEFAULT_PREFERENCES = [
 - `ccfc69a` - Add collapsible calendar for multi-day reservation selection
 
 #### Next Session
-- Begin Phase 6C: Pricing + PMS Integration
-- Or proceed to Phase 7: Interactive Map
+- Phase 7: Interactive Map
+
+---
+
+### Session: 2025-12-21 (Phase 6C Complete)
+**Duration:** Single session
+**Focus:** Sentada State + Customer Statistics
+
+#### Completed
+- **Database Migrations** (`database.py`)
+  - `migrate_add_sentada_state()` - New state for tracking when customers are at the beach
+  - `migrate_customers_extended_stats()` - Added no_shows, cancellations, total_reservations columns
+  - Updated `seed_database()` with Sentada state
+  - Updated `create_tables()` with new beach_customers columns
+
+- **State Priority** (`models/reservation_state.py`)
+  - Added 'Sentada' to `RESERVATION_STATE_DISPLAY_PRIORITY` at level 6
+  - Extended `update_customer_statistics()` to calculate:
+    - total_visits: Reservations with 'Sentada' state
+    - no_shows: Reservations with 'No-Show' state
+    - cancellations: Reservations with 'Cancelada' state
+    - total_reservations: Count excluding Cancelada and No-Show
+
+- **Customer CRUD** (`models/customer_crud.py`)
+  - Added no_shows, cancellations, total_reservations to allowed_fields
+
+- **Customer Detail UI** (`templates/beach/customer_detail.html`)
+  - Enhanced Stats Card with:
+    - Visitas (Sentada) with fa-couch icon
+    - No-Shows with fa-user-times icon (red when count > 0)
+    - Cancelaciones with fa-times-circle icon (orange when count > 0)
+
+#### Decisions
+- PMS integration deferred - prices are informational only for employees
+- Sentada state represents physical beach presence (customer at their furniture)
+- Auto-update of customer stats on any state change
+
+#### All 70 Tests Passing
+
+#### Next Session
+- Phase 7: Interactive Map
 
 ---
 

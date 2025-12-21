@@ -146,7 +146,7 @@ def update_customer(customer_id: int, **kwargs) -> bool:
 
     allowed_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number',
                       'notes', 'vip_status', 'total_visits', 'total_spent', 'last_visit',
-                      'language', 'country_code']
+                      'language', 'country_code', 'no_shows', 'cancellations', 'total_reservations']
     updates = []
     values = []
 

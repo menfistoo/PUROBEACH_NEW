@@ -11,7 +11,8 @@ from database import get_db
 # =============================================================================
 
 RESERVATION_STATE_DISPLAY_PRIORITY = {
-    'Activa': 6,       # Highest priority - customer is present
+    'Activa': 7,       # Highest priority - customer is present
+    'Sentada': 6,      # Customer physically at the beach
     'Cobrada': 5,      # Payment received
     'Check-in': 4,     # Customer arrived
     'Confirmada': 3,   # Confirmed reservation
@@ -346,6 +347,9 @@ def update_customer_statistics(customer_id: int) -> bool:
     Calculates:
     - total_visits: Reservations with 'Sentada' state
     - last_visit: Most recent visit date
+    - no_shows: Count of reservations with No-Show state
+    - cancellations: Count of reservations with Cancelada state
+    - total_reservations: All reservations excluding cancelled/no-show
 
     Args:
         customer_id: Customer ID
@@ -375,14 +379,45 @@ def update_customer_statistics(customer_id: int) -> bool:
         ''', (customer_id,))
         last_visit = cursor.fetchone()['last_visit']
 
+        # Count no-shows
+        cursor.execute('''
+            SELECT COUNT(*) as no_shows
+            FROM beach_reservations
+            WHERE customer_id = ?
+              AND current_states LIKE '%No-Show%'
+        ''', (customer_id,))
+        no_shows = cursor.fetchone()['no_shows']
+
+        # Count cancellations
+        cursor.execute('''
+            SELECT COUNT(*) as cancellations
+            FROM beach_reservations
+            WHERE customer_id = ?
+              AND current_states LIKE '%Cancelada%'
+        ''', (customer_id,))
+        cancellations = cursor.fetchone()['cancellations']
+
+        # Count total reservations (excluding cancelled and no-show)
+        cursor.execute('''
+            SELECT COUNT(*) as total
+            FROM beach_reservations
+            WHERE customer_id = ?
+              AND current_states NOT LIKE '%Cancelada%'
+              AND current_states NOT LIKE '%No-Show%'
+        ''', (customer_id,))
+        total_reservations = cursor.fetchone()['total']
+
         # Update customer
         cursor.execute('''
             UPDATE beach_customers
             SET total_visits = ?,
                 last_visit = ?,
+                no_shows = ?,
+                cancellations = ?,
+                total_reservations = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        ''', (visits, last_visit, customer_id))
+        ''', (visits, last_visit, no_shows, cancellations, total_reservations, customer_id))
 
         db.commit()
         return True

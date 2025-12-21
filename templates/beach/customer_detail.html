@@ -235,15 +235,29 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
                     <span class="text-muted">Total Reservas</span>
-                    <span class="badge bg-primary fs-6">{{ customer.total_reservations }}</span>
+                    <span class="badge bg-primary fs-6">{{ customer.total_reservations or 0 }}</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
                     <span class="text-muted">Reservas Activas</span>
-                    <span class="badge bg-success fs-6">{{ customer.active_reservations }}</span>
+                    <span class="badge bg-success fs-6">{{ customer.active_reservations or 0 }}</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                    <span class="text-muted">Total Visitas</span>
+                    <span class="text-muted">
+                        <i class="fas fa-couch me-1"></i>Visitas (Sentada)
+                    </span>
                     <span class="badge bg-info fs-6">{{ customer.total_visits or 0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                    <span class="text-muted">
+                        <i class="fas fa-user-times me-1"></i>No-Shows
+                    </span>
+                    <span class="badge {% if customer.no_shows %}bg-danger{% else %}bg-secondary{% endif %} fs-6">{{ customer.no_shows or 0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                    <span class="text-muted">
+                        <i class="fas fa-times-circle me-1"></i>Cancelaciones
+                    </span>
+                    <span class="badge {% if customer.cancellations %}bg-warning text-dark{% else %}bg-secondary{% endif %} fs-6">{{ customer.cancellations or 0 }}</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="text-muted">Total Gastado</span>
