@@ -817,7 +817,17 @@ function selectHotelGuest(g,guestCount){
 
     document.getElementById('customerPhone').value=g.phone||'';
     document.getElementById('customerEmail').value=g.email||'';
-    document.getElementById('customerPrefsNotesSection').style.display='none';
+
+    // Show hotel guest notes if they exist
+    if(g.notes){
+        document.getElementById('customerNotesText').textContent=g.notes;
+        document.getElementById('customerNotesDisplay').style.display='block';
+        document.getElementById('customerPrefsNotesSection').style.display='block';
+    }else{
+        document.getElementById('customerNotesDisplay').style.display='none';
+        document.getElementById('customerPrefsNotesSection').style.display='none';
+    }
+    document.getElementById('customerPrefsDisplay').style.display='none'; // Hotel guests have no preferences yet
     document.getElementById('customerHistorySection').style.display='none';
 
     if(chargeToRoom){chargeToRoom.checked=true;chargeRefContainer.style.display='block';document.getElementById('chargeReference').value=`Hab. ${g.room_number}`}
