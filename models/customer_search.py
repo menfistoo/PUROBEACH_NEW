@@ -153,18 +153,26 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
 
         # Get existing customer room numbers to avoid duplicates
         existing_rooms = {c['room_number'] for c in results if c.get('room_number') and c.get('customer_type') == 'interno'}
+        # Track rooms we've already added from hotel_guests (show only main guest per room)
+        added_rooms = set()
 
         guest_fields = ['guest_name', 'room_number', 'email', 'phone']
         for row in cursor.fetchall():
             guest = dict(row)
+            room = guest['room_number']
             # Skip if already have a customer with this room number
-            if guest['room_number'] in existing_rooms:
+            if room in existing_rooms:
+                continue
+            # Skip if we already added a guest from this room (show only main guest)
+            if room in added_rooms:
                 continue
             # Python-side filtering for accent-insensitive matching
             if _matches_search(guest, search_words, guest_fields):
-                guest['display_name'] = guest['guest_name']
+                guest_count = guest.get('room_guest_count', 1)
+                guest['display_name'] = guest['guest_name'] + (f" ({guest_count} huéspedes)" if guest_count > 1 else "")
                 guest['customer_type'] = 'interno'  # Hotel guests are always interno
                 results.append(guest)
+                added_rooms.add(room)
                 if len(results) >= limit:
                     break
 
