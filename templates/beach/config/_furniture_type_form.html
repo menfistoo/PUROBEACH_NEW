@@ -2,7 +2,8 @@
 {% set ft = selected_type or form_data or {} %}
 {% set is_edit = mode == 'edit' %}
 
-<form method="POST" id="furniture-type-form">
+<form method="POST" id="furniture-type-form"
+      action="{% if is_edit %}{{ url_for('beach.beach_config.furniture_types_edit', type_id=ft.id) }}{% else %}{{ url_for('beach.beach_config.furniture_types_create') }}{% endif %}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     {# Section 1: Identification #}
@@ -163,10 +164,10 @@
                     </div>
 
                     <div id="custom_svg_wrapper" class="mb-3" style="display: none;">
-                        <label for="custom_svg" class="form-label">Codigo SVG Personalizado</label>
+                        <label for="custom_svg" class="form-label">Código SVG Personalizado</label>
                         <textarea class="form-control font-monospace" id="custom_svg" name="custom_svg"
                                   rows="4" placeholder="<rect ... /> o <path ... />">{{ ft.custom_svg or '' }}</textarea>
-                        <div class="form-text">Usa {{fill}} y {{stroke}} para colores dinamicos</div>
+                        <div class="form-text">Usa {{fill}} y {{stroke}} para colores dinámicos</div>
                     </div>
 
                     {# SVG Preview #}
@@ -223,7 +224,7 @@
                     </div>
                     <div class="form-text">
                         <i class="fa-solid fa-info-circle"></i>
-                        La capacidad por defecto debe estar entre minima y maxima
+                        La capacidad por defecto debe estar entre mínima y máxima
                     </div>
                 </div>
             </div>
@@ -244,7 +245,7 @@
                                 <input class="form-check-input" type="checkbox" id="default_rotation" name="default_rotation" value="1"
                                        {% if ft.default_rotation %}checked{% endif %}>
                                 <label class="form-check-label" for="default_rotation">
-                                    <i class="fa-solid fa-rotate"></i> Permite Rotacion
+                                    <i class="fa-solid fa-rotate"></i> Permite Rotación
                                 </label>
                             </div>
                             <div class="form-check form-switch mb-3">
@@ -283,7 +284,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNumbering">
-                    <i class="fa-solid fa-hashtag me-2"></i> Numeracion
+                    <i class="fa-solid fa-hashtag me-2"></i> Numeración
                 </button>
             </h2>
             <div id="collapseNumbering" class="accordion-collapse collapse" data-bs-parent="#furnitureTypeAccordion">
@@ -291,16 +292,16 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="number_prefix" class="form-label">Prefijo de Numeracion</label>
+                                <label for="number_prefix" class="form-label">Prefijo de Numeración</label>
                                 <input type="text" class="form-control" id="number_prefix" name="number_prefix"
                                        value="{{ ft.number_prefix or '' }}" maxlength="5"
                                        placeholder="H, B, S...">
-                                <div class="form-text">Prefijo para autonumeracion (ej: H1, H2, B1...)</div>
+                                <div class="form-text">Prefijo para autonumeración (ej: H1, H2, B1...)</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="number_start" class="form-label">Numero Inicial</label>
+                                <label for="number_start" class="form-label">Número Inicial</label>
                                 <input type="number" class="form-control" id="number_start" name="number_start"
                                        value="{{ ft.number_start or 1 }}" min="1" max="9999">
                             </div>
@@ -309,7 +310,7 @@
                     {% if is_edit %}
                     <div class="alert alert-info">
                         <i class="fa-solid fa-info-circle"></i>
-                        Proximo numero disponible: <strong id="next-number-display">...</strong>
+                        Próximo número disponible: <strong id="next-number-display">...</strong>
                         <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="refresh-next-number">
                             <i class="fa-solid fa-refresh"></i>
                         </button>
@@ -323,17 +324,17 @@
         <div class="accordion-item">
             <h2 class="accordion-header">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConfig">
-                    <i class="fa-solid fa-sliders me-2"></i> Configuracion Avanzada
+                    <i class="fa-solid fa-sliders me-2"></i> Configuración Avanzada
                 </button>
             </h2>
             <div id="collapseConfig" class="accordion-collapse collapse" data-bs-parent="#furnitureTypeAccordion">
                 <div class="accordion-body">
                     <div class="mb-3">
-                        <label for="default_features" class="form-label">Caracteristicas por Defecto</label>
+                        <label for="default_features" class="form-label">Características por Defecto</label>
                         <input type="text" class="form-control" id="default_features" name="default_features"
                                value="{{ ft.default_features or '' }}"
                                placeholder="sombra, wifi, cargador...">
-                        <div class="form-text">Separadas por comas, se aplicaran a mobiliario nuevo</div>
+                        <div class="form-text">Separadas por comas, se aplicarán a mobiliario nuevo</div>
                     </div>
 
                     <div class="mb-3">
@@ -353,7 +354,7 @@
                             </div>
                             {% endfor %}
                         </div>
-                        <div class="form-text">Sin seleccion = permitido en todas las zonas</div>
+                        <div class="form-text">Sin selección = permitido en todas las zonas</div>
                     </div>
                 </div>
             </div>
