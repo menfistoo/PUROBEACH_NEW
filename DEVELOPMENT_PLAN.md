@@ -10,8 +10,8 @@
 | Field | Value |
 |-------|-------|
 | **Current Phase** | Phase 7: Interactive Map |
-| **Last Updated** | 2025-12-21 |
-| **Last Session** | Phase 6C Sentada State + Customer Statistics |
+| **Last Updated** | 2025-12-22 |
+| **Last Session** | Phase 6D Configurable Reservation States |
 | **Next Priority** | Interactive map implementation |
 
 ---
@@ -30,6 +30,7 @@
 | 6A | Reservations: Core CRUD + States | Complete | 100% |
 | 6B | Reservations: Availability + Multi-day + Suggestions | Complete | 100% |
 | 6C | Sentada State + Customer Stats | Complete | 100% |
+| 6D | Configurable Reservation States | Complete | 100% |
 | 7 | Interactive Map | Not Started | 0% |
 | 8 | Smart Features | Not Started | 0% |
 | 9 | Reports & Polish | Not Started | 0% |
@@ -413,6 +414,60 @@
 
 ---
 
+### Phase 6D: Configurable Reservation States
+
+**Objective:** Fully dynamic reservation states managed from database with configuration UI.
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **Database Migration** | Complete | Added display_priority, creates_incident, is_system, is_default columns |
+| migrate_reservation_states_configurable() | Complete | Idempotent migration with legacy state deactivation |
+| Update seed_database() | Complete | 5 system states with proper properties |
+| Update schema.py | Complete | New columns in beach_reservation_states |
+| **Model Layer** | Complete | New models/state.py with full CRUD |
+| get_all_states() | Complete | List states with active_only filter |
+| get_state_by_id/code/name() | Complete | Lookup functions |
+| get_default_state() | Complete | Returns state with is_default=1 |
+| get_state_priority_map() | Complete | Dynamic priority lookup from DB |
+| get_incident_states() | Complete | States with creates_incident=1 |
+| get_releasing_states() | Complete | States with is_availability_releasing=1 |
+| create_state() | Complete | Create non-system states |
+| update_state() | Complete | Update with system field protection |
+| delete_state() | Complete | Soft delete (active=0) |
+| reorder_states() | Complete | Update display_order |
+| **Refactored Hardcoded References** | Complete | All dynamic from DB |
+| Remove RESERVATION_STATE_DISPLAY_PRIORITY | Complete | Replaced with get_state_priority_map() |
+| reservation_crud.py | Complete | Uses get_default_state() |
+| reservation_multiday.py | Complete | Uses get_default_state() |
+| reservation_suggestions.py | Complete | Dynamic releasing states query |
+| **Configuration UI** | Complete | Full CRUD interface |
+| GET /config/states | Complete | List with show_inactive toggle |
+| GET/POST /config/states/create | Complete | Create form with color picker |
+| GET/POST /config/states/<id>/edit | Complete | Edit form |
+| POST /config/states/<id>/delete | Complete | Soft delete |
+| POST /config/states/reorder | Complete | AJAX reorder |
+| states.html template | Complete | Table with centered columns |
+| state_form.html template | Complete | Form with behavior switches |
+
+**5 System States (Configured):**
+
+| Estado | Color | Prioridad | Libera | Incidente | Default |
+|--------|-------|-----------|--------|-----------|---------|
+| Confirmada | #28A745 | 3 | No | No | Sí |
+| Sentada | #2E8B57 | 6 | No | No | No |
+| Cancelada | #DC3545 | 0 | Sí | No | No |
+| No-Show | #FF4444 | 0 | Sí | Sí | No |
+| Liberada | #6C757D | 0 | Sí | No | No |
+
+**Key Properties:**
+- `is_availability_releasing`: Furniture freed for new reservations
+- `creates_incident`: Auto-log incident when state applied
+- `is_system`: Cannot be deleted (protected)
+- `is_default`: Auto-assigned to new reservations
+- `display_priority`: Color precedence when multiple states
+
+---
+
 ### Decisions Made
 - **Schema approach:** Single `reservation_date` per reservation + parent/child for multi-day (SPEC approach)
 - **Ticket number format:** YYMMDDRR (e.g., 25011601 = first reservation on Jan 16, 2025)
@@ -758,6 +813,57 @@ DEFAULT_PREFERENCES = [
 - Auto-update of customer stats on any state change
 
 #### All 70 Tests Passing
+
+#### Next Session
+- Phase 7: Interactive Map
+
+---
+
+### Session: 2025-12-22 (Phase 6D Complete)
+**Duration:** Single session
+**Focus:** Configurable Reservation States System
+
+#### Completed
+- **Database Migration** (`database/migrations.py`)
+  - `migrate_reservation_states_configurable()` - Adds display_priority, creates_incident, is_system, is_default columns
+  - Deactivates legacy states (pendiente, checkin, activa, completada)
+  - Updates 5 core states with proper properties
+
+- **New Model** (`models/state.py`)
+  - Full CRUD: get_all_states, get_state_by_id/code/name, create_state, update_state, delete_state
+  - Dynamic lookups: get_default_state, get_state_priority_map, get_incident_states, get_releasing_states
+  - Reordering: reorder_states for drag-drop support
+
+- **Refactored Hardcoded References**
+  - Removed `RESERVATION_STATE_DISPLAY_PRIORITY` constant from reservation_state.py
+  - `reservation_crud.py`: Uses get_default_state() instead of hardcoded 'Confirmada'
+  - `reservation_multiday.py`: Uses get_default_state() for initial state
+  - `reservation_suggestions.py`: Dynamic query using get_releasing_states()
+
+- **Configuration UI**
+  - Routes in `blueprints/beach/routes/config/states.py`
+  - `states.html`: List with show_inactive toggle, centered columns
+  - `state_form.html`: Create/edit form with color picker, behavior switches
+
+- **Design Review Fixes**
+  - Aligned states.html with tags.html design pattern
+  - Centered all table columns
+  - Simplified info card layout
+
+#### Decisions
+- 5 system states: Confirmada (default), Sentada, Cancelada, No-Show, Liberada
+- Cobrada removed (not part of initial states)
+- System states (is_system=1) cannot be deleted
+- Soft delete pattern (active=0)
+
+#### Files Created
+- `models/state.py` (new)
+- `blueprints/beach/routes/config/states.py` (new)
+- `templates/beach/config/states.html` (new)
+- `templates/beach/config/state_form.html` (new)
+
+#### Commits
+- `da850eb` - Implement configurable reservation states system
 
 #### Next Session
 - Phase 7: Interactive Map
