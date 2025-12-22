@@ -272,3 +272,192 @@ def get_next_number_by_prefix(prefix: str) -> str:
 
     next_num = max_num + 1
     return f"{prefix}{next_num}"
+
+
+# =============================================================================
+# AUTO-POSITIONING FUNCTIONS (Phase 7: Interactive Map)
+# =============================================================================
+
+import math
+
+
+def auto_position_furniture_in_zone(zone_id: int, zone_bounds: dict) -> int:
+    """
+    Auto-arrange furniture in a grid layout within a zone.
+
+    Args:
+        zone_id: Zone ID to position furniture in
+        zone_bounds: Dict with x, y, width, height for zone area
+
+    Returns:
+        Number of furniture items positioned
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Get furniture in this zone
+    cursor.execute('''
+        SELECT f.id, f.width, f.height
+        FROM beach_furniture f
+        WHERE f.zone_id = ? AND f.active = 1
+        ORDER BY f.number
+    ''', (zone_id,))
+    furniture_items = cursor.fetchall()
+
+    if not furniture_items:
+        return 0
+
+    count = len(furniture_items)
+    zone_x = zone_bounds['x']
+    zone_y = zone_bounds['y']
+    zone_width = zone_bounds['width']
+
+    # Calculate grid layout
+    padding = 20  # Space between items
+    avg_width = 70  # Average furniture width for column calculation
+
+    # Calculate columns that fit in zone width
+    cols = max(1, int((zone_width - padding) / (avg_width + padding)))
+    rows = math.ceil(count / cols)
+
+    # Position each item
+    positioned = 0
+    for idx, item in enumerate(furniture_items):
+        col = idx % cols
+        row = idx // cols
+
+        item_width = item['width'] or 60
+        item_height = item['height'] or 40
+
+        # Calculate position with padding
+        pos_x = zone_x + padding + col * (avg_width + padding) + (avg_width - item_width) / 2
+        pos_y = zone_y + padding + row * (item_height + padding)
+
+        cursor.execute('''
+            UPDATE beach_furniture
+            SET position_x = ?, position_y = ?
+            WHERE id = ?
+        ''', (pos_x, pos_y, item['id']))
+        positioned += 1
+
+    db.commit()
+    return positioned
+
+
+def setup_initial_furniture_positions(map_width: int = 1200, zone_height: int = 200,
+                                       zone_padding: int = 20) -> dict:
+    """
+    Generate initial positions for all furniture items.
+    Uses vertical zone stacking with grid layout within each zone.
+
+    Args:
+        map_width: Total map width in pixels
+        zone_height: Height per zone in pixels
+        zone_padding: Padding between zones
+
+    Returns:
+        Dict with zone counts and total positioned
+    """
+    from models.zone import get_all_zones
+
+    zones = get_all_zones(active_only=True)
+    results = {'zones': {}, 'total': 0}
+
+    for idx, zone in enumerate(zones):
+        # Calculate zone bounds (vertical stacking)
+        zone_bounds = {
+            'x': zone_padding,
+            'y': zone_padding + idx * (zone_height + zone_padding),
+            'width': map_width - 2 * zone_padding,
+            'height': zone_height
+        }
+
+        count = auto_position_furniture_in_zone(zone['id'], zone_bounds)
+        results['zones'][zone['name']] = count
+        results['total'] += count
+
+    return results
+
+
+def get_furniture_needing_position() -> list:
+    """
+    Get furniture items with position at origin (0, 0).
+
+    Returns:
+        List of furniture IDs needing positioning
+    """
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('''
+        SELECT id, number, zone_id
+        FROM beach_furniture
+        WHERE position_x = 0 AND position_y = 0 AND active = 1
+    ''')
+    return [dict(row) for row in cursor.fetchall()]
+
+
+def update_furniture_position(furniture_id: int, x: float, y: float,
+                               rotation: int = None) -> bool:
+    """
+    Update furniture position (used by drag-and-drop).
+
+    Args:
+        furniture_id: Furniture ID
+        x: New X position
+        y: New Y position
+        rotation: New rotation (optional)
+
+    Returns:
+        True if updated successfully
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    if rotation is not None:
+        cursor.execute('''
+            UPDATE beach_furniture
+            SET position_x = ?, position_y = ?, rotation = ?
+            WHERE id = ?
+        ''', (x, y, rotation, furniture_id))
+    else:
+        cursor.execute('''
+            UPDATE beach_furniture
+            SET position_x = ?, position_y = ?
+            WHERE id = ?
+        ''', (x, y, furniture_id))
+
+    db.commit()
+    return cursor.rowcount > 0
+
+
+def batch_update_furniture_positions(updates: list) -> int:
+    """
+    Batch update multiple furniture positions.
+
+    Args:
+        updates: List of dicts with id, x, y, rotation (optional)
+
+    Returns:
+        Number of items updated
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    updated = 0
+    for item in updates:
+        if 'rotation' in item:
+            cursor.execute('''
+                UPDATE beach_furniture
+                SET position_x = ?, position_y = ?, rotation = ?
+                WHERE id = ?
+            ''', (item['x'], item['y'], item['rotation'], item['id']))
+        else:
+            cursor.execute('''
+                UPDATE beach_furniture
+                SET position_x = ?, position_y = ?
+                WHERE id = ?
+            ''', (item['x'], item['y'], item['id']))
+        updated += cursor.rowcount
+
+    db.commit()
+    return updated

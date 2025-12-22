@@ -23,3 +23,5 @@ furniture.register_routes(config_bp)
 preferences.register_routes(config_bp)
 tags.register_routes(config_bp)
 states.register_routes(config_bp)
+from blueprints.beach.routes.config import map_editor
+map_editor.register_routes(config_bp)

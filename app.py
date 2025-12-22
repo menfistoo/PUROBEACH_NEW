@@ -135,6 +135,47 @@ def register_cli_commands(app):
             init_db()
         click.echo('Database initialized successfully!')
 
+    @app.cli.command('run-migrations')
+    def run_migrations_command():
+        """Run all pending database migrations."""
+        from database import (
+            migrate_furniture_types_v2,
+            migrate_reservations_v2,
+            migrate_status_history_v2,
+            migrate_hotel_guests_multi_guest,
+            migrate_hotel_guests_booking_reference,
+            migrate_customers_language_phone,
+            migrate_add_sentada_state,
+            migrate_customers_extended_stats,
+            migrate_add_furniture_types_menu,
+            migrate_reservation_states_configurable,
+            migrate_add_map_edit_permission,
+        )
+
+        click.echo('Running migrations...')
+        with app.app_context():
+            migrations = [
+                ('furniture_types_v2', migrate_furniture_types_v2),
+                ('reservations_v2', migrate_reservations_v2),
+                ('status_history_v2', migrate_status_history_v2),
+                ('hotel_guests_multi_guest', migrate_hotel_guests_multi_guest),
+                ('hotel_guests_booking_reference', migrate_hotel_guests_booking_reference),
+                ('customers_language_phone', migrate_customers_language_phone),
+                ('add_sentada_state', migrate_add_sentada_state),
+                ('customers_extended_stats', migrate_customers_extended_stats),
+                ('add_furniture_types_menu', migrate_add_furniture_types_menu),
+                ('reservation_states_configurable', migrate_reservation_states_configurable),
+                ('add_map_edit_permission', migrate_add_map_edit_permission),
+            ]
+
+            for name, func in migrations:
+                try:
+                    func()
+                except Exception as e:
+                    click.echo(f'  Migration {name} failed: {e}', err=True)
+
+        click.echo('Migrations complete!')
+
     @app.cli.command('create-user')
     @click.argument('username')
     @click.argument('email')

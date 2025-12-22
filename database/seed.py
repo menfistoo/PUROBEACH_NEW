@@ -81,6 +81,7 @@ def seed_database(db):
         ('admin.hotel_guests.import', 'Importar Huéspedes', 'admin'),
         ('admin.hotel_guests.export', 'Exportar Huéspedes', 'admin'),
         ('beach.map.interact', 'Interactuar con Mapa', 'operations'),
+        ('beach.map.edit', 'Editar Posiciones Mapa', 'operations'),
         ('beach.reservations.create', 'Crear Reservas', 'operations'),
         ('beach.reservations.edit', 'Editar Reservas', 'operations'),
         ('beach.reservations.delete', 'Eliminar Reservas', 'operations'),

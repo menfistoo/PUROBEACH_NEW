@@ -22,6 +22,9 @@ from database.migrations import (
     migrate_customers_extended_stats,
     migrate_add_furniture_types_menu,
     migrate_reservation_states_configurable,
+    migrate_add_map_edit_permission,
+    migrate_zone_canvas_properties,
+    migrate_add_map_editor_permission,
 )
 from database.schema import drop_tables, create_tables, create_indexes
 from database.seed import seed_database
@@ -42,6 +45,8 @@ __all__ = [
     'migrate_customers_extended_stats',
     'migrate_add_furniture_types_menu',
     'migrate_reservation_states_configurable',
+    'migrate_zone_canvas_properties',
+    'migrate_add_map_editor_permission',
     # Schema
     'drop_tables',
     'create_tables',
