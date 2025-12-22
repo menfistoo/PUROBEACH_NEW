@@ -4,103 +4,502 @@
 
 {% block title %}Mapa de Beach Club - PuroBeach{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Map Container */
+.map-wrapper {
+    position: relative;
+    background: linear-gradient(180deg, var(--color-background) 0%, var(--color-accent) 100%);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    min-height: 600px;
+}
+
+.map-container {
+    width: 100%;
+    height: 600px;
+    overflow: hidden;
+    position: relative;
+}
+
+.beach-map-svg {
+    width: 100%;
+    height: 100%;
+    transition: transform var(--transition-slow);
+}
+
+/* Zone styling */
+.zone-group rect {
+    transition: fill var(--transition-normal);
+}
+
+.zone-label {
+    font-family: var(--font-family);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Furniture styling */
+.furniture-item {
+    transition: transform var(--transition-normal), filter var(--transition-normal);
+}
+
+.furniture-item:hover {
+    transform: scale(1.05);
+}
+
+/* Legend */
+.map-legend {
+    background: var(--color-surface);
+    border-radius: var(--border-radius-md);
+    padding: var(--space-3) var(--space-4);
+    box-shadow: var(--shadow-md);
+}
+
+.legend-color {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--border-radius-sm);
+}
+
+/* Date Navigator */
+.date-navigator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    background: var(--color-surface);
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.date-nav-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--border-radius-full);
+    border: none;
+    background: var(--color-accent);
+    color: var(--color-secondary);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.date-nav-btn:hover {
+    background: var(--color-primary);
+    color: var(--color-surface);
+}
+
+.date-display {
+    font-weight: 600;
+    color: var(--color-secondary);
+    min-width: 280px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.date-display:hover {
+    color: var(--color-primary);
+}
+
+/* Zoom Controls */
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.zoom-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-normal);
+}
+
+.zoom-btn:hover {
+    background: var(--color-accent);
+    border-color: var(--color-primary);
+}
+
+/* Selection Panel */
+.selection-panel {
+    background: var(--color-surface);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-lg);
+    border-left: 4px solid var(--color-primary);
+}
+
+.selection-panel .selection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+}
+
+/* Tooltip */
+.map-tooltip {
+    position: fixed;
+    background: var(--color-surface);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-3) var(--space-4);
+    z-index: var(--z-tooltip);
+    pointer-events: none;
+    max-width: 280px;
+    font-size: var(--font-size-base);
+}
+
+.map-tooltip .tooltip-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* Stats Panel */
+.stats-panel {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+}
+
+.stat-card {
+    background: var(--color-surface);
+    border-radius: var(--border-radius-md);
+    padding: var(--space-4);
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-secondary);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+
+/* Loading state */
+.map-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .stats-panel {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .date-display {
+        min-width: auto;
+        font-size: var(--font-size-base);
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="mb-4">
-    <h2><i class="fas fa-map"></i> Mapa de Beach Club</h2>
-    <p class="text-muted">Vista interactiva del beach club con disponibilidad en tiempo real</p>
-</div>
-
-<div class="card mb-3">
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-4">
-                <label for="map_date" class="form-label">Fecha:</label>
-                <input type="date" id="map_date" class="form-control">
-            </div>
-            <div class="col-md-8">
-                <label class="form-label">Leyenda:</label>
-                <div class="d-flex gap-3">
-                    <span><span class="badge bg-success">Disponible</span></span>
-                    <span><span class="badge bg-warning">Reservado</span></span>
-                    <span><span class="badge bg-danger">Ocupado</span></span>
-                    <span><span class="badge bg-secondary">Mantenimiento</span></span>
-                </div>
-            </div>
-        </div>
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <div>
+        <h2><i class="fas fa-map"></i> Mapa de Beach Club</h2>
+        <p class="text-muted mb-0">Vista interactiva con disponibilidad en tiempo real</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary" id="btn-refresh">
+            <i class="fas fa-sync-alt"></i> Actualizar
+        </button>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-layer-group"></i> Zonas del Beach Club</h5>
+<!-- Date Navigator -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="date-navigator">
+        <button type="button" class="date-nav-btn" id="btn-prev-day" title="Día anterior">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <span class="date-display" id="current-date-display" title="Clic para seleccionar fecha">
+            Cargando...
+        </span>
+        <button type="button" class="date-nav-btn" id="btn-next-day" title="Día siguiente">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+        <input type="date" id="date-picker" class="form-control d-none" style="width: 160px;">
     </div>
-    <div class="card-body">
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i>
-            <strong>Fase 7 - Próximamente:</strong>
-            El mapa interactivo con funcionalidad completa estará disponible en la Fase 7.
-            Por ahora, puedes ver las zonas y mobiliario disponible.
-        </div>
 
-        <div class="row">
-            {% for zone in zones %}
-            <div class="col-md-6 mb-3">
-                <div class="card border-primary">
-                    <div class="card-header" style="background-color: {{ zone.color }}">
-                        <h6 class="mb-0">{{ zone.name }}</h6>
+    <div class="map-legend" id="map-legend">
+        <!-- Populated dynamically -->
+    </div>
+</div>
+
+<!-- Stats Panel -->
+<div class="stats-panel mb-3" id="stats-panel">
+    <div class="stat-card">
+        <div class="stat-value" id="stat-total">-</div>
+        <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-success" id="stat-available">-</div>
+        <div class="stat-label">Disponible</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-warning" id="stat-occupied">-</div>
+        <div class="stat-label">Ocupado</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-info" id="stat-rate">-</div>
+        <div class="stat-label">Ocupación</div>
+    </div>
+</div>
+
+<!-- Map Container -->
+<div class="map-wrapper">
+    <div class="map-container" id="map-container">
+        <div class="map-loading">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p>Cargando mapa...</p>
+        </div>
+    </div>
+
+    <!-- Zoom Controls -->
+    <div class="zoom-controls">
+        <button type="button" class="zoom-btn" id="btn-zoom-in" title="Acercar">
+            <i class="fas fa-plus"></i>
+        </button>
+        <button type="button" class="zoom-btn" id="btn-zoom-reset" title="Restablecer zoom">
+            <i class="fas fa-expand"></i>
+        </button>
+        <button type="button" class="zoom-btn" id="btn-zoom-out" title="Alejar">
+            <i class="fas fa-minus"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Selection Panel -->
+<div class="selection-panel mt-3 d-none" id="selection-panel">
+    <div class="selection-header">
+        <h6 class="mb-0">
+            <i class="fas fa-check-square text-primary"></i>
+            <span class="selection-count">0</span> mobiliario seleccionado
+        </h6>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-clear-selection">
+            <i class="fas fa-times"></i> Limpiar
+        </button>
+    </div>
+    <div class="mb-2">
+        <small class="text-muted">Seleccionados:</small>
+        <span class="selection-list">-</span>
+    </div>
+    <div class="mb-3">
+        <small class="text-muted">Capacidad total:</small>
+        <strong><span class="selection-capacity">0</span> personas</strong>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary" id="btn-new-reservation">
+            <i class="fas fa-plus"></i> Nueva Reserva
+        </button>
+        <button type="button" class="btn btn-outline-secondary" id="btn-view-availability">
+            <i class="fas fa-calendar-alt"></i> Ver Disponibilidad
+        </button>
+    </div>
+</div>
+
+<!-- Quick Reservation Modal -->
+<div class="modal fade" id="quickReservationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus-circle"></i> Nueva Reserva Rápida</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Cliente</label>
+                            <input type="text" class="form-control" id="quick-customer-search"
+                                   placeholder="Buscar cliente..." autocomplete="off">
+                            <input type="hidden" id="quick-customer-id">
+                            <div id="customer-search-results" class="list-group position-absolute w-100 d-none"
+                                 style="z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Número de personas</label>
+                            <input type="number" class="form-control" id="quick-num-people"
+                                   min="1" max="20" value="2">
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <p class="text-muted mb-2">{{ zone.description or 'Sin descripción' }}</p>
-                        <p class="mb-0">
-                            <strong>Mobiliario:</strong>
-                            <span class="badge bg-primary">{{ zone.furniture_count }} items</span>
-                        </p>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Fecha</label>
+                            <input type="date" class="form-control" id="quick-date" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mobiliario seleccionado</label>
+                            <div id="quick-furniture-list" class="border rounded p-2 bg-light">
+                                -
+                            </div>
+                        </div>
                     </div>
                 </div>
+                <div class="mb-3">
+                    <label class="form-label">Observaciones</label>
+                    <textarea class="form-control" id="quick-notes" rows="2"></textarea>
+                </div>
             </div>
-            {% endfor %}
+            <div class="modal-footer">
+                <a href="#" id="link-full-form" class="btn btn-link me-auto">
+                    <i class="fas fa-external-link-alt"></i> Formulario completo
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-create-reservation">
+                    <i class="fas fa-check"></i> Crear Reserva
+                </button>
+            </div>
         </div>
-
-        {% if furniture %}
-        <h6 class="mt-4 mb-3">Mobiliario Disponible</h6>
-        <div class="table-responsive">
-            <table class="table table-sm table-striped">
-                <thead>
-                    <tr>
-                        <th>Número</th>
-                        <th>Tipo</th>
-                        <th>Zona</th>
-                        <th>Capacidad</th>
-                        <th>Características</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in furniture[:20] %}
-                    <tr>
-                        <td><strong>{{ item.number }}</strong></td>
-                        <td><i class="{{ item.furniture_type_icon }}"></i> {{ item.furniture_type_name }}</td>
-                        <td>{{ item.zone_name }}</td>
-                        <td>{{ item.capacity }} personas</td>
-                        <td><small class="text-muted">{{ item.features or '-' }}</small></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script>
-// Set today's date as default
 document.addEventListener('DOMContentLoaded', function() {
-    const dateInput = document.getElementById('map_date');
-    if (dateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.value = today;
+    // Initialize map
+    const map = new BeachMap('map-container', {
+        apiUrl: '/beach/api/map/data',
+        initialDate: new Date().toISOString().split('T')[0],
+        enableZoom: true
+    });
+
+    // Date navigation
+    const dateDisplay = document.getElementById('current-date-display');
+    const datePicker = document.getElementById('date-picker');
+    const btnPrevDay = document.getElementById('btn-prev-day');
+    const btnNextDay = document.getElementById('btn-next-day');
+
+    map.on('onDateChange', function(dateStr) {
+        dateDisplay.textContent = map.formatDateDisplay(dateStr);
+        datePicker.value = dateStr;
+        updateStats();
+    });
+
+    btnPrevDay.addEventListener('click', () => map.goToPreviousDay());
+    btnNextDay.addEventListener('click', () => map.goToNextDay());
+
+    dateDisplay.addEventListener('click', () => {
+        datePicker.classList.toggle('d-none');
+        if (!datePicker.classList.contains('d-none')) {
+            datePicker.focus();
+        }
+    });
+
+    datePicker.addEventListener('change', (e) => {
+        map.goToDate(e.target.value);
+        datePicker.classList.add('d-none');
+    });
+
+    // Set initial date
+    datePicker.value = map.getCurrentDate();
+    setTimeout(() => {
+        dateDisplay.textContent = map.formatDateDisplay(map.getCurrentDate());
+        updateStats();
+    }, 500);
+
+    // Zoom controls
+    document.getElementById('btn-zoom-in').addEventListener('click', () => map.zoomIn());
+    document.getElementById('btn-zoom-out').addEventListener('click', () => map.zoomOut());
+    document.getElementById('btn-zoom-reset').addEventListener('click', () => map.zoomReset());
+
+    // Refresh
+    document.getElementById('btn-refresh').addEventListener('click', () => {
+        map.refreshAvailability();
+        updateStats();
+    });
+
+    // Start auto-refresh
+    map.startAutoRefresh(30000);
+
+    // Selection handling
+    const selectionPanel = document.getElementById('selection-panel');
+
+    map.on('onFurnitureClick', function(item, selected) {
+        if (selected.length > 0) {
+            selectionPanel.classList.remove('d-none');
+        } else {
+            selectionPanel.classList.add('d-none');
+        }
+    });
+
+    document.getElementById('btn-clear-selection').addEventListener('click', () => {
+        map.clearSelection();
+        selectionPanel.classList.add('d-none');
+    });
+
+    // New reservation from selection
+    document.getElementById('btn-new-reservation').addEventListener('click', () => {
+        const selected = map.getSelectedFurnitureData();
+        if (selected.length === 0) return;
+
+        document.getElementById('quick-date').value = map.getCurrentDate();
+        document.getElementById('quick-furniture-list').innerHTML = selected.map(f =>
+            `<span class="badge bg-primary me-1">${f.number}</span>`
+        ).join('');
+
+        const modal = new bootstrap.Modal(document.getElementById('quickReservationModal'));
+        modal.show();
+
+        // Update full form link
+        const furnitureIds = selected.map(f => f.id).join(',');
+        document.getElementById('link-full-form').href =
+            `/beach/reservations/create?date=${map.getCurrentDate()}&furniture=${furnitureIds}`;
+    });
+
+    // Update stats
+    function updateStats() {
+        const data = map.getData();
+        if (!data || !data.summary) return;
+
+        document.getElementById('stat-total').textContent = data.summary.total || '-';
+        document.getElementById('stat-available').textContent = data.summary.available || '-';
+        document.getElementById('stat-occupied').textContent = data.summary.occupied || '-';
+
+        const rate = data.summary.occupancy_rate;
+        document.getElementById('stat-rate').textContent = rate !== undefined ? `${Math.round(rate)}%` : '-';
     }
+
+    // Update stats when data loads
+    map.on('onDateChange', updateStats);
+
+    // View availability
+    document.getElementById('btn-view-availability').addEventListener('click', () => {
+        const selected = map.getSelectedFurniture();
+        if (selected.length > 0) {
+            window.location.href = `/beach/reservations?furniture=${selected.join(',')}`;
+        }
+    });
 });
 </script>
 {% endblock %}

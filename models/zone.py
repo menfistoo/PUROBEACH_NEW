@@ -53,7 +53,15 @@ def get_zone_by_id(zone_id: int) -> dict:
     return dict(row) if row else None
 
 
-def create_zone(name: str, description: str = None, parent_zone_id: int = None, color: str = '#F5E6D3') -> int:
+def create_zone(
+    name: str,
+    description: str = None,
+    parent_zone_id: int = None,
+    color: str = '#F5E6D3',
+    canvas_width: float = 2000,
+    canvas_height: float = 1000,
+    background_color: str = '#FAFAFA'
+) -> int:
     """
     Create new beach zone.
 
@@ -62,6 +70,9 @@ def create_zone(name: str, description: str = None, parent_zone_id: int = None, 
         description: Zone description
         parent_zone_id: Parent zone ID (for hierarchical zones)
         color: Zone color for map display
+        canvas_width: Canvas width in pixels for map editor
+        canvas_height: Canvas height in pixels for map editor
+        background_color: Canvas background color
 
     Returns:
         New zone ID
@@ -74,9 +85,11 @@ def create_zone(name: str, description: str = None, parent_zone_id: int = None, 
     display_order = cursor.fetchone()[0]
 
     cursor.execute('''
-        INSERT INTO beach_zones (name, description, parent_zone_id, color, display_order)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (name, description, parent_zone_id, color, display_order))
+        INSERT INTO beach_zones (name, description, parent_zone_id, color, display_order,
+                                 canvas_width, canvas_height, background_color)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (name, description, parent_zone_id, color, display_order,
+          canvas_width, canvas_height, background_color))
 
     db.commit()
     return cursor.lastrowid
@@ -88,14 +101,16 @@ def update_zone(zone_id: int, **kwargs) -> bool:
 
     Args:
         zone_id: Zone ID to update
-        **kwargs: Fields to update (name, description, color, display_order, active)
+        **kwargs: Fields to update (name, description, color, display_order, active,
+                  canvas_width, canvas_height, background_color)
 
     Returns:
         True if updated successfully
     """
     db = get_db()
 
-    allowed_fields = ['name', 'description', 'color', 'display_order', 'active', 'parent_zone_id']
+    allowed_fields = ['name', 'description', 'color', 'display_order', 'active', 'parent_zone_id',
+                      'canvas_width', 'canvas_height', 'background_color']
     updates = []
     values = []
 
@@ -159,3 +174,45 @@ def delete_zone(zone_id: int) -> bool:
 
     db.commit()
     return cursor.rowcount > 0
+
+
+def get_zone_with_furniture(zone_id: int) -> dict:
+    """
+    Get zone with all its furniture for map editor.
+
+    Args:
+        zone_id: Zone ID
+
+    Returns:
+        Dict with zone data and furniture list, or None if not found
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Get zone
+    cursor.execute('SELECT * FROM beach_zones WHERE id = ?', (zone_id,))
+    zone_row = cursor.fetchone()
+    if not zone_row:
+        return None
+
+    zone = dict(zone_row)
+
+    # Get furniture with type info
+    cursor.execute('''
+        SELECT f.*,
+               ft.display_name as furniture_type_name,
+               ft.icon as furniture_type_icon,
+               ft.map_shape,
+               ft.fill_color as type_fill_color,
+               ft.stroke_color as type_stroke_color,
+               ft.stroke_width as type_stroke_width,
+               ft.border_radius as type_border_radius,
+               ft.is_decorative
+        FROM beach_furniture f
+        LEFT JOIN beach_furniture_types ft ON f.furniture_type = ft.type_code
+        WHERE f.zone_id = ? AND f.active = 1
+        ORDER BY f.number
+    ''', (zone_id,))
+
+    zone['furniture'] = [dict(row) for row in cursor.fetchall()]
+    return zone

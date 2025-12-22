@@ -110,6 +110,9 @@ def create_tables(db):
             display_order INTEGER DEFAULT 0,
             parent_zone_id INTEGER REFERENCES beach_zones(id),
             color TEXT DEFAULT '#F5E6D3',
+            canvas_width REAL DEFAULT 2000,
+            canvas_height REAL DEFAULT 1000,
+            background_color TEXT DEFAULT '#FAFAFA',
             active INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )

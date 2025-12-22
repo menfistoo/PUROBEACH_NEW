@@ -25,7 +25,7 @@ class MapEditor {
 
         // State
         this.currentZoneId = null;
-        this.canvasConfig = { width: 2000, height: 1000, backgroundColor: '#E8F4F8' };
+        this.canvasConfig = { width: 2000, height: 1000, backgroundColor: '#FAFAFA' };
         this.furniture = [];
         this.furnitureTypes = {};
         this.selectedItem = null;
@@ -290,11 +290,11 @@ class MapEditor {
             if (hasConfigDimensions) {
                 this.canvasConfig.width = config.width;
                 this.canvasConfig.height = config.height;
-                this.canvasConfig.backgroundColor = config.backgroundColor || result.zone.background_color || '#E8F4F8';
+                this.canvasConfig.backgroundColor = config.backgroundColor || result.zone.background_color || '#FAFAFA';
             } else {
                 this.canvasConfig.width = result.zone.canvas_width || 2000;
                 this.canvasConfig.height = result.zone.canvas_height || 1000;
-                this.canvasConfig.backgroundColor = result.zone.background_color || '#E8F4F8';
+                this.canvasConfig.backgroundColor = result.zone.background_color || '#FAFAFA';
             }
 
             this.createCanvas();

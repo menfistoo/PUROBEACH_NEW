@@ -591,7 +591,7 @@
             <option value="{{ zone.id }}"
                     data-width="{{ zone.canvas_width or 2000 }}"
                     data-height="{{ zone.canvas_height or 1000 }}"
-                    data-bg="{{ zone.background_color or '#E8F4F8' }}">
+                    data-bg="{{ zone.background_color or '#FAFAFA' }}">
                 {{ zone.name }}
             </option>
             {% endfor %}
@@ -855,7 +855,7 @@ document.addEventListener('DOMContentLoaded', function() {
             editor.loadZone(zoneId, {
                 width: parseFloat(option.dataset.width) || 800,
                 height: parseFloat(option.dataset.height) || 400,
-                backgroundColor: option.dataset.bg || '#E8F4F8'
+                backgroundColor: option.dataset.bg || '#FAFAFA'
             });
             btnZoneSettings.disabled = false;
             document.getElementById('empty-canvas').classList.add('d-none');
@@ -871,8 +871,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const option = zoneSelector.options[zoneSelector.selectedIndex];
         document.getElementById('zone-canvas-width').value = option.dataset.width || 800;
         document.getElementById('zone-canvas-height').value = option.dataset.height || 400;
-        document.getElementById('zone-bg-color').value = option.dataset.bg || '#E8F4F8';
-        document.getElementById('zone-bg-preview').style.backgroundColor = option.dataset.bg || '#E8F4F8';
+        document.getElementById('zone-bg-color').value = option.dataset.bg || '#FAFAFA';
+        document.getElementById('zone-bg-preview').style.backgroundColor = option.dataset.bg || '#FAFAFA';
         new bootstrap.Modal(document.getElementById('zoneSettingsModal')).show();
     });
 
@@ -1090,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     await editor.loadZone(zoneId, {
                         width: parseFloat(option.dataset.width) || 2000,
                         height: parseFloat(option.dataset.height) || 1000,
-                        backgroundColor: option.dataset.bg || '#E8F4F8'
+                        backgroundColor: option.dataset.bg || '#FAFAFA'
                     });
                 }
                 if (window.PuroBeach) window.PuroBeach.showToast(`${result.count} elementos creados`, 'success');
