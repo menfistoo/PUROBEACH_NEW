@@ -1,0 +1,49 @@
+Orchestrator Protocol: You are the Lead Systems Architect. Your task is to audit the staged changes by invoking the following checks in sequence:
+
+## CHECK 1: Design Review (/design-review)
+Run the design review skill to verify:
+- Visual consistency with DESIGN_SYSTEM.md (colors, typography, spacing)
+- Responsiveness and mobile-friendly patterns
+- Accessibility (WCAG 2.1 AA compliance)
+- Component reuse and design token usage
+
+## CHECK 2: Security Review (/security-review)
+Run the security review skill to scan for:
+- SQL injection, command injection, XSS vulnerabilities
+- Authentication/authorization bypass issues
+- Hardcoded secrets or credentials
+- Data exposure and PII handling violations
+- OWASP Top 10 vulnerabilities
+
+## CHECK 3: Code Standards (/code-standards)
+Run the code standards skill to verify:
+- File size limits (target 300-500 lines, critical >800)
+- Language convention (code in English, UI in Spanish)
+- Python conventions (type hints, docstrings, parameterized SQL)
+- Naming conventions (verb_noun functions, kebab-case routes)
+- Security decorators (@login_required, @permission_required)
+
+## CHECK 4: Stability Check
+Analyze the staged changes for:
+- Edge cases (null values, empty arrays, timeouts)
+- Missing try-catch blocks around risky operations
+- Structured logging for debugging and monitoring
+- Error handling consistency
+
+## CHECK 5: Verification
+If business logic has changed:
+- Generate or update unit tests for modified functions
+- Ensure test coverage for new code paths
+- Run existing tests to verify no regressions
+
+## Instructions
+1. Execute each check in sequence
+2. If any check finds Blocker or High-Priority issues, FIX the code directly in the file
+3. Re-run the failed check after fixes to verify resolution
+4. At the end of your analysis, you MUST output one of these exact strings:
+   - "STABILITY_PASSED" - If ALL checks pass with no Blocker/High-Priority issues
+   - "STABILITY_FAILED" - If there are unfixable Blocker/High-Priority issues
+
+## CRITICAL: Final Output Requirement
+Your response MUST end with either "STABILITY_PASSED" or "STABILITY_FAILED" on its own line.
+This is required for the pre-commit hook to determine if the commit should proceed.
