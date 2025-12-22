@@ -255,6 +255,9 @@ function initializeSidebarCollapse() {
 
     // Handle hover behavior for collapsed state child menus
     setupCollapsedHoverBehavior(sidebar);
+
+    // Handle click on parent menu when collapsed - expand sidebar and menu
+    setupCollapsedClickBehavior(sidebar, toggleBtn, STORAGE_KEY);
 }
 
 /**
@@ -315,6 +318,54 @@ function setupCollapsedHoverBehavior(sidebar) {
                 collapseEl.style.display = '';
                 collapseEl.classList.remove('show');
             }, 150); // Small delay to allow moving to submenu
+        });
+    });
+}
+
+/**
+ * Setup click behavior for parent menus when sidebar is collapsed
+ * Clicking a parent menu expands the sidebar and opens that menu
+ * @param {HTMLElement} sidebar - Sidebar element
+ * @param {HTMLElement} toggleBtn - Toggle button element
+ * @param {string} storageKey - localStorage key for persistence
+ */
+function setupCollapsedClickBehavior(sidebar, toggleBtn, storageKey) {
+    const navParents = sidebar.querySelectorAll('.nav-parent');
+
+    navParents.forEach(parent => {
+        parent.addEventListener('click', function(e) {
+            // Only intercept when sidebar is collapsed
+            if (!sidebar.classList.contains('collapsed')) return;
+
+            // Prevent Bootstrap collapse from toggling
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Get the target collapse element
+            const targetId = parent.getAttribute('href');
+            const collapseEl = document.querySelector(targetId);
+
+            // Expand sidebar
+            sidebar.classList.remove('collapsed');
+            document.documentElement.classList.remove('sidebar-collapsed');
+            localStorage.setItem(storageKey, 'false');
+            updateToggleButton(toggleBtn, false);
+
+            // Reset any hover-induced display styles
+            sidebar.querySelectorAll('.collapse').forEach(el => {
+                el.style.display = '';
+            });
+
+            // Close all menus first, then open the clicked one
+            closeAllCollapseMenus(sidebar);
+
+            // Open the clicked menu after a brief delay for smooth animation
+            if (collapseEl) {
+                setTimeout(() => {
+                    const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseEl);
+                    bsCollapse.show();
+                }, 50);
+            }
         });
     });
 }
