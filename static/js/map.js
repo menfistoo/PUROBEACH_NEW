@@ -322,7 +322,19 @@ class BeachMap {
     handleFurnitureClick(event, item) {
         event.stopPropagation();
         const addToSelection = event.ctrlKey || event.metaKey;
-        this.selectFurniture(item.id, addToSelection);
+
+        // If Ctrl/Cmd click, just add to selection (multi-select mode)
+        if (addToSelection) {
+            this.selectFurniture(item.id, addToSelection);
+        } else {
+            // Single click: show furniture details modal
+            if (this.showFurnitureDetails) {
+                this.showFurnitureDetails(item.id, event);
+            } else {
+                // Fallback to selection if no modal handler
+                this.selectFurniture(item.id, false);
+            }
+        }
 
         if (this.callbacks.onFurnitureClick) {
             this.callbacks.onFurnitureClick(item, this.getSelectedFurniture());

@@ -40,6 +40,9 @@ from database.migrations import (
     migrate_add_map_editor_permission,
     migrate_zone_canvas_properties,
     migrate_furniture_manager_menu,
+    migrate_furniture_blocks_table,
+    migrate_furniture_daily_positions_table,
+    migrate_add_blocking_permission,
 )
 
 __all__ = [
@@ -59,4 +62,7 @@ __all__ = [
     'migrate_add_map_editor_permission',
     'migrate_zone_canvas_properties',
     'migrate_furniture_manager_menu',
+    'migrate_furniture_blocks_table',
+    'migrate_furniture_daily_positions_table',
+    'migrate_add_blocking_permission',
 ]

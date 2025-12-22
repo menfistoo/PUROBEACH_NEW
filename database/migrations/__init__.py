@@ -27,6 +27,11 @@ from .permissions import (
 )
 from .zones import migrate_zone_canvas_properties
 from .furniture_manager_menu import migrate_furniture_manager_menu
+from .furniture_extensions import (
+    migrate_furniture_blocks_table,
+    migrate_furniture_daily_positions_table,
+    migrate_add_blocking_permission
+)
 
 
 # Ordered list of all migrations
@@ -58,6 +63,11 @@ MIGRATIONS = [
 
     # Phase 7: UI consolidation
     ('furniture_manager_menu', migrate_furniture_manager_menu),
+
+    # Phase 7B: Map extensions
+    ('furniture_blocks_table', migrate_furniture_blocks_table),
+    ('furniture_daily_positions_table', migrate_furniture_daily_positions_table),
+    ('add_blocking_permission', migrate_add_blocking_permission),
 ]
 
 
@@ -133,4 +143,7 @@ __all__ = [
     'migrate_add_map_editor_permission',
     'migrate_zone_canvas_properties',
     'migrate_furniture_manager_menu',
+    'migrate_furniture_blocks_table',
+    'migrate_furniture_daily_positions_table',
+    'migrate_add_blocking_permission',
 ]

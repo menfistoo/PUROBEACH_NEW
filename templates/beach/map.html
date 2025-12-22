@@ -206,6 +206,228 @@
     text-align: center;
 }
 
+/* Furniture Info Modal (Floating) */
+.furniture-info-modal {
+    position: fixed;
+    background: var(--color-surface);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-xl);
+    z-index: var(--z-modal);
+    min-width: 320px;
+    max-width: 400px;
+    animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.furniture-info-modal .modal-header {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.furniture-info-modal .modal-header h6 {
+    margin: 0;
+    font-weight: 600;
+    color: var(--color-secondary);
+}
+
+.furniture-info-modal .modal-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.furniture-info-modal .modal-close:hover {
+    color: var(--color-error);
+}
+
+.furniture-info-modal .modal-body {
+    padding: var(--space-4);
+}
+
+.furniture-info-modal .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+    font-size: var(--font-size-sm);
+}
+
+.furniture-info-modal .info-row .label {
+    color: var(--color-text-muted);
+}
+
+.furniture-info-modal .info-row .value {
+    font-weight: 500;
+    color: var(--color-secondary);
+}
+
+.furniture-info-modal .customer-card {
+    background: var(--color-accent);
+    border-radius: var(--border-radius-md);
+    padding: var(--space-3);
+    margin-top: var(--space-3);
+}
+
+.furniture-info-modal .customer-card .customer-name {
+    font-weight: 600;
+    color: var(--color-secondary);
+    margin-bottom: var(--space-1);
+}
+
+.furniture-info-modal .customer-card .customer-details {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+.furniture-info-modal .state-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--border-radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.furniture-info-modal .modal-actions {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.furniture-info-modal .modal-actions .btn {
+    flex: 1 1 auto;
+    min-width: 100px;
+}
+
+.furniture-info-modal .availability-badge {
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+.furniture-info-modal .availability-badge.available {
+    background: rgba(74, 124, 89, 0.15);
+    color: var(--color-success);
+}
+
+.furniture-info-modal .availability-badge.occupied {
+    background: rgba(229, 163, 61, 0.15);
+    color: var(--color-warning);
+}
+
+.furniture-info-modal .tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+}
+
+.furniture-info-modal .tag-badge {
+    background: var(--color-accent);
+    color: var(--color-secondary);
+    padding: 2px 6px;
+    border-radius: var(--border-radius-sm);
+    font-size: 11px;
+}
+
+/* Highlight animation for search results */
+.furniture-item.highlighted {
+    animation: pulseHighlight 1s ease-in-out infinite;
+}
+
+@keyframes pulseHighlight {
+    0%, 100% {
+        filter: drop-shadow(0 0 8px var(--color-primary));
+        transform: scale(1);
+    }
+    50% {
+        filter: drop-shadow(0 0 16px var(--color-primary));
+        transform: scale(1.1);
+    }
+}
+
+/* Customer Search */
+.customer-search-container {
+    z-index: 100;
+}
+
+.search-results-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.search-result-item {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background: var(--color-accent);
+}
+
+.search-result-item.has-furniture {
+    border-left: 3px solid var(--color-success);
+}
+
+.search-result-item .customer-name {
+    font-weight: 500;
+    color: var(--color-secondary);
+}
+
+.search-result-item .customer-details {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+.search-result-item .furniture-badge {
+    background: var(--color-primary);
+    color: white;
+    padding: 2px 6px;
+    border-radius: var(--border-radius-sm);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.search-no-results {
+    padding: var(--space-4);
+    text-align: center;
+    color: var(--color-text-muted);
+}
+
 @media (max-width: 768px) {
     .stats-panel {
         grid-template-columns: repeat(2, 1fr);
@@ -232,8 +454,8 @@
     </div>
 </div>
 
-<!-- Date Navigator -->
-<div class="d-flex justify-content-between align-items-center mb-3">
+<!-- Date Navigator & Search -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div class="date-navigator">
         <button type="button" class="date-nav-btn" id="btn-prev-day" title="Día anterior">
             <i class="fas fa-chevron-left"></i>
@@ -245,6 +467,22 @@
             <i class="fas fa-chevron-right"></i>
         </button>
         <input type="date" id="date-picker" class="form-control d-none" style="width: 160px;">
+    </div>
+
+    <!-- Customer Search -->
+    <div class="customer-search-container position-relative">
+        <div class="input-group" style="width: 300px;">
+            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+            <input type="text" class="form-control" id="customer-search-input"
+                   placeholder="Buscar cliente..." autocomplete="off">
+            <button type="button" class="btn btn-outline-secondary d-none" id="clear-search-btn" title="Limpiar búsqueda">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <!-- Search results dropdown -->
+        <div class="search-results-dropdown d-none" id="customer-search-dropdown">
+            <!-- Populated dynamically -->
+        </div>
     </div>
 
     <div class="map-legend" id="map-legend">
@@ -381,6 +619,92 @@
         </div>
     </div>
 </div>
+
+<!-- Furniture Info Modal (Floating) -->
+<div class="furniture-info-modal d-none" id="furnitureInfoModal">
+    <div class="modal-header">
+        <h6>
+            <i class="fas fa-umbrella-beach me-2"></i>
+            <span id="modal-furniture-title">Hamaca #1</span>
+        </h6>
+        <button type="button" class="modal-close" id="modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+        <!-- Furniture Info -->
+        <div class="info-row">
+            <span class="label">Tipo</span>
+            <span class="value" id="modal-furniture-type">Hamaca</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Zona</span>
+            <span class="value" id="modal-furniture-zone">Zona A</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Capacidad</span>
+            <span class="value" id="modal-furniture-capacity">2 personas</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Estado</span>
+            <span id="modal-availability-status">
+                <span class="availability-badge available">Disponible</span>
+            </span>
+        </div>
+
+        <!-- Features (if any) -->
+        <div class="tags-list d-none" id="modal-features-list">
+            <!-- Populated dynamically -->
+        </div>
+
+        <!-- Customer Card (when occupied) -->
+        <div class="customer-card d-none" id="modal-customer-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="customer-name" id="modal-customer-name">Juan García</div>
+                <span class="state-badge" id="modal-state-badge" style="background: #28A745; color: white;">Confirmada</span>
+            </div>
+            <div class="customer-details">
+                <div id="modal-customer-room" class="d-none">
+                    <i class="fas fa-door-open me-1"></i> <span></span>
+                </div>
+                <div id="modal-customer-ticket" class="d-none">
+                    <i class="fas fa-ticket-alt me-1"></i> <span></span>
+                </div>
+                <div id="modal-customer-people" class="d-none">
+                    <i class="fas fa-users me-1"></i> <span></span>
+                </div>
+                <div id="modal-reservation-notes" class="mt-2 d-none">
+                    <small class="text-muted"><i class="fas fa-sticky-note me-1"></i> <span></span></small>
+                </div>
+            </div>
+            <!-- Reservation tags -->
+            <div class="tags-list d-none" id="modal-reservation-tags">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+    <div class="modal-actions">
+        <!-- Available furniture actions -->
+        <div id="modal-actions-available">
+            <button type="button" class="btn btn-primary btn-sm" id="modal-btn-new-reservation">
+                <i class="fas fa-plus"></i> Nueva Reserva
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="modal-btn-block">
+                <i class="fas fa-ban"></i> Bloquear
+            </button>
+        </div>
+        <!-- Occupied furniture actions -->
+        <div id="modal-actions-occupied" class="d-none">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="modal-btn-view-reservation">
+                <i class="fas fa-eye"></i> Ver
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="modal-btn-edit-reservation">
+                <i class="fas fa-edit"></i> Editar
+            </button>
+            <button type="button" class="btn btn-outline-warning btn-sm" id="modal-btn-move-reservation">
+                <i class="fas fa-arrows-alt"></i> Mover
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -499,6 +823,584 @@ document.addEventListener('DOMContentLoaded', function() {
         if (selected.length > 0) {
             window.location.href = `/beach/reservations?furniture=${selected.join(',')}`;
         }
+    });
+
+    // =========================================================================
+    // FURNITURE INFO MODAL
+    // =========================================================================
+    const furnitureModal = document.getElementById('furnitureInfoModal');
+    let currentFurnitureData = null;
+    let currentReservationId = null;
+
+    // Close modal handlers
+    document.getElementById('modal-close-btn').addEventListener('click', closeFurnitureModal);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeFurnitureModal();
+    });
+    document.addEventListener('click', (e) => {
+        if (!furnitureModal.contains(e.target) &&
+            !e.target.closest('.furniture-item') &&
+            !furnitureModal.classList.contains('d-none')) {
+            closeFurnitureModal();
+        }
+    });
+
+    function closeFurnitureModal() {
+        furnitureModal.classList.add('d-none');
+        currentFurnitureData = null;
+        currentReservationId = null;
+    }
+
+    async function showFurnitureModal(furnitureId, clickEvent) {
+        try {
+            const response = await fetch(`/beach/api/map/furniture/${furnitureId}/details?date=${map.getCurrentDate()}`);
+            const data = await response.json();
+
+            if (!data.success) {
+                console.error('Error fetching furniture details:', data.error);
+                return;
+            }
+
+            currentFurnitureData = data.furniture;
+            currentReservationId = data.reservation?.id || null;
+
+            // Populate furniture info
+            document.getElementById('modal-furniture-title').textContent =
+                `${data.furniture.type_name} #${data.furniture.number}`;
+            document.getElementById('modal-furniture-type').textContent = data.furniture.type_name;
+            document.getElementById('modal-furniture-zone').textContent = data.furniture.zone_name || 'Sin zona';
+            document.getElementById('modal-furniture-capacity').textContent =
+                `${data.furniture.capacity} persona${data.furniture.capacity !== 1 ? 's' : ''}`;
+
+            // Features
+            const featuresList = document.getElementById('modal-features-list');
+            if (data.furniture.features && data.furniture.features.length > 0) {
+                featuresList.innerHTML = data.furniture.features
+                    .map(f => `<span class="tag-badge">${f}</span>`).join('');
+                featuresList.classList.remove('d-none');
+            } else {
+                featuresList.classList.add('d-none');
+            }
+
+            // Availability status
+            const statusEl = document.getElementById('modal-availability-status');
+            if (data.is_available) {
+                statusEl.innerHTML = '<span class="availability-badge available"><i class="fas fa-check me-1"></i>Disponible</span>';
+                document.getElementById('modal-customer-card').classList.add('d-none');
+                document.getElementById('modal-actions-available').classList.remove('d-none');
+                document.getElementById('modal-actions-occupied').classList.add('d-none');
+            } else {
+                statusEl.innerHTML = '<span class="availability-badge occupied"><i class="fas fa-user me-1"></i>Ocupado</span>';
+                document.getElementById('modal-actions-available').classList.add('d-none');
+                document.getElementById('modal-actions-occupied').classList.remove('d-none');
+
+                // Customer card
+                if (data.customer) {
+                    const customerCard = document.getElementById('modal-customer-card');
+                    customerCard.classList.remove('d-none');
+
+                    document.getElementById('modal-customer-name').textContent = data.customer.full_name || 'Cliente';
+
+                    // State badge
+                    const stateBadge = document.getElementById('modal-state-badge');
+                    stateBadge.textContent = data.reservation.current_state || 'Reservado';
+                    stateBadge.style.backgroundColor = data.reservation.display_color || '#6c757d';
+                    stateBadge.style.color = 'white';
+
+                    // Room number
+                    const roomEl = document.getElementById('modal-customer-room');
+                    if (data.customer.room_number) {
+                        roomEl.querySelector('span').textContent = `Hab. ${data.customer.room_number}`;
+                        roomEl.classList.remove('d-none');
+                    } else {
+                        roomEl.classList.add('d-none');
+                    }
+
+                    // Ticket number
+                    const ticketEl = document.getElementById('modal-customer-ticket');
+                    if (data.reservation.ticket_number) {
+                        ticketEl.querySelector('span').textContent = data.reservation.ticket_number;
+                        ticketEl.classList.remove('d-none');
+                    } else {
+                        ticketEl.classList.add('d-none');
+                    }
+
+                    // Number of people
+                    const peopleEl = document.getElementById('modal-customer-people');
+                    if (data.reservation.num_people) {
+                        peopleEl.querySelector('span').textContent = `${data.reservation.num_people} persona${data.reservation.num_people !== 1 ? 's' : ''}`;
+                        peopleEl.classList.remove('d-none');
+                    } else {
+                        peopleEl.classList.add('d-none');
+                    }
+
+                    // Notes
+                    const notesEl = document.getElementById('modal-reservation-notes');
+                    if (data.reservation.notes) {
+                        notesEl.querySelector('span').textContent = data.reservation.notes;
+                        notesEl.classList.remove('d-none');
+                    } else {
+                        notesEl.classList.add('d-none');
+                    }
+
+                    // Reservation tags
+                    const tagsEl = document.getElementById('modal-reservation-tags');
+                    if (data.reservation.tags && data.reservation.tags.length > 0) {
+                        tagsEl.innerHTML = data.reservation.tags
+                            .map(t => `<span class="tag-badge" style="background: ${t.color || '#e9ecef'}">${t.name}</span>`).join('');
+                        tagsEl.classList.remove('d-none');
+                    } else {
+                        tagsEl.classList.add('d-none');
+                    }
+                } else {
+                    document.getElementById('modal-customer-card').classList.add('d-none');
+                }
+            }
+
+            // Position modal near click
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const modalWidth = 360;
+            const modalHeight = 350;
+
+            let left = clickEvent.clientX + 10;
+            let top = clickEvent.clientY + 10;
+
+            // Adjust if would overflow right
+            if (left + modalWidth > viewportWidth - 20) {
+                left = clickEvent.clientX - modalWidth - 10;
+            }
+
+            // Adjust if would overflow bottom
+            if (top + modalHeight > viewportHeight - 20) {
+                top = viewportHeight - modalHeight - 20;
+            }
+
+            // Ensure not negative
+            left = Math.max(20, left);
+            top = Math.max(20, top);
+
+            furnitureModal.style.left = `${left}px`;
+            furnitureModal.style.top = `${top}px`;
+            furnitureModal.classList.remove('d-none');
+
+        } catch (error) {
+            console.error('Error showing furniture modal:', error);
+        }
+    }
+
+    // Override furniture click to show modal (single click)
+    // Store original onFurnitureClick handler
+    map.showFurnitureDetails = showFurnitureModal;
+
+    // Modal action buttons
+    document.getElementById('modal-btn-new-reservation').addEventListener('click', () => {
+        if (currentFurnitureData) {
+            closeFurnitureModal();
+            // Add to selection and open quick reservation
+            map.selectFurniture(currentFurnitureData.id);
+            document.getElementById('btn-new-reservation').click();
+        }
+    });
+
+    document.getElementById('modal-btn-view-reservation').addEventListener('click', () => {
+        if (currentReservationId) {
+            window.location.href = `/beach/reservations/${currentReservationId}`;
+        }
+    });
+
+    document.getElementById('modal-btn-edit-reservation').addEventListener('click', () => {
+        if (currentReservationId) {
+            window.location.href = `/beach/reservations/${currentReservationId}/edit`;
+        }
+    });
+
+    document.getElementById('modal-btn-move-reservation').addEventListener('click', () => {
+        if (currentReservationId && currentFurnitureData) {
+            closeFurnitureModal();
+            // TODO: Enter reassignment mode (Phase 7B.6)
+            alert('Modo de reasignación: Próximamente');
+        }
+    });
+
+    document.getElementById('modal-btn-block').addEventListener('click', () => {
+        if (currentFurnitureData) {
+            closeFurnitureModal();
+            // TODO: Show block dialog (Phase 7B.4)
+            alert('Bloquear mobiliario: Próximamente');
+        }
+    });
+
+    // =========================================================================
+    // CUSTOMER SEARCH & HIGHLIGHTING
+    // =========================================================================
+    const searchInput = document.getElementById('customer-search-input');
+    const searchDropdown = document.getElementById('customer-search-dropdown');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    let searchTimeout = null;
+    let highlightedFurnitureIds = [];
+
+    // Debounced search
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+
+        if (searchTimeout) clearTimeout(searchTimeout);
+
+        if (query.length < 2) {
+            searchDropdown.classList.add('d-none');
+            clearSearchBtn.classList.add('d-none');
+            clearHighlights();
+            return;
+        }
+
+        clearSearchBtn.classList.remove('d-none');
+
+        searchTimeout = setTimeout(() => {
+            searchCustomers(query);
+        }, 300);
+    });
+
+    async function searchCustomers(query) {
+        try {
+            const response = await fetch(`/beach/api/map/search-customer?q=${encodeURIComponent(query)}&date=${map.getCurrentDate()}`);
+            const data = await response.json();
+
+            if (!data.success && !data.customers) {
+                searchDropdown.innerHTML = '<div class="search-no-results">Error en búsqueda</div>';
+                searchDropdown.classList.remove('d-none');
+                return;
+            }
+
+            if (data.customers.length === 0) {
+                searchDropdown.innerHTML = '<div class="search-no-results"><i class="fas fa-info-circle me-1"></i>Sin resultados</div>';
+                searchDropdown.classList.remove('d-none');
+                return;
+            }
+
+            // Render results
+            let html = '';
+            data.customers.forEach(customer => {
+                const hasFurniture = customer.furniture_ids && customer.furniture_ids.length > 0;
+                const furnitureBadges = hasFurniture ?
+                    customer.furniture_ids.map(id => {
+                        const f = map.getData()?.furniture?.find(f => f.id === id);
+                        return `<span class="furniture-badge me-1">${f ? f.number : id}</span>`;
+                    }).join('') : '';
+
+                html += `
+                    <div class="search-result-item ${hasFurniture ? 'has-furniture' : ''}"
+                         data-customer-id="${customer.id}"
+                         data-furniture-ids="${customer.furniture_ids?.join(',') || ''}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="customer-name">${customer.name}</div>
+                                <div class="customer-details">
+                                    ${customer.room_number ? `<i class="fas fa-door-open me-1"></i>Hab. ${customer.room_number}` : ''}
+                                    ${customer.customer_type === 'externo' ? '<span class="badge bg-secondary ms-1">Externo</span>' : ''}
+                                </div>
+                            </div>
+                            ${hasFurniture ? `<div>${furnitureBadges}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            searchDropdown.innerHTML = html;
+            searchDropdown.classList.remove('d-none');
+
+            // Add click handlers
+            searchDropdown.querySelectorAll('.search-result-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const furnitureIdsStr = item.dataset.furnitureIds;
+                    const customerId = item.dataset.customerId;
+
+                    if (furnitureIdsStr) {
+                        const ids = furnitureIdsStr.split(',').map(id => parseInt(id));
+                        highlightFurniture(ids);
+
+                        // Scroll to first furniture
+                        if (ids.length > 0) {
+                            scrollToFurniture(ids[0]);
+                        }
+                    }
+
+                    searchDropdown.classList.add('d-none');
+                    searchInput.value = item.querySelector('.customer-name').textContent;
+                });
+            });
+
+        } catch (error) {
+            console.error('Search error:', error);
+            searchDropdown.innerHTML = '<div class="search-no-results">Error en búsqueda</div>';
+            searchDropdown.classList.remove('d-none');
+        }
+    }
+
+    function highlightFurniture(furnitureIds) {
+        // Clear previous highlights
+        clearHighlights();
+
+        // Add highlight class to furniture elements
+        highlightedFurnitureIds = furnitureIds;
+        furnitureIds.forEach(id => {
+            const element = document.querySelector(`.furniture-item[data-furniture-id="${id}"]`);
+            if (element) {
+                element.classList.add('highlighted');
+            }
+        });
+    }
+
+    function clearHighlights() {
+        highlightedFurnitureIds.forEach(id => {
+            const element = document.querySelector(`.furniture-item[data-furniture-id="${id}"]`);
+            if (element) {
+                element.classList.remove('highlighted');
+            }
+        });
+        highlightedFurnitureIds = [];
+    }
+
+    function scrollToFurniture(furnitureId) {
+        const element = document.querySelector(`.furniture-item[data-furniture-id="${furnitureId}"]`);
+        if (!element) return;
+
+        const mapContainer = document.getElementById('map-container');
+        const svg = document.getElementById('beach-map');
+        if (!mapContainer || !svg) return;
+
+        // Get element position in SVG coordinates
+        const transform = element.getAttribute('transform');
+        const match = transform?.match(/translate\(([^,]+),\s*([^)]+)\)/);
+        if (!match) return;
+
+        const x = parseFloat(match[1]);
+        const y = parseFloat(match[2]);
+
+        // Calculate scroll position to center the furniture
+        const containerRect = mapContainer.getBoundingClientRect();
+        const svgRect = svg.getBoundingClientRect();
+
+        // Scale factor between SVG viewBox and rendered size
+        const viewBox = svg.getAttribute('viewBox')?.split(' ').map(Number);
+        if (!viewBox) return;
+
+        const scaleX = svgRect.width / viewBox[2];
+        const scaleY = svgRect.height / viewBox[3];
+
+        // Position in screen coordinates
+        const screenX = x * scaleX * map.zoom;
+        const screenY = y * scaleY * map.zoom;
+
+        // Scroll to center
+        mapContainer.scrollLeft = screenX - containerRect.width / 2;
+        mapContainer.scrollTop = screenY - containerRect.height / 2;
+    }
+
+    // Clear search
+    clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        searchDropdown.classList.add('d-none');
+        clearSearchBtn.classList.add('d-none');
+        clearHighlights();
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.customer-search-container')) {
+            searchDropdown.classList.add('d-none');
+        }
+    });
+
+    // Clear highlights when date changes
+    map.on('onDateChange', () => {
+        clearHighlights();
+        searchInput.value = '';
+        clearSearchBtn.classList.add('d-none');
+    });
+
+    // =========================================================================
+    // QUICK RESERVATION MODAL
+    // =========================================================================
+    const quickReservationModal = document.getElementById('quickReservationModal');
+    const quickCustomerSearch = document.getElementById('quick-customer-search');
+    const quickCustomerId = document.getElementById('quick-customer-id');
+    const quickCustomerResults = document.getElementById('customer-search-results');
+    const quickCreateBtn = document.getElementById('btn-create-reservation');
+    let quickSearchTimeout = null;
+    let selectedCustomer = null;
+
+    // Customer autocomplete in quick reservation modal
+    quickCustomerSearch.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+
+        if (quickSearchTimeout) clearTimeout(quickSearchTimeout);
+
+        if (query.length < 2) {
+            quickCustomerResults.classList.add('d-none');
+            return;
+        }
+
+        quickSearchTimeout = setTimeout(() => {
+            searchCustomersForReservation(query);
+        }, 300);
+    });
+
+    async function searchCustomersForReservation(query) {
+        try {
+            const response = await fetch(`/beach/api/customers/search?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+
+            if (!data.customers || data.customers.length === 0) {
+                quickCustomerResults.innerHTML = `
+                    <a href="/beach/customers/create" class="list-group-item list-group-item-action text-primary">
+                        <i class="fas fa-plus me-1"></i> Crear nuevo cliente
+                    </a>
+                `;
+                quickCustomerResults.classList.remove('d-none');
+                return;
+            }
+
+            let html = '';
+            data.customers.forEach(customer => {
+                const displayName = customer.display_name || customer.guest_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+                const subtitle = customer.room_number ? `Hab. ${customer.room_number}` :
+                                customer.phone || customer.email || '';
+
+                html += `
+                    <a href="#" class="list-group-item list-group-item-action customer-result-item"
+                       data-customer-id="${customer.id}"
+                       data-customer-name="${displayName}"
+                       data-customer-type="${customer.customer_type}"
+                       data-customer-room="${customer.room_number || ''}">
+                        <div class="d-flex justify-content-between">
+                            <strong>${displayName}</strong>
+                            ${customer.vip_status ? '<span class="badge bg-warning"><i class="fas fa-star"></i></span>' : ''}
+                        </div>
+                        <small class="text-muted">${subtitle}</small>
+                    </a>
+                `;
+            });
+
+            html += `
+                <a href="/beach/customers/create" class="list-group-item list-group-item-action text-primary">
+                    <i class="fas fa-plus me-1"></i> Crear nuevo cliente
+                </a>
+            `;
+
+            quickCustomerResults.innerHTML = html;
+            quickCustomerResults.classList.remove('d-none');
+
+            // Add click handlers
+            quickCustomerResults.querySelectorAll('.customer-result-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    selectCustomerForReservation(
+                        item.dataset.customerId,
+                        item.dataset.customerName,
+                        item.dataset.customerType,
+                        item.dataset.customerRoom
+                    );
+                });
+            });
+
+        } catch (error) {
+            console.error('Customer search error:', error);
+        }
+    }
+
+    function selectCustomerForReservation(id, name, type, room) {
+        selectedCustomer = { id, name, type, room };
+        quickCustomerId.value = id;
+        quickCustomerSearch.value = name;
+        quickCustomerResults.classList.add('d-none');
+    }
+
+    // Close customer results on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#quick-customer-search') && !e.target.closest('#customer-search-results')) {
+            quickCustomerResults.classList.add('d-none');
+        }
+    });
+
+    // Create reservation
+    quickCreateBtn.addEventListener('click', async () => {
+        const customerId = quickCustomerId.value;
+        const numPeople = parseInt(document.getElementById('quick-num-people').value) || 2;
+        const notes = document.getElementById('quick-notes').value.trim();
+        const selectedFurniture = map.getSelectedFurniture();
+
+        if (!customerId) {
+            alert('Por favor seleccione un cliente');
+            quickCustomerSearch.focus();
+            return;
+        }
+
+        if (selectedFurniture.length === 0) {
+            alert('No hay mobiliario seleccionado');
+            return;
+        }
+
+        quickCreateBtn.disabled = true;
+        quickCreateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+
+        try {
+            const response = await fetch('/beach/api/map/quick-reservation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({
+                    customer_id: parseInt(customerId),
+                    furniture_ids: selectedFurniture,
+                    date: map.getCurrentDate(),
+                    num_people: numPeople,
+                    notes: notes
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Close modal
+                bootstrap.Modal.getInstance(quickReservationModal).hide();
+
+                // Clear form
+                quickCustomerSearch.value = '';
+                quickCustomerId.value = '';
+                document.getElementById('quick-notes').value = '';
+                selectedCustomer = null;
+
+                // Clear selection and refresh map
+                map.clearSelection();
+                await map.refreshAvailability();
+
+                // Show success message
+                if (window.PuroBeach && window.PuroBeach.showToast) {
+                    window.PuroBeach.showToast(data.message || 'Reserva creada', 'success');
+                } else {
+                    alert(data.message || 'Reserva creada exitosamente');
+                }
+            } else {
+                alert(data.error || 'Error al crear la reserva');
+            }
+
+        } catch (error) {
+            console.error('Error creating reservation:', error);
+            alert('Error al crear la reserva');
+        } finally {
+            quickCreateBtn.disabled = false;
+            quickCreateBtn.innerHTML = '<i class="fas fa-check"></i> Crear Reserva';
+        }
+    });
+
+    // Reset form when modal is hidden
+    quickReservationModal.addEventListener('hidden.bs.modal', () => {
+        quickCustomerSearch.value = '';
+        quickCustomerId.value = '';
+        document.getElementById('quick-notes').value = '';
+        document.getElementById('quick-num-people').value = '2';
+        selectedCustomer = null;
     });
 });
 </script>

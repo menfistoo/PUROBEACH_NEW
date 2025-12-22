@@ -26,6 +26,8 @@ def drop_tables(db):
         'beach_tags',
         'beach_customers',
         'hotel_guests',
+        'beach_furniture_blocks',
+        'beach_furniture_daily_positions',
         'beach_furniture',
         'beach_furniture_types',
         'beach_zones',
@@ -175,6 +177,35 @@ def create_tables(db):
             features TEXT,
             active INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # 2b. Furniture Blocks Table (for maintenance, VIP holds, events)
+    db.execute('''
+        CREATE TABLE beach_furniture_blocks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            furniture_id INTEGER NOT NULL REFERENCES beach_furniture(id) ON DELETE CASCADE,
+            block_type TEXT CHECK(block_type IN ('maintenance','vip_hold','event','other')) DEFAULT 'other',
+            start_date DATE NOT NULL,
+            end_date DATE NOT NULL,
+            reason TEXT,
+            notes TEXT,
+            created_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # 2c. Furniture Daily Positions Table (for daily repositioning)
+    db.execute('''
+        CREATE TABLE beach_furniture_daily_positions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            furniture_id INTEGER NOT NULL REFERENCES beach_furniture(id) ON DELETE CASCADE,
+            date DATE NOT NULL,
+            position_x REAL NOT NULL,
+            position_y REAL NOT NULL,
+            created_by TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(furniture_id, date)
         )
     ''')
 
@@ -407,6 +438,13 @@ def create_indexes(db):
     db.execute('CREATE INDEX idx_furniture_zone ON beach_furniture(zone_id)')
     db.execute('CREATE INDEX idx_furniture_active ON beach_furniture(active)')
     db.execute('CREATE INDEX idx_furniture_temp_date ON beach_furniture(is_temporary, valid_date)')
+
+    # Furniture blocks indexes
+    db.execute('CREATE INDEX idx_furniture_blocks_dates ON beach_furniture_blocks(start_date, end_date, furniture_id)')
+    db.execute('CREATE INDEX idx_furniture_blocks_type ON beach_furniture_blocks(block_type)')
+
+    # Furniture daily positions indexes
+    db.execute('CREATE INDEX idx_daily_positions_date ON beach_furniture_daily_positions(date, furniture_id)')
 
     # Customer indexes
     db.execute('CREATE INDEX idx_customers_type ON beach_customers(customer_type)')
