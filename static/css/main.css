@@ -250,6 +250,12 @@ a:hover {
     text-align: center;
 }
 
+.sidebar-logo-img {
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+}
+
 .sidebar-logo h3 {
     color: var(--color-primary);
     font-size: 20px;
@@ -414,28 +420,20 @@ html.sidebar-collapsed .sidebar-toggle i {
     transform: rotate(180deg);
 }
 
-/* Sidebar Logo - Icon for collapsed state */
+/* Sidebar Logo - Icon for collapsed state (hidden - using logo instead) */
 .sidebar-logo-icon {
     display: none;
-    font-size: 24px;
-    color: var(--color-primary);
 }
 
-.sidebar.collapsed .sidebar-logo-text,
-.sidebar.collapsed .sidebar-subtitle,
-html.sidebar-collapsed .sidebar-logo-text,
-html.sidebar-collapsed .sidebar-subtitle {
-    display: none;
-}
-
-.sidebar.collapsed .sidebar-logo-icon,
-html.sidebar-collapsed .sidebar-logo-icon {
-    display: block;
-}
-
+/* Collapsed state - smaller logo */
 .sidebar.collapsed .sidebar-logo,
 html.sidebar-collapsed .sidebar-logo {
-    padding: var(--space-4);
+    padding: var(--space-3);
+}
+
+.sidebar.collapsed .sidebar-logo-img,
+html.sidebar-collapsed .sidebar-logo-img {
+    max-width: 50px;
 }
 
 /* Sidebar Collapsed State */
