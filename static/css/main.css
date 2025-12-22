@@ -86,6 +86,10 @@
     --z-modal: 400;
     --z-toast: 500;
     --z-tooltip: 600;
+
+    /* Sidebar dimensions */
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 70px;
 }
 
 /* ==================== Bootstrap Color Overrides ==================== */
@@ -229,7 +233,7 @@ a:hover {
 
 /* ==================== Sidebar Navigation ==================== */
 .sidebar {
-    width: 260px;
+    width: var(--sidebar-width);
     background: linear-gradient(180deg, #1A3A5C 0%, #0F2744 100%);
     color: var(--color-white);
     min-height: 100vh;
@@ -237,6 +241,7 @@ a:hover {
     top: 0;
     left: 0;
     overflow-y: auto;
+    transition: width var(--transition-normal);
 }
 
 .sidebar-logo {
@@ -371,6 +376,212 @@ a:hover {
 /* Collapse animation */
 .nav-section .collapse {
     transition: height 0.2s ease;
+}
+
+/* ==================== Collapsible Sidebar ==================== */
+
+/* Toggle Button */
+.sidebar-toggle {
+    position: sticky;
+    bottom: 20px;
+    margin: var(--space-4) auto;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius-full);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-normal);
+    z-index: 10;
+}
+
+.sidebar-toggle:hover {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+}
+
+.sidebar-toggle i {
+    transition: transform var(--transition-normal);
+}
+
+.sidebar.collapsed .sidebar-toggle i,
+html.sidebar-collapsed .sidebar-toggle i {
+    transform: rotate(180deg);
+}
+
+/* Sidebar Logo - Icon for collapsed state */
+.sidebar-logo-icon {
+    display: none;
+    font-size: 24px;
+    color: var(--color-primary);
+}
+
+.sidebar.collapsed .sidebar-logo-text,
+.sidebar.collapsed .sidebar-subtitle,
+html.sidebar-collapsed .sidebar-logo-text,
+html.sidebar-collapsed .sidebar-subtitle {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-logo-icon,
+html.sidebar-collapsed .sidebar-logo-icon {
+    display: block;
+}
+
+.sidebar.collapsed .sidebar-logo,
+html.sidebar-collapsed .sidebar-logo {
+    padding: var(--space-4);
+}
+
+/* Sidebar Collapsed State */
+.sidebar.collapsed,
+html.sidebar-collapsed .sidebar {
+    width: var(--sidebar-collapsed-width);
+}
+
+/* Nav Items - Collapsed State */
+.sidebar.collapsed .nav-parent,
+.sidebar.collapsed .nav-item,
+html.sidebar-collapsed .nav-parent,
+html.sidebar-collapsed .nav-item {
+    padding: var(--space-3) var(--space-4);
+    justify-content: center;
+    position: relative;
+}
+
+.sidebar.collapsed .nav-parent span,
+.sidebar.collapsed .nav-item span,
+.sidebar.collapsed .nav-arrow,
+html.sidebar-collapsed .nav-parent span,
+html.sidebar-collapsed .nav-item span,
+html.sidebar-collapsed .nav-arrow {
+    display: none;
+}
+
+.sidebar.collapsed .nav-parent i:first-child,
+.sidebar.collapsed .nav-item i,
+html.sidebar-collapsed .nav-parent i:first-child,
+html.sidebar-collapsed .nav-item i {
+    margin: 0;
+    font-size: 18px;
+}
+
+.sidebar.collapsed .nav-child,
+html.sidebar-collapsed .nav-child {
+    padding-left: var(--space-4);
+}
+
+.sidebar.collapsed .nav-child.active,
+html.sidebar-collapsed .nav-child.active {
+    padding-left: calc(var(--space-4) - 3px);
+}
+
+/* Child menu in collapsed state - show as flyout on hover */
+.sidebar.collapsed .nav-section,
+html.sidebar-collapsed .nav-section {
+    position: relative;
+}
+
+.sidebar.collapsed .nav-section .collapse,
+html.sidebar-collapsed .nav-section .collapse {
+    position: absolute;
+    left: var(--sidebar-collapsed-width);
+    top: 0;
+    width: 200px;
+    background: linear-gradient(180deg, #1A3A5C 0%, #0F2744 100%);
+    border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-2) 0;
+    z-index: var(--z-dropdown);
+    display: none !important;
+    height: auto !important;
+}
+
+.sidebar.collapsed .nav-section:hover .collapse,
+html.sidebar-collapsed .nav-section:hover .collapse {
+    display: block !important;
+}
+
+.sidebar.collapsed .nav-section .collapse .nav-child,
+html.sidebar-collapsed .nav-section .collapse .nav-child {
+    padding-left: var(--space-4);
+    justify-content: flex-start;
+}
+
+.sidebar.collapsed .nav-section .collapse .nav-child span,
+html.sidebar-collapsed .nav-section .collapse .nav-child span {
+    display: inline;
+}
+
+.sidebar.collapsed .nav-section .collapse .nav-child i,
+html.sidebar-collapsed .nav-section .collapse .nav-child i {
+    font-size: 8px;
+}
+
+/* Tooltips for parent items (collapsed state) */
+.sidebar.collapsed .nav-parent::after,
+html.sidebar-collapsed .nav-parent::after {
+    content: attr(data-sidebar-tooltip);
+    position: absolute;
+    left: calc(var(--sidebar-collapsed-width) + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--color-secondary);
+    color: var(--color-white);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--border-radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-fast), visibility var(--transition-fast);
+    z-index: var(--z-tooltip);
+    box-shadow: var(--shadow-md);
+    pointer-events: none;
+}
+
+.sidebar.collapsed .nav-parent:hover::after,
+html.sidebar-collapsed .nav-parent:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Active state indicators in collapsed mode */
+.sidebar.collapsed .nav-parent.active,
+html.sidebar-collapsed .nav-parent.active {
+    background: rgba(212, 175, 55, 0.2);
+    border-left: 3px solid var(--color-primary);
+}
+
+.sidebar.collapsed .nav-parent.active i:first-child,
+html.sidebar-collapsed .nav-parent.active i:first-child {
+    color: var(--color-primary);
+}
+
+.sidebar.collapsed .nav-child.active,
+html.sidebar-collapsed .nav-child.active {
+    background: rgba(212, 175, 55, 0.2);
+    border-left: 3px solid var(--color-primary);
+}
+
+.sidebar.collapsed .nav-child.active i,
+html.sidebar-collapsed .nav-child.active i {
+    color: var(--color-primary);
+    opacity: 1;
+}
+
+/* Glow effect for active icon in collapsed mode */
+.sidebar.collapsed .nav-parent.active i:first-child,
+.sidebar.collapsed .nav-child.active i,
+html.sidebar-collapsed .nav-parent.active i:first-child,
+html.sidebar-collapsed .nav-child.active i {
+    filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.5));
 }
 
 /* ==================== Topbar ==================== */

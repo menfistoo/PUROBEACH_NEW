@@ -1,8 +1,9 @@
-<aside class="sidebar">
+<aside class="sidebar" id="mainSidebar">
     <!-- Logo -->
     <div class="sidebar-logo">
-        <h3>PUROBEACH</h3>
+        <h3 class="sidebar-logo-text">PUROBEACH</h3>
         <small class="sidebar-subtitle">BEACH CLUB</small>
+        <span class="sidebar-logo-icon"><i class="fa-solid fa-umbrella-beach"></i></span>
     </div>
 
     <!-- Navigation -->
@@ -11,30 +12,33 @@
 
         {% if menu_items %}
             {% for parent in menu_items %}
-                {# Check if any child is active #}
-                {% set has_active_child = false %}
+                {# Check if any child is active - use namespace to modify in inner loop #}
+                {% set ns = namespace(has_active_child=false) %}
                 {% for child in parent.children %}
-                    {% if request.path == child.url or request.path.startswith(child.url) %}
-                        {% set has_active_child = true %}
+                    {% if child.url and (request.path == child.url or request.path.startswith(child.url + '/')) %}
+                        {% set ns.has_active_child = true %}
                     {% endif %}
                 {% endfor %}
 
                 <div class="nav-section">
-                    <a class="nav-parent {% if has_active_child %}active{% endif %}"
+                    <a class="nav-parent {% if ns.has_active_child %}active{% endif %}"
                        data-bs-toggle="collapse"
                        href="#menu-{{ parent.code | replace('.', '-') }}"
                        role="button"
-                       aria-expanded="{{ 'true' if has_active_child else 'false' }}">
+                       aria-expanded="{{ 'true' if ns.has_active_child else 'false' }}"
+                       data-sidebar-tooltip="{{ parent.name }}">
                         <i class="fa-solid {{ parent.icon or 'fa-folder' }}"></i>
                         <span>{{ parent.name }}</span>
                         <i class="fa-solid fa-chevron-down nav-arrow"></i>
                     </a>
 
-                    <div class="collapse {% if has_active_child %}show{% endif %}"
+                    <div class="collapse {% if ns.has_active_child %}show{% endif %}"
                          id="menu-{{ parent.code | replace('.', '-') }}">
                         {% for child in parent.children %}
+                            {% set is_child_active = child.url and (request.path == child.url or request.path.startswith(child.url + '/')) %}
                             <a href="{{ child.url }}"
-                               class="nav-item nav-child {% if request.path == child.url or request.path.startswith(child.url + '/') %}active{% endif %}">
+                               class="nav-item nav-child {% if is_child_active %}active{% endif %}"
+                               data-sidebar-tooltip="{{ child.name }}">
                                 <i class="fa-solid {{ child.icon or 'fa-circle' }}"></i>
                                 <span>{{ child.name }}</span>
                             </a>
@@ -44,4 +48,10 @@
             {% endfor %}
         {% endif %}
     </nav>
+
+    <!-- Toggle Button -->
+    <button class="sidebar-toggle" id="sidebarToggle" type="button"
+            title="Colapsar menu" aria-label="Colapsar menu">
+        <i class="fa-solid fa-angles-left"></i>
+    </button>
 </aside>

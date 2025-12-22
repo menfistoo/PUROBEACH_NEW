@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize form validation
     initializeFormValidation();
 
+    // Initialize sidebar collapse functionality
+    initializeSidebarCollapse();
+
     console.log('PuroBeach initialized successfully');
 });
 
@@ -208,6 +211,124 @@ async function fetchJSON(url, options = {}) {
     }
 }
 
+/**
+ * Initialize sidebar collapse/expand functionality
+ * Persists user preference in localStorage
+ */
+function initializeSidebarCollapse() {
+    const sidebar = document.getElementById('mainSidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const STORAGE_KEY = 'purobeach_sidebar_collapsed';
+
+    if (!sidebar || !toggleBtn) {
+        return; // Exit if elements don't exist (e.g., login page)
+    }
+
+    // Sync sidebar class with html class (set by inline script for instant load)
+    const isInitiallyCollapsed = document.documentElement.classList.contains('sidebar-collapsed');
+    if (isInitiallyCollapsed) {
+        sidebar.classList.add('collapsed');
+        updateToggleButton(toggleBtn, true);
+    }
+
+    // Toggle button click handler
+    toggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isCollapsed = sidebar.classList.toggle('collapsed');
+
+        // Sync html class for CSS consistency
+        document.documentElement.classList.toggle('sidebar-collapsed', isCollapsed);
+
+        // Save preference to localStorage
+        localStorage.setItem(STORAGE_KEY, isCollapsed.toString());
+
+        // Update button tooltip and aria-label
+        updateToggleButton(toggleBtn, isCollapsed);
+
+        // Close any open Bootstrap collapse menus when collapsing
+        if (isCollapsed) {
+            closeAllCollapseMenus(sidebar);
+        }
+    });
+
+    // Handle hover behavior for collapsed state child menus
+    setupCollapsedHoverBehavior(sidebar);
+}
+
+/**
+ * Update toggle button state (tooltip, aria-label)
+ * @param {HTMLElement} button - Toggle button element
+ * @param {boolean} isCollapsed - Current collapsed state
+ */
+function updateToggleButton(button, isCollapsed) {
+    const expandText = 'Expandir menu';
+    const collapseText = 'Colapsar menu';
+
+    button.setAttribute('title', isCollapsed ? expandText : collapseText);
+    button.setAttribute('aria-label', isCollapsed ? expandText : collapseText);
+}
+
+/**
+ * Close all Bootstrap collapse elements in sidebar
+ * @param {HTMLElement} sidebar - Sidebar element
+ */
+function closeAllCollapseMenus(sidebar) {
+    const openCollapses = sidebar.querySelectorAll('.collapse.show');
+    openCollapses.forEach(collapse => {
+        const bsCollapse = bootstrap.Collapse.getInstance(collapse);
+        if (bsCollapse) {
+            bsCollapse.hide();
+        }
+    });
+}
+
+/**
+ * Setup hover behavior for showing child menus in collapsed state
+ * @param {HTMLElement} sidebar - Sidebar element
+ */
+function setupCollapsedHoverBehavior(sidebar) {
+    const navSections = sidebar.querySelectorAll('.nav-section');
+
+    navSections.forEach(section => {
+        const collapseEl = section.querySelector('.collapse');
+        if (!collapseEl) return;
+
+        let hoverTimeout;
+
+        // Show submenu on hover (only when collapsed)
+        section.addEventListener('mouseenter', function() {
+            if (!sidebar.classList.contains('collapsed')) return;
+
+            clearTimeout(hoverTimeout);
+            // Force display the collapse element
+            collapseEl.style.display = 'block';
+            collapseEl.classList.add('show');
+        });
+
+        // Hide submenu on mouse leave (with small delay)
+        section.addEventListener('mouseleave', function() {
+            if (!sidebar.classList.contains('collapsed')) return;
+
+            hoverTimeout = setTimeout(() => {
+                collapseEl.style.display = '';
+                collapseEl.classList.remove('show');
+            }, 150); // Small delay to allow moving to submenu
+        });
+    });
+}
+
+/**
+ * Toggle sidebar programmatically
+ */
+function toggleSidebar() {
+    const toggleBtn = document.getElementById('sidebarToggle');
+    if (toggleBtn) {
+        toggleBtn.click();
+    }
+}
+
 // Export functions for global use
 window.PuroBeach = {
     showToast,
@@ -216,5 +337,6 @@ window.PuroBeach = {
     formatDateTime,
     debounce,
     copyToClipboard,
-    fetchJSON
+    fetchJSON,
+    toggleSidebar
 };

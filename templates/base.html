@@ -23,6 +23,16 @@
 </head>
 <body>
     {% if current_user.is_authenticated %}
+        <!-- Apply sidebar state immediately to prevent flash -->
+        <script>
+            (function() {
+                var collapsed = localStorage.getItem('purobeach_sidebar_collapsed');
+                if (collapsed === 'true') {
+                    document.documentElement.classList.add('sidebar-collapsed');
+                }
+            })();
+        </script>
+
         <!-- App Container with Sidebar Layout -->
         <div class="app-container">
             <!-- Sidebar Navigation -->
