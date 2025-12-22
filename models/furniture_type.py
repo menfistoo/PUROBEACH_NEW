@@ -237,8 +237,11 @@ def get_next_number_for_type(type_id: int, zone_id: int = None) -> str:
     """
     Get the next available number for a furniture type.
 
-    Follows pattern: {prefix}{number} where number is incremented
-    based on existing furniture of this type.
+    Finds the first available gap in the sequence, reusing numbers
+    from deleted furniture.
+
+    Follows pattern: {prefix}{number} where number starts at number_start
+    and fills gaps before incrementing past existing numbers.
 
     Args:
         type_id: Furniture type ID
@@ -264,38 +267,41 @@ def get_next_number_for_type(type_id: int, zone_id: int = None) -> str:
     start = ftype['number_start'] or 1
     type_code = ftype['type_code']
 
-    # Find highest existing number for this type
+    # Get all existing numbers for this type
+    query = '''
+        SELECT number FROM beach_furniture
+        WHERE furniture_type = ? AND active = 1
+    '''
+    params = [type_code]
+
     if prefix:
-        # Extract numbers from furniture with matching prefix
-        query = '''
-            SELECT number FROM beach_furniture
-            WHERE furniture_type = ?
-              AND number LIKE ? || '%'
-        '''
-        params = [type_code, prefix]
+        query += ' AND number LIKE ? || \'%\''
+        params.append(prefix)
 
-        if zone_id:
-            query += ' AND zone_id = ?'
-            params.append(zone_id)
+    if zone_id:
+        query += ' AND zone_id = ?'
+        params.append(zone_id)
 
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
 
-        max_num = start - 1
-        for row in rows:
-            try:
-                # Extract number part after prefix
+    # Extract numeric parts and build a set of used numbers
+    used_numbers = set()
+    for row in rows:
+        try:
+            if prefix:
                 num_str = row['number'][len(prefix):]
-                num = int(num_str)
-                if num > max_num:
-                    max_num = num
-            except (ValueError, IndexError):
-                continue
+            else:
+                num_str = row['number']
+            num = int(num_str)
+            used_numbers.add(num)
+        except (ValueError, IndexError):
+            continue
 
-        next_num = max_num + 1
-    else:
-        # No prefix, just count
-        next_num = start
+    # Find first available number starting from 'start'
+    next_num = start
+    while next_num in used_numbers:
+        next_num += 1
 
     return f"{prefix}{next_num}"
 
