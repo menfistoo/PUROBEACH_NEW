@@ -3,7 +3,7 @@ Map Editor configuration routes.
 Visual editor for designing beach map layout.
 """
 
-from flask import render_template, jsonify, request
+from flask import render_template, jsonify, request, redirect, url_for
 from flask_login import login_required, current_user
 from utils.decorators import permission_required
 from models.zone import get_all_zones, get_zone_by_id, get_zone_with_furniture, update_zone
@@ -21,12 +21,8 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.map_editor.view')
     def map_editor():
-        """Map editor main view."""
-        zones = get_all_zones(active_only=True)
-        furniture_types = get_all_furniture_types(active_only=True)
-        return render_template('beach/config/map_editor.html',
-                               zones=zones,
-                               furniture_types=furniture_types)
+        """Map editor - redirect to unified furniture manager."""
+        return redirect(url_for('beach.beach_config.furniture_manager', tab='map-editor'))
 
     @bp.route('/map-editor/zone/<int:zone_id>')
     @login_required

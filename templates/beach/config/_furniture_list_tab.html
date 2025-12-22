@@ -1,0 +1,135 @@
+{# Furniture List Tab Content #}
+<div class="p-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0"><i class="fa-solid fa-couch me-2"></i>Lista de Mobiliario</h5>
+        <a href="{{ url_for('beach.beach_config.furniture_create') }}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Nuevo Mobiliario
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <form method="GET" action="{{ url_for('beach.beach_config.furniture_manager') }}" class="row g-3 align-items-end">
+                <input type="hidden" name="tab" value="furniture-list">
+                <div class="col-md-3">
+                    <label class="form-label small">Zona</label>
+                    <select name="zone" class="form-select form-select-sm">
+                        <option value="">Todas las zonas</option>
+                        {% for z in zones %}
+                        <option value="{{ z.id }}" {% if zone_filter == z.id|string %}selected{% endif %}>
+                            {{ z.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Tipo</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">Todos los tipos</option>
+                        {% for t in types %}
+                        <option value="{{ t.type_code }}" {% if type_filter == t.type_code %}selected{% endif %}>
+                            {{ t.display_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small">Estado</label>
+                    <select name="active" class="form-select form-select-sm">
+                        <option value="1" {% if active_filter == '1' %}selected{% endif %}>Solo activos</option>
+                        <option value="" {% if active_filter == '' %}selected{% endif %}>Todos</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-secondary btn-sm w-100">
+                        <i class="fa-solid fa-filter"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            {% if furniture %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead style="background: #F5E6D3; border-bottom: 2px solid #D4AF37;">
+                        <tr>
+                            <th style="width: 80px;">Número</th>
+                            <th>Zona</th>
+                            <th>Tipo</th>
+                            <th style="width: 100px;" class="text-center">Capacidad</th>
+                            <th style="width: 150px;">Posición</th>
+                            <th style="width: 80px;" class="text-center">Estado</th>
+                            <th style="width: 100px;" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in furniture %}
+                        <tr>
+                            <td>
+                                <strong>{{ f.number }}</strong>
+                                {% if f.is_temporary %}
+                                <span class="badge bg-warning ms-1">Temporal</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge text-dark" style="background-color: {{ f.zone_color }};">
+                                    {{ f.zone_name }}
+                                </span>
+                            </td>
+                            <td>
+                                <i class="fa-solid {{ f.furniture_type_icon or 'fa-umbrella-beach' }} me-1"></i>
+                                {{ f.furniture_type_name or f.furniture_type }}
+                            </td>
+                            <td class="text-center">{{ f.capacity }} <span class="text-muted">pers.</span></td>
+                            <td class="text-muted small">
+                                X: {{ f.position_x|round(0)|int }}, Y: {{ f.position_y|round(0)|int }}
+                                {% if f.rotation != 0 %}
+                                <span class="ms-1">({{ f.rotation }}°)</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if f.active %}
+                                <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{{ url_for('beach.beach_config.furniture_edit', furniture_id=f.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="fa-solid fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('beach.beach_config.furniture_delete', furniture_id=f.id) }}"
+                                      class="d-inline" onsubmit="return confirm('¿Eliminar mobiliario {{ f.number }}?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-3 border-top text-muted small">
+                <i class="fa-solid fa-info-circle"></i>
+                Mostrando {{ furniture|length }} elementos
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fa-solid fa-couch fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No hay mobiliario configurado</p>
+                <a href="{{ url_for('beach.beach_config.furniture_create') }}" class="btn btn-primary btn-sm">
+                    <i class="fa-solid fa-plus"></i> Crear primer mobiliario
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

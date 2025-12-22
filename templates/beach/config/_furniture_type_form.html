@@ -10,7 +10,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header">
                 <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseIdentity">
-                    <i class="fa-solid fa-tag me-2"></i> Identificacion
+                    <i class="fa-solid fa-tag me-2"></i> Identificación
                 </button>
             </h2>
             <div id="collapseIdentity" class="accordion-collapse collapse show" data-bs-parent="#furnitureTypeAccordion">
@@ -18,12 +18,12 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="type_code" class="form-label">Codigo <span class="text-danger">*</span></label>
+                                <label for="type_code" class="form-label">Código <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="type_code" name="type_code"
                                        value="{{ ft.type_code or '' }}"
                                        {% if is_edit %}readonly{% endif %}
                                        required maxlength="50" pattern="[a-z0-9_]+">
-                                <div class="form-text">Identificador unico (minusculas, sin espacios)</div>
+                                <div class="form-text">Identificador único (minúsculas, sin espacios)</div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -86,7 +86,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVisual">
-                    <i class="fa-solid fa-palette me-2"></i> Representacion Visual
+                    <i class="fa-solid fa-palette me-2"></i> Representación Visual
                 </button>
             </h2>
             <div id="collapseVisual" class="accordion-collapse collapse" data-bs-parent="#furnitureTypeAccordion">
@@ -96,9 +96,9 @@
                             <div class="mb-3">
                                 <label for="map_shape" class="form-label">Forma SVG</label>
                                 <select class="form-select" id="map_shape" name="map_shape">
-                                    <option value="rounded_rect" {% if (ft.map_shape or 'rounded_rect') == 'rounded_rect' %}selected{% endif %}>Rectangulo redondeado</option>
-                                    <option value="rectangle" {% if ft.map_shape == 'rectangle' %}selected{% endif %}>Rectangulo</option>
-                                    <option value="circle" {% if ft.map_shape == 'circle' %}selected{% endif %}>Circulo</option>
+                                    <option value="rounded_rect" {% if (ft.map_shape or 'rounded_rect') == 'rounded_rect' %}selected{% endif %}>Rectángulo redondeado</option>
+                                    <option value="rectangle" {% if ft.map_shape == 'rectangle' %}selected{% endif %}>Rectángulo</option>
+                                    <option value="circle" {% if ft.map_shape == 'circle' %}selected{% endif %}>Círculo</option>
                                     <option value="ellipse" {% if ft.map_shape == 'ellipse' %}selected{% endif %}>Elipse</option>
                                     <option value="custom" {% if ft.map_shape == 'custom' %}selected{% endif %}>Personalizado</option>
                                 </select>
@@ -198,7 +198,7 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="min_capacity" class="form-label">Capacidad Minima</label>
+                                <label for="min_capacity" class="form-label">Capacidad Mínima</label>
                                 <input type="number" class="form-control" id="min_capacity" name="min_capacity"
                                        value="{{ ft.min_capacity if ft.min_capacity is not none else 1 }}"
                                        min="0" max="20">
@@ -206,7 +206,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="max_capacity" class="form-label">Capacidad Maxima</label>
+                                <label for="max_capacity" class="form-label">Capacidad Máxima</label>
                                 <input type="number" class="form-control" id="max_capacity" name="max_capacity"
                                        value="{{ ft.max_capacity if ft.max_capacity is not none else 4 }}"
                                        min="1" max="20">
@@ -363,13 +363,13 @@
     <hr>
 
     <div class="d-flex gap-2 justify-content-between">
-        <a href="{{ url_for('beach.beach_config.furniture_types') }}" class="btn btn-secondary">
+        <a href="{{ url_for('beach.beach_config.furniture_manager', tab='furniture-types') }}" class="btn btn-secondary">
             <i class="fa-solid fa-times"></i> Cancelar
         </a>
         <div class="d-flex gap-2">
             {% if is_edit %}
             <button type="button" class="btn btn-outline-danger" id="btn-delete"
-                    data-type-id="{{ ft.id }}" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                    data-type-id="{{ ft.id }}" data-bs-toggle="modal" data-bs-target="#deleteTypeModal">
                 <i class="fa-solid fa-trash"></i>
             </button>
             {% endif %}

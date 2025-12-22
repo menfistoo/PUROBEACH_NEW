@@ -24,4 +24,6 @@ preferences.register_routes(config_bp)
 tags.register_routes(config_bp)
 states.register_routes(config_bp)
 from blueprints.beach.routes.config import map_editor
+from blueprints.beach.routes.config import furniture_manager
 map_editor.register_routes(config_bp)
+furniture_manager.register_routes(config_bp)

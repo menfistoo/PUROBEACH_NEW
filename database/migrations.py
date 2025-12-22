@@ -8,14 +8,15 @@ database.migrations submodules.
 
 Structure:
     database/migrations/
-    ├── __init__.py         - Orchestrator with run_all_migrations()
-    ├── furniture_types.py  - Furniture type enhancements
-    ├── reservations.py     - Reservation and status history
-    ├── hotel_guests.py     - Multi-guest support
-    ├── customers.py        - Customer statistics
-    ├── states.py           - Reservation states
-    ├── permissions.py      - Menu and permission additions
-    └── zones.py            - Zone canvas properties
+    ├── __init__.py              - Orchestrator with run_all_migrations()
+    ├── furniture_types.py       - Furniture type enhancements
+    ├── reservations.py          - Reservation and status history
+    ├── hotel_guests.py          - Multi-guest support
+    ├── customers.py             - Customer statistics
+    ├── states.py                - Reservation states
+    ├── permissions.py           - Menu and permission additions
+    ├── zones.py                 - Zone canvas properties
+    └── furniture_manager_menu.py - Unified furniture manager menu
 """
 
 # Re-export everything from the migrations package
@@ -38,6 +39,7 @@ from database.migrations import (
     migrate_add_map_edit_permission,
     migrate_add_map_editor_permission,
     migrate_zone_canvas_properties,
+    migrate_furniture_manager_menu,
 )
 
 __all__ = [
@@ -56,4 +58,5 @@ __all__ = [
     'migrate_add_map_edit_permission',
     'migrate_add_map_editor_permission',
     'migrate_zone_canvas_properties',
+    'migrate_furniture_manager_menu',
 ]

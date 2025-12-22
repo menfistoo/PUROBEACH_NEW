@@ -1,0 +1,194 @@
+{# Map Editor Tab Content #}
+<div class="p-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0"><i class="fas fa-drafting-compass me-2"></i>Editor de Mapa</h5>
+        <div class="d-flex gap-2 align-items-center">
+            <select class="form-select form-select-sm" id="zone-selector" style="width: 200px;">
+                <option value="">Selecciona zona...</option>
+                {% for zone in zones %}
+                <option value="{{ zone.id }}"
+                        data-width="{{ zone.canvas_width or 2000 }}"
+                        data-height="{{ zone.canvas_height or 1000 }}"
+                        data-bg="{{ zone.background_color or '#FAFAFA' }}">
+                    {{ zone.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-zone-settings" disabled
+                    title="Configurar zona">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="editor-container" id="editor-container">
+        <!-- Collapsible Palette Panel -->
+        <div class="palette-panel" id="palette-panel">
+            <div class="palette-header">
+                <h6><i class="fas fa-shapes me-2"></i>Mobiliario</h6>
+                <button type="button" class="btn-collapse-palette" id="btn-collapse-palette" title="Colapsar panel">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+            <div class="palette-content" id="palette">
+                {% for ft in furniture_types %}
+                <div class="palette-item" draggable="true"
+                     data-type="{{ ft.type_code }}"
+                     data-name="{{ ft.display_name }}"
+                     data-width="{{ ft.default_width or 60 }}"
+                     data-height="{{ ft.default_height or 40 }}"
+                     data-capacity="{{ ft.default_capacity or 2 }}"
+                     data-shape="{{ ft.map_shape or 'rounded_rect' }}"
+                     data-fill="{{ ft.fill_color or '#A0522D' }}"
+                     data-stroke="{{ ft.stroke_color or '#654321' }}"
+                     data-decorative="{{ ft.is_decorative or 0 }}"
+                     title="{{ ft.display_name }}">
+                    <div class="palette-item-icon" style="background-color: {{ ft.fill_color or '#A0522D' }};">
+                        <i class="fas {{ ft.icon or 'fa-umbrella-beach' }}"></i>
+                    </div>
+                    <div class="palette-item-info">
+                        <div class="palette-item-name">{{ ft.display_name }}</div>
+                        <div class="palette-item-meta">
+                            {% if ft.is_decorative %}Decorativo{% else %}Cap: {{ ft.default_capacity or 2 }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-area">
+            <div class="canvas-toolbar">
+                <div class="toolbar-group">
+                    <button type="button" class="btn btn-sm" id="btn-toggle-grid" title="Mostrar cuadricula (G)">
+                        <i class="fas fa-th"></i> Grid
+                    </button>
+                    <button type="button" class="btn btn-sm active" id="btn-toggle-center" title="Mostrar centro (C)">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm" id="btn-snap-10" title="Snap 10px">10</button>
+                        <button type="button" class="btn btn-sm active" id="btn-snap-25" title="Snap 25px">25</button>
+                        <button type="button" class="btn btn-sm" id="btn-snap-50" title="Snap 50px">50</button>
+                    </div>
+                    <button type="button" class="btn btn-sm" id="btn-save-view" title="Guardar vista actual">
+                        <i class="fas fa-save"></i>
+                    </button>
+                </div>
+                <div class="canvas-info">
+                    <span id="canvas-dimensions">-</span>
+                    <span class="mx-2">|</span>
+                    <span>Cursor: <span class="highlight" id="cursor-pos">-</span></span>
+                    <span class="mx-2">|</span>
+                    <span><span id="furniture-count">0</span> elementos</span>
+                </div>
+                <div class="toolbar-group" title="Ctrl + Rueda para zoom">
+                    <button type="button" class="btn btn-sm" id="btn-zoom-out" title="Alejar (-)">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <span class="canvas-info mx-2" id="zoom-level" style="min-width: 45px; text-align: center;">100%</span>
+                    <button type="button" class="btn btn-sm" id="btn-zoom-in" title="Acercar (+)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm" id="btn-zoom-reset" title="Reset zoom (0)">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper" id="canvas-wrapper">
+                <div class="ruler-corner"></div>
+                <div class="ruler-horizontal" id="ruler-horizontal"></div>
+                <div class="ruler-vertical" id="ruler-vertical"></div>
+                <div class="canvas-viewport" id="canvas-viewport">
+                    <div class="empty-canvas" id="empty-canvas">
+                        <i class="fas fa-draw-polygon"></i>
+                        <p>Selecciona una zona para comenzar</p>
+                    </div>
+                    <div class="canvas-loading d-none" id="canvas-loading">
+                        <div class="spinner-border text-warning mb-3" role="status"></div>
+                        <p>Cargando...</p>
+                    </div>
+                    <div class="canvas-svg-container" id="canvas-container">
+                        <!-- SVG Canvas inserted here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Properties Panel (floating) -->
+            <div class="properties-panel" id="properties-panel">
+                <div class="properties-header">
+                    <h6>Propiedades</h6>
+                    <button type="button" class="btn-close btn-sm" id="btn-close-properties"></button>
+                </div>
+                <div class="properties-body">
+                    <div class="mb-3">
+                        <label class="form-label">Número</label>
+                        <input type="text" class="form-control form-control-sm" id="prop-number" readonly>
+                    </div>
+                    <div class="prop-row mb-3">
+                        <div>
+                            <label class="form-label">Pos X</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" id="prop-x" step="1">
+                                <span class="input-group-text">px</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">Pos Y</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" id="prop-y" step="1">
+                                <span class="input-group-text">px</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rotación</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" class="form-control" id="prop-rotation" min="0" max="359" step="15">
+                            <span class="input-group-text">deg</span>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="prop-capacity-group">
+                        <label class="form-label">Capacidad</label>
+                        <input type="number" class="form-control form-control-sm" id="prop-capacity" min="0" max="20">
+                    </div>
+                    <div class="mb-3" id="prop-features-group">
+                        <label class="form-label">Características</label>
+                        <div class="features-list" id="prop-features">
+                            <!-- Features loaded dynamically -->
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Duplicar</label>
+                        <div class="duplicate-options mb-2">
+                            <div>
+                                <label class="form-label-sm text-muted">Copias</label>
+                                <input type="number" class="form-control form-control-sm" id="prop-copies" value="1" min="1" max="50">
+                            </div>
+                            <div>
+                                <label class="form-label-sm text-muted">Espacio (px)</label>
+                                <input type="number" class="form-control form-control-sm" id="prop-spacing" value="10" min="0" max="200" step="5">
+                            </div>
+                        </div>
+                        <div class="btn-group w-100">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-duplicate-h" title="Duplicar horizontal">
+                                <i class="fas fa-arrows-left-right me-1"></i>Horizontal
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-duplicate-v" title="Duplicar vertical">
+                                <i class="fas fa-arrows-up-down me-1"></i>Vertical
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger w-100" id="btn-delete-selected">
+                        <i class="fas fa-trash me-1"></i>Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coordinate display tooltip -->
+    <div class="coord-display" id="coord-display"></div>
+</div>

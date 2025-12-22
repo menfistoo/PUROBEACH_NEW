@@ -15,147 +15,130 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.furniture.view')
     def furniture_types():
-        """List all furniture types with two-panel layout."""
-        from models.furniture_type import get_all_furniture_types
-        types = get_all_furniture_types(active_only=False)
-        zones = get_all_zones()
-        return render_template('beach/config/furniture_types.html',
-                               furniture_types=types,
-                               zones=zones,
-                               selected_type=None,
-                               mode=None)
+        """Furniture types - redirect to unified furniture manager."""
+        return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-types'))
 
     @bp.route('/furniture-types/create', methods=['GET', 'POST'])
     @login_required
     @permission_required('beach.furniture.manage')
     def furniture_types_create():
-        """Create new furniture type with enhanced fields."""
+        """Create new furniture type - redirect to unified page."""
+        # Redirect GET to unified page with create mode
+        if request.method == 'GET':
+            return redirect(url_for('beach.beach_config.furniture_manager',
+                                    tab='furniture-types', create=1))
+
+        # Handle POST for form submission
         from models.furniture_type import get_all_furniture_types, create_furniture_type
 
-        if request.method == 'POST':
-            data = {
-                'type_code': request.form.get('type_code', '').strip().lower(),
-                'display_name': request.form.get('display_name', '').strip(),
-                'icon': request.form.get('icon', 'fa-umbrella-beach').strip(),
-                'default_color': request.form.get('default_color', '#A0522D'),
-                'min_capacity': request.form.get('min_capacity', 0, type=int),
-                'max_capacity': request.form.get('max_capacity', 4, type=int),
-                'default_capacity': request.form.get('default_capacity', 2, type=int),
-                'is_suite_only': 1 if request.form.get('is_suite_only') else 0,
-                'notes': request.form.get('notes', '').strip() or None,
-                'map_shape': request.form.get('map_shape', 'rounded_rect'),
-                'custom_svg': request.form.get('custom_svg', '').strip() or None,
-                'default_width': request.form.get('default_width', 60, type=float),
-                'default_height': request.form.get('default_height', 40, type=float),
-                'border_radius': request.form.get('border_radius', 5, type=int),
-                'fill_color': request.form.get('fill_color', '#A0522D'),
-                'stroke_color': request.form.get('stroke_color', '#654321'),
-                'stroke_width': request.form.get('stroke_width', 2, type=int),
-                'default_rotation': 1 if request.form.get('default_rotation') else 0,
-                'is_decorative': 1 if request.form.get('is_decorative') else 0,
-                'number_prefix': request.form.get('number_prefix', '').strip() or None,
-                'number_start': request.form.get('number_start', 1, type=int),
-                'default_features': request.form.get('default_features', '').strip() or None,
-                'allowed_zones': ','.join(request.form.getlist('allowed_zones')) or None,
-            }
+        data = {
+            'type_code': request.form.get('type_code', '').strip().lower(),
+            'display_name': request.form.get('display_name', '').strip(),
+            'icon': request.form.get('icon', 'fa-umbrella-beach').strip(),
+            'default_color': request.form.get('default_color', '#A0522D'),
+            'min_capacity': request.form.get('min_capacity', 0, type=int),
+            'max_capacity': request.form.get('max_capacity', 4, type=int),
+            'default_capacity': request.form.get('default_capacity', 2, type=int),
+            'is_suite_only': 1 if request.form.get('is_suite_only') else 0,
+            'notes': request.form.get('notes', '').strip() or None,
+            'map_shape': request.form.get('map_shape', 'rounded_rect'),
+            'custom_svg': request.form.get('custom_svg', '').strip() or None,
+            'default_width': request.form.get('default_width', 60, type=float),
+            'default_height': request.form.get('default_height', 40, type=float),
+            'border_radius': request.form.get('border_radius', 5, type=int),
+            'fill_color': request.form.get('fill_color', '#A0522D'),
+            'stroke_color': request.form.get('stroke_color', '#654321'),
+            'stroke_width': request.form.get('stroke_width', 2, type=int),
+            'default_rotation': 1 if request.form.get('default_rotation') else 0,
+            'is_decorative': 1 if request.form.get('is_decorative') else 0,
+            'number_prefix': request.form.get('number_prefix', '').strip() or None,
+            'number_start': request.form.get('number_start', 1, type=int),
+            'default_features': request.form.get('default_features', '').strip() or None,
+            'allowed_zones': ','.join(request.form.getlist('allowed_zones')) or None,
+        }
 
-            if not data['type_code'] or not data['display_name']:
-                flash('Código y nombre son obligatorios', 'error')
-                types = get_all_furniture_types(active_only=False)
-                zones = get_all_zones()
-                return render_template('beach/config/furniture_types.html',
-                                       furniture_types=types, zones=zones,
-                                       form_data=data, mode='create')
+        if not data['type_code'] or not data['display_name']:
+            flash('Codigo y nombre son obligatorios', 'error')
+            return redirect(url_for('beach.beach_config.furniture_manager',
+                                    tab='furniture-types', create=1))
 
-            try:
-                create_furniture_type(**data)
-                flash('Tipo de mobiliario creado correctamente', 'success')
-                return redirect(url_for('beach.beach_config.furniture_types'))
+        try:
+            create_furniture_type(**data)
+            flash('Tipo de mobiliario creado correctamente', 'success')
+            return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-types'))
 
-            except ValueError as e:
-                flash(str(e), 'error')
-            except Exception as e:
-                flash(f'Error al crear tipo: {str(e)}', 'error')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Error al crear tipo: {str(e)}', 'error')
 
-            types = get_all_furniture_types(active_only=False)
-            zones = get_all_zones()
-            return render_template('beach/config/furniture_types.html',
-                                   furniture_types=types, zones=zones,
-                                   form_data=data, mode='create')
-
-        # GET: Show form in right panel
-        types = get_all_furniture_types(active_only=False)
-        zones = get_all_zones()
-        return render_template('beach/config/furniture_types.html',
-                               furniture_types=types, zones=zones,
-                               selected_type=None, mode='create')
+        return redirect(url_for('beach.beach_config.furniture_manager',
+                                tab='furniture-types', create=1))
 
     @bp.route('/furniture-types/<int:type_id>/edit', methods=['GET', 'POST'])
     @login_required
     @permission_required('beach.furniture.manage')
     def furniture_types_edit(type_id):
-        """Edit existing furniture type with enhanced fields."""
-        from models.furniture_type import get_all_furniture_types, get_furniture_type_by_id, update_furniture_type
+        """Edit existing furniture type - redirect to unified page."""
+        from models.furniture_type import get_furniture_type_by_id, update_furniture_type
 
         ftype = get_furniture_type_by_id(type_id)
         if not ftype:
             flash('Tipo de mobiliario no encontrado', 'error')
-            return redirect(url_for('beach.beach_config.furniture_types'))
+            return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-types'))
 
-        if request.method == 'POST':
-            data = {
-                'display_name': request.form.get('display_name', '').strip(),
-                'icon': request.form.get('icon', 'fa-umbrella-beach').strip(),
-                'default_color': request.form.get('default_color', '#A0522D'),
-                'min_capacity': request.form.get('min_capacity', 0, type=int),
-                'max_capacity': request.form.get('max_capacity', 4, type=int),
-                'default_capacity': request.form.get('default_capacity', 2, type=int),
-                'is_suite_only': 1 if request.form.get('is_suite_only') else 0,
-                'notes': request.form.get('notes', '').strip() or None,
-                'active': 1 if request.form.get('active') == '1' else 0,
-                'map_shape': request.form.get('map_shape', 'rounded_rect'),
-                'custom_svg': request.form.get('custom_svg', '').strip() or None,
-                'default_width': request.form.get('default_width', 60, type=float),
-                'default_height': request.form.get('default_height', 40, type=float),
-                'border_radius': request.form.get('border_radius', 5, type=int),
-                'fill_color': request.form.get('fill_color', '#A0522D'),
-                'stroke_color': request.form.get('stroke_color', '#654321'),
-                'stroke_width': request.form.get('stroke_width', 2, type=int),
-                'default_rotation': 1 if request.form.get('default_rotation') else 0,
-                'is_decorative': 1 if request.form.get('is_decorative') else 0,
-                'number_prefix': request.form.get('number_prefix', '').strip() or None,
-                'number_start': request.form.get('number_start', 1, type=int),
-                'default_features': request.form.get('default_features', '').strip() or None,
-                'allowed_zones': ','.join(request.form.getlist('allowed_zones')) or None,
-            }
+        # Redirect GET to unified page with edit mode
+        if request.method == 'GET':
+            return redirect(url_for('beach.beach_config.furniture_manager',
+                                    tab='furniture-types', type_id=type_id))
 
-            if not data['display_name']:
-                flash('El nombre es obligatorio', 'error')
-                types = get_all_furniture_types(active_only=False)
-                zones = get_all_zones()
-                return render_template('beach/config/furniture_types.html',
-                                       furniture_types=types, zones=zones,
-                                       selected_type=ftype, mode='edit')
+        # Handle POST for form submission
+        data = {
+            'display_name': request.form.get('display_name', '').strip(),
+            'icon': request.form.get('icon', 'fa-umbrella-beach').strip(),
+            'default_color': request.form.get('default_color', '#A0522D'),
+            'min_capacity': request.form.get('min_capacity', 0, type=int),
+            'max_capacity': request.form.get('max_capacity', 4, type=int),
+            'default_capacity': request.form.get('default_capacity', 2, type=int),
+            'is_suite_only': 1 if request.form.get('is_suite_only') else 0,
+            'notes': request.form.get('notes', '').strip() or None,
+            'active': 1 if request.form.get('active') == '1' else 0,
+            'map_shape': request.form.get('map_shape', 'rounded_rect'),
+            'custom_svg': request.form.get('custom_svg', '').strip() or None,
+            'default_width': request.form.get('default_width', 60, type=float),
+            'default_height': request.form.get('default_height', 40, type=float),
+            'border_radius': request.form.get('border_radius', 5, type=int),
+            'fill_color': request.form.get('fill_color', '#A0522D'),
+            'stroke_color': request.form.get('stroke_color', '#654321'),
+            'stroke_width': request.form.get('stroke_width', 2, type=int),
+            'default_rotation': 1 if request.form.get('default_rotation') else 0,
+            'is_decorative': 1 if request.form.get('is_decorative') else 0,
+            'number_prefix': request.form.get('number_prefix', '').strip() or None,
+            'number_start': request.form.get('number_start', 1, type=int),
+            'default_features': request.form.get('default_features', '').strip() or None,
+            'allowed_zones': ','.join(request.form.getlist('allowed_zones')) or None,
+        }
 
-            try:
-                updated = update_furniture_type(type_id, **data)
-                if updated:
-                    flash('Tipo actualizado correctamente', 'success')
-                else:
-                    flash('No se realizaron cambios', 'warning')
-                return redirect(url_for('beach.beach_config.furniture_types'))
+        if not data['display_name']:
+            flash('El nombre es obligatorio', 'error')
+            return redirect(url_for('beach.beach_config.furniture_manager',
+                                    tab='furniture-types', type_id=type_id))
 
-            except ValueError as e:
-                flash(str(e), 'error')
-            except Exception as e:
-                flash(f'Error al actualizar: {str(e)}', 'error')
+        try:
+            updated = update_furniture_type(type_id, **data)
+            if updated:
+                flash('Tipo actualizado correctamente', 'success')
+            else:
+                flash('No se realizaron cambios', 'warning')
+            return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-types'))
 
-        # GET: Show form with existing data
-        types = get_all_furniture_types(active_only=False)
-        zones = get_all_zones()
-        return render_template('beach/config/furniture_types.html',
-                               furniture_types=types, zones=zones,
-                               selected_type=ftype, mode='edit')
+        except ValueError as e:
+            flash(str(e), 'error')
+        except Exception as e:
+            flash(f'Error al actualizar: {str(e)}', 'error')
+
+        return redirect(url_for('beach.beach_config.furniture_manager',
+                                tab='furniture-types', type_id=type_id))
 
     @bp.route('/furniture-types/<int:type_id>/delete', methods=['POST'])
     @login_required
@@ -175,7 +158,7 @@ def register_routes(bp):
         except Exception as e:
             flash(f'Error al eliminar: {str(e)}', 'error')
 
-        return redirect(url_for('beach.beach_config.furniture_types'))
+        return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-types'))
 
     @bp.route('/furniture-types/preview', methods=['POST'])
     @login_required

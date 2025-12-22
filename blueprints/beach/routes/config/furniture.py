@@ -18,28 +18,13 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.furniture.view')
     def furniture():
-        """List all furniture items."""
-        zone_filter = request.args.get('zone', '')
-        type_filter = request.args.get('type', '')
-        active_filter = request.args.get('active', '1')
-
-        # Get all furniture
-        zone_id = int(zone_filter) if zone_filter else None
-        active_only = active_filter == '1'
-        all_furniture = get_all_furniture(zone_id=zone_id, active_only=active_only)
-
-        # Apply type filter
-        if type_filter:
-            all_furniture = [f for f in all_furniture if f['furniture_type'] == type_filter]
-
-        # Get zones and types for filters
-        zones = get_all_zones()
-        types = get_furniture_types()
-
-        return render_template('beach/config/furniture.html',
-                               furniture=all_furniture, zones=zones, types=types,
-                               zone_filter=zone_filter, type_filter=type_filter,
-                               active_filter=active_filter)
+        """Furniture list - redirect to unified furniture manager."""
+        # Preserve filter parameters when redirecting
+        return redirect(url_for('beach.beach_config.furniture_manager',
+                                tab='furniture-list',
+                                zone=request.args.get('zone', ''),
+                                type=request.args.get('type', ''),
+                                active=request.args.get('active', '1')))
 
     @bp.route('/furniture/create', methods=['GET', 'POST'])
     @login_required
@@ -119,7 +104,7 @@ def register_routes(bp):
                     flash('Mobiliario creado correctamente', 'success')
                 else:
                     flash(f'{created_count} elementos de mobiliario creados correctamente', 'success')
-                return redirect(url_for('beach.beach_config.furniture'))
+                return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-list'))
 
             except Exception as e:
                 flash(f'Error al crear mobiliario: {str(e)}', 'error')
@@ -138,7 +123,7 @@ def register_routes(bp):
         item = get_furniture_by_id(furniture_id)
         if not item:
             flash('Mobiliario no encontrado', 'error')
-            return redirect(url_for('beach.beach_config.furniture'))
+            return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-list'))
 
         if request.method == 'POST':
             number = request.form.get('number', '').strip()
@@ -230,7 +215,7 @@ def register_routes(bp):
                     else:
                         flash('No se realizaron cambios', 'warning')
 
-                return redirect(url_for('beach.beach_config.furniture'))
+                return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-list'))
 
             except Exception as e:
                 flash(f'Error: {str(e)}', 'error')
@@ -257,7 +242,7 @@ def register_routes(bp):
         except Exception as e:
             flash(f'Error al eliminar: {str(e)}', 'error')
 
-        return redirect(url_for('beach.beach_config.furniture'))
+        return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-list'))
 
     # API Endpoint for Map Positioning
     @bp.route('/api/furniture/<int:furniture_id>/position', methods=['POST'])

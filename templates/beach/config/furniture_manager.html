@@ -1,0 +1,747 @@
+{% extends "base.html" %}
+
+{% set page_title = "Gestor de Mobiliario" %}
+
+{% block title %}Gestor de Mobiliario - PuroBeach{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Tab Navigation */
+.furniture-manager-tabs {
+    border-bottom: 2px solid var(--color-accent, #F5E6D3);
+    margin-bottom: 0;
+    background: #fff;
+    padding: 0 1rem;
+}
+
+.furniture-manager-tabs .nav-link {
+    color: var(--color-secondary, #1A3A5C);
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    padding: 0.875rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    margin-bottom: -2px;
+}
+
+.furniture-manager-tabs .nav-link:hover {
+    color: var(--color-primary, #D4AF37);
+    border-bottom-color: rgba(212, 175, 55, 0.3);
+    background: transparent;
+}
+
+.furniture-manager-tabs .nav-link.active {
+    color: var(--color-primary, #D4AF37);
+    background: transparent;
+    border-bottom-color: var(--color-primary, #D4AF37);
+}
+
+.furniture-manager-tabs .nav-link i {
+    margin-right: 0.5rem;
+}
+
+.tab-content {
+    background: #f8f9fa;
+}
+
+.tab-pane {
+    min-height: 500px;
+}
+
+/* Adjust map editor height within tab */
+.tab-pane .editor-container {
+    height: calc(100vh - 180px);
+}
+</style>
+
+{# Map Editor CSS #}
+{% include 'beach/config/_map_editor_css.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fas fa-tools me-2"></i>Gestor de Mobiliario</h4>
+</div>
+
+<!-- Tab Navigation -->
+<ul class="nav nav-tabs furniture-manager-tabs" id="furnitureManagerTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'map-editor' %}active{% endif %}"
+                id="map-editor-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#map-editor-pane"
+                type="button" role="tab"
+                aria-controls="map-editor-pane"
+                aria-selected="{{ 'true' if active_tab == 'map-editor' else 'false' }}">
+            <i class="fas fa-drafting-compass"></i> Editor de Mapa
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'furniture-list' %}active{% endif %}"
+                id="furniture-list-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#furniture-list-pane"
+                type="button" role="tab"
+                aria-controls="furniture-list-pane"
+                aria-selected="{{ 'true' if active_tab == 'furniture-list' else 'false' }}">
+            <i class="fas fa-couch"></i> Lista de Mobiliario
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'furniture-types' %}active{% endif %}"
+                id="furniture-types-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#furniture-types-pane"
+                type="button" role="tab"
+                aria-controls="furniture-types-pane"
+                aria-selected="{{ 'true' if active_tab == 'furniture-types' else 'false' }}">
+            <i class="fas fa-shapes"></i> Tipos de Mobiliario
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="furnitureManagerTabContent">
+    <!-- Map Editor Tab -->
+    <div class="tab-pane fade {% if active_tab == 'map-editor' %}show active{% endif %}"
+         id="map-editor-pane" role="tabpanel" aria-labelledby="map-editor-tab">
+        {% include 'beach/config/_map_editor_tab.html' %}
+    </div>
+
+    <!-- Furniture List Tab -->
+    <div class="tab-pane fade {% if active_tab == 'furniture-list' %}show active{% endif %}"
+         id="furniture-list-pane" role="tabpanel" aria-labelledby="furniture-list-tab">
+        {% include 'beach/config/_furniture_list_tab.html' %}
+    </div>
+
+    <!-- Furniture Types Tab -->
+    <div class="tab-pane fade {% if active_tab == 'furniture-types' %}show active{% endif %}"
+         id="furniture-types-pane" role="tabpanel" aria-labelledby="furniture-types-tab">
+        {% include 'beach/config/_furniture_types_tab.html' %}
+    </div>
+</div>
+
+<!-- Zone Settings Modal (shared) -->
+<div class="modal fade zone-settings-modal" id="zoneSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Configuración de Zona</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Ancho del Canvas</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="zone-canvas-width" min="400" max="3000" step="50">
+                            <span class="input-group-text">px</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Alto del Canvas</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="zone-canvas-height" min="200" max="2000" step="50">
+                            <span class="input-group-text">px</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Color de Fondo</label>
+                    <div class="d-flex gap-2 align-items-center">
+                        <input type="color" class="form-control form-control-color" id="zone-bg-color">
+                        <div class="color-preview" id="zone-bg-preview" style="width: 40px; height: 40px; border-radius: 4px; border: 1px solid #dee2e6;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-save-zone-settings">
+                    <i class="fas fa-save me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Type Modal (for furniture types) -->
+<div class="modal fade" id="deleteTypeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa-solid fa-exclamation-triangle text-danger"></i> Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de eliminar este tipo de mobiliario?</p>
+                <p class="text-muted small">
+                    <i class="fa-solid fa-info-circle"></i>
+                    Solo se puede eliminar si no hay mobiliario activo usando este tipo.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="delete-type-form" method="POST" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-trash"></i> Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/map-editor.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Track initialization state for each tab
+    const tabState = {
+        'map-editor': { initialized: false, editor: null },
+        'furniture-list': { initialized: false },
+        'furniture-types': { initialized: false, sortable: null }
+    };
+
+    // Initialize the active tab
+    const activeTab = '{{ active_tab }}';
+    initializeTab(activeTab);
+
+    // Handle tab shown events for lazy initialization
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+            const targetId = event.target.dataset.bsTarget.replace('#', '').replace('-pane', '');
+            initializeTab(targetId);
+
+            // Update URL without page reload for bookmarking
+            const url = new URL(window.location);
+            url.searchParams.set('tab', targetId);
+            window.history.replaceState({}, '', url);
+        });
+    });
+
+    function initializeTab(tabId) {
+        if (tabState[tabId]?.initialized) return;
+
+        console.log('Initializing tab:', tabId);
+
+        switch(tabId) {
+            case 'map-editor':
+                initMapEditor();
+                break;
+            case 'furniture-list':
+                initFurnitureList();
+                break;
+            case 'furniture-types':
+                initFurnitureTypes();
+                break;
+        }
+
+        tabState[tabId].initialized = true;
+    }
+
+    // ==========================================
+    // MAP EDITOR TAB
+    // ==========================================
+    function initMapEditor() {
+        const editor = new MapEditor('canvas-container', {
+            paletteId: 'palette',
+            propertiesPanelId: 'properties-panel',
+            apiBaseUrl: '/beach/config/map-editor',
+            snapToGrid: 25,
+            showRulers: true
+        });
+        tabState['map-editor'].editor = editor;
+
+        // Collapse palette
+        const editorContainer = document.getElementById('editor-container');
+        const btnCollapse = document.getElementById('btn-collapse-palette');
+
+        if (btnCollapse) {
+            btnCollapse.addEventListener('click', function() {
+                editorContainer.classList.toggle('palette-collapsed');
+                const icon = this.querySelector('i');
+                if (editorContainer.classList.contains('palette-collapsed')) {
+                    icon.classList.replace('fa-chevron-left', 'fa-chevron-right');
+                } else {
+                    icon.classList.replace('fa-chevron-right', 'fa-chevron-left');
+                }
+            });
+        }
+
+        // Zone selector
+        const zoneSelector = document.getElementById('zone-selector');
+        const btnZoneSettings = document.getElementById('btn-zone-settings');
+
+        if (zoneSelector) {
+            zoneSelector.addEventListener('change', function() {
+                const zoneId = this.value;
+                if (zoneId) {
+                    const option = this.options[this.selectedIndex];
+                    editor.loadZone(zoneId, {
+                        width: parseFloat(option.dataset.width) || 800,
+                        height: parseFloat(option.dataset.height) || 400,
+                        backgroundColor: option.dataset.bg || '#FAFAFA'
+                    });
+                    btnZoneSettings.disabled = false;
+                    document.getElementById('empty-canvas').classList.add('d-none');
+                } else {
+                    editor.clearCanvas();
+                    btnZoneSettings.disabled = true;
+                    document.getElementById('empty-canvas').classList.remove('d-none');
+                }
+            });
+        }
+
+        // Zone settings modal
+        if (btnZoneSettings) {
+            btnZoneSettings.addEventListener('click', function() {
+                const option = zoneSelector.options[zoneSelector.selectedIndex];
+                document.getElementById('zone-canvas-width').value = option.dataset.width || 800;
+                document.getElementById('zone-canvas-height').value = option.dataset.height || 400;
+                document.getElementById('zone-bg-color').value = option.dataset.bg || '#FAFAFA';
+                document.getElementById('zone-bg-preview').style.backgroundColor = option.dataset.bg || '#FAFAFA';
+                new bootstrap.Modal(document.getElementById('zoneSettingsModal')).show();
+            });
+        }
+
+        document.getElementById('zone-bg-color')?.addEventListener('input', function() {
+            document.getElementById('zone-bg-preview').style.backgroundColor = this.value;
+        });
+
+        document.getElementById('btn-save-zone-settings')?.addEventListener('click', async function() {
+            const zoneId = zoneSelector.value;
+            const width = document.getElementById('zone-canvas-width').value;
+            const height = document.getElementById('zone-canvas-height').value;
+            const bgColor = document.getElementById('zone-bg-color').value;
+
+            try {
+                const response = await fetch(`/beach/config/map-editor/zone/${zoneId}/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({
+                        canvas_width: parseFloat(width),
+                        canvas_height: parseFloat(height),
+                        background_color: bgColor
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    const option = zoneSelector.options[zoneSelector.selectedIndex];
+                    option.dataset.width = width;
+                    option.dataset.height = height;
+                    option.dataset.bg = bgColor;
+
+                    editor.loadZone(zoneId, {
+                        width: parseFloat(width),
+                        height: parseFloat(height),
+                        backgroundColor: bgColor
+                    });
+
+                    bootstrap.Modal.getInstance(document.getElementById('zoneSettingsModal')).hide();
+                    if (window.PuroBeach) window.PuroBeach.showToast('Configuración guardada', 'success');
+                }
+            } catch (error) {
+                console.error('Error saving zone settings:', error);
+                if (window.PuroBeach) window.PuroBeach.showToast('Error al guardar', 'error');
+            }
+        });
+
+        // Snap size buttons
+        document.querySelectorAll('[id^="btn-snap-"]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('[id^="btn-snap-"]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const snap = parseInt(this.id.replace('btn-snap-', ''));
+                editor.setSnapSize(snap);
+            });
+        });
+
+        // Grid toggle
+        document.getElementById('btn-toggle-grid')?.addEventListener('click', function() {
+            this.classList.toggle('active');
+            editor.toggleGrid();
+        });
+
+        // Center guides toggle
+        document.getElementById('btn-toggle-center')?.addEventListener('click', function() {
+            this.classList.toggle('active');
+            editor.toggleCenterGuides();
+        });
+
+        // Zoom controls
+        document.getElementById('btn-zoom-in')?.addEventListener('click', () => editor.zoomIn());
+        document.getElementById('btn-zoom-out')?.addEventListener('click', () => editor.zoomOut());
+        document.getElementById('btn-zoom-reset')?.addEventListener('click', () => editor.zoomReset());
+
+        // Save view
+        document.getElementById('btn-save-view')?.addEventListener('click', function() {
+            if (editor.saveCurrentView()) {
+                if (window.PuroBeach) window.PuroBeach.showToast('Vista guardada', 'success');
+            } else {
+                if (window.PuroBeach) window.PuroBeach.showToast('Error al guardar vista', 'error');
+            }
+        });
+
+        // Load saved view settings
+        const savedView = editor.getSavedView();
+        if (savedView) {
+            if (savedView.showGrid) {
+                document.getElementById('btn-toggle-grid')?.classList.add('active');
+                editor.showGrid = true;
+            }
+            if (savedView.showCenterGuides === false) {
+                document.getElementById('btn-toggle-center')?.classList.remove('active');
+                editor.showCenterGuides = false;
+            }
+            if (savedView.snapSize) {
+                document.querySelectorAll('[id^="btn-snap-"]').forEach(b => b.classList.remove('active'));
+                const snapBtn = document.getElementById(`btn-snap-${savedView.snapSize}`);
+                if (snapBtn) {
+                    snapBtn.classList.add('active');
+                    editor.setSnapSize(savedView.snapSize);
+                }
+            }
+        }
+
+        // Initialize zoom display
+        const zoomLevel = document.getElementById('zoom-level');
+        if (zoomLevel) zoomLevel.textContent = `${Math.round(editor.zoom * 100)}%`;
+
+        // Delete selected
+        document.getElementById('btn-delete-selected')?.addEventListener('click', function() {
+            if (confirm('¿Eliminar el elemento seleccionado?')) {
+                editor.deleteSelected();
+            }
+        });
+
+        // Properties panel close
+        document.getElementById('btn-close-properties')?.addEventListener('click', function() {
+            document.getElementById('properties-panel')?.classList.remove('active');
+            editor.deselectAll();
+        });
+
+        // Property inputs
+        ['prop-x', 'prop-y', 'prop-rotation', 'prop-capacity'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', function() {
+                const prop = id.replace('prop-', '');
+                let value = parseInt(this.value) || 0;
+                if (prop === 'x') editor.updateSelectedProperty('position_x', value);
+                else if (prop === 'y') editor.updateSelectedProperty('position_y', value);
+                else editor.updateSelectedProperty(prop, value);
+            });
+        });
+
+        // Load available features
+        let availableFeatures = [];
+        async function loadFeatures() {
+            try {
+                const response = await fetch('/beach/config/map-editor/features');
+                const result = await response.json();
+                if (result.success) {
+                    availableFeatures = result.features;
+                }
+            } catch (e) {
+                console.warn('Could not load features:', e);
+            }
+        }
+        loadFeatures();
+
+        // Render features in properties panel
+        function renderFeatures(selectedFeatures) {
+            const container = document.getElementById('prop-features');
+            if (!container) return;
+
+            const features = selectedFeatures ? (typeof selectedFeatures === 'string' ? JSON.parse(selectedFeatures) : selectedFeatures) : [];
+
+            container.innerHTML = availableFeatures.map(f => {
+                const isActive = features.includes(f.code);
+                return `<span class="feature-tag ${isActive ? 'active' : ''}" data-code="${f.code}">
+                    <i class="fas ${f.icon}"></i>${f.name}
+                </span>`;
+            }).join('');
+
+            container.querySelectorAll('.feature-tag').forEach(tag => {
+                tag.addEventListener('click', async function() {
+                    if (!editor.selectedItem) return;
+
+                    const code = this.dataset.code;
+                    let currentFeatures = editor.selectedItem.features ?
+                        (typeof editor.selectedItem.features === 'string' ?
+                            JSON.parse(editor.selectedItem.features) : editor.selectedItem.features) : [];
+
+                    if (currentFeatures.includes(code)) {
+                        currentFeatures = currentFeatures.filter(f => f !== code);
+                        this.classList.remove('active');
+                    } else {
+                        currentFeatures.push(code);
+                        this.classList.add('active');
+                    }
+
+                    const featuresJson = JSON.stringify(currentFeatures);
+                    editor.selectedItem.features = featuresJson;
+                    await editor.saveFurnitureProperty(editor.selectedItem.id, 'features', featuresJson);
+                });
+            });
+        }
+
+        // Duplicate functionality
+        async function duplicateFurniture(direction) {
+            if (!editor.selectedItem) return;
+
+            const count = parseInt(document.getElementById('prop-copies').value) || 1;
+            const spacing = parseInt(document.getElementById('prop-spacing').value) || 10;
+
+            try {
+                const response = await fetch(`/beach/config/map-editor/furniture/${editor.selectedItem.id}/duplicate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({
+                        direction: direction,
+                        spacing: spacing,
+                        count: count
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    const zoneId = document.getElementById('zone-selector').value;
+                    if (zoneId) {
+                        const option = document.getElementById('zone-selector').options[document.getElementById('zone-selector').selectedIndex];
+                        await editor.loadZone(zoneId, {
+                            width: parseFloat(option.dataset.width) || 2000,
+                            height: parseFloat(option.dataset.height) || 1000,
+                            backgroundColor: option.dataset.bg || '#FAFAFA'
+                        });
+                    }
+                    if (window.PuroBeach) window.PuroBeach.showToast(`${result.count} elementos creados`, 'success');
+                } else {
+                    if (window.PuroBeach) window.PuroBeach.showToast(result.error || 'Error al duplicar', 'error');
+                }
+            } catch (e) {
+                console.error('Error duplicating:', e);
+                if (window.PuroBeach) window.PuroBeach.showToast('Error al duplicar', 'error');
+            }
+        }
+
+        document.getElementById('btn-duplicate-h')?.addEventListener('click', () => duplicateFurniture('horizontal'));
+        document.getElementById('btn-duplicate-v')?.addEventListener('click', () => duplicateFurniture('vertical'));
+
+        // Editor events
+        editor.on('furnitureChanged', count => {
+            const el = document.getElementById('furniture-count');
+            if (el) el.textContent = count;
+        });
+
+        editor.on('selectionChanged', selected => {
+            if (selected) {
+                document.getElementById('prop-x').value = Math.round(selected.position_x);
+                document.getElementById('prop-y').value = Math.round(selected.position_y);
+                document.getElementById('prop-rotation').value = selected.rotation || 0;
+                document.getElementById('prop-capacity').value = selected.capacity || 2;
+                document.getElementById('prop-number').value = selected.number || '';
+                renderFeatures(selected.features);
+            }
+        });
+
+        editor.on('canvasLoaded', info => {
+            const el = document.getElementById('canvas-dimensions');
+            if (el) el.textContent = `${info.width} x ${info.height} px`;
+        });
+
+        editor.on('zoomChanged', zoom => {
+            const el = document.getElementById('zoom-level');
+            if (el) el.textContent = `${Math.round(zoom * 100)}%`;
+        });
+
+        editor.on('cursorMove', pos => {
+            const el = document.getElementById('cursor-pos');
+            if (el) el.textContent = pos ? `${pos.x}, ${pos.y}` : '-';
+        });
+
+        editor.on('itemMoved', pos => {
+            document.getElementById('prop-x').value = Math.round(pos.x);
+            document.getElementById('prop-y').value = Math.round(pos.y);
+        });
+    }
+
+    // ==========================================
+    // FURNITURE LIST TAB
+    // ==========================================
+    function initFurnitureList() {
+        // Furniture list is mostly server-rendered, minimal JS needed
+        console.log('Furniture list tab initialized');
+    }
+
+    // ==========================================
+    // FURNITURE TYPES TAB
+    // ==========================================
+    function initFurnitureTypes() {
+        // Initialize Sortable for drag-drop reordering
+        const listEl = document.getElementById('furniture-types-list');
+        if (listEl && typeof Sortable !== 'undefined') {
+            tabState['furniture-types'].sortable = new Sortable(listEl, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                filter: 'a',
+                preventOnFilter: false,
+                forceFallback: true,
+                onEnd: function(evt) {
+                    saveTypesOrder();
+                }
+            });
+
+            document.querySelectorAll('.drag-handle').forEach(handle => {
+                handle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            });
+        }
+
+        function saveTypesOrder() {
+            const items = document.querySelectorAll('#furniture-types-list li');
+            const typeIds = Array.from(items).map(item => parseInt(item.dataset.typeId));
+
+            fetch('{{ url_for("beach.beach_config.furniture_types_reorder") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ type_ids: typeIds })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Error reordering:', data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Initialize furniture type form if in edit/create mode
+        initFurnitureTypeForm();
+    }
+
+    function initFurnitureTypeForm() {
+        {% if mode %}
+        // Icon picker
+        document.querySelectorAll('.icon-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const icon = this.dataset.icon;
+                const iconInput = document.getElementById('icon');
+                const iconPreview = document.getElementById('icon-preview');
+                if (iconInput) iconInput.value = icon;
+                if (iconPreview) iconPreview.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+            });
+        });
+
+        // Color inputs sync
+        function syncColorInput(colorId, textId) {
+            const colorInput = document.getElementById(colorId);
+            const textInput = document.getElementById(textId);
+            if (colorInput && textInput) {
+                colorInput.addEventListener('input', function() {
+                    textInput.value = this.value;
+                    updateSvgPreview();
+                });
+            }
+        }
+        syncColorInput('default_color', 'default_color_text');
+        syncColorInput('fill_color', 'fill_color_text');
+        syncColorInput('stroke_color', 'stroke_color_text');
+
+        // Show/hide custom SVG field
+        const mapShapeSelect = document.getElementById('map_shape');
+        const customSvgWrapper = document.getElementById('custom_svg_wrapper');
+        if (mapShapeSelect) {
+            mapShapeSelect.addEventListener('change', function() {
+                if (customSvgWrapper) customSvgWrapper.style.display = this.value === 'custom' ? 'block' : 'none';
+                updateSvgPreview();
+            });
+            if (mapShapeSelect.value === 'custom' && customSvgWrapper) {
+                customSvgWrapper.style.display = 'block';
+            }
+        }
+
+        // Update SVG preview with debounce
+        let previewTimeout;
+        function updateSvgPreview() {
+            clearTimeout(previewTimeout);
+            previewTimeout = setTimeout(doUpdateSvgPreview, 300);
+        }
+
+        function doUpdateSvgPreview() {
+            const data = {
+                map_shape: document.getElementById('map_shape')?.value || 'rounded_rect',
+                default_width: parseFloat(document.getElementById('default_width')?.value) || 60,
+                default_height: parseFloat(document.getElementById('default_height')?.value) || 40,
+                border_radius: parseInt(document.getElementById('border_radius')?.value) || 5,
+                stroke_width: parseInt(document.getElementById('stroke_width')?.value) || 2,
+                fill_color: document.getElementById('fill_color')?.value || '#A0522D',
+                stroke_color: document.getElementById('stroke_color')?.value || '#654321',
+                custom_svg: document.getElementById('custom_svg')?.value || ''
+            };
+
+            fetch('{{ url_for("beach.beach_config.furniture_types_preview") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const preview = document.getElementById('svg-preview');
+                    if (preview) preview.innerHTML = data.preview;
+                }
+            })
+            .catch(error => console.error('Error updating preview:', error));
+        }
+
+        // Trigger preview update on field changes
+        ['map_shape', 'default_width', 'default_height', 'border_radius',
+         'stroke_width', 'fill_color', 'stroke_color', 'custom_svg'].forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('input', updateSvgPreview);
+                field.addEventListener('change', updateSvgPreview);
+            }
+        });
+
+        updateSvgPreview();
+
+        // Decorative toggle
+        const decorativeCheckbox = document.getElementById('is_decorative');
+        if (decorativeCheckbox) {
+            decorativeCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    document.getElementById('min_capacity').value = 0;
+                    document.getElementById('max_capacity').value = 0;
+                    document.getElementById('default_capacity').value = 0;
+                }
+            });
+        }
+        {% endif %}
+    }
+});
+</script>
+{% endblock %}

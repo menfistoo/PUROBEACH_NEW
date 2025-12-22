@@ -1,0 +1,135 @@
+{# Furniture Types Tab Content #}
+<div class="p-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0"><i class="fa-solid fa-shapes me-2"></i>Tipos de Mobiliario</h5>
+        {% if not mode %}
+        <a href="{{ url_for('beach.beach_config.furniture_manager', tab='furniture-types', create=1) }}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Nuevo Tipo
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        {# Left Panel: List (30%) #}
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span><i class="fa-solid fa-list"></i> Tipos</span>
+                    <small class="text-muted">
+                        <i class="fa-solid fa-grip-vertical"></i> Arrastra para reordenar
+                    </small>
+                </div>
+                <div class="card-body p-0">
+                    {% if furniture_types_all %}
+                    <ul class="list-group list-group-flush" id="furniture-types-list">
+                        {% for ft in furniture_types_all %}
+                        <li class="list-group-item list-group-item-action d-flex align-items-center {% if selected_type and selected_type.id == ft.id %}active{% endif %}"
+                            data-type-id="{{ ft.id }}">
+                            <span class="drag-handle me-2 text-muted">
+                                <i class="fa-solid fa-grip-vertical"></i>
+                            </span>
+                            <a href="{{ url_for('beach.beach_config.furniture_manager', tab='furniture-types', type_id=ft.id) }}"
+                               class="d-flex align-items-center flex-grow-1 text-decoration-none {% if selected_type and selected_type.id == ft.id %}text-white{% else %}text-body{% endif %}">
+                                <span class="me-2" style="width: 28px; text-align: center;">
+                                    <i class="fa-solid {{ ft.icon or 'fa-umbrella-beach' }}"
+                                       style="color: {% if selected_type and selected_type.id == ft.id %}#fff{% else %}{{ ft.default_color or '#A0522D' }}{% endif %};"></i>
+                                </span>
+                                <span class="flex-grow-1">
+                                    <span class="fw-medium">{{ ft.display_name }}</span>
+                                    <small class="d-block text-{% if selected_type and selected_type.id == ft.id %}white-50{% else %}muted{% endif %}">
+                                        {{ ft.type_code }}
+                                        {% if ft.is_decorative %}<i class="fa-solid fa-tree ms-1" title="Decorativo"></i>{% endif %}
+                                        {% if ft.is_suite_only %}<i class="fa-solid fa-crown ms-1" title="Solo Suites"></i>{% endif %}
+                                    </small>
+                                </span>
+                                <span class="d-flex align-items-center gap-2">
+                                    <span class="badge {% if ft.active %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {{ ft.furniture_count or 0 }}
+                                    </span>
+                                </span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fa-solid fa-shapes fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No hay tipos configurados</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Right Panel: Form or Empty State (70%) #}
+        <div class="col-lg-8">
+            {% if mode %}
+            <div class="card">
+                <div class="card-header py-2">
+                    {% if mode == 'create' %}
+                    <i class="fa-solid fa-plus-circle"></i> Crear Nuevo Tipo
+                    {% else %}
+                    <i class="fa-solid fa-edit"></i> Editar: {{ selected_type.display_name }}
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% include 'beach/config/_furniture_type_form.html' %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fa-solid fa-hand-pointer fa-3x text-muted mb-3"></i>
+                    <h5>Selecciona un tipo para editar</h5>
+                    <p class="text-muted mb-4">
+                        Haz clic en un tipo de la lista o crea uno nuevo
+                    </p>
+                    <a href="{{ url_for('beach.beach_config.furniture_manager', tab='furniture-types', create=1) }}" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-plus"></i> Crear Nuevo Tipo
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+#furniture-types-list .list-group-item {
+    padding: 0.5rem 0.75rem;
+    transition: background-color 0.15s;
+}
+#furniture-types-list .list-group-item:hover:not(.active) {
+    background-color: rgba(0,0,0,0.02);
+}
+#furniture-types-list .drag-handle {
+    opacity: 0.4;
+    transition: opacity 0.15s;
+    cursor: grab;
+    padding: 0.25rem;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+#furniture-types-list .drag-handle:active {
+    cursor: grabbing;
+}
+#furniture-types-list .list-group-item:hover .drag-handle {
+    opacity: 1;
+}
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #f8f9fa !important;
+}
+.sortable-chosen {
+    background-color: #e9ecef !important;
+}
+#svg-preview svg {
+    max-width: 100%;
+    height: auto;
+}
+.accordion-button:not(.collapsed) {
+    background-color: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary);
+}
+</style>

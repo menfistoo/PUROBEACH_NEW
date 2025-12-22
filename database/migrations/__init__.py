@@ -26,6 +26,7 @@ from .permissions import (
     migrate_add_map_editor_permission
 )
 from .zones import migrate_zone_canvas_properties
+from .furniture_manager_menu import migrate_furniture_manager_menu
 
 
 # Ordered list of all migrations
@@ -54,6 +55,9 @@ MIGRATIONS = [
 
     # Phase 6: Zone properties
     ('zone_canvas_properties', migrate_zone_canvas_properties),
+
+    # Phase 7: UI consolidation
+    ('furniture_manager_menu', migrate_furniture_manager_menu),
 ]
 
 
@@ -128,4 +132,5 @@ __all__ = [
     'migrate_add_map_edit_permission',
     'migrate_add_map_editor_permission',
     'migrate_zone_canvas_properties',
+    'migrate_furniture_manager_menu',
 ]
