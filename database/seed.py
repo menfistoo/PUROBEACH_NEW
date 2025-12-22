@@ -227,25 +227,23 @@ def seed_database(db):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (number, zone_id, furn_type, capacity, x, y, rotation, width, height, features))
 
-    # 10. Create Reservation States
+    # 10. Create Reservation States (5 core states with full properties)
+    # (code, name, color, icon, is_releasing, display_order, priority, incident, system, default)
     states_data = [
-        ('pendiente', 'Pendiente', '#FFC107', 'fa-clock', 0, 1),
-        ('confirmada', 'Confirmada', '#0066CC', 'fa-check-circle', 0, 2),
-        ('checkin', 'Check-in', '#17A2B8', 'fa-user-check', 0, 3),
-        ('activa', 'Activa', '#28A745', 'fa-play-circle', 0, 4),
-        ('sentada', 'Sentada', '#28A745', 'fa-couch', 0, 5),
-        ('completada', 'Completada', '#6C757D', 'fa-check-double', 0, 6),
-        ('cancelada', 'Cancelada', '#DC3545', 'fa-times-circle', 1, 7),
-        ('noshow', 'No-Show', '#FD7E14', 'fa-user-times', 1, 8),
-        ('liberada', 'Liberada', '#6C757D', 'fa-unlock', 1, 9)
+        ('confirmada', 'Confirmada', '#28A745', 'fa-check-circle', 0, 1, 3, 0, 1, 1),
+        ('sentada', 'Sentada', '#2E8B57', 'fa-couch', 0, 2, 6, 0, 1, 0),
+        ('cancelada', 'Cancelada', '#DC3545', 'fa-times-circle', 1, 3, 0, 0, 1, 0),
+        ('noshow', 'No-Show', '#FF4444', 'fa-user-times', 1, 4, 0, 1, 1, 0),
+        ('liberada', 'Liberada', '#6C757D', 'fa-unlock', 1, 5, 0, 0, 1, 0),
     ]
 
-    for code, name, color, icon, is_releasing, display_order in states_data:
+    for code, name, color, icon, is_releasing, display_order, priority, incident, is_system, is_default in states_data:
         db.execute('''
             INSERT INTO beach_reservation_states
-            (code, name, color, icon, is_availability_releasing, display_order)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (code, name, color, icon, is_releasing, display_order))
+            (code, name, color, icon, is_availability_releasing, display_order,
+             display_priority, creates_incident, is_system, is_default)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (code, name, color, icon, is_releasing, display_order, priority, incident, is_system, is_default))
 
     # 11. Create Customer Preferences
     preferences_data = [

@@ -272,6 +272,10 @@ def create_tables(db):
             icon TEXT,
             is_availability_releasing INTEGER DEFAULT 0,
             display_order INTEGER DEFAULT 0,
+            display_priority INTEGER DEFAULT 0,
+            creates_incident INTEGER DEFAULT 0,
+            is_system INTEGER DEFAULT 0,
+            is_default INTEGER DEFAULT 0,
             active INTEGER DEFAULT 1
         )
     ''')

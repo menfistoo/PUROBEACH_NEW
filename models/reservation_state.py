@@ -1,27 +1,18 @@
 """
 Reservation state management functions.
 Handles state transitions, history, and color calculations.
+
+State properties are now fully configurable via the database.
+Use models/state.py for state CRUD operations and property lookups.
 """
 
 from database import get_db
-
-
-# =============================================================================
-# CONSTANTS
-# =============================================================================
-
-RESERVATION_STATE_DISPLAY_PRIORITY = {
-    'Activa': 7,       # Highest priority - customer is present
-    'Sentada': 6,      # Customer physically at the beach
-    'Cobrada': 5,      # Payment received
-    'Check-in': 4,     # Customer arrived
-    'Confirmada': 3,   # Confirmed reservation
-    'Pendiente': 2,    # Pending confirmation
-    'Completada': 1,   # Session completed
-    'Cancelada': 0,    # Cancelled
-    'No-Show': 0,      # No show
-    'Liberada': 0      # Released/freed
-}
+from models.state import (
+    get_state_priority_map,
+    get_default_state,
+    get_state_by_name,
+    get_incident_states,
+)
 
 
 # =============================================================================
@@ -123,9 +114,10 @@ def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
             VALUES (?, ?, 'added', ?, ?, CURRENT_TIMESTAMP)
         ''', (reservation_id, state_type, changed_by, notes))
 
-        # Auto-create incident for No-Show
-        if state_type == 'No-Show':
-            _create_noshow_incident(cursor, customer_id, reservation_id, changed_by)
+        # Auto-create incident for states with creates_incident=1
+        state_info = get_state_by_name(state_type)
+        if state_info and state_info.get('creates_incident'):
+            _create_state_incident(cursor, customer_id, reservation_id, changed_by, state_type)
 
         db.commit()
 
@@ -277,12 +269,10 @@ def cancel_beach_reservation(reservation_id: int, cancelled_by: str, notes: str 
 
 def calculate_reservation_color(current_states_str: str) -> str:
     """
-    Calculate display color based on states.
+    Calculate display color based on states using database priorities.
 
-    Priority rules:
-    1. If has Cobrada -> Cobrada color
-    2. If has Cancelada/No-Show -> respective color
-    3. Else -> highest priority state color
+    Uses display_priority from beach_reservation_states table.
+    Higher priority states determine the displayed color.
 
     Args:
         current_states_str: CSV of states
@@ -292,27 +282,25 @@ def calculate_reservation_color(current_states_str: str) -> str:
     """
     states_list = [s.strip() for s in current_states_str.split(',') if s.strip()]
 
-    # Priority color checks
-    if 'Cobrada' in states_list:
-        return _get_state_color('Cobrada')
-    if 'Cancelada' in states_list:
-        return _get_state_color('Cancelada')
-    if 'No-Show' in states_list:
-        return _get_state_color('No-Show')
+    if not states_list:
+        return '#CCCCCC'  # Default
 
-    # Use highest priority state
-    if states_list:
-        top_state = max(states_list, key=lambda s: RESERVATION_STATE_DISPLAY_PRIORITY.get(s, 0))
-        return _get_state_color(top_state)
+    # Get priority map from database
+    priority_map = get_state_priority_map()
 
-    return '#CCCCCC'  # Default
+    # Find highest priority state
+    top_state = max(states_list, key=lambda s: priority_map.get(s, 0))
+    return _get_state_color(top_state)
 
 
 def _get_highest_priority_state(states_list: list) -> str:
     """Get state with highest display priority from list."""
     if not states_list:
-        return 'Confirmada'
-    return max(states_list, key=lambda s: RESERVATION_STATE_DISPLAY_PRIORITY.get(s, 0))
+        default = get_default_state()
+        return default.get('name', 'Confirmada')
+
+    priority_map = get_state_priority_map()
+    return max(states_list, key=lambda s: priority_map.get(s, 0))
 
 
 def _get_state_color(state_name: str) -> str:
@@ -324,16 +312,18 @@ def _get_state_color(state_name: str) -> str:
     return row['color'] if row else '#CCCCCC'
 
 
-def _create_noshow_incident(cursor, customer_id: int, reservation_id: int, reported_by: str):
-    """Create automatic incident for No-Show."""
+def _create_state_incident(cursor, customer_id: int, reservation_id: int, reported_by: str, state_type: str):
+    """Create automatic incident for states with creates_incident=1."""
     # Check if beach_customer_incidents table exists
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='beach_customer_incidents'")
     if cursor.fetchone():
+        incident_type = state_type.lower().replace('-', '_').replace(' ', '_')
         cursor.execute('''
             INSERT INTO beach_customer_incidents
             (customer_id, description, incident_type, reservation_id, reported_by, created_at)
-            VALUES (?, ?, 'no_show', ?, ?, CURRENT_TIMESTAMP)
-        ''', (customer_id, f'No-Show automatico para reserva {reservation_id}', reservation_id, reported_by))
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ''', (customer_id, f'{state_type} automatico para reserva {reservation_id}',
+              incident_type, reservation_id, reported_by))
 
 
 # =============================================================================

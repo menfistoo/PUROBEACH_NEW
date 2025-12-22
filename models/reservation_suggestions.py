@@ -692,16 +692,23 @@ def get_customer_preferred_furniture(customer_id: int, limit: int = 5) -> list:
     db = get_db()
     cursor = db.cursor()
 
-    cursor.execute('''
+    # Get releasing states dynamically from database
+    releasing_states = get_active_releasing_states()
+    if not releasing_states:
+        releasing_states = ['Cancelada', 'No-Show', 'Liberada']  # Fallback
+
+    placeholders = ','.join('?' * len(releasing_states))
+    query = f'''
         SELECT f.id, f.number, COUNT(*) as usage_count
         FROM beach_reservation_furniture rf
         JOIN beach_reservations r ON rf.reservation_id = r.id
         JOIN beach_furniture f ON rf.furniture_id = f.id
         WHERE r.customer_id = ?
-          AND r.current_state NOT IN ('Cancelada', 'No-Show')
+          AND r.current_state NOT IN ({placeholders})
         GROUP BY f.id
         ORDER BY usage_count DESC
         LIMIT ?
-    ''', (customer_id, limit))
+    '''
+    cursor.execute(query, [customer_id] + releasing_states + [limit])
 
     return [dict(row) for row in cursor.fetchall()]

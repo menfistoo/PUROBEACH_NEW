@@ -21,6 +21,7 @@ from database.migrations import (
     migrate_add_sentada_state,
     migrate_customers_extended_stats,
     migrate_add_furniture_types_menu,
+    migrate_reservation_states_configurable,
 )
 from database.schema import drop_tables, create_tables, create_indexes
 from database.seed import seed_database
@@ -40,6 +41,7 @@ __all__ = [
     'migrate_add_sentada_state',
     'migrate_customers_extended_stats',
     'migrate_add_furniture_types_menu',
+    'migrate_reservation_states_configurable',
     # Schema
     'drop_tables',
     'create_tables',

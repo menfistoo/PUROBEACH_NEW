@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% set page_title = "Estados de Reserva" %}
+
+{% block title %}Estados de Reserva - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0"><i class="fa-solid fa-toggle-on"></i> Estados de Reserva</h2>
+        {% if show_inactive %}
+        <small class="text-muted">Mostrando estados inactivos</small>
+        {% endif %}
+    </div>
+    <div class="d-flex gap-2">
+        {% if show_inactive %}
+        <a href="{{ url_for('beach.beach_config.states') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-eye-slash"></i> Ocultar Inactivos
+        </a>
+        {% else %}
+        <a href="{{ url_for('beach.beach_config.states', show_inactive='1') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-eye"></i> Ver Inactivos
+        </a>
+        {% endif %}
+        <a href="{{ url_for('beach.beach_config.states_create') }}" class="btn btn-primary">
+            <i class="fa-solid fa-plus"></i> Nuevo Estado
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if states %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;" class="text-center">Color</th>
+                        <th class="text-center">Nombre</th>
+                        <th style="width: 120px;" class="text-center">Libera Disp.</th>
+                        <th style="width: 100px;" class="text-center">Sistema</th>
+                        <th style="width: 80px;" class="text-center">Estado</th>
+                        <th style="width: 120px;" class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for state in states %}
+                    <tr class="{% if not state.active %}table-secondary{% endif %}">
+                        <td class="text-center">
+                            <span class="badge" style="background-color: {{ state.color }}; min-width: 40px; font-size: 0.9rem;">
+                                &nbsp;
+                            </span>
+                        </td>
+                        <td class="text-center"><strong>{{ state.name }}</strong></td>
+                        <td class="text-center">
+                            {% if state.is_availability_releasing %}
+                            <i class="fa-solid fa-check text-success" title="Libera disponibilidad"></i>
+                            {% else %}
+                            <i class="fa-solid fa-times text-muted"></i>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if state.is_system %}
+                            <i class="fa-solid fa-lock text-primary" title="Estado del sistema"></i>
+                            {% else %}
+                            <i class="fa-solid fa-unlock text-muted" title="Estado personalizado"></i>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if state.active %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ url_for('beach.beach_config.states_edit', state_id=state.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="Editar">
+                                <i class="fa-solid fa-edit"></i>
+                            </a>
+                            {% if not state.is_system %}
+                            <form method="POST" action="{{ url_for('beach.beach_config.states_delete', state_id=state.id) }}"
+                                  class="d-inline" onsubmit="return confirm('¿Eliminar estado {{ state.name }}?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fa-solid fa-toggle-on fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No hay estados configurados</p>
+            <a href="{{ url_for('beach.beach_config.states_create') }}" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Crear primer estado
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fa-solid fa-info-circle"></i> Como funcionan los estados</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-2">Los estados controlan el ciclo de vida de las reservas:</p>
+        <ul class="mb-0">
+            <li><strong>Libera Disponibilidad:</strong> El mobiliario queda libre para nuevas reservas (ej: Cancelada, No-Show)</li>
+            <li><strong>Sistema:</strong> Los estados con <i class="fa-solid fa-lock"></i> no se pueden eliminar</li>
+            <li><strong>Estado por defecto:</strong> Se asigna automaticamente al crear nuevas reservas</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

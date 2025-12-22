@@ -19,8 +19,6 @@ Phase 6B: Availability + Multi-day + Suggestions
 
 # State management
 from .reservation_state import (
-    # Constants
-    RESERVATION_STATE_DISPLAY_PRIORITY,
     # State queries
     get_reservation_states,
     get_active_releasing_states,

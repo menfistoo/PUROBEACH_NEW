@@ -20,6 +20,7 @@ from .reservation_availability import (
     check_furniture_availability_bulk,
     check_duplicate_reservation
 )
+from .state import get_default_state
 
 
 # =============================================================================
@@ -132,6 +133,10 @@ def create_linked_multiday_reservations(
     db = get_db()
     cursor = db.cursor()
 
+    # Get default state from database
+    default_state = get_default_state()
+    initial_state = default_state.get('name', 'Confirmada')
+
     try:
         cursor.execute('BEGIN IMMEDIATE')
 
@@ -156,7 +161,7 @@ def create_linked_multiday_reservations(
                         parent_reservation_id, reservation_type, created_by, created_at
                     ) VALUES (
                         ?, ?, ?, ?, ?,
-                        ?, ?, 'Confirmada', 'Confirmada',
+                        ?, ?, ?, ?,
                         ?, ?, ?, ?,
                         ?, ?, ?,
                         ?, ?,
@@ -164,7 +169,7 @@ def create_linked_multiday_reservations(
                     )
                 ''', (
                     customer_id, ticket_number, date, dates[0], dates[-1],
-                    num_people, time_slot,
+                    num_people, time_slot, initial_state, initial_state,
                     payment_status, price, charge_to_room, charge_reference,
                     hamaca_included, preferences, observations,
                     check_in_date, check_out_date,
@@ -178,8 +183,8 @@ def create_linked_multiday_reservations(
                 cursor.execute('''
                     INSERT INTO reservation_status_history
                     (reservation_id, status_type, action, changed_by, notes, created_at)
-                    VALUES (?, 'Confirmada', 'added', ?, 'Creacion de reserva multi-dia (parent)', CURRENT_TIMESTAMP)
-                ''', (parent_id, created_by))
+                    VALUES (?, ?, 'added', ?, 'Creacion de reserva multi-dia (parent)', CURRENT_TIMESTAMP)
+                ''', (parent_id, initial_state, created_by))
 
             else:
                 # Following dates: create child reservations
@@ -195,7 +200,7 @@ def create_linked_multiday_reservations(
                         parent_reservation_id, reservation_type, created_by, created_at
                     ) VALUES (
                         ?, ?, ?, ?, ?,
-                        ?, ?, 'Confirmada', 'Confirmada',
+                        ?, ?, ?, ?,
                         ?, ?, ?, ?,
                         ?, ?, ?,
                         ?, ?,
@@ -203,7 +208,7 @@ def create_linked_multiday_reservations(
                     )
                 ''', (
                     customer_id, child_ticket, date, dates[0], dates[-1],
-                    num_people, time_slot,
+                    num_people, time_slot, initial_state, initial_state,
                     payment_status, price, charge_to_room, charge_reference,
                     hamaca_included, preferences, observations,
                     check_in_date, check_out_date,
@@ -216,8 +221,8 @@ def create_linked_multiday_reservations(
                 cursor.execute('''
                     INSERT INTO reservation_status_history
                     (reservation_id, status_type, action, changed_by, notes, created_at)
-                    VALUES (?, 'Confirmada', 'added', ?, 'Creacion de reserva multi-dia (child)', CURRENT_TIMESTAMP)
-                ''', (child_id, created_by))
+                    VALUES (?, ?, 'added', ?, 'Creacion de reserva multi-dia (child)', CURRENT_TIMESTAMP)
+                ''', (child_id, initial_state, created_by))
 
                 children.append({
                     'id': child_id,

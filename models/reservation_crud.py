@@ -6,6 +6,7 @@ Handles create, read, update, delete for reservations.
 from database import get_db
 from datetime import datetime
 from .reservation_state import calculate_reservation_color, update_customer_statistics
+from .state import get_default_state
 
 
 # =============================================================================
@@ -158,6 +159,10 @@ def create_beach_reservation(
         if not ticket_number:
             ticket_number = generate_reservation_number(reservation_date, cursor)
 
+        # Get default state from database
+        default_state = get_default_state()
+        initial_state = default_state.get('name', 'Confirmada')
+
         # Insert reservation
         cursor.execute('''
             INSERT INTO beach_reservations (
@@ -170,7 +175,7 @@ def create_beach_reservation(
                 parent_reservation_id, reservation_type, created_by, created_at
             ) VALUES (
                 ?, ?, ?, ?, ?,
-                ?, ?, 'Confirmada', 'Confirmada',
+                ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?,
                 ?, ?,
                 ?, ?,
@@ -179,7 +184,7 @@ def create_beach_reservation(
             )
         ''', (
             customer_id, ticket_number, reservation_date, reservation_date, reservation_date,
-            num_people, time_slot,
+            num_people, time_slot, initial_state, initial_state,
             payment_status, price, final_price, hamaca_included, price_catalog_id, paid,
             charge_to_room, charge_reference,
             minimum_consumption_amount, minimum_consumption_policy_id,
@@ -202,8 +207,8 @@ def create_beach_reservation(
         cursor.execute('''
             INSERT INTO reservation_status_history
             (reservation_id, status_type, action, changed_by, notes, created_at)
-            VALUES (?, 'Confirmada', 'added', ?, 'Creacion de reserva', CURRENT_TIMESTAMP)
-        ''', (reservation_id, created_by))
+            VALUES (?, ?, 'added', ?, 'Creacion de reserva', CURRENT_TIMESTAMP)
+        ''', (reservation_id, initial_state, created_by))
 
         db.commit()
 
