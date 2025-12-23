@@ -6,6 +6,7 @@
 {% block title %}Mapa - PuroBeach{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/customer-search.css') }}">
 <style>
 /* =============================================================================
    MOBILE-FIRST MAP PAGE LAYOUT
@@ -393,18 +394,33 @@
 .bottom-action-bar {
     position: fixed;
     bottom: 0;
-    left: 0;
+    left: var(--sidebar-width, 260px);
     right: 0;
     background: white;
-    border-top: 3px solid var(--color-primary);
-    padding: 12px 16px;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    border-top: 2px solid var(--color-primary);
+    padding: 10px 16px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
     transform: translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s, left 0.3s ease;
     z-index: 100;
     visibility: hidden;
     pointer-events: none;
+}
+
+/* Adjust footer when sidebar is collapsed */
+html.sidebar-collapsed .bottom-action-bar {
+    left: var(--sidebar-collapsed-width, 70px);
+}
+
+/* On mobile, footer goes full width */
+@media (max-width: 991px) {
+    .bottom-action-bar {
+        left: 0;
+    }
+    html.sidebar-collapsed .bottom-action-bar {
+        left: 0;
+    }
 }
 
 .bottom-action-bar.show {
@@ -416,25 +432,26 @@
 .selection-summary {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 10px;
 }
 
 .selected-items {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    flex: 1;
+    justify-content: center;
 }
 
 .selection-chip {
     display: inline-flex;
     align-items: center;
-    padding: 4px 10px;
+    padding: 5px 12px;
     background: var(--color-accent);
-    border: 1px solid var(--color-primary);
-    border-radius: 16px;
-    font-size: 12px;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 20px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--color-secondary);
 }
@@ -442,7 +459,8 @@
 .selection-chip .remove-chip {
     margin-left: 6px;
     cursor: pointer;
-    opacity: 0.7;
+    opacity: 0.6;
+    font-size: 10px;
 }
 
 .selection-chip .remove-chip:hover {
@@ -453,39 +471,45 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--color-text-muted);
     white-space: nowrap;
-    margin-left: 12px;
+    background: var(--color-accent);
+    padding: 5px 12px;
+    border-radius: 20px;
 }
 
 .selection-actions {
     display: flex;
-    gap: 8px;
+    justify-content: center;
+    gap: 10px;
 }
 
 .btn-clear {
     width: 44px;
     height: 44px;
-    border-radius: 12px;
-    border: 1px solid var(--color-border);
+    border-radius: 22px;
+    border: 1.5px solid var(--color-border);
     background: white;
     color: var(--color-text-muted);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 14px;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .btn-clear:hover {
-    border-color: var(--color-danger);
-    color: var(--color-danger);
+    border-color: var(--color-error);
+    color: var(--color-error);
+    background: rgba(193, 68, 79, 0.05);
 }
 
 .btn-reserve {
-    flex: 1;
+    flex: 0 1 auto;
+    min-width: 140px;
     padding: 12px 20px;
     background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
     color: white;
@@ -1117,10 +1141,11 @@
             <span id="total-capacity">0</span> pers
         </div>
     </div>
-    <div class="selection-actions">
+    <div class="selection-actions" id="selection-actions">
         <button type="button" class="btn-clear" id="btn-clear-selection" title="Limpiar seleccion">
             <i class="fas fa-times"></i>
         </button>
+        <!-- Action button changes based on selection type -->
         <button type="button" class="btn-reserve" id="btn-new-reservation">
             <i class="fas fa-calendar-plus"></i>
             <span>Reservar</span>
@@ -1157,27 +1182,82 @@
         <!-- Customer search -->
         <div class="form-group">
             <label>Cliente</label>
-            <div class="customer-search-input">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="Buscar por nombre o habitacion..."
-                       id="sheet-customer-search" autocomplete="off">
-            </div>
-            <input type="hidden" id="sheet-customer-id">
-            <div class="customer-results" id="sheet-customer-results">
-                <!-- Results populated dynamically -->
+            <div class="customer-search-wrapper" style="position: relative;">
+                <div class="customer-search-input">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Buscar por nombre o habitacion..."
+                           id="sheet-customer-search" autocomplete="off">
+                </div>
+                <input type="hidden" id="sheet-customer-id">
+                <div class="cs-results cs-compact" id="sheet-customer-results">
+                    <!-- Results populated by CustomerSearch component -->
+                </div>
             </div>
         </div>
 
-        <!-- Quick details -->
-        <div class="form-row">
-            <div class="form-group">
-                <label>Personas</label>
-                <input type="number" class="form-control" id="sheet-num-people" value="2" min="1" max="20">
+        <!-- People count -->
+        <div class="form-group">
+            <label>Personas</label>
+            <input type="number" class="form-control" id="sheet-num-people" value="2" min="1" max="20">
+        </div>
+
+        <!-- Dates -->
+        <div class="form-group">
+            <label>Fechas</label>
+            <div id="sheet-dates-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                <input type="date" class="form-control" id="sheet-start-date" style="flex: 1; min-width: 140px;">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-add-date" style="white-space: nowrap;">
+                    <i class="fas fa-plus"></i> Dias
+                </button>
             </div>
-            <div class="form-group">
-                <label>Fecha</label>
-                <input type="text" class="form-control" id="sheet-date" readonly>
+            <div id="sheet-selected-dates" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+                <!-- Selected additional dates as removable chips -->
             </div>
+            <input type="hidden" id="sheet-dates-list">
+        </div>
+
+        <!-- Time slot -->
+        <div class="form-group">
+            <label>Horario</label>
+            <div class="time-slot-toggle" style="display: flex; gap: 8px;">
+                <button type="button" class="time-slot-btn active" data-slot="all_day"
+                    style="flex: 1; padding: 10px; border: 1px solid #dee2e6; border-radius: 8px; background: white; cursor: pointer; font-size: 13px; transition: all 0.2s;">
+                    <i class="fas fa-sun me-1"></i> Todo el dia
+                </button>
+                <button type="button" class="time-slot-btn" data-slot="morning"
+                    style="flex: 1; padding: 10px; border: 1px solid #dee2e6; border-radius: 8px; background: white; cursor: pointer; font-size: 13px; transition: all 0.2s;">
+                    <i class="fas fa-cloud-sun me-1"></i> Manana
+                </button>
+                <button type="button" class="time-slot-btn" data-slot="afternoon"
+                    style="flex: 1; padding: 10px; border: 1px solid #dee2e6; border-radius: 8px; background: white; cursor: pointer; font-size: 13px; transition: all 0.2s;">
+                    <i class="fas fa-cloud-moon me-1"></i> Tarde
+                </button>
+            </div>
+            <input type="hidden" id="sheet-time-slot" value="all_day">
+        </div>
+
+        <!-- Quick preferences -->
+        <div class="form-group">
+            <label>Preferencias</label>
+            <div class="preference-chips" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <button type="button" class="pref-chip" data-pref="pref_primera_linea"
+                    style="padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 20px; background: white; cursor: pointer; font-size: 12px; transition: all 0.2s;">
+                    <i class="fas fa-water me-1"></i> Primera linea
+                </button>
+                <button type="button" class="pref-chip" data-pref="pref_sombra"
+                    style="padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 20px; background: white; cursor: pointer; font-size: 12px; transition: all 0.2s;">
+                    <i class="fas fa-umbrella-beach me-1"></i> Sombra
+                </button>
+                <button type="button" class="pref-chip" data-pref="pref_cerca_piscina"
+                    style="padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 20px; background: white; cursor: pointer; font-size: 12px; transition: all 0.2s;">
+                    <i class="fas fa-swimming-pool me-1"></i> Cerca piscina
+                </button>
+                <button type="button" class="pref-chip" data-pref="pref_cerca_bar"
+                    style="padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 20px; background: white; cursor: pointer; font-size: 12px; transition: all 0.2s;">
+                    <i class="fas fa-cocktail me-1"></i> Cerca bar
+                </button>
+            </div>
+            <input type="hidden" id="sheet-preferences">
         </div>
 
         <!-- Notes (collapsible) -->
@@ -1238,8 +1318,11 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/map.js') }}"></script>
-<script>
+<script src="{{ url_for('static', filename='js/customer-search.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map/touch-handler.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map/action-sheet.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/map/index.js') }}"></script>
+<script type="module">
 document.addEventListener('DOMContentLoaded', function() {
     // ==========================================================================
     // INITIALIZE MAP
@@ -1249,6 +1332,578 @@ document.addEventListener('DOMContentLoaded', function() {
         initialDate: new Date().toISOString().split('T')[0],
         enableZoom: true
     });
+
+    // ==========================================================================
+    // TOUCH HANDLER & ACTION SHEET FOR RESERVATION DETAILS
+    // ==========================================================================
+    const mapContainer = document.getElementById('map-container');
+    let reservationActionSheet = null;
+
+    // Initialize touch handler for long-press detection
+    const touchHandler = new TouchHandler(mapContainer, {
+        longPressDelay: 500,
+        vibrate: true
+    });
+
+    touchHandler.onLongPress(async (event) => {
+        const { furnitureId, clientX, clientY } = event;
+
+        // Check if furniture is occupied
+        const data = map.getData();
+        const availability = data.availability[furnitureId];
+
+        if (availability && !availability.available) {
+            // Occupied furniture - show reservation details
+            await showReservationActionSheet(furnitureId, availability);
+        } else {
+            // Available furniture - select it and open quick reservation
+            map.clearSelection();
+            map.selectFurniture(furnitureId, true);
+            updateSelectionBar();
+            openReservationSheet();
+        }
+    });
+
+    // Create action sheet on first use
+    function getActionSheet() {
+        if (!reservationActionSheet) {
+            reservationActionSheet = new ActionSheet({
+                maxHeight: '80vh',
+                backdropClose: true
+            });
+        }
+        return reservationActionSheet;
+    }
+
+    // Show reservation details in action sheet
+    async function showReservationActionSheet(furnitureId, availability) {
+        const sheet = getActionSheet();
+
+        try {
+            // Fetch full reservation details
+            const response = await fetch(`/beach/api/map/furniture/${furnitureId}/details?date=${map.getCurrentDate()}`);
+            const data = await response.json();
+
+            if (!data.success || !data.reservation) {
+                console.error('No reservation data');
+                return;
+            }
+
+            const res = data.reservation;
+            const customer = data.customer || {};
+            const furniture = data.furniture || {};
+
+            // Auto-select all furniture from this reservation for the current date
+            map.clearSelection();
+            if (res.furniture && res.furniture.length > 0) {
+                const currentDate = map.getCurrentDate(); // Format: YYYY-MM-DD
+                res.furniture
+                    .filter(f => {
+                        // Convert API date format "Tue, 23 Dec 2025 00:00:00 GMT" to "YYYY-MM-DD"
+                        const assignDate = new Date(f.assignment_date).toISOString().split('T')[0];
+                        return assignDate === currentDate;
+                    })
+                    .forEach(f => {
+                        // furniture_id comes from beach_reservation_furniture table
+                        map.selectFurniture(f.furniture_id, true);
+                    });
+                updateSelectionBar();
+            }
+
+            // Set title
+            sheet.setTitle(`Reserva #${res.ticket_number}`);
+
+            // Build content
+            const customerType = customer.customer_type === 'interno' ? 'INTERNO' : 'EXTERNO';
+            const roomInfo = customer.room_number ? `Hab. ${customer.room_number}` : '';
+            const vipBadge = customer.vip_status ? '<span class="badge bg-warning text-dark ms-2">VIP</span>' : '';
+
+            // Get state color
+            const stateColor = map.getData().state_colors[res.current_state] || '#6C757D';
+
+            const content = `
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 18px; font-weight: 600; color: #1A3A5C;">
+                        ${customer.first_name || ''} ${customer.last_name || ''}
+                        ${vipBadge}
+                    </div>
+                    <div style="color: #6c757d; font-size: 14px; margin-top: 4px;">
+                        <span class="badge bg-secondary">${customerType}</span>
+                        ${roomInfo ? `<span class="ms-2">${roomInfo}</span>` : ''}
+                    </div>
+                </div>
+
+                <div style="background: ${stateColor}; color: white; padding: 10px 16px; border-radius: 8px; text-align: center; font-weight: 600; margin-bottom: 16px;">
+                    ${res.current_state || 'Sin estado'}
+                </div>
+
+                <div style="display: flex; gap: 16px; margin-bottom: 16px; color: #6c757d; font-size: 14px;">
+                    <div>
+                        <i class="fas fa-users me-1"></i>
+                        ${res.num_people || 2} persona${(res.num_people || 2) > 1 ? 's' : ''}
+                    </div>
+                    <div>
+                        <i class="fas fa-clock me-1"></i>
+                        ${res.time_slot === 'morning' ? 'Manana' : res.time_slot === 'afternoon' ? 'Tarde' : 'Todo el dia'}
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <div style="font-weight: 600; color: #1A3A5C; margin-bottom: 8px; font-size: 13px;">Mobiliario</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        ${(res.furniture || []).map(f => `
+                            <span style="background: #F5E6D3; border: 1px solid #D4AF37; padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; color: #1A3A5C;">
+                                ${f.number}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+
+                ${res.notes ? `
+                    <div style="background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                        <div style="font-weight: 600; color: #1A3A5C; margin-bottom: 4px; font-size: 13px;">
+                            <i class="fas fa-sticky-note me-1"></i> Notas
+                        </div>
+                        <div style="color: #6c757d; font-size: 14px;">${res.notes}</div>
+                    </div>
+                ` : ''}
+            `;
+
+            sheet.setContent(content);
+
+            // Build footer with action buttons
+            // Get available states for state chips
+            const allStates = map.getData().states || [];
+            const stateColors = map.getData().state_colors || {};
+            const activeStates = allStates.filter(s => s.active);
+
+            // Build state chips HTML
+            const stateChipsHtml = activeStates.map(s => {
+                const isActive = s.name === res.current_state;
+                const bgColor = isActive ? s.color : 'transparent';
+                const textColor = isActive ? '#FFFFFF' : '#1A3A5C';
+                const borderColor = s.color;
+                return `
+                    <button type="button" class="state-chip ${isActive ? 'active' : ''}"
+                        data-state="${s.name}" data-color="${s.color}"
+                        style="
+                            padding: 8px 16px;
+                            border: 2px solid ${borderColor};
+                            border-radius: 20px;
+                            background: ${bgColor};
+                            color: ${textColor};
+                            font-size: 13px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            white-space: nowrap;
+                            transition: all 0.2s ease;
+                            flex-shrink: 0;
+                        ">
+                        ${s.name}
+                    </button>
+                `;
+            }).join('');
+
+            const footerContent = `
+                <div style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
+                    <!-- State chips row - horizontally scrollable -->
+                    <div style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px; -webkit-overflow-scrolling: touch; scrollbar-width: none;" id="state-chips-container" data-reservation-id="${res.id}">
+                        ${stateChipsHtml}
+                    </div>
+
+                    <!-- Action buttons row - centered, compact -->
+                    <div style="display: flex; justify-content: center; gap: 12px;">
+                        <button type="button" class="btn-sheet-action" data-action="change-furniture" data-reservation-id="${res.id}"
+                            style="
+                                display: flex; align-items: center; justify-content: center; gap: 6px;
+                                padding: 10px 20px;
+                                background: #F5E6D3;
+                                border: none;
+                                border-radius: 24px;
+                                color: #1A3A5C;
+                                font-size: 13px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                            ">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>Cambiar</span>
+                        </button>
+                        <a href="/beach/reservations/${res.id}" class="btn-sheet-action"
+                            style="
+                                display: flex; align-items: center; justify-content: center; gap: 6px;
+                                padding: 10px 20px;
+                                background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+                                border: none;
+                                border-radius: 24px;
+                                color: white;
+                                font-size: 13px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                text-decoration: none;
+                                transition: all 0.2s ease;
+                            ">
+                            <i class="fas fa-external-link-alt"></i>
+                            <span>Ver Detalle</span>
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            sheet.setFooter(footerContent);
+
+            // Attach action handlers
+            // Handle state chip clicks
+            const stateChipsContainer = sheet.footer.querySelector('#state-chips-container');
+            if (stateChipsContainer) {
+                const reservationId = stateChipsContainer.dataset.reservationId;
+
+                stateChipsContainer.querySelectorAll('.state-chip').forEach(chip => {
+                    chip.addEventListener('click', async (e) => {
+                        const newState = e.currentTarget.dataset.state;
+                        const chipColor = e.currentTarget.dataset.color;
+
+                        // Skip if already active
+                        if (e.currentTarget.classList.contains('active')) {
+                            return;
+                        }
+
+                        // Visual feedback - update chip styles immediately
+                        stateChipsContainer.querySelectorAll('.state-chip').forEach(c => {
+                            const cColor = c.dataset.color;
+                            c.classList.remove('active');
+                            c.style.background = 'transparent';
+                            c.style.color = '#1A3A5C';
+                        });
+                        e.currentTarget.classList.add('active');
+                        e.currentTarget.style.background = chipColor;
+                        e.currentTarget.style.color = '#FFFFFF';
+
+                        // Apply state change
+                        await handleStateChange(reservationId, newState, sheet);
+                    });
+                });
+            }
+
+            // Handle other action buttons
+            sheet.footer.querySelectorAll('.btn-sheet-action').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const action = e.currentTarget.dataset.action;
+                    const reservationId = e.currentTarget.dataset.reservationId;
+
+                    if (action === 'change-furniture') {
+                        // Filter furniture for current date only
+                        const currentDate = map.getCurrentDate();
+                        const currentDateFurniture = (res.furniture || []).filter(f => {
+                            const assignDate = new Date(f.assignment_date).toISOString().split('T')[0];
+                            return assignDate === currentDate;
+                        });
+                        // Enter furniture reassignment mode with num_people as limit
+                        enterReassignmentMode(reservationId, currentDateFurniture, res.num_people);
+                        sheet.close();
+                    }
+                });
+            });
+
+            sheet.open();
+
+        } catch (error) {
+            console.error('Error loading reservation details:', error);
+        }
+    }
+
+    // Handle state change
+    async function handleStateChange(reservationId, newState, sheet) {
+        try {
+            const response = await fetch(`/beach/api/reservations/${reservationId}/toggle-state`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({ state: newState, action: 'set' })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Update state badge in sheet content
+                const stateBadge = sheet.content.querySelector('[style*="border-radius: 20px"][style*="font-weight: 600"]');
+                if (stateBadge) {
+                    const stateColors = map.getData().state_colors || {};
+                    const newColor = stateColors[newState] || '#6C757D';
+                    stateBadge.textContent = newState;
+                    stateBadge.style.background = newColor;
+                }
+
+                // Refresh map data in background (don't close sheet)
+                await map.refreshAvailability();
+                updateStats(currentZoneId);
+
+                if (window.PuroBeach && window.PuroBeach.showToast) {
+                    window.PuroBeach.showToast(`Estado cambiado a ${newState}`, 'success');
+                }
+            } else {
+                alert(data.error || 'Error al cambiar estado');
+            }
+        } catch (error) {
+            console.error('Error changing state:', error);
+            alert('Error al cambiar estado');
+        }
+    }
+
+    // ==========================================================================
+    // FURNITURE REASSIGNMENT MODE
+    // ==========================================================================
+    let reassignmentMode = false;
+    let reassignmentReservationId = null;
+    let reassignmentFurnitureIds = [];  // Currently selected furniture (new selection)
+    let reassignmentOriginalFurnitureIds = [];  // Original furniture (for reference only)
+    let reassignmentMaxAllowed = 0;  // Max furniture = num_people
+
+    function enterReassignmentMode(reservationId, currentFurniture, numPeople) {
+        reassignmentMode = true;
+        reassignmentReservationId = reservationId;
+        reassignmentOriginalFurnitureIds = currentFurniture.map(f => f.furniture_id);  // Store original for reference
+        reassignmentFurnitureIds = [];  // Start with empty selection
+        reassignmentMaxAllowed = numPeople || currentFurniture.length;  // Limit = num_people
+
+        // Clear map selection - don't pre-select anything
+        map.clearSelection();
+        map.render();
+
+        // Show reassignment bar
+        showReassignmentBar(currentFurniture, numPeople);
+
+        // Show instruction toast
+        if (window.PuroBeach && window.PuroBeach.showToast) {
+            window.PuroBeach.showToast(`Selecciona hasta ${reassignmentMaxAllowed} mobiliario${reassignmentMaxAllowed !== 1 ? 's' : ''}`, 'info');
+        }
+
+        // Update touch handler to work in reassignment mode
+        touchHandler.onLongPress(null);  // Disable long-press during reassignment
+        touchHandler.onTap((event) => {
+            const { furnitureId } = event;
+            const data = map.getData();
+            const availability = data.availability[furnitureId];
+
+            // Can only select available furniture or furniture in current reservation's original assignment
+            const isOriginalFurniture = reassignmentOriginalFurnitureIds.includes(furnitureId);
+            if (availability && !availability.available && !isOriginalFurniture) {
+                // This furniture belongs to another reservation - can't select
+                if (window.PuroBeach && window.PuroBeach.showToast) {
+                    window.PuroBeach.showToast('Este mobiliario tiene otra reserva', 'warning');
+                }
+                return;
+            }
+
+            // Toggle selection
+            const isSelected = map.isSelected(furnitureId);
+            if (isSelected) {
+                map.deselectFurniture(furnitureId);
+                reassignmentFurnitureIds = reassignmentFurnitureIds.filter(id => id !== furnitureId);
+            } else {
+                // Check if we're at the limit
+                if (reassignmentFurnitureIds.length >= reassignmentMaxAllowed) {
+                    if (window.PuroBeach && window.PuroBeach.showToast) {
+                        window.PuroBeach.showToast(`Máximo ${reassignmentMaxAllowed} mobiliario${reassignmentMaxAllowed !== 1 ? 's' : ''} permitido${reassignmentMaxAllowed !== 1 ? 's' : ''}`, 'warning');
+                    }
+                    return;
+                }
+                map.selectFurniture(furnitureId, true);
+                if (!reassignmentFurnitureIds.includes(furnitureId)) {
+                    reassignmentFurnitureIds.push(furnitureId);
+                }
+            }
+
+            // Force redraw to show selection change
+            map.render();
+            updateReassignmentBar();
+        });
+    }
+
+    function exitReassignmentMode() {
+        reassignmentMode = false;
+        reassignmentReservationId = null;
+        reassignmentFurnitureIds = [];
+        reassignmentOriginalFurnitureIds = [];
+        reassignmentMaxAllowed = 0;
+
+        // Hide reassignment bar
+        hideReassignmentBar();
+
+        // Clear map selection
+        map.clearSelection();
+        updateSelectionBar();
+
+        // Restore normal touch handler behavior
+        touchHandler.onLongPress(async (event) => {
+            const { furnitureId } = event;
+            const data = map.getData();
+            const availability = data.availability[furnitureId];
+
+            if (availability && !availability.available) {
+                await showReservationActionSheet(furnitureId, availability);
+            } else {
+                map.clearSelection();
+                map.selectFurniture(furnitureId, true);
+                updateSelectionBar();
+                openReservationSheet();
+            }
+        });
+
+        touchHandler.onTap(null);  // Use default click handler
+    }
+
+    function showReassignmentBar(currentFurniture, numPeople) {
+        // Remove existing reassignment bar if any
+        hideReassignmentBar();
+
+        // Get furniture numbers for display
+        const data = map.getData();
+        const furnitureMap = {};
+        data.furniture.forEach(f => furnitureMap[f.id] = f);
+        const originalNumbers = currentFurniture.map(f => {
+            const fData = furnitureMap[f.furniture_id];
+            return fData ? fData.number : f.furniture_id;
+        }).join(', ');
+
+        const bar = document.createElement('div');
+        bar.id = 'reassignment-bar';
+        bar.style.cssText = `
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1A3A5C;
+            color: white;
+            padding: 12px 16px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            z-index: 1030;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        `;
+
+        bar.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-weight: 600; font-size: 14px;">Cambiar Mobiliario</div>
+                    <div style="font-size: 11px; opacity: 0.6; margin-bottom: 2px;">
+                        <i class="fas fa-info-circle me-1"></i>Actual: ${originalNumbers}
+                    </div>
+                    <div style="font-size: 12px; opacity: 0.8;" id="reassignment-info">
+                        0 / ${numPeople} seleccionados
+                    </div>
+                </div>
+                <button type="button" id="btn-cancel-reassignment" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+                    Cancelar
+                </button>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <div id="reassignment-chips" style="flex: 1; display: flex; flex-wrap: wrap; gap: 6px; max-height: 60px; overflow-y: auto; min-height: 28px;">
+                    <span style="opacity: 0.5; font-size: 12px;">Toca en el mapa para seleccionar...</span>
+                </div>
+                <button type="button" id="btn-save-reassignment" style="background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%); color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+                    <i class="fas fa-check me-1"></i> Guardar
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(bar);
+
+        // Event listeners
+        document.getElementById('btn-cancel-reassignment').addEventListener('click', exitReassignmentMode);
+        document.getElementById('btn-save-reassignment').addEventListener('click', saveReassignment);
+    }
+
+    function hideReassignmentBar() {
+        const existing = document.getElementById('reassignment-bar');
+        if (existing) {
+            existing.remove();
+        }
+    }
+
+    function updateReassignmentBar() {
+        const chipsContainer = document.getElementById('reassignment-chips');
+        const infoEl = document.getElementById('reassignment-info');
+        if (!chipsContainer) return;
+
+        // Get furniture data
+        const data = map.getData();
+        const furnitureMap = {};
+        data.furniture.forEach(f => furnitureMap[f.id] = f);
+
+        if (reassignmentFurnitureIds.length === 0) {
+            chipsContainer.innerHTML = `<span style="opacity: 0.5; font-size: 12px;">Toca en el mapa para seleccionar...</span>`;
+        } else {
+            chipsContainer.innerHTML = reassignmentFurnitureIds.map(id => {
+                const f = furnitureMap[id] || { number: id };
+                return `
+                    <span style="background: #D4AF37; color: #1A3A5C; padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 600;">
+                        ${f.number}
+                    </span>
+                `;
+            }).join('');
+        }
+
+        if (infoEl) {
+            infoEl.textContent = `${reassignmentFurnitureIds.length} / ${reassignmentMaxAllowed} seleccionados`;
+        }
+    }
+
+    async function saveReassignment() {
+        if (reassignmentFurnitureIds.length === 0) {
+            alert('Debe seleccionar al menos un mobiliario');
+            return;
+        }
+
+        const saveBtn = document.getElementById('btn-save-reassignment');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        }
+
+        try {
+            const response = await fetch(`/beach/api/map/reservations/${reassignmentReservationId}/reassign-furniture`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({
+                    furniture_ids: reassignmentFurnitureIds,
+                    date: map.getCurrentDate()
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                exitReassignmentMode();
+                await map.refreshAvailability();
+                updateStats(currentZoneId);
+
+                if (window.PuroBeach && window.PuroBeach.showToast) {
+                    window.PuroBeach.showToast(data.message || 'Mobiliario actualizado', 'success');
+                }
+            } else {
+                alert(data.error || 'Error al actualizar mobiliario');
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-check me-1"></i> Guardar';
+                }
+            }
+        } catch (error) {
+            console.error('Error saving reassignment:', error);
+            alert('Error al actualizar mobiliario');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-check me-1"></i> Guardar';
+            }
+        }
+    }
 
     // ==========================================================================
     // DATE NAVIGATION
@@ -1872,13 +2527,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
         selectionBar.classList.add('show');
 
-        // Build chips
-        selectedBadges.innerHTML = selected.map(f => `
-            <span class="selection-chip" data-id="${f.id}">
-                ${f.number}
-                <span class="remove-chip" data-id="${f.id}"><i class="fas fa-times"></i></span>
-            </span>
-        `).join('');
+        // Check availability status of selected furniture
+        const data = map.getData();
+        const availability = data.availability || {};
+
+        let occupiedFurniture = [];
+        let availableFurniture = [];
+        let reservationIds = new Set();
+
+        selected.forEach(f => {
+            const avail = availability[f.id];
+            if (avail && !avail.available) {
+                occupiedFurniture.push({ ...f, reservation_id: avail.reservation_id });
+                if (avail.reservation_id) {
+                    reservationIds.add(avail.reservation_id);
+                }
+            } else {
+                availableFurniture.push(f);
+            }
+        });
+
+        // Build chips with visual indicator for occupied
+        selectedBadges.innerHTML = selected.map(f => {
+            const avail = availability[f.id];
+            const isOccupied = avail && !avail.available;
+            const chipStyle = isOccupied ?
+                'background: rgba(220, 53, 69, 0.15); border-color: #dc3545;' : '';
+
+            return `
+                <span class="selection-chip" data-id="${f.id}" style="${chipStyle}">
+                    ${f.number}
+                    ${isOccupied ? '<i class="fas fa-user" style="font-size: 8px; margin-left: 2px; opacity: 0.7;"></i>' : ''}
+                    <span class="remove-chip" data-id="${f.id}"><i class="fas fa-times"></i></span>
+                </span>
+            `;
+        }).join('');
 
         // Add remove handlers
         selectedBadges.querySelectorAll('.remove-chip').forEach(btn => {
@@ -1893,10 +2576,143 @@ document.addEventListener('DOMContentLoaded', function() {
         // Calculate total capacity
         const capacity = selected.reduce((sum, f) => sum + (f.capacity || 2), 0);
         totalCapacity.textContent = capacity;
+
+        // Update action button based on selection type
+        updateSelectionActions(availableFurniture, occupiedFurniture, reservationIds);
     }
 
-    // Override map selection callback
-    map.on('onFurnitureClick', () => updateSelectionBar());
+    function updateSelectionActions(availableFurniture, occupiedFurniture, reservationIds) {
+        const actionsContainer = document.getElementById('selection-actions');
+        const clearBtn = document.getElementById('btn-clear-selection');
+
+        // Determine the action type
+        const allAvailable = occupiedFurniture.length === 0;
+        const allOccupied = availableFurniture.length === 0;
+        const singleReservation = reservationIds.size === 1;
+
+        // Clear existing action button (keep clear button)
+        const existingActionBtn = actionsContainer.querySelector('.btn-reserve, .btn-view-reservation, .btn-mixed');
+        if (existingActionBtn) {
+            existingActionBtn.remove();
+        }
+
+        let actionBtn;
+
+        if (allAvailable) {
+            // All available - show "Reservar" button
+            actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.className = 'btn-reserve';
+            actionBtn.id = 'btn-new-reservation';
+            actionBtn.innerHTML = '<i class="fas fa-calendar-plus"></i> <span>Reservar</span>';
+            actionBtn.addEventListener('click', openReservationSheet);
+
+        } else if (allOccupied && singleReservation) {
+            // All from same reservation - show "Ver Reserva" button
+            const reservationId = Array.from(reservationIds)[0];
+            actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.className = 'btn-view-reservation';
+            actionBtn.style.cssText = 'background: linear-gradient(135deg, #1A3A5C 0%, #2d5a87 100%); color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;';
+            actionBtn.innerHTML = '<i class="fas fa-eye"></i> <span>Ver Reserva</span>';
+            actionBtn.addEventListener('click', async () => {
+                const furnitureId = occupiedFurniture[0].id;
+                const data = map.getData();
+                const avail = data.availability[furnitureId];
+                await showReservationActionSheet(furnitureId, avail);
+            });
+
+        } else if (allOccupied) {
+            // Multiple reservations selected
+            actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.className = 'btn-view-reservation';
+            actionBtn.style.cssText = 'background: #6c757d; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;';
+            actionBtn.innerHTML = `<i class="fas fa-layer-group"></i> <span>${reservationIds.size} Reservas</span>`;
+            actionBtn.addEventListener('click', () => {
+                alert(`Hay ${reservationIds.size} reservas diferentes seleccionadas. Seleccione mobiliario de una sola reserva para ver detalles.`);
+            });
+
+        } else {
+            // Mixed selection (some available, some occupied)
+            actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.className = 'btn-mixed';
+            actionBtn.style.cssText = 'background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%); color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;';
+            actionBtn.innerHTML = `<i class="fas fa-calendar-plus"></i> <span>Reservar ${availableFurniture.length}</span>`;
+            actionBtn.title = `Reservar solo los ${availableFurniture.length} mobiliarios disponibles`;
+            actionBtn.addEventListener('click', () => {
+                // Deselect occupied furniture and open reservation sheet
+                occupiedFurniture.forEach(f => map.deselectFurniture(f.id));
+                updateSelectionBar();
+                openReservationSheet();
+            });
+        }
+
+        actionsContainer.appendChild(actionBtn);
+    }
+
+    // Override map selection callback - handle occupied furniture clicks
+    map.on('onFurnitureClick', async (item, selectedFurniture) => {
+        try {
+            const data = map.getData();
+            const availability = data.availability[item.id];
+
+            // Handle reassignment mode
+            // Note: map.handleFurnitureClick already called selectFurniture before this callback
+            // So the item is already toggled in the map's selection. We manage our own array
+            // and only need to deselect when blocking or removing.
+            if (reassignmentMode) {
+                const furnitureId = item.id;
+
+                // Can only select available furniture or furniture in current reservation's original assignment
+                const isOriginalFurniture = reassignmentOriginalFurnitureIds.includes(furnitureId);
+                if (availability && !availability.available && !isOriginalFurniture) {
+                    // This furniture belongs to another reservation - can't select
+                    map.deselectFurniture(furnitureId);
+                    if (window.PuroBeach && window.PuroBeach.showToast) {
+                        window.PuroBeach.showToast('Este mobiliario tiene otra reserva', 'warning');
+                    }
+                    return;
+                }
+
+                // Toggle selection in reassignment mode
+                const isSelected = reassignmentFurnitureIds.includes(furnitureId);
+                if (isSelected) {
+                    // Already in our list - remove it (map already toggled it off)
+                    reassignmentFurnitureIds = reassignmentFurnitureIds.filter(id => id !== furnitureId);
+                } else {
+                    // Check if we're at the limit
+                    if (reassignmentFurnitureIds.length >= reassignmentMaxAllowed) {
+                        // Deselect since map already selected it
+                        map.deselectFurniture(furnitureId);
+                        if (window.PuroBeach && window.PuroBeach.showToast) {
+                            window.PuroBeach.showToast(`Máximo ${reassignmentMaxAllowed} mobiliario${reassignmentMaxAllowed !== 1 ? 's' : ''} permitido${reassignmentMaxAllowed !== 1 ? 's' : ''}`, 'warning');
+                        }
+                        return;
+                    }
+                    // Map already selected it, just add to our array
+                    reassignmentFurnitureIds.push(furnitureId);
+                }
+
+                // Force redraw to show selection change
+                map.render();
+                updateReassignmentBar();
+                return;
+            }
+
+            // Normal mode - check if clicked furniture is occupied
+            if (availability && !availability.available) {
+                // Occupied furniture - deselect it and show action sheet
+                map.deselectFurniture(item.id);
+                await showReservationActionSheet(item.id, availability);
+            }
+            updateSelectionBar();
+        } catch (error) {
+            console.error('Error in onFurnitureClick callback:', error);
+            updateSelectionBar();
+        }
+    });
 
     document.getElementById('btn-clear-selection').addEventListener('click', () => {
         map.clearSelection();
@@ -1913,6 +2729,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnFullForm = document.getElementById('btn-full-form');
     const btnCreateReservation = document.getElementById('btn-create-reservation');
 
+    // State for multi-day dates
+    let selectedDates = [];
+    let selectedPreferences = [];
+
     function openReservationSheet() {
         const selected = map.getSelectedFurnitureData();
         if (selected.length === 0) return;
@@ -1925,21 +2745,150 @@ document.addEventListener('DOMContentLoaded', function() {
         const capacity = selected.reduce((sum, f) => sum + (f.capacity || 2), 0);
         document.getElementById('sheet-capacity').textContent = capacity;
         document.getElementById('sheet-num-people').value = Math.min(capacity, 2);
-        document.getElementById('sheet-date').value = formatDateCompact(map.getCurrentDate());
-        document.getElementById('sheet-customer-search').value = '';
+        // Reset customer search using component
+        if (typeof customerSearch !== 'undefined') {
+            customerSearch.clear();
+        }
         document.getElementById('sheet-customer-id').value = '';
         document.getElementById('sheet-notes').value = '';
+
+        // Initialize date field
+        const currentDate = map.getCurrentDate();
+        document.getElementById('sheet-start-date').value = currentDate;
+        selectedDates = [currentDate];
+        updateSelectedDatesUI();
+
+        // Reset time slot to "all_day"
+        document.getElementById('sheet-time-slot').value = 'all_day';
+        document.querySelectorAll('.time-slot-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.slot === 'all_day');
+            updateButtonStyle(btn, btn.dataset.slot === 'all_day');
+        });
+
+        // Reset preferences
+        selectedPreferences = [];
+        document.querySelectorAll('.pref-chip').forEach(btn => {
+            btn.classList.remove('active');
+            updatePrefChipStyle(btn, false);
+        });
 
         // Update full form link
         const furnitureIds = selected.map(f => f.id).join(',');
         btnFullForm.onclick = () => {
-            window.location.href = `/beach/reservations/create?date=${map.getCurrentDate()}&furniture=${furnitureIds}`;
+            window.location.href = `/beach/reservations/create?date=${currentDate}&furniture=${furnitureIds}`;
         };
 
         // Show sheet
         sheetBackdrop.classList.add('show');
         reservationSheet.classList.add('show');
     }
+
+    function updateButtonStyle(btn, isActive) {
+        if (isActive) {
+            btn.style.background = 'linear-gradient(135deg, #D4AF37 0%, #B8960C 100%)';
+            btn.style.color = 'white';
+            btn.style.borderColor = '#D4AF37';
+        } else {
+            btn.style.background = 'white';
+            btn.style.color = '#1A3A5C';
+            btn.style.borderColor = '#dee2e6';
+        }
+    }
+
+    function updatePrefChipStyle(btn, isActive) {
+        if (isActive) {
+            btn.style.background = '#F5E6D3';
+            btn.style.borderColor = '#D4AF37';
+            btn.style.color = '#1A3A5C';
+        } else {
+            btn.style.background = 'white';
+            btn.style.borderColor = '#dee2e6';
+            btn.style.color = '#666';
+        }
+    }
+
+    function updateSelectedDatesUI() {
+        const container = document.getElementById('sheet-selected-dates');
+        if (selectedDates.length <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        // Show additional dates as chips (skip first date which is in the input)
+        container.innerHTML = selectedDates.slice(1).map((d, idx) => `
+            <span class="date-chip" style="background: #F5E6D3; border: 1px solid #D4AF37; padding: 4px 10px; border-radius: 16px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                ${formatDateCompact(d)}
+                <i class="fas fa-times remove-date" data-index="${idx + 1}" style="cursor: pointer; opacity: 0.7;"></i>
+            </span>
+        `).join('');
+
+        // Add remove handlers
+        container.querySelectorAll('.remove-date').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.target.dataset.index);
+                selectedDates.splice(idx, 1);
+                updateSelectedDatesUI();
+            });
+        });
+    }
+
+    // Time slot toggle handlers
+    document.querySelectorAll('.time-slot-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const slot = btn.dataset.slot;
+            document.getElementById('sheet-time-slot').value = slot;
+
+            document.querySelectorAll('.time-slot-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.slot === slot);
+                updateButtonStyle(b, b.dataset.slot === slot);
+            });
+        });
+    });
+
+    // Preference chip toggle handlers
+    document.querySelectorAll('.pref-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const pref = btn.dataset.pref;
+            const isActive = btn.classList.toggle('active');
+
+            if (isActive) {
+                selectedPreferences.push(pref);
+            } else {
+                selectedPreferences = selectedPreferences.filter(p => p !== pref);
+            }
+
+            updatePrefChipStyle(btn, isActive);
+        });
+    });
+
+    // Add date button handler
+    document.getElementById('btn-add-date').addEventListener('click', () => {
+        const startDate = document.getElementById('sheet-start-date').value;
+        if (!startDate) return;
+
+        // Calculate next date to add
+        const lastDate = selectedDates.length > 0 ? selectedDates[selectedDates.length - 1] : startDate;
+        const nextDate = new Date(lastDate + 'T12:00:00');
+        nextDate.setDate(nextDate.getDate() + 1);
+        const nextDateStr = nextDate.toISOString().split('T')[0];
+
+        // Add if not already in list
+        if (!selectedDates.includes(nextDateStr)) {
+            selectedDates.push(nextDateStr);
+            updateSelectedDatesUI();
+        }
+    });
+
+    // Start date change handler
+    document.getElementById('sheet-start-date').addEventListener('change', (e) => {
+        const newStartDate = e.target.value;
+        if (newStartDate && !selectedDates.includes(newStartDate)) {
+            selectedDates[0] = newStartDate;
+        } else if (newStartDate) {
+            selectedDates = [newStartDate];
+        }
+        updateSelectedDatesUI();
+    });
 
     function closeReservationSheet() {
         sheetBackdrop.classList.remove('show');
@@ -1950,95 +2899,39 @@ document.addEventListener('DOMContentLoaded', function() {
     btnCloseSheet.addEventListener('click', closeReservationSheet);
     sheetBackdrop.addEventListener('click', closeReservationSheet);
 
-    // Customer search in sheet
-    const sheetCustomerSearch = document.getElementById('sheet-customer-search');
+    // Customer search in sheet - using shared component
+    const sheetCustomerSearchInput = document.getElementById('sheet-customer-search');
     const sheetCustomerResults = document.getElementById('sheet-customer-results');
     const sheetCustomerId = document.getElementById('sheet-customer-id');
-    let searchTimeout = null;
 
-    sheetCustomerSearch.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
-        if (searchTimeout) clearTimeout(searchTimeout);
-
-        if (query.length < 2) {
-            sheetCustomerResults.classList.remove('show');
-            return;
-        }
-
-        searchTimeout = setTimeout(() => searchCustomers(query), 300);
-    });
-
-    async function searchCustomers(query) {
-        try {
-            const response = await fetch(`/beach/api/customers/search?q=${encodeURIComponent(query)}`);
-            const data = await response.json();
-
-            if (!data.customers || data.customers.length === 0) {
-                sheetCustomerResults.innerHTML = `
-                    <a href="/beach/customers/create" class="customer-result-item" style="color: var(--color-primary);">
-                        <i class="fas fa-plus me-1"></i> Crear nuevo cliente
-                    </a>
-                `;
-                sheetCustomerResults.classList.add('show');
-                return;
-            }
-
-            let html = '';
-            data.customers.forEach(customer => {
-                const displayName = customer.display_name || customer.guest_name ||
-                    `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
-                const subtitle = customer.room_number ? `Hab. ${customer.room_number}` :
-                    customer.phone || customer.email || '';
-
-                html += `
-                    <div class="customer-result-item"
-                         data-id="${customer.id}"
-                         data-name="${displayName}">
-                        <div class="name">${displayName}</div>
-                        <div class="details">${subtitle}</div>
-                    </div>
-                `;
-            });
-
-            html += `
-                <a href="/beach/customers/create" class="customer-result-item" style="color: var(--color-primary);">
-                    <i class="fas fa-plus me-1"></i> Crear nuevo cliente
-                </a>
-            `;
-
-            sheetCustomerResults.innerHTML = html;
-            sheetCustomerResults.classList.add('show');
-
-            sheetCustomerResults.querySelectorAll('.customer-result-item[data-id]').forEach(item => {
-                item.addEventListener('click', () => {
-                    sheetCustomerId.value = item.dataset.id;
-                    sheetCustomerSearch.value = item.dataset.name;
-                    sheetCustomerResults.classList.remove('show');
-                });
-            });
-
-        } catch (error) {
-            console.error('Search error:', error);
-        }
-    }
-
-    // Close results on outside click
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.customer-search-input') && !e.target.closest('.customer-results')) {
-            sheetCustomerResults.classList.remove('show');
+    const customerSearch = new CustomerSearch({
+        inputElement: sheetCustomerSearchInput,
+        resultsContainer: sheetCustomerResults,
+        apiUrl: '/beach/api/customers/search',
+        compact: true,
+        showCreateLink: true,
+        createCustomerUrl: '/beach/customers/create',
+        onSelect: (customer) => {
+            // Beach club customer selected
+            sheetCustomerId.value = customer.id;
+        },
+        onHotelGuestSelect: (guest) => {
+            // Hotel guest selected - store guest ID, will convert on reservation create
+            sheetCustomerId.value = guest.id;
         }
     });
 
     // Create reservation
     btnCreateReservation.addEventListener('click', async () => {
-        const customerId = sheetCustomerId.value;
+        let customerId = sheetCustomerId.value;
         const numPeople = parseInt(document.getElementById('sheet-num-people').value) || 2;
+        const timeSlot = document.getElementById('sheet-time-slot').value || 'all_day';
         const notes = document.getElementById('sheet-notes').value.trim();
         const selectedFurniture = map.getSelectedFurniture();
 
         if (!customerId) {
             alert('Por favor seleccione un cliente');
-            sheetCustomerSearch.focus();
+            sheetCustomerSearchInput.focus();
             return;
         }
 
@@ -2047,10 +2940,38 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        if (selectedDates.length === 0) {
+            alert('Por favor seleccione al menos una fecha');
+            return;
+        }
+
         btnCreateReservation.disabled = true;
         btnCreateReservation.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
 
         try {
+            // If customer is a hotel guest, convert to beach customer first
+            if (customerSearch.isHotelGuest()) {
+                const convertResponse = await fetch('/beach/api/customers/from-hotel-guest', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({
+                        hotel_guest_id: parseInt(customerId)
+                    })
+                });
+                
+                const convertData = await convertResponse.json();
+                
+                if (!convertData.success) {
+                    throw new Error(convertData.error || 'Error al convertir huesped a cliente');
+                }
+                
+                // Use the new beach customer ID
+                customerId = convertData.customer.id;
+            }
+
             const response = await fetch('/beach/api/map/quick-reservation', {
                 method: 'POST',
                 headers: {
@@ -2060,8 +2981,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({
                     customer_id: parseInt(customerId),
                     furniture_ids: selectedFurniture,
-                    date: map.getCurrentDate(),
+                    dates: selectedDates,
                     num_people: numPeople,
+                    time_slot: timeSlot,
+                    preferences: selectedPreferences,
                     notes: notes
                 })
             });
@@ -2206,7 +3129,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 'Content-Type': 'application/json',
                                 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
                             },
-                            body: JSON.stringify({ state: 'Cancelada', action: 'add' })
+                            body: JSON.stringify({ state: 'Cancelada', action: 'set' })
                         });
                         const data = await response.json();
                         if (data.success) {
