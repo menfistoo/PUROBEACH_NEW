@@ -28,13 +28,19 @@ class MapEditor {
         this.canvasConfig = { width: 2000, height: 1000, backgroundColor: '#FAFAFA' };
         this.furniture = [];
         this.furnitureTypes = {};
-        this.selectedItem = null;
+        this.selectedItems = new Set();  // Multi-selection support
         this.zoom = 1;
         this.showGrid = false;
         this.showCenterGuides = true;  // Show center guides by default
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
         this.spaceDown = false;  // For pan mode
+
+        // Marquee selection state
+        this.isMarqueeSelecting = false;
+        this.marqueeStart = { x: 0, y: 0 };
+        this.marqueeRect = null;
+        this.selectionLayer = null;
 
         // DOM elements
         this.svg = null;
@@ -51,6 +57,7 @@ class MapEditor {
         this.callbacks = {
             furnitureChanged: null,
             selectionChanged: null,
+            multiSelectionChanged: null,
             canvasLoaded: null,
             zoomChanged: null,
             cursorMove: null,
@@ -62,6 +69,7 @@ class MapEditor {
         this.setupKeyboardShortcuts();
         this.setupViewportTracking();
         this.setupWheelZoom();
+        this.setupMarqueeSelection();
         this.loadSavedView();
     }
 
@@ -73,7 +81,8 @@ class MapEditor {
         if (!this.viewport) return;
 
         this.viewport.addEventListener('wheel', (e) => {
-            if (e.ctrlKey || e.metaKey) {
+            // Use Shift+Wheel for zoom to avoid browser zoom conflict
+            if (e.shiftKey) {
                 e.preventDefault();
 
                 // Get mouse position relative to viewport
@@ -365,10 +374,20 @@ class MapEditor {
         this.furnitureLayer.setAttribute('id', 'furniture-layer');
         this.svg.appendChild(this.furnitureLayer);
 
+        // Selection layer (for marquee rectangle)
+        this.selectionLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.selectionLayer.setAttribute('id', 'selection-layer');
+        this.svg.appendChild(this.selectionLayer);
+
         this.container.appendChild(this.svg);
         this.setupCanvasDrop();
 
         this.svg.addEventListener('click', (e) => {
+            // Don't deselect if we just finished a marquee selection
+            if (this.justFinishedMarquee) {
+                this.justFinishedMarquee = false;
+                return;
+            }
             if (e.target === this.svg || e.target === bg) {
                 this.deselectAll();
             }
@@ -590,57 +609,115 @@ class MapEditor {
     }
 
     setupFurnitureEvents(group, item) {
-        let startX, startY, startPosX, startPosY;
+        let startX, startY;
+        let startPositions = new Map(); // Store start positions for all selected items
 
         group.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
 
-            this.selectItem(item);
+            // Ctrl+click/drag should initiate marquee selection, not move items
+            // Let the event bubble up to the viewport handler
+            if (e.ctrlKey || e.metaKey) {
+                // Just toggle selection on click, marquee will be handled by viewport
+                this.toggleItemSelection(item);
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            // If item is not selected, select it (and clear others unless Shift)
+            if (!this.isSelected(item.id)) {
+                this.selectItem(item, e.shiftKey);
+            }
+
+            // Start dragging all selected items
             this.isDragging = true;
-            group.classList.add('dragging');
 
             const pt = this.getSVGPoint(e);
             startX = pt.x;
             startY = pt.y;
-            startPosX = item.position_x;
-            startPosY = item.position_y;
 
-            e.preventDefault();
+            // Store start positions for all selected items
+            startPositions.clear();
+            this.getSelectedItems().forEach(selectedItem => {
+                startPositions.set(selectedItem.id, {
+                    x: selectedItem.position_x,
+                    y: selectedItem.position_y
+                });
+                const g = this.furnitureLayer.querySelector(`[data-id="${selectedItem.id}"]`);
+                if (g) g.classList.add('dragging');
+            });
         });
 
         const handleMouseMove = (e) => {
-            if (!this.isDragging || !this.selectedItem || this.selectedItem.id !== item.id) return;
+            if (!this.isDragging || startPositions.size === 0) return;
 
             const pt = this.getSVGPoint(e);
-            let newX = startPosX + (pt.x - startX);
-            let newY = startPosY + (pt.y - startY);
+            const deltaX = pt.x - startX;
+            const deltaY = pt.y - startY;
 
-            // Snap to grid
-            newX = Math.round(newX / this.options.snapToGrid) * this.options.snapToGrid;
-            newY = Math.round(newY / this.options.snapToGrid) * this.options.snapToGrid;
+            // Move all selected items
+            this.getSelectedItems().forEach(selectedItem => {
+                const startPos = startPositions.get(selectedItem.id);
+                if (!startPos) return;
 
-            // Bounds check
-            newX = Math.max(0, Math.min(newX, this.canvasConfig.width - item.width));
-            newY = Math.max(0, Math.min(newY, this.canvasConfig.height - item.height));
+                let newX = startPos.x + deltaX;
+                let newY = startPos.y + deltaY;
 
-            group.setAttribute('transform', `translate(${newX}, ${newY}) rotate(${item.rotation || 0}, ${item.width / 2}, ${item.height / 2})`);
+                // Snap to grid
+                newX = Math.round(newX / this.options.snapToGrid) * this.options.snapToGrid;
+                newY = Math.round(newY / this.options.snapToGrid) * this.options.snapToGrid;
 
-            item.position_x = newX;
-            item.position_y = newY;
+                // Bounds check
+                newX = Math.max(0, Math.min(newX, this.canvasConfig.width - selectedItem.width));
+                newY = Math.max(0, Math.min(newY, this.canvasConfig.height - selectedItem.height));
 
-            this.emit('itemMoved', { x: newX, y: newY });
+                const g = this.furnitureLayer.querySelector(`[data-id="${selectedItem.id}"]`);
+                if (g) {
+                    g.setAttribute('transform',
+                        `translate(${newX}, ${newY}) rotate(${selectedItem.rotation || 0}, ${selectedItem.width / 2}, ${selectedItem.height / 2})`
+                    );
+                }
+
+                selectedItem.position_x = newX;
+                selectedItem.position_y = newY;
+            });
+
+            this.emit('itemMoved', { count: startPositions.size });
         };
 
         const handleMouseUp = async () => {
             if (!this.isDragging) return;
 
             this.isDragging = false;
-            group.classList.remove('dragging');
 
-            if (item.position_x !== startPosX || item.position_y !== startPosY) {
-                await this.saveFurniturePosition(item);
+            // Check if any items moved
+            let anyMoved = false;
+            const updates = [];
+
+            this.getSelectedItems().forEach(selectedItem => {
+                const startPos = startPositions.get(selectedItem.id);
+                const g = this.furnitureLayer.querySelector(`[data-id="${selectedItem.id}"]`);
+                if (g) g.classList.remove('dragging');
+
+                if (startPos && (selectedItem.position_x !== startPos.x || selectedItem.position_y !== startPos.y)) {
+                    anyMoved = true;
+                    updates.push({
+                        id: selectedItem.id,
+                        x: selectedItem.position_x,
+                        y: selectedItem.position_y,
+                        rotation: selectedItem.rotation
+                    });
+                }
+            });
+
+            // Save all positions in batch if any moved
+            if (anyMoved && updates.length > 0) {
+                await this.saveBatchPositions(updates);
             }
 
+            startPositions.clear();
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
@@ -661,27 +738,142 @@ class MapEditor {
     }
 
     // =============================================================================
-    // SELECTION
+    // SELECTION (Multi-select support)
     // =============================================================================
 
-    selectItem(item) {
-        this.deselectAll();
-        this.selectedItem = item;
-        // Attach type info for external access
-        this.selectedItem.typeInfo = this.furnitureTypes[item.furniture_type] || {};
+    /**
+     * Select a single item (clears previous selection unless addToSelection is true)
+     */
+    selectItem(item, addToSelection = false) {
+        if (!addToSelection) {
+            this.deselectAll();
+        }
 
+        // Attach type info for external access
+        item.typeInfo = this.furnitureTypes[item.furniture_type] || {};
+
+        this.selectedItems.add(item.id);
         const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
         if (group) group.classList.add('selected');
 
-        this.showProperties(item);
+        this.updateSelectionUI();
         this.emit('selectionChanged', item);
+        this.emit('multiSelectionChanged', this.getSelectedItems());
     }
 
+    /**
+     * Toggle selection of an item (for Ctrl+click)
+     */
+    toggleItemSelection(item) {
+        if (this.selectedItems.has(item.id)) {
+            this.deselectItem(item.id);
+        } else {
+            this.selectItem(item, true);
+        }
+    }
+
+    /**
+     * Deselect a single item
+     */
+    deselectItem(itemId) {
+        this.selectedItems.delete(itemId);
+        const group = this.furnitureLayer.querySelector(`[data-id="${itemId}"]`);
+        if (group) group.classList.remove('selected');
+
+        this.updateSelectionUI();
+        this.emit('multiSelectionChanged', this.getSelectedItems());
+    }
+
+    /**
+     * Clear all selections
+     */
     deselectAll() {
-        this.selectedItem = null;
+        this.selectedItems.clear();
         this.furnitureLayer?.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
-        if (this.propertiesPanel) this.propertiesPanel.classList.remove('active');
+        this.updateSelectionUI();
         this.emit('selectionChanged', null);
+        this.emit('multiSelectionChanged', []);
+    }
+
+    /**
+     * Select multiple items by IDs
+     */
+    selectMultiple(itemIds, addToSelection = false) {
+        if (!addToSelection) {
+            this.deselectAll();
+        }
+
+        itemIds.forEach(id => {
+            this.selectedItems.add(id);
+            const group = this.furnitureLayer.querySelector(`[data-id="${id}"]`);
+            if (group) group.classList.add('selected');
+        });
+
+        this.updateSelectionUI();
+        this.emit('multiSelectionChanged', this.getSelectedItems());
+    }
+
+    /**
+     * Select all items in canvas
+     */
+    selectAll() {
+        this.furniture.forEach(item => {
+            this.selectedItems.add(item.id);
+            const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
+            if (group) group.classList.add('selected');
+        });
+
+        this.updateSelectionUI();
+        this.emit('multiSelectionChanged', this.getSelectedItems());
+    }
+
+    /**
+     * Get array of selected item objects
+     */
+    getSelectedItems() {
+        return this.furniture.filter(item => this.selectedItems.has(item.id));
+    }
+
+    /**
+     * Get count of selected items
+     */
+    getSelectionCount() {
+        return this.selectedItems.size;
+    }
+
+    /**
+     * Check if item is selected
+     */
+    isSelected(itemId) {
+        return this.selectedItems.has(itemId);
+    }
+
+    /**
+     * Update UI based on selection state
+     */
+    updateSelectionUI() {
+        const count = this.selectedItems.size;
+        const multiSelectToolbar = document.getElementById('multi-select-toolbar');
+        const singlePropsPanel = this.propertiesPanel;
+
+        if (count === 0) {
+            // No selection
+            if (singlePropsPanel) singlePropsPanel.classList.remove('active');
+            if (multiSelectToolbar) multiSelectToolbar.classList.add('d-none');
+        } else if (count === 1) {
+            // Single selection - show properties panel
+            const item = this.getSelectedItems()[0];
+            this.showProperties(item);
+            if (multiSelectToolbar) multiSelectToolbar.classList.add('d-none');
+        } else {
+            // Multiple selection - show multi-select toolbar
+            if (singlePropsPanel) singlePropsPanel.classList.remove('active');
+            if (multiSelectToolbar) {
+                multiSelectToolbar.classList.remove('d-none');
+                const countEl = multiSelectToolbar.querySelector('.selection-count');
+                if (countEl) countEl.textContent = count;
+            }
+        }
     }
 
     showProperties(item) {
@@ -695,6 +887,21 @@ class MapEditor {
         document.getElementById('prop-rotation').value = item.rotation || 0;
         document.getElementById('prop-capacity').value = item.capacity || 0;
 
+        // Size properties (for decorative items)
+        const widthInput = document.getElementById('prop-width');
+        const heightInput = document.getElementById('prop-height');
+        if (widthInput) widthInput.value = item.width || 60;
+        if (heightInput) heightInput.value = item.height || 40;
+
+        // Color property
+        const fillColorInput = document.getElementById('prop-fill-color');
+        const fillColorText = document.getElementById('prop-fill-color-text');
+        if (fillColorInput) {
+            const color = item.fill_color || type.fill_color || '#A0522D';
+            fillColorInput.value = color;
+            if (fillColorText) fillColorText.value = color;
+        }
+
         const capacityGroup = document.getElementById('prop-capacity-group');
         if (capacityGroup) {
             capacityGroup.style.display = type.is_decorative ? 'none' : 'block';
@@ -703,62 +910,481 @@ class MapEditor {
         this.propertiesPanel.classList.add('active');
     }
 
+    // =============================================================================
+    // MARQUEE SELECTION
+    // =============================================================================
+
+    setupMarqueeSelection() {
+        if (!this.viewport) return;
+
+        let startPoint = null;
+        let mouseDownPos = null;
+        let isMouseDown = false;
+        let marqueeStarted = false;
+
+        // Start potential marquee on mousedown
+        // Use capture phase to intercept Ctrl+drag even on furniture items
+        this.viewport.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+
+            const target = e.target;
+            const isOnFurniture = target.closest('.furniture-item');
+
+            // If Ctrl is held, always allow marquee selection (even on furniture)
+            // If not on furniture, also allow normal marquee
+            if (!e.ctrlKey && isOnFurniture) return;
+
+            // For Ctrl+click on furniture, the toggle was already done by setupFurnitureEvents
+            // But we still want to enable marquee if they drag
+
+            // Store initial position to detect drag vs click
+            mouseDownPos = { x: e.clientX, y: e.clientY };
+            isMouseDown = true;
+            marqueeStarted = false;
+
+            const pt = this.getSVGPoint(e);
+            startPoint = { x: pt.x, y: pt.y };
+        }, true); // Use capture phase
+
+        // Update marquee on mousemove
+        document.addEventListener('mousemove', (e) => {
+            if (!isMouseDown || !startPoint) return;
+
+            // Check if we've moved enough to start marquee (5px threshold)
+            const dx = Math.abs(e.clientX - mouseDownPos.x);
+            const dy = Math.abs(e.clientY - mouseDownPos.y);
+
+            if (!marqueeStarted && (dx > 5 || dy > 5)) {
+                // Start marquee
+                marqueeStarted = true;
+                this.isMarqueeSelecting = true;
+
+                // Clear selection if not holding Shift
+                if (!e.shiftKey) {
+                    this.deselectAll();
+                }
+
+                // Create marquee rectangle
+                this.marqueeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                this.marqueeRect.setAttribute('class', 'marquee-rect');
+                this.marqueeRect.setAttribute('x', startPoint.x);
+                this.marqueeRect.setAttribute('y', startPoint.y);
+                this.marqueeRect.setAttribute('width', 0);
+                this.marqueeRect.setAttribute('height', 0);
+                this.selectionLayer?.appendChild(this.marqueeRect);
+            }
+
+            if (!this.isMarqueeSelecting || !this.marqueeRect) return;
+
+            const pt = this.getSVGPoint(e);
+            const x = Math.min(startPoint.x, pt.x);
+            const y = Math.min(startPoint.y, pt.y);
+            const width = Math.abs(pt.x - startPoint.x);
+            const height = Math.abs(pt.y - startPoint.y);
+
+            this.marqueeRect.setAttribute('x', x);
+            this.marqueeRect.setAttribute('y', y);
+            this.marqueeRect.setAttribute('width', width);
+            this.marqueeRect.setAttribute('height', height);
+
+            // Preview selection (highlight items within marquee)
+            this.previewMarqueeSelection(x, y, width, height);
+        });
+
+        // End marquee on mouseup
+        document.addEventListener('mouseup', (e) => {
+            if (this.isMarqueeSelecting && this.marqueeRect) {
+                const x = parseFloat(this.marqueeRect.getAttribute('x'));
+                const y = parseFloat(this.marqueeRect.getAttribute('y'));
+                const width = parseFloat(this.marqueeRect.getAttribute('width'));
+                const height = parseFloat(this.marqueeRect.getAttribute('height'));
+
+                // Only select if marquee has some size
+                if (width > 5 && height > 5) {
+                    // Use Ctrl or Shift to add to selection
+                    const addToSelection = e.shiftKey || e.ctrlKey;
+                    this.selectItemsInRect(x, y, width, height, addToSelection);
+                    // Prevent the click handler from deselecting
+                    this.justFinishedMarquee = true;
+                }
+
+                this.marqueeRect.remove();
+                this.marqueeRect = null;
+            }
+
+            // Remove preview highlights
+            this.furnitureLayer?.querySelectorAll('.marquee-preview').forEach(el => {
+                el.classList.remove('marquee-preview');
+            });
+
+            // Reset state
+            this.isMarqueeSelecting = false;
+            isMouseDown = false;
+            marqueeStarted = false;
+            startPoint = null;
+            mouseDownPos = null;
+        });
+    }
+
+    previewMarqueeSelection(x, y, width, height) {
+        // Remove previous previews
+        this.furnitureLayer?.querySelectorAll('.marquee-preview').forEach(el => {
+            el.classList.remove('marquee-preview');
+        });
+
+        // Add preview to items within marquee
+        this.furniture.forEach(item => {
+            if (this.isItemInRect(item, x, y, width, height)) {
+                const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
+                if (group && !this.selectedItems.has(item.id)) {
+                    group.classList.add('marquee-preview');
+                }
+            }
+        });
+    }
+
+    selectItemsInRect(x, y, width, height, addToSelection = false) {
+        const itemsToSelect = [];
+
+        this.furniture.forEach(item => {
+            if (this.isItemInRect(item, x, y, width, height)) {
+                itemsToSelect.push(item.id);
+            }
+        });
+
+        if (itemsToSelect.length > 0) {
+            this.selectMultiple(itemsToSelect, addToSelection);
+        }
+    }
+
+    isItemInRect(item, rectX, rectY, rectWidth, rectHeight) {
+        // Check if item center is within rectangle
+        const itemCenterX = item.position_x + item.width / 2;
+        const itemCenterY = item.position_y + item.height / 2;
+
+        return itemCenterX >= rectX &&
+               itemCenterX <= rectX + rectWidth &&
+               itemCenterY >= rectY &&
+               itemCenterY <= rectY + rectHeight;
+    }
+
+    /**
+     * Update property for currently selected item(s)
+     */
     async updateSelectedProperty(property, value) {
-        if (!this.selectedItem) return;
+        const selectedItems = this.getSelectedItems();
+        if (selectedItems.length === 0) return;
+
+        // For single selection, update the item directly
+        const item = selectedItems[0];
 
         // Handle position updates
         if (property === 'position_x' || property === 'position_y') {
             const snapped = Math.round(value / this.options.snapToGrid) * this.options.snapToGrid;
-            this.selectedItem[property] = snapped;
+            item[property] = snapped;
 
-            const group = this.furnitureLayer.querySelector(`[data-id="${this.selectedItem.id}"]`);
+            const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
             if (group) {
                 group.setAttribute('transform',
-                    `translate(${this.selectedItem.position_x}, ${this.selectedItem.position_y}) rotate(${this.selectedItem.rotation || 0}, ${this.selectedItem.width / 2}, ${this.selectedItem.height / 2})`
+                    `translate(${item.position_x}, ${item.position_y}) rotate(${item.rotation || 0}, ${item.width / 2}, ${item.height / 2})`
                 );
             }
 
-            await this.saveFurniturePosition(this.selectedItem);
+            await this.saveFurniturePosition(item);
             return;
         }
 
-        this.selectedItem[property] = value;
+        item[property] = value;
 
         if (property === 'rotation') {
-            const group = this.furnitureLayer.querySelector(`[data-id="${this.selectedItem.id}"]`);
+            const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
             if (group) {
                 group.setAttribute('transform',
-                    `translate(${this.selectedItem.position_x}, ${this.selectedItem.position_y}) rotate(${value}, ${this.selectedItem.width / 2}, ${this.selectedItem.height / 2})`
+                    `translate(${item.position_x}, ${item.position_y}) rotate(${value}, ${item.width / 2}, ${item.height / 2})`
                 );
             }
-            await this.saveFurniturePosition(this.selectedItem);
+            await this.saveFurniturePosition(item);
         } else if (property === 'width' || property === 'height' || property === 'fill_color') {
             // Re-render the shape when size or color changes
-            const group = this.furnitureLayer.querySelector(`[data-id="${this.selectedItem.id}"]`);
+            const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
             if (group) {
-                const type = this.furnitureTypes[this.selectedItem.furniture_type] || {};
+                const type = this.furnitureTypes[item.furniture_type] || {};
                 const oldShape = group.querySelector('rect, ellipse');
                 if (oldShape) {
-                    const newShape = this.createShape(this.selectedItem, type);
+                    const newShape = this.createShape(item, type);
                     oldShape.replaceWith(newShape);
                 }
                 // Update number position if size changed
                 if (property === 'width' || property === 'height') {
                     const text = group.querySelector('.furniture-number');
                     if (text) {
-                        text.setAttribute('x', this.selectedItem.width / 2);
-                        text.setAttribute('y', this.selectedItem.height / 2);
+                        text.setAttribute('x', item.width / 2);
+                        text.setAttribute('y', item.height / 2);
                     }
                     // Update transform for center rotation point
                     group.setAttribute('transform',
-                        `translate(${this.selectedItem.position_x}, ${this.selectedItem.position_y}) rotate(${this.selectedItem.rotation || 0}, ${this.selectedItem.width / 2}, ${this.selectedItem.height / 2})`
+                        `translate(${item.position_x}, ${item.position_y}) rotate(${item.rotation || 0}, ${item.width / 2}, ${item.height / 2})`
                     );
                 }
             }
-            await this.saveFurnitureProperty(this.selectedItem.id, property, value);
+            await this.saveFurnitureProperty(item.id, property, value);
         } else {
-            await this.saveFurnitureProperty(this.selectedItem.id, property, value);
+            await this.saveFurnitureProperty(item.id, property, value);
         }
+    }
+
+    // =============================================================================
+    // MULTI-SELECTION OPERATIONS
+    // =============================================================================
+
+    /**
+     * Move all selected items by delta
+     */
+    async moveSelectedItems(deltaX, deltaY) {
+        const selectedItems = this.getSelectedItems();
+        if (selectedItems.length === 0) return;
+
+        const updates = [];
+
+        selectedItems.forEach(item => {
+            let newX = item.position_x + deltaX;
+            let newY = item.position_y + deltaY;
+
+            // Snap to grid
+            newX = Math.round(newX / this.options.snapToGrid) * this.options.snapToGrid;
+            newY = Math.round(newY / this.options.snapToGrid) * this.options.snapToGrid;
+
+            // Bounds check
+            newX = Math.max(0, Math.min(newX, this.canvasConfig.width - item.width));
+            newY = Math.max(0, Math.min(newY, this.canvasConfig.height - item.height));
+
+            item.position_x = newX;
+            item.position_y = newY;
+
+            const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
+            if (group) {
+                group.setAttribute('transform',
+                    `translate(${newX}, ${newY}) rotate(${item.rotation || 0}, ${item.width / 2}, ${item.height / 2})`
+                );
+            }
+
+            updates.push({ id: item.id, x: newX, y: newY, rotation: item.rotation });
+        });
+
+        // Batch save positions
+        await this.saveBatchPositions(updates);
+    }
+
+    /**
+     * Delete all selected items
+     */
+    async deleteSelectedItems() {
+        const selectedItems = this.getSelectedItems();
+        if (selectedItems.length === 0) return;
+
+        const count = selectedItems.length;
+        const confirmMsg = count === 1
+            ? '¿Eliminar el elemento seleccionado?'
+            : `¿Eliminar ${count} elementos seleccionados?`;
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            const ids = selectedItems.map(item => item.id);
+            await this.deleteBatchFurniture(ids);
+
+            // Remove from DOM and local state
+            ids.forEach(id => {
+                const group = this.furnitureLayer.querySelector(`[data-id="${id}"]`);
+                if (group) group.remove();
+            });
+
+            this.furniture = this.furniture.filter(f => !ids.includes(f.id));
+            this.deselectAll();
+            this.emit('furnitureChanged', this.furniture.length);
+
+            if (window.PuroBeach) {
+                window.PuroBeach.showToast(`${count} elemento(s) eliminado(s)`, 'success');
+            }
+        } catch (error) {
+            console.error('Error deleting items:', error);
+            if (window.PuroBeach) {
+                window.PuroBeach.showToast(error.message || 'Error al eliminar', 'error');
+            }
+        }
+    }
+
+    /**
+     * Align selected items
+     */
+    async alignSelectedItems(alignment) {
+        const selectedItems = this.getSelectedItems();
+        if (selectedItems.length < 2) return;
+
+        const updates = [];
+        let reference;
+
+        // Calculate reference point based on alignment type
+        switch (alignment) {
+            case 'left':
+                reference = Math.min(...selectedItems.map(i => i.position_x));
+                selectedItems.forEach(item => {
+                    item.position_x = reference;
+                    updates.push({ id: item.id, x: item.position_x, y: item.position_y, rotation: item.rotation });
+                });
+                break;
+
+            case 'right':
+                reference = Math.max(...selectedItems.map(i => i.position_x + i.width));
+                selectedItems.forEach(item => {
+                    item.position_x = reference - item.width;
+                    updates.push({ id: item.id, x: item.position_x, y: item.position_y, rotation: item.rotation });
+                });
+                break;
+
+            case 'top':
+                reference = Math.min(...selectedItems.map(i => i.position_y));
+                selectedItems.forEach(item => {
+                    item.position_y = reference;
+                    updates.push({ id: item.id, x: item.position_x, y: item.position_y, rotation: item.rotation });
+                });
+                break;
+
+            case 'bottom':
+                reference = Math.max(...selectedItems.map(i => i.position_y + i.height));
+                selectedItems.forEach(item => {
+                    item.position_y = reference - item.height;
+                    updates.push({ id: item.id, x: item.position_x, y: item.position_y, rotation: item.rotation });
+                });
+                break;
+
+            case 'center-h':
+                reference = selectedItems.reduce((sum, i) => sum + i.position_x + i.width / 2, 0) / selectedItems.length;
+                selectedItems.forEach(item => {
+                    item.position_x = Math.round((reference - item.width / 2) / this.options.snapToGrid) * this.options.snapToGrid;
+                    updates.push({ id: item.id, x: item.position_x, y: item.position_y, rotation: item.rotation });
+                });
+                break;
+
+            case 'center-v':
+                reference = selectedItems.reduce((sum, i) => sum + i.position_y + i.height / 2, 0) / selectedItems.length;
+                selectedItems.forEach(item => {
+                    item.position_y = Math.round((reference - item.height / 2) / this.options.snapToGrid) * this.options.snapToGrid;
+                    updates.push({ id: item.id, x: item.position_x, y: item.position_y, rotation: item.rotation });
+                });
+                break;
+
+            case 'distribute-h':
+                this.distributeItems(selectedItems, 'horizontal', updates);
+                break;
+
+            case 'distribute-v':
+                this.distributeItems(selectedItems, 'vertical', updates);
+                break;
+        }
+
+        // Update DOM
+        updates.forEach(update => {
+            const item = this.furniture.find(f => f.id === update.id);
+            if (item) {
+                const group = this.furnitureLayer.querySelector(`[data-id="${update.id}"]`);
+                if (group) {
+                    group.setAttribute('transform',
+                        `translate(${item.position_x}, ${item.position_y}) rotate(${item.rotation || 0}, ${item.width / 2}, ${item.height / 2})`
+                    );
+                }
+            }
+        });
+
+        // Batch save
+        await this.saveBatchPositions(updates);
+
+        if (window.PuroBeach) {
+            window.PuroBeach.showToast('Elementos alineados', 'success');
+        }
+    }
+
+    distributeItems(items, direction, updates) {
+        if (items.length < 2) return;
+
+        const margin = 50; // Interior margin from canvas edges
+        const canvasSize = direction === 'horizontal'
+            ? this.canvasConfig.width
+            : this.canvasConfig.height;
+
+        // Available space = canvas size minus margins on both sides
+        const availableSpace = canvasSize - (margin * 2);
+
+        // Calculate total size of all items
+        const totalItemSize = items.reduce((sum, item) =>
+            sum + (direction === 'horizontal' ? item.width : item.height), 0
+        );
+
+        // Calculate uniform spacing between items
+        // For N items, we have N-1 gaps between them
+        const totalGapSpace = availableSpace - totalItemSize;
+        const uniformSpacing = items.length > 1 ? totalGapSpace / (items.length - 1) : 0;
+
+        // Sort items by current position to maintain relative order
+        const sorted = [...items].sort((a, b) =>
+            direction === 'horizontal'
+                ? a.position_x - b.position_x
+                : a.position_y - b.position_y
+        );
+
+        // Calculate average position for the perpendicular axis (to align items)
+        const avgPerpendicularPos = direction === 'horizontal'
+            ? items.reduce((sum, item) => sum + item.position_y, 0) / items.length
+            : items.reduce((sum, item) => sum + item.position_x, 0) / items.length;
+
+        // Round perpendicular position to integer only (no grid snap to maintain uniform spacing)
+        const alignedPerpendicularPos = Math.round(avgPerpendicularPos);
+
+        // Position items with precise spacing (no grid snapping)
+        let currentPos = margin;
+
+        sorted.forEach((item, index) => {
+            // Round to integer for clean rendering, but don't snap to grid
+            const precisePos = Math.round(currentPos);
+
+            if (direction === 'horizontal') {
+                item.position_x = precisePos;
+                item.position_y = alignedPerpendicularPos;
+            } else {
+                item.position_y = precisePos;
+                item.position_x = alignedPerpendicularPos;
+            }
+
+            updates.push({ id: item.id, x: item.position_x, y: item.position_y, rotation: item.rotation });
+
+            // Move to next position with exact spacing (no rounding until next iteration)
+            currentPos += (direction === 'horizontal' ? item.width : item.height) + uniformSpacing;
+        });
+    }
+
+    /**
+     * Apply rotation to all selected items
+     */
+    async rotateSelectedItems(rotation) {
+        const selectedItems = this.getSelectedItems();
+        if (selectedItems.length === 0) return;
+
+        const updates = [];
+
+        selectedItems.forEach(item => {
+            item.rotation = rotation;
+
+            const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
+            if (group) {
+                group.setAttribute('transform',
+                    `translate(${item.position_x}, ${item.position_y}) rotate(${rotation}, ${item.width / 2}, ${item.height / 2})`
+                );
+            }
+
+            updates.push({ id: item.id, x: item.position_x, y: item.position_y, rotation: rotation });
+        });
+
+        await this.saveBatchPositions(updates);
     }
 
     // =============================================================================
@@ -920,33 +1546,53 @@ class MapEditor {
         }
     }
 
-    async deleteSelected() {
-        if (!this.selectedItem) return;
+    /**
+     * Save positions for multiple items in batch
+     */
+    async saveBatchPositions(updates) {
+        if (updates.length === 0) return;
 
         try {
-            const response = await fetch(`${this.options.apiBaseUrl}/furniture/${this.selectedItem.id}`, {
-                method: 'DELETE',
+            await fetch(`${this.options.apiBaseUrl}/furniture/batch-position`, {
+                method: 'PUT',
                 headers: {
+                    'Content-Type': 'application/json',
                     'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                }
+                },
+                body: JSON.stringify({ updates })
             });
-
-            const result = await response.json();
-            if (!result.success) throw new Error(result.error);
-
-            const group = this.furnitureLayer.querySelector(`[data-id="${this.selectedItem.id}"]`);
-            if (group) group.remove();
-
-            this.furniture = this.furniture.filter(f => f.id !== this.selectedItem.id);
-            this.deselectAll();
-            this.emit('furnitureChanged', this.furniture.length);
-
-            if (window.PuroBeach) window.PuroBeach.showToast('Elemento eliminado', 'success');
-
         } catch (error) {
-            console.error('Error deleting furniture:', error);
-            if (window.PuroBeach) window.PuroBeach.showToast(error.message || 'Error al eliminar', 'error');
+            console.error('Error saving batch positions:', error);
         }
+    }
+
+    /**
+     * Delete multiple furniture items in batch
+     */
+    async deleteBatchFurniture(ids) {
+        if (ids.length === 0) return;
+
+        const response = await fetch(`${this.options.apiBaseUrl}/furniture/batch-delete`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+            },
+            body: JSON.stringify({ ids })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Error al eliminar');
+        }
+        return result;
+    }
+
+    /**
+     * Delete selected items (legacy method, now uses batch)
+     */
+    async deleteSelected() {
+        await this.deleteSelectedItems();
     }
 
     // =============================================================================
@@ -1074,19 +1720,63 @@ class MapEditor {
         document.addEventListener('keydown', (e) => {
             if (!this.container.contains(document.activeElement) && document.activeElement.tagName !== 'BODY') return;
 
+            const hasSelection = this.selectedItems.size > 0;
+            const isInputFocused = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
+
             switch (e.key) {
                 case 'Escape':
                     this.deselectAll();
                     break;
+
                 case 'Delete':
                 case 'Backspace':
-                    if (this.selectedItem && document.activeElement.tagName !== 'INPUT') {
+                    if (hasSelection && !isInputFocused) {
                         e.preventDefault();
-                        if (confirm('¿Eliminar el elemento seleccionado?')) {
-                            this.deleteSelected();
-                        }
+                        this.deleteSelectedItems();
                     }
                     break;
+
+                case 'a':
+                case 'A':
+                    // Ctrl+A to select all
+                    if ((e.ctrlKey || e.metaKey) && !isInputFocused) {
+                        e.preventDefault();
+                        this.selectAll();
+                    }
+                    break;
+
+                case 'ArrowUp':
+                    if (hasSelection && !isInputFocused) {
+                        e.preventDefault();
+                        const stepY = e.shiftKey ? this.options.snapToGrid * 4 : this.options.snapToGrid;
+                        this.moveSelectedItems(0, -stepY);
+                    }
+                    break;
+
+                case 'ArrowDown':
+                    if (hasSelection && !isInputFocused) {
+                        e.preventDefault();
+                        const stepY = e.shiftKey ? this.options.snapToGrid * 4 : this.options.snapToGrid;
+                        this.moveSelectedItems(0, stepY);
+                    }
+                    break;
+
+                case 'ArrowLeft':
+                    if (hasSelection && !isInputFocused) {
+                        e.preventDefault();
+                        const stepX = e.shiftKey ? this.options.snapToGrid * 4 : this.options.snapToGrid;
+                        this.moveSelectedItems(-stepX, 0);
+                    }
+                    break;
+
+                case 'ArrowRight':
+                    if (hasSelection && !isInputFocused) {
+                        e.preventDefault();
+                        const stepX = e.shiftKey ? this.options.snapToGrid * 4 : this.options.snapToGrid;
+                        this.moveSelectedItems(stepX, 0);
+                    }
+                    break;
+
                 case '+':
                 case '=':
                     if (e.ctrlKey || e.metaKey) {
@@ -1094,29 +1784,33 @@ class MapEditor {
                         this.zoomIn();
                     }
                     break;
+
                 case '-':
                     if (e.ctrlKey || e.metaKey) {
                         e.preventDefault();
                         this.zoomOut();
                     }
                     break;
+
                 case '0':
                     if (e.ctrlKey || e.metaKey) {
                         e.preventDefault();
                         this.zoomReset();
                     }
                     break;
+
                 case 'g':
                 case 'G':
-                    if (!e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') {
+                    if (!e.ctrlKey && !e.metaKey && !isInputFocused) {
                         e.preventDefault();
                         this.toggleGrid();
                         document.getElementById('btn-toggle-grid')?.classList.toggle('active');
                     }
                     break;
+
                 case 'c':
                 case 'C':
-                    if (!e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') {
+                    if (!e.ctrlKey && !e.metaKey && !isInputFocused) {
                         e.preventDefault();
                         this.toggleCenterGuides();
                         document.getElementById('btn-toggle-center')?.classList.toggle('active');

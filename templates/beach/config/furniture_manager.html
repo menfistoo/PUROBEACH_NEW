@@ -126,9 +126,9 @@
 <div class="modal fade zone-settings-modal" id="zoneSettingsModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Configuración de Zona</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header" style="background: linear-gradient(135deg, #1A3A5C 0%, #2A4A6C 100%);">
+                <h5 class="modal-title text-white"><i class="fas fa-cog me-2"></i>Configuración de Zona</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="row mb-3">
@@ -484,12 +484,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
             container.querySelectorAll('.feature-tag').forEach(tag => {
                 tag.addEventListener('click', async function() {
-                    if (!editor.selectedItem) return;
+                    const selectedItems = editor.getSelectedItems();
+                    if (selectedItems.length === 0) return;
 
+                    const selectedItem = selectedItems[0];
                     const code = this.dataset.code;
-                    let currentFeatures = editor.selectedItem.features ?
-                        (typeof editor.selectedItem.features === 'string' ?
-                            JSON.parse(editor.selectedItem.features) : editor.selectedItem.features) : [];
+                    let currentFeatures = selectedItem.features ?
+                        (typeof selectedItem.features === 'string' ?
+                            JSON.parse(selectedItem.features) : selectedItem.features) : [];
 
                     if (currentFeatures.includes(code)) {
                         currentFeatures = currentFeatures.filter(f => f !== code);
@@ -500,21 +502,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                     const featuresJson = JSON.stringify(currentFeatures);
-                    editor.selectedItem.features = featuresJson;
-                    await editor.saveFurnitureProperty(editor.selectedItem.id, 'features', featuresJson);
+                    selectedItem.features = featuresJson;
+                    await editor.saveFurnitureProperty(selectedItem.id, 'features', featuresJson);
                 });
             });
         }
 
         // Duplicate functionality
         async function duplicateFurniture(direction) {
-            if (!editor.selectedItem) return;
+            const selectedItems = editor.getSelectedItems();
+            if (selectedItems.length === 0) return;
 
+            const selectedItem = selectedItems[0];
             const count = parseInt(document.getElementById('prop-copies').value) || 1;
             const spacing = parseInt(document.getElementById('prop-spacing').value) || 10;
 
             try {
-                const response = await fetch(`/beach/config/map-editor/furniture/${editor.selectedItem.id}/duplicate`, {
+                const response = await fetch(`/beach/config/map-editor/furniture/${selectedItem.id}/duplicate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -596,9 +600,56 @@ document.addEventListener('DOMContentLoaded', function() {
             if (el) el.textContent = pos ? `${pos.x}, ${pos.y}` : '-';
         });
 
-        editor.on('itemMoved', pos => {
-            document.getElementById('prop-x').value = Math.round(pos.x);
-            document.getElementById('prop-y').value = Math.round(pos.y);
+        editor.on('itemMoved', data => {
+            if (data.x !== undefined) {
+                document.getElementById('prop-x').value = Math.round(data.x);
+                document.getElementById('prop-y').value = Math.round(data.y);
+            }
+        });
+
+        // ==========================================
+        // MULTI-SELECTION TOOLBAR EVENTS
+        // ==========================================
+
+        // Alignment buttons
+        document.querySelectorAll('[data-align]').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const alignment = this.dataset.align;
+                editor.alignSelectedItems(alignment);
+            });
+        });
+
+        // Rotation buttons
+        document.getElementById('btn-rotate-0')?.addEventListener('click', () => {
+            editor.rotateSelectedItems(0);
+        });
+
+        document.getElementById('btn-rotate-90')?.addEventListener('click', () => {
+            editor.rotateSelectedItems(90);
+        });
+
+        // Delete multiple button
+        document.getElementById('btn-delete-multiple')?.addEventListener('click', () => {
+            editor.deleteSelectedItems();
+        });
+
+        // Deselect all button
+        document.getElementById('btn-deselect-all')?.addEventListener('click', () => {
+            editor.deselectAll();
+        });
+
+        // Multi-selection changed event
+        editor.on('multiSelectionChanged', selected => {
+            const toolbar = document.getElementById('multi-select-toolbar');
+            if (!toolbar) return;
+
+            if (selected.length > 1) {
+                toolbar.classList.remove('d-none');
+                toolbar.querySelector('.selection-count').textContent = selected.length;
+            } else {
+                toolbar.classList.add('d-none');
+            }
         });
     }
 

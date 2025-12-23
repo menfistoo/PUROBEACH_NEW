@@ -300,3 +300,74 @@ def register_routes(bp):
 
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
+
+    @bp.route('/map-editor/furniture/batch-position', methods=['PUT'])
+    @login_required
+    @permission_required('beach.map_editor.edit')
+    def map_editor_batch_position():
+        """Update positions for multiple furniture items in batch."""
+        data = request.get_json()
+        updates = data.get('updates', [])
+
+        if not updates:
+            return jsonify({'success': False, 'error': 'No se recibieron actualizaciones'}), 400
+
+        try:
+            for update in updates:
+                furniture_id = update.get('id')
+                x = update.get('x')
+                y = update.get('y')
+                rotation = update.get('rotation')
+
+                if furniture_id and x is not None and y is not None:
+                    update_furniture_position(
+                        furniture_id,
+                        float(x),
+                        float(y),
+                        int(rotation) if rotation is not None else None
+                    )
+
+            return jsonify({
+                'success': True,
+                'count': len(updates)
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @bp.route('/map-editor/furniture/batch-delete', methods=['DELETE'])
+    @login_required
+    @permission_required('beach.map_editor.edit')
+    def map_editor_batch_delete():
+        """Delete multiple furniture items in batch."""
+        data = request.get_json()
+        ids = data.get('ids', [])
+
+        if not ids:
+            return jsonify({'success': False, 'error': 'No se recibieron IDs para eliminar'}), 400
+
+        try:
+            deleted_count = 0
+            errors = []
+
+            for furniture_id in ids:
+                try:
+                    deleted = delete_furniture(furniture_id)
+                    if deleted:
+                        deleted_count += 1
+                except ValueError as e:
+                    errors.append(f"ID {furniture_id}: {str(e)}")
+
+            if errors:
+                return jsonify({
+                    'success': True,
+                    'deleted': deleted_count,
+                    'errors': errors,
+                    'message': f'Se eliminaron {deleted_count} de {len(ids)} elementos'
+                })
+
+            return jsonify({
+                'success': True,
+                'deleted': deleted_count
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
