@@ -13,6 +13,7 @@ from models.furniture import get_all_furniture
 from models.furniture_type import get_all_furniture_types
 from models.state import get_all_states
 from models.reservation import get_furniture_availability_map
+from models.config import get_map_config
 
 
 def register_routes(bp):
@@ -53,12 +54,15 @@ def register_routes(bp):
                 if date_str in dates_data:
                     furniture_availability[int(fid)] = dates_data[date_str]
 
+        # Get map configuration from database
+        map_config = get_map_config()
+        zone_padding = map_config['zone_padding']
+        zone_height = map_config['zone_height']
+        map_width = map_config['default_width']
+        min_height = map_config['min_height']
+
         # Calculate zone bounds for rendering (vertical stacking)
         zone_bounds = {}
-        zone_padding = 20
-        zone_height = 200
-        map_width = 1200
-
         for idx, zone in enumerate(zones):
             zone_bounds[zone['id']] = {
                 'x': zone_padding,
@@ -83,8 +87,9 @@ def register_routes(bp):
             'summary': availability.get('summary', {}).get(date_str, {}),
             'map_dimensions': {
                 'width': map_width,
-                'height': max(800, total_height)
-            }
+                'height': max(min_height, total_height)
+            },
+            'map_config': map_config  # Send config to frontend
         })
 
     @bp.route('/map/availability')

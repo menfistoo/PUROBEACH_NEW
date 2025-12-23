@@ -90,6 +90,23 @@
     /* Sidebar dimensions */
     --sidebar-width: 260px;
     --sidebar-collapsed-width: 70px;
+
+    /* Map-specific colors */
+    --map-available-fill: #F5E6D3;
+    --map-available-stroke: #D4AF37;
+    --map-selected-fill: #D4AF37;
+    --map-selected-stroke: #8B6914;
+    --map-zone-label: #1A3A5C;
+    --map-tooltip-bg: #1A3A5C;
+    --map-pool-primary: #87CEEB;
+    --map-pool-secondary: #5DADE2;
+    --map-canvas-bg: #dee2e6;
+
+    /* Map settings (configurable) */
+    --map-auto-refresh-ms: 30000;
+    --map-min-zoom: 0.1;
+    --map-max-zoom: 3;
+    --map-snap-grid: 10;
 }
 
 /* ==================== Bootstrap Color Overrides ==================== */

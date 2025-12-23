@@ -10,17 +10,23 @@ class BeachMap {
             throw new Error(`Container #${containerId} not found`);
         }
 
-        // Configuration
+        // Load CSS variables for configurable values
+        const cssVars = this.loadCSSVariables();
+
+        // Configuration (with CSS variable fallbacks)
         this.options = {
             apiUrl: '/beach/api/map/data',
-            autoRefreshInterval: 30000,  // 30 seconds
+            autoRefreshInterval: cssVars.autoRefreshMs,
             enableDragDrop: false,
             enableZoom: true,
-            minZoom: 0.1,  // Allow zoom out to 10%
-            maxZoom: 3,
-            snapToGrid: 10,
+            minZoom: cssVars.minZoom,
+            maxZoom: cssVars.maxZoom,
+            snapToGrid: cssVars.snapGrid,
             ...options
         };
+
+        // Store colors from CSS variables
+        this.colors = cssVars.colors;
 
         // State
         this.currentDate = this.options.initialDate || new Date().toISOString().split('T')[0];
@@ -73,7 +79,7 @@ class BeachMap {
         this.svg.setAttribute('class', 'beach-map-svg');
         this.svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
-        // Create defs for patterns and filters
+        // Create defs for patterns and filters (using CSS variable colors)
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
         defs.innerHTML = `
             <filter id="selected-glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -88,9 +94,9 @@ class BeachMap {
                 <circle cx="10" cy="10" r="1" fill="rgba(212, 175, 55, 0.2)"/>
             </pattern>
             <pattern id="pool-pattern" patternUnits="userSpaceOnUse" width="10" height="10">
-                <rect width="10" height="10" fill="#87CEEB"/>
-                <rect x="0" y="0" width="5" height="5" fill="#5DADE2" opacity="0.3"/>
-                <rect x="5" y="5" width="5" height="5" fill="#5DADE2" opacity="0.3"/>
+                <rect width="10" height="10" fill="${this.colors.poolPrimary}"/>
+                <rect x="0" y="0" width="5" height="5" fill="${this.colors.poolSecondary}" opacity="0.3"/>
+                <rect x="5" y="5" width="5" height="5" fill="${this.colors.poolSecondary}" opacity="0.3"/>
             </pattern>
         `;
         this.svg.appendChild(defs);
@@ -137,6 +143,15 @@ class BeachMap {
             if (!result.success) throw new Error(result.error || 'Error loading data');
 
             this.data = result;
+
+            // Override options with server config if available
+            if (result.map_config) {
+                this.options.autoRefreshInterval = result.map_config.auto_refresh_ms || this.options.autoRefreshInterval;
+                this.options.minZoom = result.map_config.min_zoom || this.options.minZoom;
+                this.options.maxZoom = result.map_config.max_zoom || this.options.maxZoom;
+                this.options.snapToGrid = result.map_config.snap_grid || this.options.snapToGrid;
+            }
+
             this.render();
         } catch (error) {
             console.error('Map load error:', error);
@@ -197,7 +212,7 @@ class BeachMap {
             label.setAttribute('x', bounds.x + 15);
             label.setAttribute('y', bounds.y + 25);
             label.setAttribute('class', 'zone-label');
-            label.setAttribute('fill', '#1A3A5C');
+            label.setAttribute('fill', this.colors.zoneLabel);
             label.setAttribute('font-size', '14');
             label.setAttribute('font-weight', '600');
             label.textContent = zone.name;
@@ -245,8 +260,12 @@ class BeachMap {
         let fillColor, strokeColor, fillPattern;
 
         if (item.furniture_type === 'piscina') {
-            fillPattern = 'url(#pool-pattern)';
-            strokeColor = '#5DADE2';
+            // Use furniture type colors for pool pattern
+            const poolFill = typeConfig.fill_color || this.colors.poolPrimary;
+            const poolStroke = typeConfig.stroke_color || this.colors.poolSecondary;
+            // Create dynamic pool pattern with furniture type colors
+            fillPattern = this.getPoolPattern(item.id, poolFill, poolStroke);
+            strokeColor = poolStroke;
         } else {
             fillColor = item.fill_color || typeConfig.fill_color || '#E8E8E8';
             strokeColor = typeConfig.stroke_color || '#CCCCCC';
@@ -316,8 +335,8 @@ class BeachMap {
 
         let fillColor, strokeColor;
         if (isAvailable) {
-            fillColor = '#F5E6D3';  // Warm sand - available
-            strokeColor = '#D4AF37';  // Gold stroke
+            fillColor = this.colors.availableFill;
+            strokeColor = this.colors.availableStroke;
         } else if (state && this.data.state_colors[state]) {
             fillColor = this.data.state_colors[state];
             strokeColor = this.darkenColor(fillColor, 30);
@@ -328,8 +347,8 @@ class BeachMap {
 
         // Check if selected
         if (this.selectedFurniture.has(item.id)) {
-            fillColor = '#D4AF37';  // Gold for selected
-            strokeColor = '#8B6914';
+            fillColor = this.colors.selectedFill;
+            strokeColor = this.colors.selectedStroke;
             group.setAttribute('filter', 'url(#selected-glow)');
         }
 
@@ -339,21 +358,61 @@ class BeachMap {
         const shape = this.createShape(typeConfig.map_shape || 'rounded_rect', width, height, fillColor, strokeColor);
         group.appendChild(shape);
 
-        // Add label
-        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        label.setAttribute('x', width / 2);
-        label.setAttribute('y', height / 2);
-        label.setAttribute('text-anchor', 'middle');
-        label.setAttribute('dominant-baseline', 'middle');
-        label.setAttribute('fill', this.getContrastColor(fillColor));
-        label.setAttribute('font-size', '12');
-        label.setAttribute('font-weight', '600');
-        label.setAttribute('pointer-events', 'none');
-        label.textContent = item.number;
-        group.appendChild(label);
+        // Add labels
+        if (!isAvailable && availability) {
+            // Occupied furniture: show customer info (room# or name) + furniture number
+            const customerLabel = this.getCustomerLabel(availability);
+
+            // Primary label: customer info (room# for interno, first name for externo)
+            const primaryLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            primaryLabel.setAttribute('x', width / 2);
+            primaryLabel.setAttribute('y', height / 2 - 4);
+            primaryLabel.setAttribute('text-anchor', 'middle');
+            primaryLabel.setAttribute('dominant-baseline', 'middle');
+            primaryLabel.setAttribute('fill', this.getContrastColor(fillColor));
+            primaryLabel.setAttribute('font-size', '11');
+            primaryLabel.setAttribute('font-weight', '600');
+            primaryLabel.setAttribute('pointer-events', 'none');
+            primaryLabel.textContent = customerLabel;
+            group.appendChild(primaryLabel);
+
+            // Secondary label: furniture number (smaller, below)
+            const secondaryLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            secondaryLabel.setAttribute('x', width / 2);
+            secondaryLabel.setAttribute('y', height / 2 + 8);
+            secondaryLabel.setAttribute('text-anchor', 'middle');
+            secondaryLabel.setAttribute('dominant-baseline', 'middle');
+            secondaryLabel.setAttribute('fill', this.getContrastColor(fillColor));
+            secondaryLabel.setAttribute('font-size', '8');
+            secondaryLabel.setAttribute('font-weight', '400');
+            secondaryLabel.setAttribute('pointer-events', 'none');
+            secondaryLabel.setAttribute('opacity', '0.8');
+            secondaryLabel.textContent = item.number;
+            group.appendChild(secondaryLabel);
+        } else {
+            // Available furniture: show just furniture number
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', width / 2);
+            label.setAttribute('y', height / 2);
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('dominant-baseline', 'middle');
+            label.setAttribute('fill', this.getContrastColor(fillColor));
+            label.setAttribute('font-size', '12');
+            label.setAttribute('font-weight', '600');
+            label.setAttribute('pointer-events', 'none');
+            label.textContent = item.number;
+            group.appendChild(label);
+        }
 
         // Event listeners
         group.addEventListener('click', (e) => this.handleFurnitureClick(e, item));
+
+        // Hover handlers for tooltip (only for occupied furniture)
+        if (!isAvailable && availability && availability.customer_name) {
+            group.addEventListener('mouseenter', (e) => this.showTooltip(e, availability));
+            group.addEventListener('mouseleave', () => this.hideTooltip());
+            group.addEventListener('mousemove', (e) => this.moveTooltip(e));
+        }
 
         return group;
     }
@@ -747,10 +806,10 @@ class BeachMap {
 
         let html = '<div class="legend-items d-flex flex-wrap gap-2">';
 
-        // Available state
+        // Available state (using CSS variable colors)
         html += `
             <div class="legend-item d-flex align-items-center">
-                <span class="legend-color" style="background-color: #F5E6D3; border: 2px solid #D4AF37;"></span>
+                <span class="legend-color" style="background-color: ${this.colors.availableFill}; border: 2px solid ${this.colors.availableStroke};"></span>
                 <span class="ms-1">Disponible</span>
             </div>
         `;
@@ -772,6 +831,69 @@ class BeachMap {
     }
 
     // ==========================================================================
+    // DYNAMIC PATTERNS
+    // ==========================================================================
+
+    getPoolPattern(itemId, fillColor, strokeColor) {
+        // Create a unique pattern for this pool item using its colors
+        const patternId = `pool-pattern-${itemId}`;
+
+        // Check if pattern already exists in defs
+        let pattern = this.svg.querySelector(`#${patternId}`);
+        if (!pattern) {
+            const defs = this.svg.querySelector('defs');
+            pattern = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+            pattern.setAttribute('id', patternId);
+            pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+            pattern.setAttribute('width', '10');
+            pattern.setAttribute('height', '10');
+            pattern.innerHTML = `
+                <rect width="10" height="10" fill="${fillColor}"/>
+                <rect x="0" y="0" width="5" height="5" fill="${strokeColor}" opacity="0.3"/>
+                <rect x="5" y="5" width="5" height="5" fill="${strokeColor}" opacity="0.3"/>
+            `;
+            defs.appendChild(pattern);
+        }
+        return `url(#${patternId})`;
+    }
+
+    // ==========================================================================
+    // CSS VARIABLES
+    // ==========================================================================
+
+    loadCSSVariables() {
+        const style = getComputedStyle(document.documentElement);
+        const getVar = (name, fallback) => {
+            const value = style.getPropertyValue(name).trim();
+            return value || fallback;
+        };
+        const getNumVar = (name, fallback) => {
+            const value = style.getPropertyValue(name).trim();
+            return value ? parseFloat(value) : fallback;
+        };
+
+        return {
+            autoRefreshMs: getNumVar('--map-auto-refresh-ms', 30000),
+            minZoom: getNumVar('--map-min-zoom', 0.1),
+            maxZoom: getNumVar('--map-max-zoom', 3),
+            snapGrid: getNumVar('--map-snap-grid', 10),
+            colors: {
+                availableFill: getVar('--map-available-fill', '#F5E6D3'),
+                availableStroke: getVar('--map-available-stroke', '#D4AF37'),
+                selectedFill: getVar('--map-selected-fill', '#D4AF37'),
+                selectedStroke: getVar('--map-selected-stroke', '#8B6914'),
+                zoneLabel: getVar('--map-zone-label', '#1A3A5C'),
+                tooltipBg: getVar('--map-tooltip-bg', '#1A3A5C'),
+                poolPrimary: getVar('--map-pool-primary', '#87CEEB'),
+                poolSecondary: getVar('--map-pool-secondary', '#5DADE2'),
+                // Also load design system colors for contrast calculations
+                primary: getVar('--color-primary', '#D4AF37'),
+                secondary: getVar('--color-secondary', '#1A3A5C')
+            }
+        };
+    }
+
+    // ==========================================================================
     // UTILITIES
     // ==========================================================================
 
@@ -789,7 +911,7 @@ class BeachMap {
         const g = parseInt(hexcolor.slice(3, 5), 16);
         const b = parseInt(hexcolor.slice(5, 7), 16);
         const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        return luminance > 0.5 ? '#1A3A5C' : '#FFFFFF';
+        return luminance > 0.5 ? this.colors.secondary : '#FFFFFF';
     }
 
     getCSRFToken() {
@@ -810,6 +932,105 @@ class BeachMap {
         errorDiv.className = 'alert alert-danger m-3';
         errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
         this.container.appendChild(errorDiv);
+    }
+
+    // ==========================================================================
+    // CUSTOMER LABELS & TOOLTIPS
+    // ==========================================================================
+
+    getCustomerLabel(availability) {
+        // Returns room number for interno, first name for externo
+        if (!availability) return '';
+
+        if (availability.customer_type === 'interno' && availability.room_number) {
+            // Show room number for hotel guests
+            return availability.room_number;
+        } else if (availability.first_name) {
+            // Show first name for externos (truncate if too long)
+            const name = availability.first_name;
+            return name.length > 6 ? name.substring(0, 5) + '.' : name;
+        } else if (availability.customer_name) {
+            // Fallback: first word of full name
+            const firstName = availability.customer_name.split(' ')[0];
+            return firstName.length > 6 ? firstName.substring(0, 5) + '.' : firstName;
+        }
+        return '';
+    }
+
+    showTooltip(event, availability) {
+        if (!this.tooltip) {
+            this.createTooltip();
+        }
+
+        // Build tooltip content with full customer name
+        let content = `<strong>${availability.customer_name || 'Sin nombre'}</strong>`;
+
+        if (availability.customer_type === 'interno' && availability.room_number) {
+            content += `<br><small>Hab. ${availability.room_number}</small>`;
+        }
+
+        if (availability.vip_status) {
+            content += ` <span class="badge bg-warning text-dark" style="font-size: 9px;">VIP</span>`;
+        }
+
+        if (availability.num_people) {
+            content += `<br><small>${availability.num_people} persona${availability.num_people > 1 ? 's' : ''}</small>`;
+        }
+
+        this.tooltip.innerHTML = content;
+        this.tooltip.style.display = 'block';
+        this.moveTooltip(event);
+    }
+
+    hideTooltip() {
+        if (this.tooltip) {
+            this.tooltip.style.display = 'none';
+        }
+    }
+
+    moveTooltip(event) {
+        if (!this.tooltip) return;
+
+        // Position tooltip above cursor
+        const offsetX = 10;
+        const offsetY = -10;
+        const tooltipRect = this.tooltip.getBoundingClientRect();
+        const containerRect = this.container.getBoundingClientRect();
+
+        let left = event.clientX - containerRect.left + offsetX;
+        let top = event.clientY - containerRect.top + offsetY - tooltipRect.height;
+
+        // Keep tooltip within container bounds
+        if (left + tooltipRect.width > containerRect.width) {
+            left = event.clientX - containerRect.left - tooltipRect.width - offsetX;
+        }
+        if (top < 0) {
+            top = event.clientY - containerRect.top + 20;
+        }
+
+        this.tooltip.style.left = `${left}px`;
+        this.tooltip.style.top = `${top}px`;
+    }
+
+    createTooltip() {
+        this.tooltip = document.createElement('div');
+        this.tooltip.className = 'map-tooltip';
+        this.tooltip.style.cssText = `
+            position: absolute;
+            display: none;
+            background: ${this.colors.tooltipBg};
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            max-width: 200px;
+            z-index: 1000;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            line-height: 1.4;
+        `;
+        this.container.style.position = 'relative';
+        this.container.appendChild(this.tooltip);
     }
 
     // ==========================================================================
@@ -834,6 +1055,12 @@ class BeachMap {
     destroy() {
         this.stopAutoRefresh();
         document.removeEventListener('keydown', this.handleKeyDown);
+
+        // Clean up tooltip
+        if (this.tooltip && this.tooltip.parentNode) {
+            this.tooltip.parentNode.removeChild(this.tooltip);
+            this.tooltip = null;
+        }
     }
 }
 

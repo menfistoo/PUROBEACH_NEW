@@ -185,6 +185,11 @@ def seed_database(db):
          'circle', 60, 60, 0, '#6B8E23', '#556B2F',
          0, 0, 1, 'S', 10,
          '{"available":"#90EE90","reserved":"#4CAF50","occupied":"#F44336","maintenance":"#9E9E9E"}'),
+        # Decorative pool element - fill_color is primary blue, stroke_color is pattern blue
+        ('piscina', 'Piscina', 'fa-water', '#87CEEB', 0, 0, 0,
+         'rounded_rect', 300, 150, 12, '#87CEEB', '#5DADE2',
+         0, 0, 1, 'P', 20,
+         '{}'),
     ]
 
     for (type_code, display_name, icon, color, min_cap, max_cap, suite_only,
@@ -273,7 +278,16 @@ def seed_database(db):
         ('allow_overbooking', 'false', 'Permitir sobrerreservas'),
         ('cancellation_hours', '24', 'Horas mínimas para cancelación gratuita'),
         ('default_reservation_state', 'pendiente', 'Estado por defecto de nuevas reservas'),
-        ('season_current', '2025_verano', 'Temporada actual')
+        ('season_current', '2025_verano', 'Temporada actual'),
+        # Map configuration
+        ('map_default_width', '1200', 'Ancho por defecto del mapa en píxeles'),
+        ('map_min_height', '800', 'Altura mínima del mapa en píxeles'),
+        ('map_zone_padding', '20', 'Espacio entre zonas en píxeles'),
+        ('map_zone_height', '200', 'Altura por defecto de zona en píxeles'),
+        ('map_auto_refresh_ms', '30000', 'Intervalo de auto-refresco en milisegundos'),
+        ('map_min_zoom', '0.1', 'Zoom mínimo del mapa'),
+        ('map_max_zoom', '3', 'Zoom máximo del mapa'),
+        ('map_snap_grid', '10', 'Tamaño de rejilla para ajuste en píxeles'),
     ]
 
     for key, value, description in config_data:
