@@ -1,355 +1,806 @@
 {% extends "base.html" %}
 
-{% set page_title = "Mapa de Beach Club" %}
+{% set page_title = "Mapa" %}
+{% set hide_header = true %}
 
-{% block title %}Mapa de Beach Club - PuroBeach{% endblock %}
+{% block title %}Mapa - PuroBeach{% endblock %}
 
 {% block extra_css %}
 <style>
-/* Map Container */
-.map-wrapper {
-    position: relative;
-    background: linear-gradient(180deg, var(--color-background) 0%, var(--color-accent) 100%);
-    border-radius: var(--border-radius-lg);
+/* =============================================================================
+   MOBILE-FIRST MAP PAGE LAYOUT
+   ============================================================================= */
+
+/* Override parent containers for full-height map layout */
+.main-content:has(.map-page) {
     overflow: hidden;
-    min-height: 600px;
+    min-height: 0;  /* Allow flex shrinking */
 }
 
-.map-container {
-    width: 100%;
-    height: 600px;
+/* Full viewport height layout - negate content-wrapper padding */
+.content-wrapper:has(.map-page) {
+    padding: 0;
     overflow: hidden;
-    position: relative;
-}
-
-.beach-map-svg {
-    width: 100%;
     height: 100%;
-    transition: transform var(--transition-slow);
+    /* Critical: these ensure the container doesn't grow beyond viewport */
+    min-height: 0;
+    max-height: calc(100vh - 60px);
+    max-height: calc(100dvh - 60px);
 }
 
-/* Zone styling */
-.zone-group rect {
-    transition: fill var(--transition-normal);
+.map-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;  /* Fill the content-wrapper */
+    overflow: hidden;
+    background: var(--color-background);
+    /* Prevent any content from expanding beyond */
+    max-height: 100%;
 }
 
-.zone-label {
-    font-family: var(--font-family);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-/* Furniture styling */
-.furniture-item {
-    transition: transform var(--transition-normal), filter var(--transition-normal);
-}
-
-.furniture-item:hover {
-    transform: scale(1.05);
-}
-
-/* Legend */
-.map-legend {
-    background: var(--color-surface);
-    border-radius: var(--border-radius-md);
-    padding: var(--space-3) var(--space-4);
-    box-shadow: var(--shadow-md);
-}
-
-.legend-color {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border-radius: var(--border-radius-sm);
-}
-
-/* Date Navigator */
-.date-navigator {
+/* =============================================================================
+   TOOLBAR - Ultra Compact, Dark
+   ============================================================================= */
+.map-toolbar {
     display: flex;
     align-items: center;
-    gap: var(--space-4);
-    background: var(--color-surface);
-    padding: var(--space-3) var(--space-5);
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-md);
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--color-secondary);
+    color: white;
+    min-height: 44px;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
-.date-nav-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: var(--border-radius-full);
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.toolbar-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     border: none;
-    background: var(--color-accent);
-    color: var(--color-secondary);
+    background: rgba(255,255,255,0.15);
+    color: white;
     cursor: pointer;
-    transition: all var(--transition-normal);
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s;
+    font-size: 14px;
 }
 
-.date-nav-btn:hover {
-    background: var(--color-primary);
-    color: var(--color-surface);
+.toolbar-btn:hover,
+.toolbar-btn:active {
+    background: rgba(255,255,255,0.25);
+}
+
+.toolbar-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .date-display {
     font-weight: 600;
-    color: var(--color-secondary);
-    min-width: 280px;
+    font-size: 13px;
+    color: white;
+    min-width: 70px;
     text-align: center;
     cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
 }
 
 .date-display:hover {
-    color: var(--color-primary);
+    background: rgba(255,255,255,0.1);
 }
 
-/* Zoom Controls */
-.zoom-controls {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-}
-
-.zoom-btn {
-    width: 40px;
-    height: 40px;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    border-radius: var(--border-radius-md);
+/* Gold Zone Selector */
+.zone-selector-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+    border: none;
+    border-radius: 16px;
+    padding: 6px 14px;
     cursor: pointer;
+    box-shadow: 0 2px 6px rgba(212, 175, 55, 0.4);
+    min-width: 120px;
+    text-align: center;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 26px;
+}
+
+.zone-selector-gold:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.5);
+}
+
+/* =============================================================================
+   STATS STRIP - Ultra Compact Horizontal
+   ============================================================================= */
+.stats-strip {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 4px 8px;
+    background: white;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 2px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-item .stat-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-secondary);
+    line-height: 1;
+}
+
+.stat-item .stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    letter-spacing: 0.3px;
+}
+
+.stat-item.stat-available .stat-value {
+    color: var(--color-success);
+}
+
+.stat-item.stat-occupied .stat-value {
+    color: var(--color-warning);
+}
+
+/* =============================================================================
+   CANVAS INFO BAR (Map Editor Style)
+   ============================================================================= */
+.canvas-info-bar {
+    display: flex;
+    align-items: center;
+    padding: 3px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 11px;
+    color: var(--color-text-muted);
+    gap: 6px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.info-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.info-label {
+    color: #6c757d;
+}
+
+.info-value {
+    color: var(--color-secondary);
+    font-weight: 500;
+}
+
+.info-value.highlight {
+    color: var(--color-primary);
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 11px;
+    background: rgba(212, 175, 55, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.info-divider {
+    width: 1px;
+    height: 16px;
+    background: #dee2e6;
+}
+
+.info-spacer {
+    flex: 1;
+}
+
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zoom-level {
+    min-width: 45px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.info-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--transition-normal);
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: all 0.15s;
+    font-size: 11px;
 }
 
-.zoom-btn:hover {
+.info-btn:hover {
     background: var(--color-accent);
     border-color: var(--color-primary);
-}
-
-/* Selection Panel */
-.selection-panel {
-    background: var(--color-surface);
-    border-radius: var(--border-radius-lg);
-    padding: var(--space-4);
-    box-shadow: var(--shadow-lg);
-    border-left: 4px solid var(--color-primary);
-}
-
-.selection-panel .selection-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-3);
-}
-
-/* Tooltip */
-.map-tooltip {
-    position: fixed;
-    background: var(--color-surface);
-    border-radius: var(--border-radius-md);
-    box-shadow: var(--shadow-lg);
-    padding: var(--space-3) var(--space-4);
-    z-index: var(--z-tooltip);
-    pointer-events: none;
-    max-width: 280px;
-    font-size: var(--font-size-base);
-}
-
-.map-tooltip .tooltip-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: var(--space-2);
-    padding-bottom: var(--space-2);
-    border-bottom: 1px solid var(--color-border);
-}
-
-/* Stats Panel */
-.stats-panel {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-3);
-}
-
-.stat-card {
-    background: var(--color-surface);
-    border-radius: var(--border-radius-md);
-    padding: var(--space-4);
-    text-align: center;
-    box-shadow: var(--shadow-sm);
-}
-
-.stat-value {
-    font-size: 24px;
-    font-weight: 700;
     color: var(--color-secondary);
 }
 
-.stat-label {
+/* Shortcuts Dropdown */
+.shortcuts-dropdown {
+    width: 320px;
     font-size: 12px;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
 }
 
-/* Loading state */
+.shortcuts-section {
+    margin-bottom: 12px;
+}
+
+.shortcuts-title {
+    font-weight: 600;
+    color: var(--color-secondary);
+    margin-bottom: 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.shortcut-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    color: var(--color-text-muted);
+}
+
+.shortcut-row kbd {
+    background: #f1f3f4;
+    border: 1px solid #dadce0;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-family: inherit;
+    color: var(--color-secondary);
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+}
+
+/* Hide info bar on very small screens */
+@media (max-width: 576px) {
+    .canvas-info-bar {
+        display: none;
+    }
+}
+
+/* =============================================================================
+   MAP CANVAS - Full Screen (Map Editor Style)
+   ============================================================================= */
+/* Canvas viewport - matches map editor style */
+.map-canvas-wrapper {
+    flex: 1 1 0%;  /* Grow, shrink, but start at 0 (critical for flex containment) */
+    position: relative;
+    overflow: auto;  /* Use auto instead of scroll for better behavior */
+    background: #dee2e6;
+    padding: 10px;
+    /* Critical: min-height: 0 allows flex item to shrink below content size */
+    min-height: 0;
+    /* Isolate scrolling to this container */
+    isolation: isolate;
+    /* Center content using text-align (works with inline-block child) */
+    text-align: center;
+}
+
+.map-canvas {
+    /* Inline-block for centering via text-align */
+    display: inline-block;
+    /* Allow touch gestures for mobile */
+    touch-action: pan-x pan-y pinch-zoom;
+    /* Reset text-align for content */
+    text-align: left;
+    /* Margin auto for additional centering support */
+    margin: 0 auto;
+}
+
+/* SVG container with shadow - like map editor */
+.map-canvas svg {
+    background: #FAFAFA;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    border-radius: 4px;
+    display: block;
+}
+
+/* Hide zone rectangles - zone is shown in toolbar dropdown */
+.map-canvas .zone-group {
+    display: none;
+}
+
+/* Loading State */
 .map-loading {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
+    z-index: 10;
 }
 
-/* Furniture Info Modal (Floating) */
-.furniture-info-modal {
+/* =============================================================================
+   FLOATING ZOOM CONTROLS (FAB Style)
+   ============================================================================= */
+.zoom-fab {
+    position: fixed;  /* Fixed so it stays visible always */
+    bottom: 100px; /* Above bottom bar */
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 50;
+}
+
+.fab-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-size: 18px;
+    color: var(--color-secondary);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fab-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
+.fab-btn:active {
+    transform: scale(0.95);
+}
+
+/* =============================================================================
+   BOTTOM ACTION BAR (Slides up on selection)
+   ============================================================================= */
+.bottom-action-bar {
     position: fixed;
-    background: var(--color-surface);
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-xl);
-    z-index: var(--z-modal);
-    min-width: 320px;
-    max-width: 400px;
-    animation: slideIn 0.2s ease-out;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 3px solid var(--color-primary);
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s;
+    z-index: 100;
+    visibility: hidden;
+    pointer-events: none;
 }
 
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.bottom-action-bar.show {
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
 }
 
-.furniture-info-modal .modal-header {
-    padding: var(--space-4);
+.selection-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.selected-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+}
+
+.selection-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    background: var(--color-accent);
+    border: 1px solid var(--color-primary);
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-secondary);
+}
+
+.selection-chip .remove-chip {
+    margin-left: 6px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.selection-chip .remove-chip:hover {
+    opacity: 1;
+}
+
+.selection-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    margin-left: 12px;
+}
+
+.selection-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-clear {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background: white;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.btn-clear:hover {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+}
+
+.btn-reserve {
+    flex: 1;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+}
+
+.btn-reserve:hover {
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+
+.btn-reserve:active {
+    transform: scale(0.98);
+}
+
+/* =============================================================================
+   BOTTOM SHEET MODAL (Reservation)
+   ============================================================================= */
+.sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 199;
+}
+
+.sheet-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.reservation-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 20px 20px 0 0;
+    max-height: 85vh;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.reservation-sheet.show {
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: #DDD;
+    border-radius: 2px;
+    margin: 12px auto 8px;
+    flex-shrink: 0;
+}
+
+.sheet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px 16px;
     border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.sheet-header h5 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sheet-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-accent);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sheet-body {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.sheet-footer {
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* Sheet form elements */
+.furniture-summary {
+    background: var(--color-accent);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.furniture-info-modal .modal-header h6 {
-    margin: 0;
+.selected-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.selected-chips .chip {
+    background: white;
+    border: 1px solid var(--color-primary);
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--color-secondary);
 }
 
-.furniture-info-modal .modal-close {
-    background: none;
-    border: none;
-    font-size: 18px;
+.capacity-info {
+    font-size: 14px;
     color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sheet-body .form-group {
+    margin-bottom: 16px;
+}
+
+.sheet-body .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+}
+
+.customer-search-input {
+    position: relative;
+}
+
+.customer-search-input i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+}
+
+.customer-search-input input {
+    width: 100%;
+    padding: 12px 12px 12px 40px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    font-size: 15px;
+}
+
+.customer-search-input input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+.customer-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-lg);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+    display: none;
+}
+
+.customer-results.show {
+    display: block;
+}
+
+.customer-result-item {
+    padding: 12px;
+    border-bottom: 1px solid var(--color-border);
     cursor: pointer;
-    padding: 0;
-    line-height: 1;
+    transition: background 0.2s;
 }
 
-.furniture-info-modal .modal-close:hover {
-    color: var(--color-error);
+.customer-result-item:last-child {
+    border-bottom: none;
 }
 
-.furniture-info-modal .modal-body {
-    padding: var(--space-4);
+.customer-result-item:hover {
+    background: var(--color-accent);
 }
 
-.furniture-info-modal .info-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: var(--space-2);
-    font-size: var(--font-size-sm);
-}
-
-.furniture-info-modal .info-row .label {
-    color: var(--color-text-muted);
-}
-
-.furniture-info-modal .info-row .value {
+.customer-result-item .name {
     font-weight: 500;
     color: var(--color-secondary);
 }
 
-.furniture-info-modal .customer-card {
-    background: var(--color-accent);
-    border-radius: var(--border-radius-md);
-    padding: var(--space-3);
-    margin-top: var(--space-3);
-}
-
-.furniture-info-modal .customer-card .customer-name {
-    font-weight: 600;
-    color: var(--color-secondary);
-    margin-bottom: var(--space-1);
-}
-
-.furniture-info-modal .customer-card .customer-details {
-    font-size: var(--font-size-sm);
+.customer-result-item .details {
+    font-size: 13px;
     color: var(--color-text-muted);
 }
 
-.furniture-info-modal .state-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: var(--border-radius-sm);
-    font-size: 11px;
+.form-row {
+    display: flex;
+    gap: 12px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.notes-section {
+    margin-top: 16px;
+}
+
+.notes-section summary {
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    padding: 8px 0;
+}
+
+.notes-section textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    font-size: 15px;
+    resize: none;
+    margin-top: 8px;
+}
+
+.sheet-footer .btn-secondary {
+    padding: 12px 16px;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sheet-footer .btn-primary {
+    flex: 1;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+    color: white;
     font-weight: 600;
-    text-transform: uppercase;
-}
-
-.furniture-info-modal .modal-actions {
-    padding: var(--space-3) var(--space-4);
-    border-top: 1px solid var(--color-border);
+    font-size: 15px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
-.furniture-info-modal .modal-actions .btn {
-    flex: 1 1 auto;
-    min-width: 100px;
+/* =============================================================================
+   FURNITURE STYLING (Map)
+   ============================================================================= */
+.furniture-item {
+    transition: filter 0.2s, transform 0.2s;
+    cursor: pointer;
 }
 
-.furniture-info-modal .availability-badge {
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--border-radius-sm);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
+.furniture-item:active {
+    filter: brightness(0.9);
 }
 
-.furniture-info-modal .availability-badge.available {
-    background: rgba(74, 124, 89, 0.15);
-    color: var(--color-success);
+.furniture-item.selected {
+    filter: drop-shadow(0 0 8px var(--color-primary));
 }
 
-.furniture-info-modal .availability-badge.occupied {
-    background: rgba(229, 163, 61, 0.15);
-    color: var(--color-warning);
-}
-
-.furniture-info-modal .tags-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-1);
-    margin-top: var(--space-2);
-}
-
-.furniture-info-modal .tag-badge {
-    background: var(--color-accent);
-    color: var(--color-secondary);
-    padding: 2px 6px;
-    border-radius: var(--border-radius-sm);
-    font-size: 11px;
-}
-
-/* Highlight animation for search results */
 .furniture-item.highlighted {
     animation: pulseHighlight 1s ease-in-out infinite;
 }
@@ -357,351 +808,430 @@
 @keyframes pulseHighlight {
     0%, 100% {
         filter: drop-shadow(0 0 8px var(--color-primary));
-        transform: scale(1);
     }
     50% {
         filter: drop-shadow(0 0 16px var(--color-primary));
-        transform: scale(1.1);
     }
 }
 
-/* Customer Search */
-.customer-search-container {
-    z-index: 100;
+/* Decorative items */
+.decorative-item {
+    pointer-events: none;
 }
 
-.search-results-dropdown {
+/* =============================================================================
+   HIDDEN DATE PICKER
+   ============================================================================= */
+.date-picker-hidden {
     position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius-md);
-    box-shadow: var(--shadow-lg);
-    max-height: 300px;
-    overflow-y: auto;
-    z-index: 1000;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
 }
 
-.search-result-item {
-    padding: var(--space-3);
-    border-bottom: 1px solid var(--color-border);
-    cursor: pointer;
-    transition: background var(--transition-fast);
+.date-picker-hidden.show {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 1;
+    width: auto;
+    height: auto;
+    pointer-events: auto;
+    z-index: 200;
+    background: white;
+    padding: 8px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 }
 
-.search-result-item:last-child {
-    border-bottom: none;
-}
-
-.search-result-item:hover {
-    background: var(--color-accent);
-}
-
-.search-result-item.has-furniture {
-    border-left: 3px solid var(--color-success);
-}
-
-.search-result-item .customer-name {
-    font-weight: 500;
-    color: var(--color-secondary);
-}
-
-.search-result-item .customer-details {
-    font-size: var(--font-size-sm);
-    color: var(--color-text-muted);
-}
-
-.search-result-item .furniture-badge {
-    background: var(--color-primary);
-    color: white;
-    padding: 2px 6px;
-    border-radius: var(--border-radius-sm);
-    font-size: 10px;
-    font-weight: 600;
-}
-
-.search-no-results {
-    padding: var(--space-4);
-    text-align: center;
-    color: var(--color-text-muted);
-}
-
-@media (max-width: 768px) {
-    .stats-panel {
-        grid-template-columns: repeat(2, 1fr);
+/* =============================================================================
+   DESKTOP ENHANCEMENTS
+   ============================================================================= */
+@media (min-width: 768px) {
+    .map-toolbar {
+        padding: 12px 24px;
     }
 
     .date-display {
-        min-width: auto;
-        font-size: var(--font-size-base);
+        min-width: 120px;
+        font-size: 15px;
     }
+
+    .zone-selector-gold {
+        min-width: 180px;
+        font-size: 15px;
+    }
+
+    .zoom-fab {
+        bottom: 120px;
+        right: 24px;
+    }
+
+    /* Bottom bar accounts for sidebar */
+    .bottom-action-bar {
+        left: var(--sidebar-width, 280px);
+    }
+
+    /* Reservation sheet becomes centered modal */
+    .reservation-sheet {
+        bottom: auto;
+        top: 50%;
+        left: 50%;
+        right: auto;
+        transform: translate(-50%, -50%) scale(0.9);
+        opacity: 0;
+        max-width: 500px;
+        width: 90%;
+        border-radius: 16px;
+        max-height: 80vh;
+    }
+
+    .reservation-sheet.show {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+
+    .sheet-handle {
+        display: none;
+    }
+}
+
+
+/* Hover states for desktop */
+@media (hover: hover) {
+    .furniture-item:hover {
+        filter: brightness(1.1);
+    }
+
+    .furniture-item:hover rect,
+    .furniture-item:hover ellipse,
+    .furniture-item:hover circle {
+        stroke-width: 3;
+    }
+}
+
+/* =============================================================================
+   CONTEXT MENU (Keep from original)
+   ============================================================================= */
+.context-menu {
+    position: fixed;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 1050;
+    min-width: 180px;
+    padding: 8px 0;
+    border: 1px solid var(--color-border);
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    color: var(--color-text);
+    font-size: 14px;
+}
+
+.context-menu-item:hover {
+    background: var(--color-accent);
+}
+
+.context-menu-item.danger {
+    color: var(--color-danger);
+}
+
+.context-menu-item.danger:hover {
+    background: #fef2f2;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background: var(--color-border);
+    margin: 6px 0;
+}
+
+.context-menu-header {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="mb-4 d-flex justify-content-between align-items-center">
-    <div>
-        <h2><i class="fas fa-map"></i> Mapa de Beach Club</h2>
-        <p class="text-muted mb-0">Vista interactiva con disponibilidad en tiempo real</p>
-    </div>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-primary" id="btn-refresh">
-            <i class="fas fa-sync-alt"></i> Actualizar
-        </button>
-    </div>
-</div>
-
-<!-- Date Navigator & Search -->
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <div class="date-navigator">
-        <button type="button" class="date-nav-btn" id="btn-prev-day" title="Día anterior">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        <span class="date-display" id="current-date-display" title="Clic para seleccionar fecha">
-            Cargando...
-        </span>
-        <button type="button" class="date-nav-btn" id="btn-next-day" title="Día siguiente">
-            <i class="fas fa-chevron-right"></i>
-        </button>
-        <input type="date" id="date-picker" class="form-control d-none" style="width: 160px;">
-    </div>
-
-    <!-- Customer Search -->
-    <div class="customer-search-container position-relative">
-        <div class="input-group" style="width: 300px;">
-            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-            <input type="text" class="form-control" id="customer-search-input"
-                   placeholder="Buscar cliente..." autocomplete="off">
-            <button type="button" class="btn btn-outline-secondary d-none" id="clear-search-btn" title="Limpiar búsqueda">
-                <i class="fas fa-times"></i>
+<div class="map-page">
+    <!-- Compact Toolbar -->
+    <div class="map-toolbar">
+        <!-- Date Navigation -->
+        <div class="toolbar-group">
+            <button type="button" class="toolbar-btn" id="btn-prev-day" title="Dia anterior">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <span class="date-display" id="date-display" title="Seleccionar fecha">
+                Cargando...
+            </span>
+            <button type="button" class="toolbar-btn" id="btn-next-day" title="Dia siguiente">
+                <i class="fas fa-chevron-right"></i>
             </button>
         </div>
-        <!-- Search results dropdown -->
-        <div class="search-results-dropdown d-none" id="customer-search-dropdown">
+
+        <!-- Zone Selector -->
+        <select class="zone-selector-gold" id="zone-select">
             <!-- Populated dynamically -->
+        </select>
+
+        <!-- Refresh Button -->
+        <button type="button" class="toolbar-btn" id="btn-refresh" title="Actualizar">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+    </div>
+
+    <!-- Hidden Date Picker -->
+    <input type="date" id="date-picker" class="date-picker-hidden">
+
+    <!-- Stats Strip -->
+    <div class="stats-strip">
+        <div class="stat-item">
+            <span class="stat-value" id="stat-total">-</span>
+            <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-item stat-available">
+            <span class="stat-value" id="stat-available">-</span>
+            <span class="stat-label">Disp</span>
+        </div>
+        <div class="stat-item stat-occupied">
+            <span class="stat-value" id="stat-occupied">-</span>
+            <span class="stat-label">Ocup</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value" id="stat-rate">-%</span>
+            <span class="stat-label">Ocup</span>
         </div>
     </div>
 
-    <div class="map-legend" id="map-legend">
-        <!-- Populated dynamically -->
-    </div>
-</div>
-
-<!-- Stats Panel -->
-<div class="stats-panel mb-3" id="stats-panel">
-    <div class="stat-card">
-        <div class="stat-value" id="stat-total">-</div>
-        <div class="stat-label">Total</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value text-success" id="stat-available">-</div>
-        <div class="stat-label">Disponible</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value text-warning" id="stat-occupied">-</div>
-        <div class="stat-label">Ocupado</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value text-info" id="stat-rate">-</div>
-        <div class="stat-label">Ocupación</div>
-    </div>
-</div>
-
-<!-- Map Container -->
-<div class="map-wrapper">
-    <div class="map-container" id="map-container">
-        <div class="map-loading">
-            <div class="spinner-border text-primary mb-3" role="status">
-                <span class="visually-hidden">Cargando...</span>
+    <!-- Canvas Info Bar (Map Editor Style) -->
+    <div class="canvas-info-bar">
+        <div class="info-group">
+            <span class="info-label"><i class="fas fa-expand-arrows-alt"></i></span>
+            <span class="info-value" id="canvas-dimensions">-</span>
+        </div>
+        <div class="info-divider"></div>
+        <div class="info-group">
+            <span class="info-label">Cursor:</span>
+            <span class="info-value highlight" id="cursor-pos">-</span>
+        </div>
+        <div class="info-divider"></div>
+        <div class="info-group">
+            <span class="info-value" id="furniture-count">0</span>
+            <span class="info-label">elementos</span>
+        </div>
+        <div class="info-spacer"></div>
+        <div class="info-group zoom-controls">
+            <button type="button" class="info-btn" id="btn-zoom-out-bar" title="Alejar (Ctrl+-)">
+                <i class="fas fa-minus"></i>
+            </button>
+            <span class="info-value zoom-level" id="zoom-level">100%</span>
+            <button type="button" class="info-btn" id="btn-zoom-in-bar" title="Acercar (Ctrl++)">
+                <i class="fas fa-plus"></i>
+            </button>
+            <button type="button" class="info-btn" id="btn-zoom-reset" title="Reset a vista guardada (Ctrl+0)">
+                <i class="fas fa-expand"></i>
+            </button>
+            <button type="button" class="info-btn" id="btn-save-view" title="Guardar vista actual">
+                <i class="fas fa-save"></i>
+            </button>
+        </div>
+        <div class="info-divider"></div>
+        <div class="dropdown">
+            <button type="button" class="info-btn" data-bs-toggle="dropdown" title="Atajos de teclado">
+                <i class="fas fa-keyboard"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end shortcuts-dropdown p-3">
+                <h6 class="dropdown-header px-0 mb-2"><i class="fas fa-keyboard me-2"></i>Atajos de Teclado</h6>
+                <div class="shortcuts-section mb-3">
+                    <div class="shortcuts-title">Seleccion</div>
+                    <div class="shortcut-row"><kbd>Click</kbd> <span>Seleccionar/deseleccionar</span></div>
+                    <div class="shortcut-row"><kbd>Ctrl</kbd> + <kbd>A</kbd> <span>Seleccionar todo</span></div>
+                    <div class="shortcut-row"><kbd>Esc</kbd> <span>Deseleccionar</span></div>
+                </div>
+                <div class="shortcuts-section mb-3">
+                    <div class="shortcuts-title">Vista</div>
+                    <div class="shortcut-row"><kbd>Shift</kbd> + <kbd>Rueda</kbd> <span>Zoom</span></div>
+                    <div class="shortcut-row"><kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>-</kbd> <span>Zoom in/out</span></div>
+                    <div class="shortcut-row"><kbd>Ctrl</kbd> + <kbd>S</kbd> <span>Guardar vista</span></div>
+                    <div class="shortcut-row"><kbd>Ctrl</kbd> + <kbd>0</kbd> <span>Restaurar vista</span></div>
+                </div>
+                <div class="shortcuts-section mb-3">
+                    <div class="shortcuts-title">Navegacion</div>
+                    <div class="shortcut-row"><kbd>Espacio</kbd> + <kbd>Arrastrar</kbd> <span>Pan del canvas</span></div>
+                    <div class="shortcut-row"><kbd>Rueda central</kbd> + <kbd>Arrastrar</kbd> <span>Pan del canvas</span></div>
+                    <div class="shortcut-row"><kbd>&#8592;</kbd> / <kbd>&#8594;</kbd> <span>Dia anterior/siguiente</span></div>
+                </div>
+                <div class="shortcuts-section">
+                    <div class="shortcuts-title">Acciones</div>
+                    <div class="shortcut-row"><kbd>R</kbd> <span>Actualizar mapa</span></div>
+                </div>
             </div>
-            <p>Cargando mapa...</p>
         </div>
     </div>
 
-    <!-- Zoom Controls -->
-    <div class="zoom-controls">
-        <button type="button" class="zoom-btn" id="btn-zoom-in" title="Acercar">
+    <!-- Map Canvas -->
+    <div class="map-canvas-wrapper">
+        <div class="map-canvas" id="map-container">
+            <div class="map-loading">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p>Cargando mapa...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Zoom Controls (outside scrollable area) -->
+    <div class="zoom-fab">
+        <button type="button" class="fab-btn" id="btn-zoom-in" title="Acercar">
             <i class="fas fa-plus"></i>
         </button>
-        <button type="button" class="zoom-btn" id="btn-zoom-reset" title="Restablecer zoom">
-            <i class="fas fa-expand"></i>
-        </button>
-        <button type="button" class="zoom-btn" id="btn-zoom-out" title="Alejar">
+        <button type="button" class="fab-btn" id="btn-zoom-out" title="Alejar">
             <i class="fas fa-minus"></i>
         </button>
     </div>
 </div>
 
-<!-- Selection Panel -->
-<div class="selection-panel mt-3 d-none" id="selection-panel">
-    <div class="selection-header">
-        <h6 class="mb-0">
-            <i class="fas fa-check-square text-primary"></i>
-            <span class="selection-count">0</span> mobiliario seleccionado
-        </h6>
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-clear-selection">
-            <i class="fas fa-times"></i> Limpiar
+<!-- Bottom Action Bar (Slides up on selection) -->
+<div class="bottom-action-bar" id="selection-bar">
+    <div class="selection-summary">
+        <div class="selected-items" id="selected-badges">
+            <!-- Chips populated dynamically -->
+        </div>
+        <div class="selection-meta">
+            <i class="fas fa-users"></i>
+            <span id="total-capacity">0</span> pers
+        </div>
+    </div>
+    <div class="selection-actions">
+        <button type="button" class="btn-clear" id="btn-clear-selection" title="Limpiar seleccion">
+            <i class="fas fa-times"></i>
         </button>
-    </div>
-    <div class="mb-2">
-        <small class="text-muted">Seleccionados:</small>
-        <span class="selection-list">-</span>
-    </div>
-    <div class="mb-3">
-        <small class="text-muted">Capacidad total:</small>
-        <strong><span class="selection-capacity">0</span> personas</strong>
-    </div>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-primary" id="btn-new-reservation">
-            <i class="fas fa-plus"></i> Nueva Reserva
-        </button>
-        <button type="button" class="btn btn-outline-secondary" id="btn-view-availability">
-            <i class="fas fa-calendar-alt"></i> Ver Disponibilidad
+        <button type="button" class="btn-reserve" id="btn-new-reservation">
+            <i class="fas fa-calendar-plus"></i>
+            <span>Reservar</span>
         </button>
     </div>
 </div>
 
-<!-- Quick Reservation Modal -->
-<div class="modal fade" id="quickReservationModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-plus-circle"></i> Nueva Reserva Rápida</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Sheet Backdrop -->
+<div class="sheet-backdrop" id="sheet-backdrop"></div>
+
+<!-- Bottom Sheet Reservation Modal -->
+<div class="reservation-sheet" id="reservationSheet">
+    <div class="sheet-handle"></div>
+
+    <div class="sheet-header">
+        <h5><i class="fas fa-calendar-plus"></i> Nueva Reserva</h5>
+        <button type="button" class="sheet-close" id="btn-close-sheet">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <div class="sheet-body">
+        <!-- Selected furniture summary -->
+        <div class="furniture-summary">
+            <div class="selected-chips" id="sheet-furniture-chips">
+                <!-- Chips populated dynamically -->
             </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Cliente</label>
-                            <input type="text" class="form-control" id="quick-customer-search"
-                                   placeholder="Buscar cliente..." autocomplete="off">
-                            <input type="hidden" id="quick-customer-id">
-                            <div id="customer-search-results" class="list-group position-absolute w-100 d-none"
-                                 style="z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Número de personas</label>
-                            <input type="number" class="form-control" id="quick-num-people"
-                                   min="1" max="20" value="2">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Fecha</label>
-                            <input type="date" class="form-control" id="quick-date" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Mobiliario seleccionado</label>
-                            <div id="quick-furniture-list" class="border rounded p-2 bg-light">
-                                -
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Observaciones</label>
-                    <textarea class="form-control" id="quick-notes" rows="2"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <a href="#" id="link-full-form" class="btn btn-link me-auto">
-                    <i class="fas fa-external-link-alt"></i> Formulario completo
-                </a>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="btn-create-reservation">
-                    <i class="fas fa-check"></i> Crear Reserva
-                </button>
+            <div class="capacity-info">
+                <i class="fas fa-users"></i>
+                <span id="sheet-capacity">0</span> personas
             </div>
         </div>
+
+        <!-- Customer search -->
+        <div class="form-group">
+            <label>Cliente</label>
+            <div class="customer-search-input">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Buscar por nombre o habitacion..."
+                       id="sheet-customer-search" autocomplete="off">
+            </div>
+            <input type="hidden" id="sheet-customer-id">
+            <div class="customer-results" id="sheet-customer-results">
+                <!-- Results populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Quick details -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Personas</label>
+                <input type="number" class="form-control" id="sheet-num-people" value="2" min="1" max="20">
+            </div>
+            <div class="form-group">
+                <label>Fecha</label>
+                <input type="text" class="form-control" id="sheet-date" readonly>
+            </div>
+        </div>
+
+        <!-- Notes (collapsible) -->
+        <details class="notes-section">
+            <summary><i class="fas fa-sticky-note me-1"></i> Anadir notas</summary>
+            <textarea id="sheet-notes" rows="2" placeholder="Notas opcionales..."></textarea>
+        </details>
+    </div>
+
+    <div class="sheet-footer">
+        <button type="button" class="btn-secondary" id="btn-full-form">
+            <i class="fas fa-expand"></i> Mas opciones
+        </button>
+        <button type="button" class="btn-primary" id="btn-create-reservation">
+            <i class="fas fa-check"></i> Crear Reserva
+        </button>
     </div>
 </div>
 
-<!-- Furniture Info Modal (Floating) -->
-<div class="furniture-info-modal d-none" id="furnitureInfoModal">
-    <div class="modal-header">
-        <h6>
-            <i class="fas fa-umbrella-beach me-2"></i>
-            <span id="modal-furniture-title">Hamaca #1</span>
-        </h6>
-        <button type="button" class="modal-close" id="modal-close-btn">&times;</button>
-    </div>
-    <div class="modal-body">
-        <!-- Furniture Info -->
-        <div class="info-row">
-            <span class="label">Tipo</span>
-            <span class="value" id="modal-furniture-type">Hamaca</span>
-        </div>
-        <div class="info-row">
-            <span class="label">Zona</span>
-            <span class="value" id="modal-furniture-zone">Zona A</span>
-        </div>
-        <div class="info-row">
-            <span class="label">Capacidad</span>
-            <span class="value" id="modal-furniture-capacity">2 personas</span>
-        </div>
-        <div class="info-row">
-            <span class="label">Estado</span>
-            <span id="modal-availability-status">
-                <span class="availability-badge available">Disponible</span>
-            </span>
-        </div>
+<!-- Context Menu -->
+<div class="context-menu d-none" id="contextMenu">
+    <div class="context-menu-header" id="context-menu-header">Hamaca #1</div>
 
-        <!-- Features (if any) -->
-        <div class="tags-list d-none" id="modal-features-list">
-            <!-- Populated dynamically -->
+    <!-- Available furniture menu items -->
+    <div id="context-menu-available">
+        <div class="context-menu-item" data-action="view-details">
+            <i class="fas fa-info-circle"></i> Ver detalles
         </div>
-
-        <!-- Customer Card (when occupied) -->
-        <div class="customer-card d-none" id="modal-customer-card">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <div class="customer-name" id="modal-customer-name">Juan García</div>
-                <span class="state-badge" id="modal-state-badge" style="background: #28A745; color: white;">Confirmada</span>
-            </div>
-            <div class="customer-details">
-                <div id="modal-customer-room" class="d-none">
-                    <i class="fas fa-door-open me-1"></i> <span></span>
-                </div>
-                <div id="modal-customer-ticket" class="d-none">
-                    <i class="fas fa-ticket-alt me-1"></i> <span></span>
-                </div>
-                <div id="modal-customer-people" class="d-none">
-                    <i class="fas fa-users me-1"></i> <span></span>
-                </div>
-                <div id="modal-reservation-notes" class="mt-2 d-none">
-                    <small class="text-muted"><i class="fas fa-sticky-note me-1"></i> <span></span></small>
-                </div>
-            </div>
-            <!-- Reservation tags -->
-            <div class="tags-list d-none" id="modal-reservation-tags">
-                <!-- Populated dynamically -->
-            </div>
+        <div class="context-menu-item" data-action="select">
+            <i class="fas fa-check-square"></i> Seleccionar
+        </div>
+        <div class="context-menu-item" data-action="new-reservation">
+            <i class="fas fa-plus"></i> Nueva reserva
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="block">
+            <i class="fas fa-ban"></i> Bloquear
         </div>
     </div>
-    <div class="modal-actions">
-        <!-- Available furniture actions -->
-        <div id="modal-actions-available">
-            <button type="button" class="btn btn-primary btn-sm" id="modal-btn-new-reservation">
-                <i class="fas fa-plus"></i> Nueva Reserva
-            </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="modal-btn-block">
-                <i class="fas fa-ban"></i> Bloquear
-            </button>
+
+    <!-- Occupied furniture menu items -->
+    <div id="context-menu-occupied" class="d-none">
+        <div class="context-menu-item" data-action="view-details">
+            <i class="fas fa-info-circle"></i> Ver detalles
         </div>
-        <!-- Occupied furniture actions -->
-        <div id="modal-actions-occupied" class="d-none">
-            <button type="button" class="btn btn-outline-primary btn-sm" id="modal-btn-view-reservation">
-                <i class="fas fa-eye"></i> Ver
-            </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="modal-btn-edit-reservation">
-                <i class="fas fa-edit"></i> Editar
-            </button>
-            <button type="button" class="btn btn-outline-warning btn-sm" id="modal-btn-move-reservation">
-                <i class="fas fa-arrows-alt"></i> Mover
-            </button>
+        <div class="context-menu-item" data-action="view-reservation">
+            <i class="fas fa-eye"></i> Ver reserva
+        </div>
+        <div class="context-menu-item" data-action="edit-reservation">
+            <i class="fas fa-edit"></i> Editar reserva
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" data-action="cancel-reservation">
+            <i class="fas fa-times"></i> Cancelar reserva
         </div>
     </div>
 </div>
@@ -711,627 +1241,804 @@
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize map
+    // ==========================================================================
+    // INITIALIZE MAP
+    // ==========================================================================
     const map = new BeachMap('map-container', {
         apiUrl: '/beach/api/map/data',
         initialDate: new Date().toISOString().split('T')[0],
         enableZoom: true
     });
 
-    // Date navigation
-    const dateDisplay = document.getElementById('current-date-display');
+    // ==========================================================================
+    // DATE NAVIGATION
+    // ==========================================================================
+    const dateDisplay = document.getElementById('date-display');
     const datePicker = document.getElementById('date-picker');
     const btnPrevDay = document.getElementById('btn-prev-day');
     const btnNextDay = document.getElementById('btn-next-day');
 
+    // Format date for display (compact for mobile)
+    function formatDateCompact(dateStr) {
+        const date = new Date(dateStr + 'T12:00:00');
+        const day = date.getDate();
+        const month = date.toLocaleDateString('es-ES', { month: 'short' });
+        return `${day} ${month.charAt(0).toUpperCase() + month.slice(1)}`;
+    }
+
     map.on('onDateChange', function(dateStr) {
-        dateDisplay.textContent = map.formatDateDisplay(dateStr);
+        dateDisplay.textContent = formatDateCompact(dateStr);
         datePicker.value = dateStr;
         updateStats();
+        populateZoneSelector();
     });
 
-    btnPrevDay.addEventListener('click', () => map.goToPreviousDay());
-    btnNextDay.addEventListener('click', () => map.goToNextDay());
+    btnPrevDay.addEventListener('click', async () => {
+        btnPrevDay.disabled = true;
+        await map.goToPreviousDay();
+        btnPrevDay.disabled = false;
+    });
 
+    btnNextDay.addEventListener('click', async () => {
+        btnNextDay.disabled = true;
+        await map.goToNextDay();
+        btnNextDay.disabled = false;
+    });
+
+    // Click on date to open picker
     dateDisplay.addEventListener('click', () => {
-        datePicker.classList.toggle('d-none');
-        if (!datePicker.classList.contains('d-none')) {
+        datePicker.classList.toggle('show');
+        if (datePicker.classList.contains('show')) {
             datePicker.focus();
+            datePicker.showPicker && datePicker.showPicker();
         }
     });
 
-    datePicker.addEventListener('change', (e) => {
-        map.goToDate(e.target.value);
-        datePicker.classList.add('d-none');
+    datePicker.addEventListener('change', async (e) => {
+        await map.goToDate(e.target.value);
+        datePicker.classList.remove('show');
     });
+
+    datePicker.addEventListener('blur', () => {
+        setTimeout(() => datePicker.classList.remove('show'), 200);
+    });
+
+    // Swipe date navigation on mobile
+    let touchStartX = 0;
+    dateDisplay.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    dateDisplay.addEventListener('touchend', (e) => {
+        const diff = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(diff) > 50) {
+            if (diff > 0) map.goToPreviousDay();
+            else map.goToNextDay();
+        }
+    }, { passive: true });
 
     // Set initial date
     datePicker.value = map.getCurrentDate();
     setTimeout(() => {
-        dateDisplay.textContent = map.formatDateDisplay(map.getCurrentDate());
+        dateDisplay.textContent = formatDateCompact(map.getCurrentDate());
         updateStats();
+        populateZoneSelector();
     }, 500);
 
-    // Zoom controls
-    document.getElementById('btn-zoom-in').addEventListener('click', () => map.zoomIn());
-    document.getElementById('btn-zoom-out').addEventListener('click', () => map.zoomOut());
-    document.getElementById('btn-zoom-reset').addEventListener('click', () => map.zoomReset());
+    // ==========================================================================
+    // ZONE SELECTOR
+    // ==========================================================================
+    const zoneSelect = document.getElementById('zone-select');
+    let currentZoneId = null;
 
-    // Refresh
-    document.getElementById('btn-refresh').addEventListener('click', () => {
-        map.refreshAvailability();
-        updateStats();
+    function populateZoneSelector() {
+        const data = map.getData();
+        if (!data || !data.zones || data.zones.length === 0) return;
+
+        const currentValue = zoneSelect.value;
+        zoneSelect.innerHTML = '';
+
+        data.zones.forEach(zone => {
+            const option = document.createElement('option');
+            option.value = zone.id;
+            option.textContent = zone.name;
+            zoneSelect.appendChild(option);
+        });
+
+        if (currentValue && data.zones.some(z => z.id == currentValue)) {
+            zoneSelect.value = currentValue;
+        } else {
+            zoneSelect.value = data.zones[0].id;
+        }
+
+        currentZoneId = parseInt(zoneSelect.value);
+        applyZoneView(currentZoneId);
+    }
+
+    zoneSelect.addEventListener('change', () => {
+        currentZoneId = parseInt(zoneSelect.value);
+        applyZoneView(currentZoneId);
     });
 
-    // Start auto-refresh
-    map.startAutoRefresh(30000);
+    function applyZoneView(zoneId) {
+        const data = map.getData();
+        if (!data) return;
 
-    // Selection handling
-    const selectionPanel = document.getElementById('selection-panel');
+        // Show only furniture in selected zone
+        document.querySelectorAll('.furniture-item').forEach(item => {
+            const furnitureId = parseInt(item.dataset.furnitureId);
+            const furniture = data.furniture?.find(f => f.id === furnitureId);
+            if (!furniture) return;
+            item.style.display = furniture.zone_id === zoneId ? '' : 'none';
+        });
 
-    map.on('onFurnitureClick', function(item, selected) {
-        if (selected.length > 0) {
-            selectionPanel.classList.remove('d-none');
+        // Show only decorative items in selected zone
+        document.querySelectorAll('.decorative-item').forEach(item => {
+            const furnitureId = parseInt(item.dataset.furnitureId);
+            const furniture = data.furniture?.find(f => f.id === furnitureId);
+            if (!furniture) return;
+            item.style.display = furniture.zone_id === zoneId ? '' : 'none';
+        });
+
+        updateStats(zoneId);
+        adjustViewBoxForZone(zoneId);
+    }
+
+    function adjustViewBoxForZone(zoneId) {
+        const data = map.getData();
+        if (!data) return;
+
+        const svg = document.getElementById('beach-map');
+        if (!svg) return;
+
+        // Get zone's canvas dimensions (more accurate than map_dimensions)
+        const zone = data.zones?.find(z => z.id === zoneId);
+        const canvasWidth = zone?.canvas_width || data.map_dimensions?.width || 1200;
+        const canvasHeight = zone?.canvas_height || data.map_dimensions?.height || 800;
+
+        // Use the zone's full canvas dimensions (matches map editor)
+        svg.setAttribute('viewBox', `0 0 ${canvasWidth} ${canvasHeight}`);
+    }
+
+    // ==========================================================================
+    // STATS
+    // ==========================================================================
+    function updateStats(zoneId = null) {
+        const data = map.getData();
+        if (!data || !data.furniture) return;
+
+        // Filter out decorative items
+        let furniture = data.furniture.filter(f => {
+            const typeConfig = data.furniture_types[f.furniture_type] || {};
+            return typeConfig.is_decorative !== 1;
+        });
+
+        if (zoneId !== null) {
+            furniture = furniture.filter(f => f.zone_id === zoneId);
+        }
+
+        const total = furniture.length;
+        let available = 0;
+        let occupied = 0;
+
+        furniture.forEach(f => {
+            const avail = data.availability[f.id];
+            if (!avail || avail.available) {
+                available++;
+            } else {
+                occupied++;
+            }
+        });
+
+        const rate = total > 0 ? Math.round((occupied / total) * 100) : 0;
+
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-available').textContent = available;
+        document.getElementById('stat-occupied').textContent = occupied;
+        document.getElementById('stat-rate').textContent = `${rate}%`;
+    }
+
+    // ==========================================================================
+    // CANVAS INFO BAR
+    // ==========================================================================
+    const canvasDimensions = document.getElementById('canvas-dimensions');
+    const cursorPos = document.getElementById('cursor-pos');
+    const furnitureCount = document.getElementById('furniture-count');
+    const zoomLevel = document.getElementById('zoom-level');
+
+    function updateCanvasInfo() {
+        const data = map.getData();
+        if (!data) return;
+
+        // Get zone's canvas dimensions
+        const zone = data.zones?.find(z => z.id === currentZoneId);
+        const width = zone?.canvas_width || data.map_dimensions?.width || 1200;
+        const height = zone?.canvas_height || data.map_dimensions?.height || 800;
+
+        canvasDimensions.textContent = `${width} x ${height}`;
+
+        // Count visible furniture (in current zone, non-decorative)
+        const visibleCount = data.furniture?.filter(f => {
+            if (f.zone_id !== currentZoneId) return false;
+            const typeConfig = data.furniture_types[f.furniture_type] || {};
+            return typeConfig.is_decorative !== 1;
+        }).length || 0;
+
+        furnitureCount.textContent = visibleCount;
+
+        // Update zoom level
+        updateZoomDisplay();
+    }
+
+    function updateZoomDisplay() {
+        const zoom = map.getZoom ? map.getZoom() : 1;
+        zoomLevel.textContent = `${Math.round(zoom * 100)}%`;
+    }
+
+    // Track cursor position over canvas
+    const mapCanvas = document.querySelector('.map-canvas');
+    mapCanvas?.addEventListener('mousemove', (e) => {
+        const svg = document.getElementById('beach-map');
+        if (!svg) return;
+
+        const rect = svg.getBoundingClientRect();
+        const viewBox = svg.getAttribute('viewBox')?.split(' ').map(Number) || [0, 0, 1200, 800];
+
+        // Convert screen coords to SVG coords
+        const scaleX = viewBox[2] / rect.width;
+        const scaleY = viewBox[3] / rect.height;
+
+        const x = Math.round((e.clientX - rect.left) * scaleX);
+        const y = Math.round((e.clientY - rect.top) * scaleY);
+
+        cursorPos.textContent = `${x}, ${y}`;
+    });
+
+    mapCanvas?.addEventListener('mouseleave', () => {
+        cursorPos.textContent = '-';
+    });
+
+    // Update info after render
+    map.on('onRender', () => {
+        updateCanvasInfo();
+    });
+
+    // ==========================================================================
+    // ZOOM CONTROLS
+    // ==========================================================================
+    document.getElementById('btn-zoom-in').addEventListener('click', () => { map.zoomIn(); updateZoomDisplay(); });
+    document.getElementById('btn-zoom-out').addEventListener('click', () => { map.zoomOut(); updateZoomDisplay(); });
+
+    // Info bar zoom controls
+    document.getElementById('btn-zoom-in-bar')?.addEventListener('click', () => { map.zoomIn(); updateZoomDisplay(); });
+    document.getElementById('btn-zoom-out-bar')?.addEventListener('click', () => { map.zoomOut(); updateZoomDisplay(); });
+    document.getElementById('btn-zoom-reset')?.addEventListener('click', () => { resetToSavedView(); });
+    document.getElementById('btn-save-view')?.addEventListener('click', () => { saveCurrentView(); });
+
+    // ==========================================================================
+    // SAVE/RESTORE VIEW
+    // ==========================================================================
+    const VIEW_STORAGE_KEY = 'beachMap_savedView';
+    let savedView = null;
+
+    // Load saved view on init
+    function loadSavedView() {
+        try {
+            const saved = localStorage.getItem(VIEW_STORAGE_KEY);
+            if (saved) {
+                savedView = JSON.parse(saved);
+            }
+        } catch (e) {
+            console.warn('Could not load saved view:', e);
+        }
+    }
+
+    // Save current view (zoom + scroll position)
+    function saveCurrentView() {
+        const view = {
+            zoom: map.getZoom ? map.getZoom() : 1,
+            scrollLeft: mapWrapper.scrollLeft,
+            scrollTop: mapWrapper.scrollTop,
+            zoneId: currentZoneId
+        };
+
+        savedView = view;
+
+        try {
+            localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify(view));
+            // Visual feedback
+            const btn = document.getElementById('btn-save-view');
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            btn.style.color = 'var(--color-success)';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-save"></i>';
+                btn.style.color = '';
+            }, 1500);
+        } catch (e) {
+            console.warn('Could not save view:', e);
+        }
+    }
+
+    // Reset to saved view or default
+    function resetToSavedView() {
+        if (savedView) {
+            // Restore zoom
+            map.setZoom(savedView.zoom || 1);
+            updateZoomDisplay();
+
+            // Restore scroll position after a short delay (for zoom to apply)
+            setTimeout(() => {
+                mapWrapper.scrollLeft = savedView.scrollLeft || 0;
+                mapWrapper.scrollTop = savedView.scrollTop || 0;
+            }, 50);
+
+            // Restore zone if different
+            if (savedView.zoneId && savedView.zoneId !== currentZoneId) {
+                zoneSelect.value = savedView.zoneId;
+                currentZoneId = savedView.zoneId;
+                applyZoneView(currentZoneId);
+            }
         } else {
-            selectionPanel.classList.add('d-none');
+            // Default: zoom 100%, scroll to origin
+            map.setZoom(1);
+            updateZoomDisplay();
+            mapWrapper.scrollLeft = 0;
+            mapWrapper.scrollTop = 0;
+        }
+    }
+
+    // Load saved view on page load
+    loadSavedView();
+
+    // ==========================================================================
+    // MAP EDITOR STYLE NAVIGATION (Ctrl+Wheel Zoom, Space+Drag Pan)
+    // ==========================================================================
+    const mapWrapper = document.querySelector('.map-canvas-wrapper');
+    let spaceDown = false;
+    let isPanning = false;
+    let panStart = { x: 0, y: 0 };
+    let scrollStart = { x: 0, y: 0 };
+
+    // Shift+Wheel Zoom (zoom to mouse position)
+    // Using Shift instead of Ctrl to avoid conflict with browser zoom
+    document.addEventListener('wheel', (e) => {
+        // Only handle if Shift is pressed and mouse is over the map
+        if (!e.shiftKey) return;
+
+        // Check if event is within map wrapper
+        if (!mapWrapper.contains(e.target)) return;
+
+        // Prevent default scroll behavior
+        e.preventDefault();
+        e.stopPropagation();
+
+        const svg = document.getElementById('beach-map');
+        if (!svg) return;
+
+        // Get current zoom
+        const currentZoom = map.getZoom ? map.getZoom() : 1;
+
+        // Use percentage-based zoom for smoother experience at all zoom levels
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;  // 10% change
+        const minZoom = 0.1;
+        const maxZoom = 3;
+        const newZoom = Math.max(minZoom, Math.min(currentZoom * zoomFactor, maxZoom));
+
+        // Skip if zoom didn't change (hit min/max)
+        if (Math.abs(newZoom - currentZoom) < 0.001) return;
+
+        // Get wrapper dimensions
+        const wrapperRect = mapWrapper.getBoundingClientRect();
+        const wrapperWidth = mapWrapper.clientWidth;
+        const wrapperHeight = mapWrapper.clientHeight;
+
+        // Get SVG rect
+        const svgRect = svg.getBoundingClientRect();
+
+        // Mouse position relative to wrapper viewport
+        const mouseXInWrapper = e.clientX - wrapperRect.left;
+        const mouseYInWrapper = e.clientY - wrapperRect.top;
+
+        // Calculate mouse position relative to SVG (clamp to SVG bounds)
+        const mouseXInSvg = Math.max(0, Math.min(e.clientX - svgRect.left, svgRect.width));
+        const mouseYInSvg = Math.max(0, Math.min(e.clientY - svgRect.top, svgRect.height));
+
+        // Convert to canvas coordinates (the actual viewBox coordinates)
+        const canvasX = mouseXInSvg / currentZoom;
+        const canvasY = mouseYInSvg / currentZoom;
+
+        // Get current SVG dimensions
+        const currentSvgWidth = svgRect.width;
+        const currentSvgHeight = svgRect.height;
+
+        // Calculate new SVG dimensions after zoom
+        const zoomRatio = newZoom / currentZoom;
+        const newSvgWidth = currentSvgWidth * zoomRatio;
+        const newSvgHeight = currentSvgHeight * zoomRatio;
+
+        // Calculate centering offset after zoom
+        const padding = 10;
+        const availableWidth = wrapperWidth - padding * 2;
+        const availableHeight = wrapperHeight - padding * 2;
+        const newCenterOffsetX = Math.max(0, (availableWidth - newSvgWidth) / 2);
+        const newCenterOffsetY = Math.max(0, (availableHeight - newSvgHeight) / 2);
+
+        // Apply zoom
+        map.setZoom(newZoom);
+        updateZoomDisplay();
+
+        // Calculate new scroll position
+        requestAnimationFrame(() => {
+            // The canvas point position in the new SVG
+            const newPointXInSvg = canvasX * newZoom;
+            const newPointYInSvg = canvasY * newZoom;
+
+            // Target scroll: position the point under the mouse
+            const targetScrollX = padding + newCenterOffsetX + newPointXInSvg - mouseXInWrapper;
+            const targetScrollY = padding + newCenterOffsetY + newPointYInSvg - mouseYInWrapper;
+
+            mapWrapper.scrollLeft = Math.max(0, targetScrollX);
+            mapWrapper.scrollTop = Math.max(0, targetScrollY);
+        });
+    }, { passive: false, capture: true });
+
+    // Track space key for pan mode
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !spaceDown && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            spaceDown = true;
+            mapWrapper.style.cursor = 'grab';
         }
     });
+
+    document.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            spaceDown = false;
+            if (!isPanning) {
+                mapWrapper.style.cursor = '';
+            }
+        }
+    });
+
+    // Space+Drag or Middle Mouse Button Pan
+    mapWrapper.addEventListener('mousedown', (e) => {
+        // Middle mouse button (1) or space + left click (0)
+        if (e.button === 1 || (e.button === 0 && spaceDown)) {
+            e.preventDefault();
+            isPanning = true;
+            panStart = { x: e.clientX, y: e.clientY };
+            scrollStart = { x: mapWrapper.scrollLeft, y: mapWrapper.scrollTop };
+            mapWrapper.style.cursor = 'grabbing';
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isPanning) return;
+        const dx = e.clientX - panStart.x;
+        const dy = e.clientY - panStart.y;
+        mapWrapper.scrollLeft = scrollStart.x - dx;
+        mapWrapper.scrollTop = scrollStart.y - dy;
+    });
+
+    document.addEventListener('mouseup', (e) => {
+        if (isPanning) {
+            isPanning = false;
+            mapWrapper.style.cursor = spaceDown ? 'grab' : '';
+        }
+    });
+
+    // Prevent default middle click behavior
+    mapWrapper.addEventListener('auxclick', (e) => {
+        if (e.button === 1) e.preventDefault();
+    });
+
+    // ==========================================================================
+    // KEYBOARD SHORTCUTS (Map Editor Style)
+    // ==========================================================================
+    document.addEventListener('keydown', (e) => {
+        const isInputFocused = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
+        const hasSelection = map.getSelectedFurniture && map.getSelectedFurniture().length > 0;
+
+        switch (e.key) {
+            case 'Escape':
+                // Close reservation sheet if open
+                if (reservationSheet.classList.contains('show')) {
+                    closeReservationSheet();
+                } else {
+                    // Deselect all
+                    map.clearSelection();
+                    updateSelectionBar();
+                }
+                break;
+
+            case 'a':
+            case 'A':
+                // Ctrl+A: Select all visible furniture
+                if ((e.ctrlKey || e.metaKey) && !isInputFocused) {
+                    e.preventDefault();
+                    selectAllVisibleFurniture();
+                }
+                break;
+
+            case '+':
+            case '=':
+                // Ctrl++: Zoom in
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    map.zoomIn();
+                    updateZoomDisplay();
+                }
+                break;
+
+            case '-':
+                // Ctrl+-: Zoom out
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    map.zoomOut();
+                    updateZoomDisplay();
+                }
+                break;
+
+            case '0':
+                // Ctrl+0: Reset to saved view
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    resetToSavedView();
+                }
+                break;
+
+            case 'ArrowLeft':
+                // Navigate to previous day
+                if (!isInputFocused && !hasSelection) {
+                    e.preventDefault();
+                    map.goToPreviousDay();
+                }
+                break;
+
+            case 'ArrowRight':
+                // Navigate to next day
+                if (!isInputFocused && !hasSelection) {
+                    e.preventDefault();
+                    map.goToNextDay();
+                }
+                break;
+
+            case 'r':
+            case 'R':
+                // R: Refresh
+                if (!e.ctrlKey && !e.metaKey && !isInputFocused) {
+                    e.preventDefault();
+                    btnRefresh.click();
+                }
+                break;
+
+            case 's':
+            case 'S':
+                // Ctrl+S: Save view
+                if ((e.ctrlKey || e.metaKey) && !isInputFocused) {
+                    e.preventDefault();
+                    saveCurrentView();
+                }
+                break;
+        }
+    });
+
+    // Select all visible furniture in current zone
+    function selectAllVisibleFurniture() {
+        const data = map.getData();
+        if (!data || !data.furniture) return;
+
+        // Get visible furniture (in current zone, not decorative)
+        const visibleFurniture = data.furniture.filter(f => {
+            if (f.zone_id !== currentZoneId) return false;
+            const typeConfig = data.furniture_types[f.furniture_type] || {};
+            return typeConfig.is_decorative !== 1;
+        });
+
+        visibleFurniture.forEach(f => {
+            map.selectFurniture(f.id, true); // true = add to selection
+        });
+
+        updateSelectionBar();
+    }
+
+    // ==========================================================================
+    // REFRESH
+    // ==========================================================================
+    const btnRefresh = document.getElementById('btn-refresh');
+    btnRefresh.addEventListener('click', async () => {
+        btnRefresh.querySelector('i').classList.add('fa-spin');
+        await map.refreshAvailability();
+        updateStats(currentZoneId);
+        setTimeout(() => btnRefresh.querySelector('i').classList.remove('fa-spin'), 500);
+    });
+
+    map.startAutoRefresh(30000);
+
+    // ==========================================================================
+    // SELECTION & BOTTOM ACTION BAR
+    // ==========================================================================
+    const selectionBar = document.getElementById('selection-bar');
+    const selectedBadges = document.getElementById('selected-badges');
+    const totalCapacity = document.getElementById('total-capacity');
+
+    function updateSelectionBar() {
+        const selected = map.getSelectedFurnitureData();
+
+        if (selected.length === 0) {
+            selectionBar.classList.remove('show');
+            return;
+        }
+
+        selectionBar.classList.add('show');
+
+        // Build chips
+        selectedBadges.innerHTML = selected.map(f => `
+            <span class="selection-chip" data-id="${f.id}">
+                ${f.number}
+                <span class="remove-chip" data-id="${f.id}"><i class="fas fa-times"></i></span>
+            </span>
+        `).join('');
+
+        // Add remove handlers
+        selectedBadges.querySelectorAll('.remove-chip').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.id);
+                map.deselectFurniture(id);
+                updateSelectionBar();
+            });
+        });
+
+        // Calculate total capacity
+        const capacity = selected.reduce((sum, f) => sum + (f.capacity || 2), 0);
+        totalCapacity.textContent = capacity;
+    }
+
+    // Override map selection callback
+    map.on('onFurnitureClick', () => updateSelectionBar());
 
     document.getElementById('btn-clear-selection').addEventListener('click', () => {
         map.clearSelection();
-        selectionPanel.classList.add('d-none');
+        updateSelectionBar();
     });
 
-    // New reservation from selection
-    document.getElementById('btn-new-reservation').addEventListener('click', () => {
+    // ==========================================================================
+    // RESERVATION SHEET
+    // ==========================================================================
+    const reservationSheet = document.getElementById('reservationSheet');
+    const sheetBackdrop = document.getElementById('sheet-backdrop');
+    const btnNewReservation = document.getElementById('btn-new-reservation');
+    const btnCloseSheet = document.getElementById('btn-close-sheet');
+    const btnFullForm = document.getElementById('btn-full-form');
+    const btnCreateReservation = document.getElementById('btn-create-reservation');
+
+    function openReservationSheet() {
         const selected = map.getSelectedFurnitureData();
         if (selected.length === 0) return;
 
-        document.getElementById('quick-date').value = map.getCurrentDate();
-        document.getElementById('quick-furniture-list').innerHTML = selected.map(f =>
-            `<span class="badge bg-primary me-1">${f.number}</span>`
+        // Populate sheet
+        document.getElementById('sheet-furniture-chips').innerHTML = selected.map(f =>
+            `<span class="chip">${f.number}</span>`
         ).join('');
 
-        const modal = new bootstrap.Modal(document.getElementById('quickReservationModal'));
-        modal.show();
+        const capacity = selected.reduce((sum, f) => sum + (f.capacity || 2), 0);
+        document.getElementById('sheet-capacity').textContent = capacity;
+        document.getElementById('sheet-num-people').value = Math.min(capacity, 2);
+        document.getElementById('sheet-date').value = formatDateCompact(map.getCurrentDate());
+        document.getElementById('sheet-customer-search').value = '';
+        document.getElementById('sheet-customer-id').value = '';
+        document.getElementById('sheet-notes').value = '';
 
         // Update full form link
         const furnitureIds = selected.map(f => f.id).join(',');
-        document.getElementById('link-full-form').href =
-            `/beach/reservations/create?date=${map.getCurrentDate()}&furniture=${furnitureIds}`;
-    });
+        btnFullForm.onclick = () => {
+            window.location.href = `/beach/reservations/create?date=${map.getCurrentDate()}&furniture=${furnitureIds}`;
+        };
 
-    // Update stats
-    function updateStats() {
-        const data = map.getData();
-        if (!data || !data.summary) return;
-
-        document.getElementById('stat-total').textContent = data.summary.total || '-';
-        document.getElementById('stat-available').textContent = data.summary.available || '-';
-        document.getElementById('stat-occupied').textContent = data.summary.occupied || '-';
-
-        const rate = data.summary.occupancy_rate;
-        document.getElementById('stat-rate').textContent = rate !== undefined ? `${Math.round(rate)}%` : '-';
+        // Show sheet
+        sheetBackdrop.classList.add('show');
+        reservationSheet.classList.add('show');
     }
 
-    // Update stats when data loads
-    map.on('onDateChange', updateStats);
-
-    // View availability
-    document.getElementById('btn-view-availability').addEventListener('click', () => {
-        const selected = map.getSelectedFurniture();
-        if (selected.length > 0) {
-            window.location.href = `/beach/reservations?furniture=${selected.join(',')}`;
-        }
-    });
-
-    // =========================================================================
-    // FURNITURE INFO MODAL
-    // =========================================================================
-    const furnitureModal = document.getElementById('furnitureInfoModal');
-    let currentFurnitureData = null;
-    let currentReservationId = null;
-
-    // Close modal handlers
-    document.getElementById('modal-close-btn').addEventListener('click', closeFurnitureModal);
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeFurnitureModal();
-    });
-    document.addEventListener('click', (e) => {
-        if (!furnitureModal.contains(e.target) &&
-            !e.target.closest('.furniture-item') &&
-            !furnitureModal.classList.contains('d-none')) {
-            closeFurnitureModal();
-        }
-    });
-
-    function closeFurnitureModal() {
-        furnitureModal.classList.add('d-none');
-        currentFurnitureData = null;
-        currentReservationId = null;
+    function closeReservationSheet() {
+        sheetBackdrop.classList.remove('show');
+        reservationSheet.classList.remove('show');
     }
 
-    async function showFurnitureModal(furnitureId, clickEvent) {
-        try {
-            const response = await fetch(`/beach/api/map/furniture/${furnitureId}/details?date=${map.getCurrentDate()}`);
-            const data = await response.json();
+    btnNewReservation.addEventListener('click', openReservationSheet);
+    btnCloseSheet.addEventListener('click', closeReservationSheet);
+    sheetBackdrop.addEventListener('click', closeReservationSheet);
 
-            if (!data.success) {
-                console.error('Error fetching furniture details:', data.error);
-                return;
-            }
-
-            currentFurnitureData = data.furniture;
-            currentReservationId = data.reservation?.id || null;
-
-            // Populate furniture info
-            document.getElementById('modal-furniture-title').textContent =
-                `${data.furniture.type_name} #${data.furniture.number}`;
-            document.getElementById('modal-furniture-type').textContent = data.furniture.type_name;
-            document.getElementById('modal-furniture-zone').textContent = data.furniture.zone_name || 'Sin zona';
-            document.getElementById('modal-furniture-capacity').textContent =
-                `${data.furniture.capacity} persona${data.furniture.capacity !== 1 ? 's' : ''}`;
-
-            // Features
-            const featuresList = document.getElementById('modal-features-list');
-            if (data.furniture.features && data.furniture.features.length > 0) {
-                featuresList.innerHTML = data.furniture.features
-                    .map(f => `<span class="tag-badge">${f}</span>`).join('');
-                featuresList.classList.remove('d-none');
-            } else {
-                featuresList.classList.add('d-none');
-            }
-
-            // Availability status
-            const statusEl = document.getElementById('modal-availability-status');
-            if (data.is_available) {
-                statusEl.innerHTML = '<span class="availability-badge available"><i class="fas fa-check me-1"></i>Disponible</span>';
-                document.getElementById('modal-customer-card').classList.add('d-none');
-                document.getElementById('modal-actions-available').classList.remove('d-none');
-                document.getElementById('modal-actions-occupied').classList.add('d-none');
-            } else {
-                statusEl.innerHTML = '<span class="availability-badge occupied"><i class="fas fa-user me-1"></i>Ocupado</span>';
-                document.getElementById('modal-actions-available').classList.add('d-none');
-                document.getElementById('modal-actions-occupied').classList.remove('d-none');
-
-                // Customer card
-                if (data.customer) {
-                    const customerCard = document.getElementById('modal-customer-card');
-                    customerCard.classList.remove('d-none');
-
-                    document.getElementById('modal-customer-name').textContent = data.customer.full_name || 'Cliente';
-
-                    // State badge
-                    const stateBadge = document.getElementById('modal-state-badge');
-                    stateBadge.textContent = data.reservation.current_state || 'Reservado';
-                    stateBadge.style.backgroundColor = data.reservation.display_color || '#6c757d';
-                    stateBadge.style.color = 'white';
-
-                    // Room number
-                    const roomEl = document.getElementById('modal-customer-room');
-                    if (data.customer.room_number) {
-                        roomEl.querySelector('span').textContent = `Hab. ${data.customer.room_number}`;
-                        roomEl.classList.remove('d-none');
-                    } else {
-                        roomEl.classList.add('d-none');
-                    }
-
-                    // Ticket number
-                    const ticketEl = document.getElementById('modal-customer-ticket');
-                    if (data.reservation.ticket_number) {
-                        ticketEl.querySelector('span').textContent = data.reservation.ticket_number;
-                        ticketEl.classList.remove('d-none');
-                    } else {
-                        ticketEl.classList.add('d-none');
-                    }
-
-                    // Number of people
-                    const peopleEl = document.getElementById('modal-customer-people');
-                    if (data.reservation.num_people) {
-                        peopleEl.querySelector('span').textContent = `${data.reservation.num_people} persona${data.reservation.num_people !== 1 ? 's' : ''}`;
-                        peopleEl.classList.remove('d-none');
-                    } else {
-                        peopleEl.classList.add('d-none');
-                    }
-
-                    // Notes
-                    const notesEl = document.getElementById('modal-reservation-notes');
-                    if (data.reservation.notes) {
-                        notesEl.querySelector('span').textContent = data.reservation.notes;
-                        notesEl.classList.remove('d-none');
-                    } else {
-                        notesEl.classList.add('d-none');
-                    }
-
-                    // Reservation tags
-                    const tagsEl = document.getElementById('modal-reservation-tags');
-                    if (data.reservation.tags && data.reservation.tags.length > 0) {
-                        tagsEl.innerHTML = data.reservation.tags
-                            .map(t => `<span class="tag-badge" style="background: ${t.color || '#e9ecef'}">${t.name}</span>`).join('');
-                        tagsEl.classList.remove('d-none');
-                    } else {
-                        tagsEl.classList.add('d-none');
-                    }
-                } else {
-                    document.getElementById('modal-customer-card').classList.add('d-none');
-                }
-            }
-
-            // Position modal near click
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            const modalWidth = 360;
-            const modalHeight = 350;
-
-            let left = clickEvent.clientX + 10;
-            let top = clickEvent.clientY + 10;
-
-            // Adjust if would overflow right
-            if (left + modalWidth > viewportWidth - 20) {
-                left = clickEvent.clientX - modalWidth - 10;
-            }
-
-            // Adjust if would overflow bottom
-            if (top + modalHeight > viewportHeight - 20) {
-                top = viewportHeight - modalHeight - 20;
-            }
-
-            // Ensure not negative
-            left = Math.max(20, left);
-            top = Math.max(20, top);
-
-            furnitureModal.style.left = `${left}px`;
-            furnitureModal.style.top = `${top}px`;
-            furnitureModal.classList.remove('d-none');
-
-        } catch (error) {
-            console.error('Error showing furniture modal:', error);
-        }
-    }
-
-    // Override furniture click to show modal (single click)
-    // Store original onFurnitureClick handler
-    map.showFurnitureDetails = showFurnitureModal;
-
-    // Modal action buttons
-    document.getElementById('modal-btn-new-reservation').addEventListener('click', () => {
-        if (currentFurnitureData) {
-            closeFurnitureModal();
-            // Add to selection and open quick reservation
-            map.selectFurniture(currentFurnitureData.id);
-            document.getElementById('btn-new-reservation').click();
-        }
-    });
-
-    document.getElementById('modal-btn-view-reservation').addEventListener('click', () => {
-        if (currentReservationId) {
-            window.location.href = `/beach/reservations/${currentReservationId}`;
-        }
-    });
-
-    document.getElementById('modal-btn-edit-reservation').addEventListener('click', () => {
-        if (currentReservationId) {
-            window.location.href = `/beach/reservations/${currentReservationId}/edit`;
-        }
-    });
-
-    document.getElementById('modal-btn-move-reservation').addEventListener('click', () => {
-        if (currentReservationId && currentFurnitureData) {
-            closeFurnitureModal();
-            // TODO: Enter reassignment mode (Phase 7B.6)
-            alert('Modo de reasignación: Próximamente');
-        }
-    });
-
-    document.getElementById('modal-btn-block').addEventListener('click', () => {
-        if (currentFurnitureData) {
-            closeFurnitureModal();
-            // TODO: Show block dialog (Phase 7B.4)
-            alert('Bloquear mobiliario: Próximamente');
-        }
-    });
-
-    // =========================================================================
-    // CUSTOMER SEARCH & HIGHLIGHTING
-    // =========================================================================
-    const searchInput = document.getElementById('customer-search-input');
-    const searchDropdown = document.getElementById('customer-search-dropdown');
-    const clearSearchBtn = document.getElementById('clear-search-btn');
+    // Customer search in sheet
+    const sheetCustomerSearch = document.getElementById('sheet-customer-search');
+    const sheetCustomerResults = document.getElementById('sheet-customer-results');
+    const sheetCustomerId = document.getElementById('sheet-customer-id');
     let searchTimeout = null;
-    let highlightedFurnitureIds = [];
 
-    // Debounced search
-    searchInput.addEventListener('input', (e) => {
+    sheetCustomerSearch.addEventListener('input', (e) => {
         const query = e.target.value.trim();
-
         if (searchTimeout) clearTimeout(searchTimeout);
 
         if (query.length < 2) {
-            searchDropdown.classList.add('d-none');
-            clearSearchBtn.classList.add('d-none');
-            clearHighlights();
+            sheetCustomerResults.classList.remove('show');
             return;
         }
 
-        clearSearchBtn.classList.remove('d-none');
-
-        searchTimeout = setTimeout(() => {
-            searchCustomers(query);
-        }, 300);
+        searchTimeout = setTimeout(() => searchCustomers(query), 300);
     });
 
     async function searchCustomers(query) {
-        try {
-            const response = await fetch(`/beach/api/map/search-customer?q=${encodeURIComponent(query)}&date=${map.getCurrentDate()}`);
-            const data = await response.json();
-
-            if (!data.success && !data.customers) {
-                searchDropdown.innerHTML = '<div class="search-no-results">Error en búsqueda</div>';
-                searchDropdown.classList.remove('d-none');
-                return;
-            }
-
-            if (data.customers.length === 0) {
-                searchDropdown.innerHTML = '<div class="search-no-results"><i class="fas fa-info-circle me-1"></i>Sin resultados</div>';
-                searchDropdown.classList.remove('d-none');
-                return;
-            }
-
-            // Render results
-            let html = '';
-            data.customers.forEach(customer => {
-                const hasFurniture = customer.furniture_ids && customer.furniture_ids.length > 0;
-                const furnitureBadges = hasFurniture ?
-                    customer.furniture_ids.map(id => {
-                        const f = map.getData()?.furniture?.find(f => f.id === id);
-                        return `<span class="furniture-badge me-1">${f ? f.number : id}</span>`;
-                    }).join('') : '';
-
-                html += `
-                    <div class="search-result-item ${hasFurniture ? 'has-furniture' : ''}"
-                         data-customer-id="${customer.id}"
-                         data-furniture-ids="${customer.furniture_ids?.join(',') || ''}">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="customer-name">${customer.name}</div>
-                                <div class="customer-details">
-                                    ${customer.room_number ? `<i class="fas fa-door-open me-1"></i>Hab. ${customer.room_number}` : ''}
-                                    ${customer.customer_type === 'externo' ? '<span class="badge bg-secondary ms-1">Externo</span>' : ''}
-                                </div>
-                            </div>
-                            ${hasFurniture ? `<div>${furnitureBadges}</div>` : ''}
-                        </div>
-                    </div>
-                `;
-            });
-
-            searchDropdown.innerHTML = html;
-            searchDropdown.classList.remove('d-none');
-
-            // Add click handlers
-            searchDropdown.querySelectorAll('.search-result-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const furnitureIdsStr = item.dataset.furnitureIds;
-                    const customerId = item.dataset.customerId;
-
-                    if (furnitureIdsStr) {
-                        const ids = furnitureIdsStr.split(',').map(id => parseInt(id));
-                        highlightFurniture(ids);
-
-                        // Scroll to first furniture
-                        if (ids.length > 0) {
-                            scrollToFurniture(ids[0]);
-                        }
-                    }
-
-                    searchDropdown.classList.add('d-none');
-                    searchInput.value = item.querySelector('.customer-name').textContent;
-                });
-            });
-
-        } catch (error) {
-            console.error('Search error:', error);
-            searchDropdown.innerHTML = '<div class="search-no-results">Error en búsqueda</div>';
-            searchDropdown.classList.remove('d-none');
-        }
-    }
-
-    function highlightFurniture(furnitureIds) {
-        // Clear previous highlights
-        clearHighlights();
-
-        // Add highlight class to furniture elements
-        highlightedFurnitureIds = furnitureIds;
-        furnitureIds.forEach(id => {
-            const element = document.querySelector(`.furniture-item[data-furniture-id="${id}"]`);
-            if (element) {
-                element.classList.add('highlighted');
-            }
-        });
-    }
-
-    function clearHighlights() {
-        highlightedFurnitureIds.forEach(id => {
-            const element = document.querySelector(`.furniture-item[data-furniture-id="${id}"]`);
-            if (element) {
-                element.classList.remove('highlighted');
-            }
-        });
-        highlightedFurnitureIds = [];
-    }
-
-    function scrollToFurniture(furnitureId) {
-        const element = document.querySelector(`.furniture-item[data-furniture-id="${furnitureId}"]`);
-        if (!element) return;
-
-        const mapContainer = document.getElementById('map-container');
-        const svg = document.getElementById('beach-map');
-        if (!mapContainer || !svg) return;
-
-        // Get element position in SVG coordinates
-        const transform = element.getAttribute('transform');
-        const match = transform?.match(/translate\(([^,]+),\s*([^)]+)\)/);
-        if (!match) return;
-
-        const x = parseFloat(match[1]);
-        const y = parseFloat(match[2]);
-
-        // Calculate scroll position to center the furniture
-        const containerRect = mapContainer.getBoundingClientRect();
-        const svgRect = svg.getBoundingClientRect();
-
-        // Scale factor between SVG viewBox and rendered size
-        const viewBox = svg.getAttribute('viewBox')?.split(' ').map(Number);
-        if (!viewBox) return;
-
-        const scaleX = svgRect.width / viewBox[2];
-        const scaleY = svgRect.height / viewBox[3];
-
-        // Position in screen coordinates
-        const screenX = x * scaleX * map.zoom;
-        const screenY = y * scaleY * map.zoom;
-
-        // Scroll to center
-        mapContainer.scrollLeft = screenX - containerRect.width / 2;
-        mapContainer.scrollTop = screenY - containerRect.height / 2;
-    }
-
-    // Clear search
-    clearSearchBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        searchDropdown.classList.add('d-none');
-        clearSearchBtn.classList.add('d-none');
-        clearHighlights();
-    });
-
-    // Close dropdown on outside click
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.customer-search-container')) {
-            searchDropdown.classList.add('d-none');
-        }
-    });
-
-    // Clear highlights when date changes
-    map.on('onDateChange', () => {
-        clearHighlights();
-        searchInput.value = '';
-        clearSearchBtn.classList.add('d-none');
-    });
-
-    // =========================================================================
-    // QUICK RESERVATION MODAL
-    // =========================================================================
-    const quickReservationModal = document.getElementById('quickReservationModal');
-    const quickCustomerSearch = document.getElementById('quick-customer-search');
-    const quickCustomerId = document.getElementById('quick-customer-id');
-    const quickCustomerResults = document.getElementById('customer-search-results');
-    const quickCreateBtn = document.getElementById('btn-create-reservation');
-    let quickSearchTimeout = null;
-    let selectedCustomer = null;
-
-    // Customer autocomplete in quick reservation modal
-    quickCustomerSearch.addEventListener('input', (e) => {
-        const query = e.target.value.trim();
-
-        if (quickSearchTimeout) clearTimeout(quickSearchTimeout);
-
-        if (query.length < 2) {
-            quickCustomerResults.classList.add('d-none');
-            return;
-        }
-
-        quickSearchTimeout = setTimeout(() => {
-            searchCustomersForReservation(query);
-        }, 300);
-    });
-
-    async function searchCustomersForReservation(query) {
         try {
             const response = await fetch(`/beach/api/customers/search?q=${encodeURIComponent(query)}`);
             const data = await response.json();
 
             if (!data.customers || data.customers.length === 0) {
-                quickCustomerResults.innerHTML = `
-                    <a href="/beach/customers/create" class="list-group-item list-group-item-action text-primary">
+                sheetCustomerResults.innerHTML = `
+                    <a href="/beach/customers/create" class="customer-result-item" style="color: var(--color-primary);">
                         <i class="fas fa-plus me-1"></i> Crear nuevo cliente
                     </a>
                 `;
-                quickCustomerResults.classList.remove('d-none');
+                sheetCustomerResults.classList.add('show');
                 return;
             }
 
             let html = '';
             data.customers.forEach(customer => {
-                const displayName = customer.display_name || customer.guest_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+                const displayName = customer.display_name || customer.guest_name ||
+                    `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
                 const subtitle = customer.room_number ? `Hab. ${customer.room_number}` :
-                                customer.phone || customer.email || '';
+                    customer.phone || customer.email || '';
 
                 html += `
-                    <a href="#" class="list-group-item list-group-item-action customer-result-item"
-                       data-customer-id="${customer.id}"
-                       data-customer-name="${displayName}"
-                       data-customer-type="${customer.customer_type}"
-                       data-customer-room="${customer.room_number || ''}">
-                        <div class="d-flex justify-content-between">
-                            <strong>${displayName}</strong>
-                            ${customer.vip_status ? '<span class="badge bg-warning"><i class="fas fa-star"></i></span>' : ''}
-                        </div>
-                        <small class="text-muted">${subtitle}</small>
-                    </a>
+                    <div class="customer-result-item"
+                         data-id="${customer.id}"
+                         data-name="${displayName}">
+                        <div class="name">${displayName}</div>
+                        <div class="details">${subtitle}</div>
+                    </div>
                 `;
             });
 
             html += `
-                <a href="/beach/customers/create" class="list-group-item list-group-item-action text-primary">
+                <a href="/beach/customers/create" class="customer-result-item" style="color: var(--color-primary);">
                     <i class="fas fa-plus me-1"></i> Crear nuevo cliente
                 </a>
             `;
 
-            quickCustomerResults.innerHTML = html;
-            quickCustomerResults.classList.remove('d-none');
+            sheetCustomerResults.innerHTML = html;
+            sheetCustomerResults.classList.add('show');
 
-            // Add click handlers
-            quickCustomerResults.querySelectorAll('.customer-result-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    selectCustomerForReservation(
-                        item.dataset.customerId,
-                        item.dataset.customerName,
-                        item.dataset.customerType,
-                        item.dataset.customerRoom
-                    );
+            sheetCustomerResults.querySelectorAll('.customer-result-item[data-id]').forEach(item => {
+                item.addEventListener('click', () => {
+                    sheetCustomerId.value = item.dataset.id;
+                    sheetCustomerSearch.value = item.dataset.name;
+                    sheetCustomerResults.classList.remove('show');
                 });
             });
 
         } catch (error) {
-            console.error('Customer search error:', error);
+            console.error('Search error:', error);
         }
     }
 
-    function selectCustomerForReservation(id, name, type, room) {
-        selectedCustomer = { id, name, type, room };
-        quickCustomerId.value = id;
-        quickCustomerSearch.value = name;
-        quickCustomerResults.classList.add('d-none');
-    }
-
-    // Close customer results on outside click
+    // Close results on outside click
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('#quick-customer-search') && !e.target.closest('#customer-search-results')) {
-            quickCustomerResults.classList.add('d-none');
+        if (!e.target.closest('.customer-search-input') && !e.target.closest('.customer-results')) {
+            sheetCustomerResults.classList.remove('show');
         }
     });
 
     // Create reservation
-    quickCreateBtn.addEventListener('click', async () => {
-        const customerId = quickCustomerId.value;
-        const numPeople = parseInt(document.getElementById('quick-num-people').value) || 2;
-        const notes = document.getElementById('quick-notes').value.trim();
+    btnCreateReservation.addEventListener('click', async () => {
+        const customerId = sheetCustomerId.value;
+        const numPeople = parseInt(document.getElementById('sheet-num-people').value) || 2;
+        const notes = document.getElementById('sheet-notes').value.trim();
         const selectedFurniture = map.getSelectedFurniture();
 
         if (!customerId) {
             alert('Por favor seleccione un cliente');
-            quickCustomerSearch.focus();
+            sheetCustomerSearch.focus();
             return;
         }
 
@@ -1340,8 +2047,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        quickCreateBtn.disabled = true;
-        quickCreateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+        btnCreateReservation.disabled = true;
+        btnCreateReservation.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
 
         try {
             const response = await fetch('/beach/api/map/quick-reservation', {
@@ -1362,20 +2069,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                // Close modal
-                bootstrap.Modal.getInstance(quickReservationModal).hide();
-
-                // Clear form
-                quickCustomerSearch.value = '';
-                quickCustomerId.value = '';
-                document.getElementById('quick-notes').value = '';
-                selectedCustomer = null;
-
-                // Clear selection and refresh map
+                closeReservationSheet();
                 map.clearSelection();
+                updateSelectionBar();
                 await map.refreshAvailability();
+                updateStats(currentZoneId);
 
-                // Show success message
                 if (window.PuroBeach && window.PuroBeach.showToast) {
                     window.PuroBeach.showToast(data.message || 'Reserva creada', 'success');
                 } else {
@@ -1389,19 +2088,192 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error creating reservation:', error);
             alert('Error al crear la reserva');
         } finally {
-            quickCreateBtn.disabled = false;
-            quickCreateBtn.innerHTML = '<i class="fas fa-check"></i> Crear Reserva';
+            btnCreateReservation.disabled = false;
+            btnCreateReservation.innerHTML = '<i class="fas fa-check"></i> Crear Reserva';
         }
     });
 
-    // Reset form when modal is hidden
-    quickReservationModal.addEventListener('hidden.bs.modal', () => {
-        quickCustomerSearch.value = '';
-        quickCustomerId.value = '';
-        document.getElementById('quick-notes').value = '';
-        document.getElementById('quick-num-people').value = '2';
-        selectedCustomer = null;
+    // ==========================================================================
+    // CONTEXT MENU
+    // ==========================================================================
+    const contextMenu = document.getElementById('contextMenu');
+    const contextMenuHeader = document.getElementById('context-menu-header');
+    const contextMenuAvailable = document.getElementById('context-menu-available');
+    const contextMenuOccupied = document.getElementById('context-menu-occupied');
+    let contextFurnitureId = null;
+    let contextReservationId = null;
+
+    document.addEventListener('click', () => contextMenu.classList.add('d-none'));
+    document.addEventListener('contextmenu', (e) => {
+        if (!e.target.closest('.furniture-item') && !e.target.closest('.context-menu')) {
+            contextMenu.classList.add('d-none');
+        }
     });
+
+    async function showContextMenu(furnitureId, event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        try {
+            const response = await fetch(`/beach/api/map/furniture/${furnitureId}/details?date=${map.getCurrentDate()}`);
+            const data = await response.json();
+
+            if (!data.success) return;
+
+            contextFurnitureId = furnitureId;
+            contextReservationId = data.reservation?.id || null;
+
+            contextMenuHeader.textContent = `${data.furniture.type_name} #${data.furniture.number}`;
+
+            contextMenuAvailable.classList.add('d-none');
+            contextMenuOccupied.classList.add('d-none');
+
+            if (data.reservation) {
+                contextMenuOccupied.classList.remove('d-none');
+            } else {
+                contextMenuAvailable.classList.remove('d-none');
+            }
+
+            // Position menu
+            let left = event.clientX;
+            let top = event.clientY;
+
+            if (left + 180 > window.innerWidth - 10) {
+                left = window.innerWidth - 190;
+            }
+            if (top + 200 > window.innerHeight - 10) {
+                top = window.innerHeight - 210;
+            }
+
+            contextMenu.style.left = `${left}px`;
+            contextMenu.style.top = `${top}px`;
+            contextMenu.classList.remove('d-none');
+
+        } catch (error) {
+            console.error('Error showing context menu:', error);
+        }
+    }
+
+    document.getElementById('map-container').addEventListener('contextmenu', (e) => {
+        const furnitureItem = e.target.closest('.furniture-item');
+        if (furnitureItem) {
+            const furnitureId = parseInt(furnitureItem.dataset.furnitureId);
+            if (furnitureId) showContextMenu(furnitureId, e);
+        }
+    });
+
+    contextMenu.addEventListener('click', async (e) => {
+        const menuItem = e.target.closest('.context-menu-item');
+        if (!menuItem) return;
+
+        const action = menuItem.dataset.action;
+        contextMenu.classList.add('d-none');
+
+        switch (action) {
+            case 'view-details':
+                // TODO: Show details modal
+                break;
+            case 'select':
+                if (contextFurnitureId) {
+                    map.selectFurniture(contextFurnitureId, true);
+                    updateSelectionBar();
+                }
+                break;
+            case 'new-reservation':
+                if (contextFurnitureId) {
+                    map.clearSelection();
+                    map.selectFurniture(contextFurnitureId);
+                    updateSelectionBar();
+                    openReservationSheet();
+                }
+                break;
+            case 'view-reservation':
+                if (contextReservationId) {
+                    window.location.href = `/beach/reservations/${contextReservationId}`;
+                }
+                break;
+            case 'edit-reservation':
+                if (contextReservationId) {
+                    window.location.href = `/beach/reservations/${contextReservationId}/edit`;
+                }
+                break;
+            case 'cancel-reservation':
+                if (contextReservationId && confirm('Cancelar esta reserva?')) {
+                    try {
+                        const response = await fetch(`/beach/api/reservations/${contextReservationId}/toggle-state`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                            },
+                            body: JSON.stringify({ state: 'Cancelada', action: 'add' })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            await map.refreshAvailability();
+                            updateStats(currentZoneId);
+                        } else {
+                            alert(data.error || 'Error al cancelar');
+                        }
+                    } catch (error) {
+                        console.error('Error canceling:', error);
+                    }
+                }
+                break;
+            case 'block':
+                if (contextFurnitureId) {
+                    const today = map.getCurrentDate();
+                    if (confirm(`Bloquear mobiliario para ${formatDateCompact(today)}?`)) {
+                        try {
+                            const response = await fetch(`/beach/api/map/furniture/${contextFurnitureId}/block`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                                },
+                                body: JSON.stringify({
+                                    start_date: today,
+                                    end_date: today,
+                                    block_type: 'maintenance',
+                                    reason: 'Bloqueado desde mapa'
+                                })
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                                await map.refreshAvailability();
+                                updateStats(currentZoneId);
+                            }
+                        } catch (error) {
+                            console.error('Error blocking:', error);
+                        }
+                    }
+                }
+                break;
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            contextMenu.classList.add('d-none');
+            closeReservationSheet();
+        }
+    });
+
+    // Apply zone view after every render
+    map.on('onRender', () => {
+        if (currentZoneId) {
+            applyZoneView(currentZoneId);
+        } else {
+            populateZoneSelector();
+        }
+    });
+
+    // Update stats when date changes
+    map.on('onDateChange', () => {
+        updateStats(currentZoneId);
+    });
+
 });
+
 </script>
 {% endblock %}

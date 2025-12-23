@@ -9,10 +9,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Current Phase** | Phase 8: Smart Features |
-| **Last Updated** | 2025-12-22 |
-| **Last Session** | Phase 7 Interactive Map Editor (Complete) |
-| **Next Priority** | Phase 8 Smart features OR Phase 7B Live Map with availability |
+| **Current Phase** | Phase 7B: Live Map with Availability |
+| **Last Updated** | 2025-12-23 |
+| **Last Session** | Phase 7B Map Interaction Fixes |
+| **Next Priority** | Improve reservation modal from map |
 
 ---
 
@@ -32,7 +32,7 @@
 | 6C | Sentada State + Customer Stats | Complete | 100% |
 | 6D | Configurable Reservation States | Complete | 100% |
 | 7A | Interactive Map Editor | Complete | 100% |
-| 7B | Live Map with Availability | Not Started | 0% |
+| 7B | Live Map with Availability | In Progress | 80% |
 | 8 | Smart Features | Not Started | 0% |
 | 9 | Reports & Polish | Not Started | 0% |
 
@@ -530,28 +530,49 @@
 ## Phase 7B: Live Map with Availability
 
 ### Objectives
-- [ ] Real-time availability display by date
-- [ ] Reservation creation from map
-- [ ] Reservation info on hover/click
-- [ ] Date navigation
+- [x] Real-time availability display by date
+- [x] Reservation creation from map
+- [ ] Reservation info on hover/click (tooltip)
+- [x] Date navigation
 
 ### Tasks
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Availability colors | Pending | Available/reserved/occupied states |
-| Load reservations by date | Pending | API endpoint |
-| Tooltip on hover | Pending | Reservation info |
-| Quick reservation modal | Pending | From furniture click |
-| Date navigation | Pending | Previous/next day |
-| State color integration | Pending | From beach_reservation_states |
-| Temporary furniture | Pending | Per-date visibility |
+| **Mobile-First Layout** | Complete | Full redesign with toolbar, stats strip, canvas, bottom bar |
+| - Compact toolbar | Complete | Date nav + gold zone selector + refresh |
+| - Stats strip | Complete | Total, available, occupied, rate |
+| - Full-screen canvas | Complete | Matches map editor style with shadow |
+| - Floating zoom controls | Complete | FAB style buttons |
+| - Bottom action bar | Complete | Slides up on selection with chips |
+| **Reservation Features** | Complete | |
+| - Load reservations by date | Complete | API endpoint with availability |
+| - Availability colors | Complete | From beach_reservation_states |
+| - Quick reservation modal | Complete | Bottom sheet with customer search |
+| - Context menu | Complete | Right-click menu for actions |
+| **Navigation** | Complete | |
+| - Date navigation | Complete | Previous/next day + date picker |
+| - Zone filtering | Complete | Single zone view with dropdown |
+| - Zone canvas dimensions | Complete | Uses zone's canvas_width/height |
+| **Pending** | | |
+| - Tooltip on hover | Removed | Decided not to implement tooltips |
+| - Temporary furniture | Pending | Per-date visibility |
+| - Mobile testing | Pending | iOS Safari, Android Chrome |
+| - Reservation modal improvements | In Progress | Improve quick reservation from map |
 
 ### Decisions Made
-- (None yet)
+- Mobile-first approach with full-screen canvas
+- Gold zone selector prominent in toolbar (no zone rectangle on canvas)
+- Bottom action bar slides up on selection (thumb-friendly)
+- Bottom sheet modal for quick reservation (transforms to centered modal on desktop)
+- CSS hides zone rectangles since zone is shown in toolbar dropdown
+- Canvas uses zone's canvas_width/canvas_height (not map_dimensions) to match editor
 
 ### Issues Discovered
-- (None yet)
+- Map dimensions mismatch: API returned 1200x800, zone had 2000x1000
+  - Resolution: Use zone's canvas dimensions for viewBox
+- Zone rectangle redundant with toolbar selector
+  - Resolution: CSS `.zone-group { display: none; }`
 
 ---
 
@@ -773,6 +794,61 @@ DEFAULT_PREFERENCES = [
 - Priority 1
 - Priority 2
 ```
+
+---
+
+### Session: 2025-12-23 (Map Interaction Fixes)
+**Duration:** Single session
+**Focus:** Phase 7B - Fix map click/hover issues
+
+#### Completed
+- **Hidden Modals Blocking Clicks** (`templates/beach/map.html`)
+  - `.reservation-sheet` and `.bottom-action-bar` were intercepting pointer events when hidden
+  - Added `visibility: hidden; pointer-events: none;` to hidden state
+  - Added `visibility: visible; pointer-events: auto;` to shown state
+
+- **Furniture Moving When Clicked** (`templates/beach/map.html`)
+  - CSS `.furniture-item:active { transform: scale(0.95); }` was overriding SVG position transform
+  - Changed to `filter: brightness(0.9)` which doesn't affect positioning
+
+- **Removed All Tooltips** (`static/js/map.js`, `templates/beach/map.html`)
+  - Removed duplicate tooltip implementations (both JS and template versions)
+  - Removed `this.tooltip` property and `createTooltip()` method
+  - Removed `handleFurnitureMouseEnter/Leave`, `showDecorativeTooltip`, `positionTooltip` methods
+  - Removed all `mouseenter`/`mouseleave` event listeners
+  - Removed `.map-tooltip` CSS styles from template
+  - Cleaned up tooltip code in `destroy()` method
+
+#### Decisions
+- Tooltips removed entirely per user preference (cleaner interaction)
+- Map now only responds to clicks, no hover effects
+
+#### Next
+- Improve reservation modal from map
+
+---
+
+### Session: 2025-12-23 (Live Map UI Compacting)
+**Duration:** Single session
+**Focus:** Phase 7B - Maximize map real estate
+
+#### Completed
+- **Live Map UI Compacting** (`templates/beach/map.html`)
+  - Removed redundant page title "Mapa de Beach Club" (~40px saved)
+  - Reduced toolbar height: 56px → 44px
+  - Reduced toolbar buttons: 40px → 32px
+  - Made stats strip horizontal inline layout (saved ~15px)
+  - Reduced canvas info bar padding: 6px → 3px
+  - Reduced info bar buttons: 28px → 24px
+  - Reduced canvas wrapper padding: 20px → 10px
+  - **Total vertical space saved: ~70-80 pixels**
+
+#### Decisions
+- Page title removed since sidebar already shows current location
+- Stats now display inline (value + label side by side) instead of stacked
+
+#### Next
+- Tackle reservations issues
 
 ---
 

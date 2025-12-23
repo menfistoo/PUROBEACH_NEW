@@ -16,7 +16,7 @@ class BeachMap {
             autoRefreshInterval: 30000,  // 30 seconds
             enableDragDrop: false,
             enableZoom: true,
-            minZoom: 0.5,
+            minZoom: 0.1,  // Allow zoom out to 10%
             maxZoom: 3,
             snapToGrid: 10,
             ...options
@@ -38,7 +38,6 @@ class BeachMap {
         this.zonesLayer = null;
         this.furnitureLayer = null;
         this.selectionLayer = null;
-        this.tooltip = null;
 
         // Event callbacks
         this.callbacks = {
@@ -46,13 +45,12 @@ class BeachMap {
             onDeselect: null,
             onDateChange: null,
             onFurnitureClick: null,
-            onError: null
+            onError: null,
+            onRender: null
         };
 
         // Bind methods
         this.handleFurnitureClick = this.handleFurnitureClick.bind(this);
-        this.handleFurnitureMouseEnter = this.handleFurnitureMouseEnter.bind(this);
-        this.handleFurnitureMouseLeave = this.handleFurnitureMouseLeave.bind(this);
         this.handleKeyDown = this.handleKeyDown.bind(this);
 
         // Initialize
@@ -61,7 +59,6 @@ class BeachMap {
 
     async init() {
         this.createSVG();
-        this.createTooltip();
         this.setupEventListeners();
         await this.loadData();
     }
@@ -90,12 +87,20 @@ class BeachMap {
                 <rect width="20" height="20" fill="rgba(245, 230, 211, 0.3)"/>
                 <circle cx="10" cy="10" r="1" fill="rgba(212, 175, 55, 0.2)"/>
             </pattern>
+            <pattern id="pool-pattern" patternUnits="userSpaceOnUse" width="10" height="10">
+                <rect width="10" height="10" fill="#87CEEB"/>
+                <rect x="0" y="0" width="5" height="5" fill="#5DADE2" opacity="0.3"/>
+                <rect x="5" y="5" width="5" height="5" fill="#5DADE2" opacity="0.3"/>
+            </pattern>
         `;
         this.svg.appendChild(defs);
 
-        // Create layers
+        // Create layers (order matters: zones -> decorative -> furniture -> selection)
         this.zonesLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.zonesLayer.setAttribute('id', 'zones-layer');
+
+        this.decorativeLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        this.decorativeLayer.setAttribute('id', 'decorative-layer');
 
         this.furnitureLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         this.furnitureLayer.setAttribute('id', 'furniture-layer');
@@ -104,17 +109,11 @@ class BeachMap {
         this.selectionLayer.setAttribute('id', 'selection-layer');
 
         this.svg.appendChild(this.zonesLayer);
+        this.svg.appendChild(this.decorativeLayer);
         this.svg.appendChild(this.furnitureLayer);
         this.svg.appendChild(this.selectionLayer);
 
         this.container.appendChild(this.svg);
-    }
-
-    createTooltip() {
-        this.tooltip = document.createElement('div');
-        this.tooltip.className = 'map-tooltip';
-        this.tooltip.style.display = 'none';
-        document.body.appendChild(this.tooltip);
     }
 
     setupEventListeners() {
@@ -155,8 +154,17 @@ class BeachMap {
         this.svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
         this.renderZones();
+        this.renderDecorativeItems();
         this.renderFurniture();
         this.updateLegend();
+
+        // Apply zoom to set initial SVG dimensions
+        this.applyZoom();
+
+        // Notify render complete
+        if (this.callbacks.onRender) {
+            this.callbacks.onRender(this.data);
+        }
     }
 
     renderZones() {
@@ -200,12 +208,87 @@ class BeachMap {
         });
     }
 
+    renderDecorativeItems() {
+        this.decorativeLayer.innerHTML = '';
+
+        if (!this.data.furniture) return;
+
+        // Filter decorative items (is_decorative = 1 from furniture type)
+        const decorativeItems = this.data.furniture.filter(item => {
+            const typeConfig = this.data.furniture_types[item.furniture_type] || {};
+            return typeConfig.is_decorative === 1;
+        });
+
+        decorativeItems.forEach(item => {
+            const group = this.createDecorativeElement(item);
+            this.decorativeLayer.appendChild(group);
+        });
+    }
+
+    createDecorativeElement(item) {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', 'decorative-item');
+        group.setAttribute('data-furniture-id', item.id);
+        group.setAttribute('data-furniture-type', item.furniture_type);
+
+        // Handle null/undefined positions - default to 0
+        const posX = item.position_x ?? 0;
+        const posY = item.position_y ?? 0;
+        const rotation = item.rotation ?? 0;
+        group.setAttribute('transform', `translate(${posX}, ${posY}) rotate(${rotation})`);
+
+        const typeConfig = this.data.furniture_types[item.furniture_type] || {};
+        const width = item.width || typeConfig.default_width || 100;
+        const height = item.height || typeConfig.default_height || 60;
+
+        // Create decorative shape with special styling based on type
+        let fillColor, strokeColor, fillPattern;
+
+        if (item.furniture_type === 'piscina') {
+            fillPattern = 'url(#pool-pattern)';
+            strokeColor = '#5DADE2';
+        } else {
+            fillColor = item.fill_color || typeConfig.fill_color || '#E8E8E8';
+            strokeColor = typeConfig.stroke_color || '#CCCCCC';
+        }
+
+        const shape = this.createShape(typeConfig.map_shape || 'rounded_rect', width, height,
+            fillPattern || fillColor, strokeColor);
+        shape.setAttribute('stroke-width', '3');
+        shape.setAttribute('opacity', '0.9');
+        group.appendChild(shape);
+
+        // Add label for decorative items (centered)
+        if (item.furniture_type !== 'piscina') {
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', width / 2);
+            label.setAttribute('y', height / 2);
+            label.setAttribute('text-anchor', 'middle');
+            label.setAttribute('dominant-baseline', 'middle');
+            label.setAttribute('fill', '#666666');
+            label.setAttribute('font-size', '11');
+            label.setAttribute('font-style', 'italic');
+            label.setAttribute('pointer-events', 'none');
+            label.textContent = item.number;
+            group.appendChild(label);
+        }
+
+        // Decorative items are not clickable for reservations
+        return group;
+    }
+
     renderFurniture() {
         this.furnitureLayer.innerHTML = '';
 
         if (!this.data.furniture) return;
 
-        this.data.furniture.forEach(item => {
+        // Filter out decorative items - only render reservable furniture
+        const reservableFurniture = this.data.furniture.filter(item => {
+            const typeConfig = this.data.furniture_types[item.furniture_type] || {};
+            return typeConfig.is_decorative !== 1;
+        });
+
+        reservableFurniture.forEach(item => {
             const group = this.createFurnitureElement(item);
             this.furnitureLayer.appendChild(group);
         });
@@ -215,7 +298,12 @@ class BeachMap {
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         group.setAttribute('class', 'furniture-item');
         group.setAttribute('data-furniture-id', item.id);
-        group.setAttribute('transform', `translate(${item.position_x}, ${item.position_y}) rotate(${item.rotation || 0})`);
+
+        // Handle null/undefined positions - default to 0
+        const posX = item.position_x ?? 0;
+        const posY = item.position_y ?? 0;
+        const rotation = item.rotation ?? 0;
+        group.setAttribute('transform', `translate(${posX}, ${posY}) rotate(${rotation})`);
         group.style.cursor = 'pointer';
 
         // Get furniture type config
@@ -266,8 +354,6 @@ class BeachMap {
 
         // Event listeners
         group.addEventListener('click', (e) => this.handleFurnitureClick(e, item));
-        group.addEventListener('mouseenter', (e) => this.handleFurnitureMouseEnter(e, item));
-        group.addEventListener('mouseleave', (e) => this.handleFurnitureMouseLeave(e, item));
 
         return group;
     }
@@ -321,20 +407,13 @@ class BeachMap {
 
     handleFurnitureClick(event, item) {
         event.stopPropagation();
-        const addToSelection = event.ctrlKey || event.metaKey;
 
-        // If Ctrl/Cmd click, just add to selection (multi-select mode)
-        if (addToSelection) {
-            this.selectFurniture(item.id, addToSelection);
-        } else {
-            // Single click: show furniture details modal
-            if (this.showFurnitureDetails) {
-                this.showFurnitureDetails(item.id, event);
-            } else {
-                // Fallback to selection if no modal handler
-                this.selectFurniture(item.id, false);
-            }
-        }
+        // For mobile-first: tap always adds to selection (multi-select mode)
+        // Ctrl/Cmd click on desktop also adds to selection
+        // Double-tap or long-press will show details (handled separately)
+        const addToSelection = true;  // Always multi-select on tap
+
+        this.selectFurniture(item.id, addToSelection);
 
         if (this.callbacks.onFurnitureClick) {
             this.callbacks.onFurnitureClick(item, this.getSelectedFurniture());
@@ -406,65 +485,6 @@ class BeachMap {
     }
 
     // ==========================================================================
-    // TOOLTIPS
-    // ==========================================================================
-
-    handleFurnitureMouseEnter(event, item) {
-        const availability = this.data.availability[item.id];
-        const typeConfig = this.data.furniture_types[item.furniture_type] || {};
-
-        let content = `
-            <div class="tooltip-header">
-                <strong>${item.number}</strong>
-                <span class="badge bg-secondary ms-2">${typeConfig.display_name || item.furniture_type}</span>
-            </div>
-            <div class="tooltip-body">
-                <div><i class="fas fa-users me-1"></i> Capacidad: ${item.capacity} personas</div>
-                <div><i class="fas fa-map-marker-alt me-1"></i> ${item.zone_name}</div>
-        `;
-
-        if (availability && !availability.available) {
-            content += `
-                <hr class="my-2">
-                <div class="text-warning"><strong>Reservado</strong></div>
-                <div><i class="fas fa-user me-1"></i> ${availability.customer_name || 'Cliente'}</div>
-                <div><i class="fas fa-ticket-alt me-1"></i> ${availability.ticket_number || ''}</div>
-                <div><span class="badge" style="background-color: ${this.data.state_colors[availability.state] || '#6c757d'}">${availability.state}</span></div>
-            `;
-        } else {
-            content += `<div class="text-success mt-2"><strong>Disponible</strong></div>`;
-        }
-
-        content += '</div>';
-
-        this.tooltip.innerHTML = content;
-        this.tooltip.style.display = 'block';
-        this.positionTooltip(event);
-    }
-
-    handleFurnitureMouseLeave(event, item) {
-        this.tooltip.style.display = 'none';
-    }
-
-    positionTooltip(event) {
-        const offset = 15;
-        let x = event.pageX + offset;
-        let y = event.pageY + offset;
-
-        // Keep tooltip in viewport
-        const rect = this.tooltip.getBoundingClientRect();
-        if (x + rect.width > window.innerWidth) {
-            x = event.pageX - rect.width - offset;
-        }
-        if (y + rect.height > window.innerHeight) {
-            y = event.pageY - rect.height - offset;
-        }
-
-        this.tooltip.style.left = x + 'px';
-        this.tooltip.style.top = y + 'px';
-    }
-
-    // ==========================================================================
     // DATE NAVIGATION
     // ==========================================================================
 
@@ -499,28 +519,46 @@ class BeachMap {
     // ZOOM & PAN
     // ==========================================================================
 
-    zoomIn(factor = 1.2) {
-        this.setZoom(this.zoom * factor);
+    zoomIn(factor = 0.25) {
+        this.setZoom(this.zoom + factor);
     }
 
-    zoomOut(factor = 1.2) {
-        this.setZoom(this.zoom / factor);
+    zoomOut(factor = 0.25) {
+        this.setZoom(this.zoom - factor);
     }
 
     zoomReset() {
         this.setZoom(1);
         this.pan = { x: 0, y: 0 };
-        this.updateTransform();
+        this.applyZoom();
     }
 
     setZoom(level) {
         this.zoom = Math.max(this.options.minZoom, Math.min(this.options.maxZoom, level));
-        this.updateTransform();
+        this.applyZoom();
+    }
+
+    getZoom() {
+        return this.zoom;
+    }
+
+    applyZoom() {
+        if (!this.svg || !this.data) return;
+
+        // Get canvas dimensions from viewBox
+        const viewBox = this.svg.getAttribute('viewBox');
+        if (!viewBox) return;
+
+        const [, , width, height] = viewBox.split(' ').map(Number);
+
+        // Apply zoom by changing SVG dimensions (like map editor)
+        this.svg.style.width = `${width * this.zoom}px`;
+        this.svg.style.height = `${height * this.zoom}px`;
     }
 
     updateTransform() {
-        const transform = `scale(${this.zoom}) translate(${this.pan.x}px, ${this.pan.y}px)`;
-        this.svg.style.transform = transform;
+        // Legacy method - now using applyZoom instead
+        this.applyZoom();
     }
 
     // ==========================================================================
@@ -796,9 +834,6 @@ class BeachMap {
     destroy() {
         this.stopAutoRefresh();
         document.removeEventListener('keydown', this.handleKeyDown);
-        if (this.tooltip && this.tooltip.parentNode) {
-            this.tooltip.parentNode.removeChild(this.tooltip);
-        }
     }
 }
 

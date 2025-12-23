@@ -225,7 +225,8 @@ Weighted scoring: **40% contiguity + 35% preferences + 25% capacity**
 ### Reviews
 - **Code Review:** `/review` or see `code-review/README.md`
 - **Security Review:** `/security-review` for auth/data changes
-- **Design Review:** `/design-review` for UI changes
+- **Design Review:** `/design-review` for reviewing UI changes
+- **Frontend Design:** `/frontend-design` for creating/editing UI (MUST use before any UI work)
 
 ## Quick Reference
 
@@ -276,6 +277,8 @@ REASON: New waitlist feature
 ---
 
 ## Design System
+
+**CRITICAL:** Before creating or editing ANY UI elements (templates, CSS, JavaScript UI code), run `/frontend-design` to load the complete design guidelines into context.
 
 **IMPORTANT:** When implementing any UI/frontend work, read `DESIGN_SYSTEM.md` for:
 - Color palette (Primary: #D4AF37, Secondary: #1A3A5C, Accent: #F5E6D3)
