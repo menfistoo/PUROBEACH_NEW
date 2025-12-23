@@ -143,3 +143,77 @@ def migrate_add_blocking_permission() -> bool:
     db.commit()
     print("  beach.furniture.block permission added successfully")
     return True
+
+
+def migrate_furniture_fill_color() -> bool:
+    """
+    Add fill_color column to beach_furniture table.
+    Allows individual furniture items to have custom colors
+    different from their furniture type's default color.
+
+    Returns:
+        bool: True if migration was applied, False if skipped
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if column already exists
+    cursor.execute("PRAGMA table_info(beach_furniture)")
+    columns = [col[1] for col in cursor.fetchall()]
+
+    if 'fill_color' in columns:
+        print("  fill_color column already exists in beach_furniture, skipping")
+        return False
+
+    print("Adding fill_color column to beach_furniture table...")
+
+    cursor.execute('''
+        ALTER TABLE beach_furniture
+        ADD COLUMN fill_color TEXT DEFAULT NULL
+    ''')
+
+    db.commit()
+    print("  fill_color column added to beach_furniture table")
+    return True
+
+
+def migrate_add_temporary_furniture_permission() -> bool:
+    """
+    Add the temporary furniture permission.
+
+    Returns:
+        bool: True if migration was applied, False if skipped
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if permission exists
+    cursor.execute('''
+        SELECT id FROM permissions WHERE code = 'beach.furniture.temporary'
+    ''')
+
+    if cursor.fetchone():
+        print("  beach.furniture.temporary permission already exists, skipping")
+        return False
+
+    print("Adding beach.furniture.temporary permission...")
+
+    # Insert permission
+    cursor.execute('''
+        INSERT INTO permissions (code, name, description, module)
+        VALUES ('beach.furniture.temporary', 'Mobiliario temporal',
+                'Permite crear mobiliario temporal para eventos', 'beach')
+    ''')
+
+    # Assign to admin and manager roles
+    cursor.execute('''
+        INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+        SELECT r.id, p.id
+        FROM roles r, permissions p
+        WHERE r.name IN ('admin', 'manager')
+        AND p.code = 'beach.furniture.temporary'
+    ''')
+
+    db.commit()
+    print("  beach.furniture.temporary permission added successfully")
+    return True

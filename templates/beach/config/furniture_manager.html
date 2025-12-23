@@ -430,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Property inputs
-        ['prop-x', 'prop-y', 'prop-rotation', 'prop-capacity'].forEach(id => {
+        ['prop-x', 'prop-y', 'prop-rotation', 'prop-capacity', 'prop-width', 'prop-height'].forEach(id => {
             document.getElementById(id)?.addEventListener('change', function() {
                 const prop = id.replace('prop-', '');
                 let value = parseInt(this.value) || 0;
@@ -439,6 +439,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 else editor.updateSelectedProperty(prop, value);
             });
         });
+
+        // Color picker sync
+        const fillColorPicker = document.getElementById('prop-fill-color');
+        const fillColorText = document.getElementById('prop-fill-color-text');
+        if (fillColorPicker && fillColorText) {
+            fillColorPicker.addEventListener('input', function() {
+                fillColorText.value = this.value;
+            });
+            fillColorPicker.addEventListener('change', function() {
+                fillColorText.value = this.value;
+                editor.updateSelectedProperty('fill_color', this.value);
+            });
+        }
 
         // Load available features
         let availableFeatures = [];
@@ -551,6 +564,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('prop-rotation').value = selected.rotation || 0;
                 document.getElementById('prop-capacity').value = selected.capacity || 2;
                 document.getElementById('prop-number').value = selected.number || '';
+                document.getElementById('prop-width').value = selected.width || 60;
+                document.getElementById('prop-height').value = selected.height || 40;
+
+                // Color fields
+                const fillColor = selected.fill_color || selected.typeInfo?.fill_color || '#A0522D';
+                document.getElementById('prop-fill-color').value = fillColor;
+                document.getElementById('prop-fill-color-text').value = fillColor;
+
+                // Show/hide fields based on decorative status
+                const isDecorative = selected.typeInfo?.is_decorative || selected.is_decorative;
+                document.getElementById('prop-capacity-group').style.display = isDecorative ? 'none' : 'block';
+                document.getElementById('prop-features-group').style.display = isDecorative ? 'none' : 'block';
+
                 renderFeatures(selected.features);
             }
         });
@@ -737,6 +763,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('min_capacity').value = 0;
                     document.getElementById('max_capacity').value = 0;
                     document.getElementById('default_capacity').value = 0;
+                }
+            });
+        }
+
+        // Form validation - open accordion sections with invalid fields
+        const furnitureTypeForm = document.getElementById('furniture-type-form');
+        if (furnitureTypeForm) {
+            furnitureTypeForm.addEventListener('submit', function(e) {
+                const invalidFields = furnitureTypeForm.querySelectorAll(':invalid');
+                if (invalidFields.length > 0) {
+                    // Find and open accordion containing first invalid field
+                    const firstInvalid = invalidFields[0];
+                    const accordionCollapse = firstInvalid.closest('.accordion-collapse');
+                    if (accordionCollapse && !accordionCollapse.classList.contains('show')) {
+                        e.preventDefault();
+                        const bsCollapse = new bootstrap.Collapse(accordionCollapse, { toggle: true });
+                        accordionCollapse.addEventListener('shown.bs.collapse', function() {
+                            firstInvalid.focus();
+                            firstInvalid.reportValidity();
+                        }, { once: true });
+                    }
                 }
             });
         }

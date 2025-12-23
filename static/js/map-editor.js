@@ -556,7 +556,8 @@ class MapEditor {
 
     createShape(item, type) {
         const shape = type.map_shape || 'rounded_rect';
-        const fillColor = item.type_fill_color || type.fill_color || '#A0522D';
+        // Custom fill_color takes priority, then type defaults
+        const fillColor = item.fill_color || item.type_fill_color || type.fill_color || '#A0522D';
         const strokeColor = item.type_stroke_color || type.stroke_color || '#654321';
         const strokeWidth = type.type_stroke_width || 2;
         const borderRadius = type.type_border_radius || 5;
@@ -666,6 +667,8 @@ class MapEditor {
     selectItem(item) {
         this.deselectAll();
         this.selectedItem = item;
+        // Attach type info for external access
+        this.selectedItem.typeInfo = this.furnitureTypes[item.furniture_type] || {};
 
         const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
         if (group) group.classList.add('selected');
@@ -729,6 +732,30 @@ class MapEditor {
                 );
             }
             await this.saveFurniturePosition(this.selectedItem);
+        } else if (property === 'width' || property === 'height' || property === 'fill_color') {
+            // Re-render the shape when size or color changes
+            const group = this.furnitureLayer.querySelector(`[data-id="${this.selectedItem.id}"]`);
+            if (group) {
+                const type = this.furnitureTypes[this.selectedItem.furniture_type] || {};
+                const oldShape = group.querySelector('rect, ellipse');
+                if (oldShape) {
+                    const newShape = this.createShape(this.selectedItem, type);
+                    oldShape.replaceWith(newShape);
+                }
+                // Update number position if size changed
+                if (property === 'width' || property === 'height') {
+                    const text = group.querySelector('.furniture-number');
+                    if (text) {
+                        text.setAttribute('x', this.selectedItem.width / 2);
+                        text.setAttribute('y', this.selectedItem.height / 2);
+                    }
+                    // Update transform for center rotation point
+                    group.setAttribute('transform',
+                        `translate(${this.selectedItem.position_x}, ${this.selectedItem.position_y}) rotate(${this.selectedItem.rotation || 0}, ${this.selectedItem.width / 2}, ${this.selectedItem.height / 2})`
+                    );
+                }
+            }
+            await this.saveFurnitureProperty(this.selectedItem.id, property, value);
         } else {
             await this.saveFurnitureProperty(this.selectedItem.id, property, value);
         }

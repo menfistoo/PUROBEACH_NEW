@@ -175,6 +175,7 @@ def create_tables(db):
             is_temporary INTEGER DEFAULT 0,
             valid_date DATE,
             features TEXT,
+            fill_color TEXT DEFAULT NULL,
             active INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )

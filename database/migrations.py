@@ -43,6 +43,8 @@ from database.migrations import (
     migrate_furniture_blocks_table,
     migrate_furniture_daily_positions_table,
     migrate_add_blocking_permission,
+    migrate_furniture_fill_color,
+    migrate_add_temporary_furniture_permission,
 )
 
 __all__ = [
@@ -65,4 +67,6 @@ __all__ = [
     'migrate_furniture_blocks_table',
     'migrate_furniture_daily_positions_table',
     'migrate_add_blocking_permission',
+    'migrate_furniture_fill_color',
+    'migrate_add_temporary_furniture_permission',
 ]

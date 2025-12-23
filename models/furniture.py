@@ -117,14 +117,15 @@ def create_furniture(number: str, zone_id: int, furniture_type: str, capacity: i
     features = kwargs.get('features', '')
     is_temporary = kwargs.get('is_temporary', 0)
     valid_date = kwargs.get('valid_date', None)
+    fill_color = kwargs.get('fill_color', None)
 
     cursor.execute('''
         INSERT INTO beach_furniture
         (number, zone_id, furniture_type, capacity, position_x, position_y,
-         rotation, width, height, features, is_temporary, valid_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         rotation, width, height, features, is_temporary, valid_date, fill_color)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (number, zone_id, furniture_type, capacity, position_x, position_y,
-          rotation, width, height, features, is_temporary, valid_date))
+          rotation, width, height, features, is_temporary, valid_date, fill_color))
 
     db.commit()
     return cursor.lastrowid
@@ -144,7 +145,7 @@ def update_furniture(furniture_id: int, **kwargs) -> bool:
     db = get_db()
 
     allowed_fields = ['number', 'zone_id', 'capacity', 'position_x', 'position_y',
-                      'rotation', 'width', 'height', 'features', 'active']
+                      'rotation', 'width', 'height', 'features', 'active', 'fill_color']
     updates = []
     values = []
 
