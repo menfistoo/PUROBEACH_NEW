@@ -859,18 +859,28 @@ document.addEventListener('DOMContentLoaded', function() {
         const furnitureTypeForm = document.getElementById('furniture-type-form');
         if (furnitureTypeForm) {
             furnitureTypeForm.addEventListener('submit', function(e) {
-                const invalidFields = furnitureTypeForm.querySelectorAll(':invalid');
-                if (invalidFields.length > 0) {
-                    // Find and open accordion containing first invalid field
-                    const firstInvalid = invalidFields[0];
-                    const accordionCollapse = firstInvalid.closest('.accordion-collapse');
-                    if (accordionCollapse && !accordionCollapse.classList.contains('show')) {
-                        e.preventDefault();
-                        const bsCollapse = new bootstrap.Collapse(accordionCollapse, { toggle: true });
-                        accordionCollapse.addEventListener('shown.bs.collapse', function() {
+                // Check if form is valid
+                if (!furnitureTypeForm.checkValidity()) {
+                    e.preventDefault();
+
+                    // Find first invalid field
+                    const invalidFields = furnitureTypeForm.querySelectorAll(':invalid');
+                    if (invalidFields.length > 0) {
+                        const firstInvalid = invalidFields[0];
+                        const accordionCollapse = firstInvalid.closest('.accordion-collapse');
+
+                        // If field is in a collapsed accordion, open it first
+                        if (accordionCollapse && !accordionCollapse.classList.contains('show')) {
+                            const bsCollapse = new bootstrap.Collapse(accordionCollapse, { toggle: true });
+                            accordionCollapse.addEventListener('shown.bs.collapse', function() {
+                                firstInvalid.focus();
+                                firstInvalid.reportValidity();
+                            }, { once: true });
+                        } else {
+                            // Accordion already open, just focus and show error
                             firstInvalid.focus();
                             firstInvalid.reportValidity();
-                        }, { once: true });
+                        }
                     }
                 }
             });

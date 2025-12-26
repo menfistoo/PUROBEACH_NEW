@@ -2,7 +2,7 @@
 {% set ft = selected_type or form_data or {} %}
 {% set is_edit = mode == 'edit' %}
 
-<form method="POST" id="furniture-type-form"
+<form method="POST" id="furniture-type-form" novalidate
       action="{% if is_edit %}{{ url_for('beach.beach_config.furniture_types_edit', type_id=ft.id) }}{% else %}{{ url_for('beach.beach_config.furniture_types_create') }}{% endif %}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
