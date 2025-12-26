@@ -9,6 +9,10 @@ from typing import Tuple, Optional
 from database import get_db
 
 
+# =============================================================================
+# READ OPERATIONS
+# =============================================================================
+
 def get_all_furniture_types(active_only: bool = True) -> list:
     """
     Get all furniture types.
@@ -72,6 +76,10 @@ def get_furniture_type_by_code(type_code: str) -> Optional[dict]:
     row = cursor.fetchone()
     return dict(row) if row else None
 
+
+# =============================================================================
+# CREATE OPERATIONS
+# =============================================================================
 
 def create_furniture_type(type_code: str, display_name: str, **kwargs) -> int:
     """
@@ -140,6 +148,10 @@ def create_furniture_type(type_code: str, display_name: str, **kwargs) -> int:
     return cursor.lastrowid
 
 
+# =============================================================================
+# UPDATE OPERATIONS
+# =============================================================================
+
 def update_furniture_type(type_id: int, **kwargs) -> bool:
     """
     Update furniture type fields.
@@ -192,6 +204,10 @@ def update_furniture_type(type_id: int, **kwargs) -> bool:
     return cursor.rowcount > 0
 
 
+# =============================================================================
+# DELETE OPERATIONS
+# =============================================================================
+
 def delete_furniture_type(type_id: int) -> bool:
     """
     Soft delete furniture type (set active = 0).
@@ -232,6 +248,10 @@ def delete_furniture_type(type_id: int) -> bool:
     db.commit()
     return cursor.rowcount > 0
 
+
+# =============================================================================
+# AUTO-NUMBERING
+# =============================================================================
 
 def get_next_number_for_type(type_id: int, zone_id: int = None) -> str:
     """
@@ -305,6 +325,10 @@ def get_next_number_for_type(type_id: int, zone_id: int = None) -> str:
 
     return f"{prefix}{next_num}"
 
+
+# =============================================================================
+# SVG RENDERING
+# =============================================================================
 
 def get_furniture_type_svg(type_config: dict, state: str = None,
                            width: float = None, height: float = None,
@@ -381,6 +405,10 @@ def get_furniture_type_svg(type_config: dict, state: str = None,
     # Default fallback
     return f'<rect width="{w}" height="{h}" fill="{fill_color}"/>'
 
+
+# =============================================================================
+# VALIDATION
+# =============================================================================
 
 def validate_furniture_type_data(data: dict, is_update: bool = False) -> Tuple[bool, dict]:
     """
@@ -499,6 +527,10 @@ def validate_furniture_type_data(data: dict, is_update: bool = False) -> Tuple[b
 
     return (len(errors) == 0, errors)
 
+
+# =============================================================================
+# DISPLAY ORDER
+# =============================================================================
 
 def update_furniture_types_order(type_ids: list) -> bool:
     """
