@@ -45,6 +45,10 @@ from database.migrations import (
     migrate_add_blocking_permission,
     migrate_furniture_fill_color,
     migrate_add_temporary_furniture_permission,
+    migrate_create_beach_packages,
+    migrate_minimum_consumption_calculation_type,
+    migrate_reservations_pricing_fields,
+    migrate_add_package_permissions,
 )
 
 __all__ = [
@@ -69,4 +73,8 @@ __all__ = [
     'migrate_add_blocking_permission',
     'migrate_furniture_fill_color',
     'migrate_add_temporary_furniture_permission',
+    'migrate_create_beach_packages',
+    'migrate_minimum_consumption_calculation_type',
+    'migrate_reservations_pricing_fields',
+    'migrate_add_package_permissions',
 ]

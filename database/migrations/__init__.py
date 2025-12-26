@@ -34,6 +34,12 @@ from .furniture_extensions import (
     migrate_furniture_fill_color,
     migrate_add_temporary_furniture_permission
 )
+from .pricing import (
+    migrate_create_beach_packages,
+    migrate_minimum_consumption_calculation_type,
+    migrate_reservations_pricing_fields,
+    migrate_add_package_permissions
+)
 
 
 # Ordered list of all migrations
@@ -74,6 +80,12 @@ MIGRATIONS = [
     # Phase 7C: Furniture customization
     ('furniture_fill_color', migrate_furniture_fill_color),
     ('add_temporary_furniture_permission', migrate_add_temporary_furniture_permission),
+
+    # Phase 8: Payment & Pricing System
+    ('create_beach_packages', migrate_create_beach_packages),
+    ('minimum_consumption_calculation_type', migrate_minimum_consumption_calculation_type),
+    ('reservations_pricing_fields', migrate_reservations_pricing_fields),
+    ('add_package_permissions', migrate_add_package_permissions),
 ]
 
 
@@ -154,4 +166,8 @@ __all__ = [
     'migrate_add_blocking_permission',
     'migrate_furniture_fill_color',
     'migrate_add_temporary_furniture_permission',
+    'migrate_create_beach_packages',
+    'migrate_minimum_consumption_calculation_type',
+    'migrate_reservations_pricing_fields',
+    'migrate_add_package_permissions',
 ]
