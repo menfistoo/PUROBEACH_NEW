@@ -43,6 +43,10 @@ def create_app(config_name=None):
     # Load configuration
     app.config.from_object(config[config_name])
 
+    # Validate production configuration
+    if config_name == 'production' and app.config.get('SECRET_KEY') == 'dev-secret-key-change-in-production':
+        raise ValueError("SECRET_KEY environment variable must be set in production (not using default)")
+
     # Initialize extensions
     initialize_extensions(app)
 

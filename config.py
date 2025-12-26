@@ -59,10 +59,13 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True  # Require HTTPS
     WTF_CSRF_SSL_STRICT = True
 
-    # Override with strong secret key
-    SECRET_KEY = os.environ.get('SECRET_KEY')
-    if not SECRET_KEY:
-        raise ValueError("SECRET_KEY environment variable must be set in production")
+    # Override with strong secret key (must be set via environment variable)
+    # Note: Validation happens in app.py after config is loaded
+    _prod_secret = os.environ.get('SECRET_KEY')
+    if _prod_secret:
+        SECRET_KEY = _prod_secret
+    # If not set, will inherit default from Config class
+    # App will validate and raise error if running in production without SECRET_KEY
 
 
 class TestConfig(Config):
