@@ -998,7 +998,7 @@
     position: absolute;
     left: 12px;
     font-size: 18px;
-    font-weight: 600;
+    font-weight: 700;  /* Increased from 600 for better contrast on white background */
     color: var(--color-primary, #D4AF37);
     pointer-events: none;
     z-index: 1;
@@ -1086,6 +1086,27 @@
 
 .pricing-section .pricing-amount .pricing-value.updating {
     animation: priceUpdate 0.4s ease;
+}
+
+/* Responsive: Mobile adjustments for pricing section */
+@media (max-width: 480px) {
+    .pricing-section .pricing-input-group {
+        flex-wrap: wrap;
+        gap: var(--space-3);
+    }
+
+    .pricing-section .pricing-reset-btn {
+        width: 100%;
+        margin-top: var(--space-1);
+    }
+
+    .pricing-section .pricing-currency {
+        font-size: 16px;
+    }
+
+    .pricing-section .pricing-input {
+        font-size: 16px;
+    }
 }
 
 .pricing-section .pricing-type {

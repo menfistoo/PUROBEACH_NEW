@@ -224,19 +224,21 @@
                             <div class="pricing-display-group">
                                 <label class="detail-label">Precio final:</label>
                                 <div class="pricing-input-group">
-                                    <span class="pricing-currency">€</span>
+                                    <span class="pricing-currency" aria-hidden="true">€</span>
                                     <input type="number"
                                            class="pricing-input"
                                            id="newPanelFinalPriceInput"
                                            min="0"
                                            step="0.01"
-                                           placeholder="0.00">
+                                           placeholder="0.00"
+                                           aria-label="Precio final en euros">
                                     <button type="button"
                                             class="pricing-reset-btn"
                                             id="newPanelPriceResetBtn"
                                             title="Restablecer precio calculado"
+                                            aria-label="Restablecer precio calculado"
                                             style="display: none;">
-                                        <i class="fas fa-undo"></i>
+                                        <i class="fas fa-undo" aria-hidden="true"></i>
                                     </button>
                                 </div>
                                 <div class="pricing-calculated" id="newPanelCalculatedPrice" style="display: none;">
@@ -244,7 +246,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="pricing-breakdown" id="newPanelPricingBreakdown" style="display: none;"></div>
+                        <div class="pricing-breakdown" id="newPanelPricingBreakdown" style="display: none;" aria-live="polite"></div>
                         <input type="hidden" id="newPanelPriceOverride" value="">
                     </div>
                 </div>
