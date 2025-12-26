@@ -15,6 +15,9 @@ from blueprints.beach.routes.config import furniture
 from blueprints.beach.routes.config import preferences
 from blueprints.beach.routes.config import tags
 from blueprints.beach.routes.config import states
+from blueprints.beach.routes.config import packages
+from blueprints.beach.routes.config import minimum_consumption
+from blueprints.beach.routes.config import pricing
 
 # Register all route functions on the blueprint
 zones.register_routes(config_bp)
@@ -23,6 +26,9 @@ furniture.register_routes(config_bp)
 preferences.register_routes(config_bp)
 tags.register_routes(config_bp)
 states.register_routes(config_bp)
+packages.register_routes(config_bp)
+minimum_consumption.register_routes(config_bp)
+pricing.register_routes(config_bp)
 from blueprints.beach.routes.config import map_editor
 from blueprints.beach.routes.config import furniture_manager
 map_editor.register_routes(config_bp)

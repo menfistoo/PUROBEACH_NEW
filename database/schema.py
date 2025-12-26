@@ -13,6 +13,7 @@ def drop_tables(db):
         'reservation_status_history',
         'audit_log',
         'beach_config',
+        'beach_packages',
         'beach_minimum_consumption_policies',
         'beach_price_catalog',
         'beach_reservation_tags',
@@ -385,6 +386,7 @@ def create_tables(db):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             policy_name TEXT NOT NULL,
             minimum_amount REAL NOT NULL,
+            calculation_type TEXT DEFAULT 'per_reservation' CHECK(calculation_type IN ('per_reservation', 'per_person')),
             furniture_type TEXT,
             customer_type TEXT,
             zone_id INTEGER REFERENCES beach_zones(id),
@@ -392,6 +394,30 @@ def create_tables(db):
             policy_description TEXT,
             is_active INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    db.execute('''
+        CREATE TABLE beach_packages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            package_name TEXT NOT NULL,
+            package_description TEXT,
+            base_price REAL NOT NULL,
+            price_type TEXT NOT NULL CHECK(price_type IN ('per_package', 'per_person')),
+            min_people INTEGER NOT NULL DEFAULT 1,
+            standard_people INTEGER NOT NULL DEFAULT 2,
+            max_people INTEGER NOT NULL DEFAULT 4,
+            furniture_types_included TEXT,
+            customer_type TEXT CHECK(customer_type IN ('interno', 'externo', 'both')),
+            zone_id INTEGER REFERENCES beach_zones(id),
+            valid_from DATE,
+            valid_until DATE,
+            active INTEGER DEFAULT 1,
+            display_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT valid_people_range CHECK(min_people <= standard_people AND standard_people <= max_people),
+            CONSTRAINT valid_price CHECK(base_price > 0)
         )
     ''')
 

@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% set page_title = "Crear Política" if mode == 'create' else "Editar Política" %}
+
+{% block title %}{{ page_title }} - Consumo Mínimo - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fa-solid fa-euro-sign"></i>
+        {{ page_title }} de Consumo Mínimo
+    </h2>
+    <a href="{{ url_for('beach.beach_config.minimum_consumption') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <h6 class="mb-3">Informacion Basica</h6>
+
+                    <div class="mb-3">
+                        <label for="policy_name" class="form-label">Nombre de la Politica <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="policy_name" name="policy_name"
+                               value="{{ policy.policy_name if policy else '' }}"
+                               required maxlength="255" placeholder="Balinesa Premium - Internos">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="policy_description" class="form-label">Descripcion</label>
+                        <textarea class="form-control" id="policy_description" name="policy_description"
+                                  rows="3" placeholder="Descripcion detallada de la politica...">{{ policy.policy_description if policy else '' }}</textarea>
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3">Monto y Calculo</h6>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="minimum_amount" class="form-label">Monto Minimo (€) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="minimum_amount" name="minimum_amount"
+                                       value="{{ policy.minimum_amount if policy else '' }}"
+                                       required min="0.01" step="0.01" placeholder="50.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="calculation_type" class="form-label">Tipo de Calculo <span class="text-danger">*</span></label>
+                                <select class="form-select" id="calculation_type" name="calculation_type" required>
+                                    <option value="per_reservation" {% if not policy or policy.calculation_type == 'per_reservation' %}selected{% endif %}>
+                                        Por Reserva (monto fijo)
+                                    </option>
+                                    <option value="per_person" {% if policy and policy.calculation_type == 'per_person' %}selected{% endif %}>
+                                        Por Persona (monto x personas)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3">Condiciones de Aplicacion</h6>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="furniture_type" class="form-label">Tipo de Mobiliario</label>
+                                <select class="form-select" id="furniture_type" name="furniture_type">
+                                    <option value="" {% if not policy or not policy.furniture_type %}selected{% endif %}>
+                                        Todos
+                                    </option>
+                                    {% for ft in furniture_types %}
+                                    <option value="{{ ft.type_code }}" {% if policy and policy.furniture_type == ft.type_code %}selected{% endif %}>
+                                        {{ ft.display_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="customer_type" class="form-label">Tipo de Cliente</label>
+                                <select class="form-select" id="customer_type" name="customer_type">
+                                    <option value="" {% if not policy or not policy.customer_type %}selected{% endif %}>
+                                        Todos
+                                    </option>
+                                    <option value="interno" {% if policy and policy.customer_type == 'interno' %}selected{% endif %}>
+                                        Solo Internos
+                                    </option>
+                                    <option value="externo" {% if policy and policy.customer_type == 'externo' %}selected{% endif %}>
+                                        Solo Externos
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="zone_id" class="form-label">Zona</label>
+                                <select class="form-select" id="zone_id" name="zone_id">
+                                    <option value="" {% if not policy or not policy.zone_id %}selected{% endif %}>
+                                        Todas las Zonas
+                                    </option>
+                                    {% for zone in zones %}
+                                    <option value="{{ zone.id }}" {% if policy and policy.zone_id == zone.id %}selected{% endif %}>
+                                        {{ zone.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="priority_order" class="form-label">Prioridad</label>
+                        <input type="number" class="form-control" id="priority_order" name="priority_order"
+                               value="{{ policy.priority_order if policy else 0 }}"
+                               min="0" max="10" placeholder="0">
+                        <div class="form-text">Mayor prioridad = más específica. Las políticas más específicas se aplican primero</div>
+                    </div>
+
+                    {% if mode == 'edit' %}
+                    <hr>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1"
+                                   {% if policy.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">Politica activa</label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save"></i>
+                            {{ 'Crear Política' if mode == 'create' else 'Guardar Cambios' }}
+                        </button>
+                        <a href="{{ url_for('beach.beach_config.minimum_consumption') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        {% if mode == 'edit' and policy %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Informacion</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-1">
+                    <strong>Reservas con esta politica:</strong> {{ policy.usage_count or 0 }}
+                </p>
+                <p class="small mb-0">
+                    <strong>Creado:</strong> {{ (policy.created_at|string)[:10] if policy.created_at else 'N/A' }}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card {% if mode == 'edit' and policy %}mt-3{% endif %}">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Ayuda</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2"><strong>Tipo de Calculo:</strong></p>
+                <ul class="small mb-3">
+                    <li><strong>Por Reserva:</strong> Monto fijo sin importar personas</li>
+                    <li><strong>Por Persona:</strong> Monto mínimo × número de personas</li>
+                </ul>
+
+                <p class="small mb-2"><strong>Prioridad y Especificidad:</strong></p>
+                <p class="small mb-3">El sistema selecciona automáticamente la política más específica. Una política con mobiliario+cliente+zona tiene prioridad sobre políticas más generales.</p>
+
+                <p class="small mb-2"><strong>Ejemplos:</strong></p>
+                <ul class="small mb-0">
+                    <li><strong>Específica:</strong> Balinesa + Externo + Zona VIP = 100€</li>
+                    <li><strong>General:</strong> Todos + Todos + Todas = 30€</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Orden de Prioridad</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2">Las políticas se aplican en este orden (de mayor a menor):</p>
+                <ol class="small mb-0">
+                    <li>Mobiliario + Cliente + Zona</li>
+                    <li>Mobiliario + Cliente</li>
+                    <li>Mobiliario + Zona</li>
+                    <li>Cliente + Zona</li>
+                    <li>Solo Mobiliario</li>
+                    <li>Solo Cliente</li>
+                    <li>Solo Zona</li>
+                    <li>Política por Defecto (ninguna condición)</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,134 @@
+<div class="p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="mb-1"><i class="fa-solid fa-euro-sign"></i> Consumo Mínimo</h5>
+            <p class="text-muted small mb-0">Gestionar políticas de consumo mínimo</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if show_inactive_policies %}
+            <a href="?tab=minimum-consumption&show_inactive_policies=0" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-eye-slash"></i> Ocultar Inactivas
+            </a>
+            {% else %}
+            <a href="?tab=minimum-consumption&show_inactive_policies=1" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-eye"></i> Ver Inactivas
+            </a>
+            {% endif %}
+            <a href="{{ url_for('beach.beach_config.minimum_consumption_create') }}" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Nueva Política
+            </a>
+        </div>
+    </div>
+
+    {% if policies %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th class="text-end">Monto Mínimo</th>
+                            <th class="text-center">Tipo Cálculo</th>
+                            <th class="text-center">Mobiliario</th>
+                            <th class="text-center">Cliente</th>
+                            <th class="text-center">Zona</th>
+                            <th class="text-center" style="width: 80px;">Prioridad</th>
+                            <th class="text-center" style="width: 80px;">Uso</th>
+                            <th class="text-center" style="width: 80px;">Estado</th>
+                            <th class="text-center" style="width: 120px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for policy in policies %}
+                        <tr class="{% if not policy.is_active %}table-secondary{% endif %}">
+                            <td>
+                                <strong>{{ policy.policy_name }}</strong>
+                                {% if policy.policy_description %}
+                                <br><small class="text-muted">{{ policy.policy_description[:60] }}{% if policy.policy_description|length > 60 %}...{% endif %}</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <strong>{{ "%.2f"|format(policy.minimum_amount) }} €</strong>
+                            </td>
+                            <td class="text-center">
+                                {% if policy.calculation_type == 'per_reservation' %}
+                                <span class="badge bg-info">Por Reserva</span>
+                                {% else %}
+                                <span class="badge bg-primary">Por Persona</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <small class="text-muted">{{ policy.furniture_type_name or policy.furniture_type or 'Todos' }}</small>
+                            </td>
+                            <td class="text-center">
+                                {% if policy.customer_type == 'interno' %}
+                                <span class="badge bg-success">Interno</span>
+                                {% elif policy.customer_type == 'externo' %}
+                                <span class="badge bg-warning">Externo</span>
+                                {% else %}
+                                <span class="text-muted">Todos</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <small class="text-muted">{{ policy.zone_name or 'Todas' }}</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">{{ policy.priority_order }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">{{ policy.usage_count or 0 }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if policy.is_active %}
+                                <span class="badge bg-success">Activa</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactiva</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{{ url_for('beach.beach_config.minimum_consumption_edit', policy_id=policy.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Editar">
+                                    <i class="fa-solid fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('beach.beach_config.minimum_consumption_delete', policy_id=policy.id) }}"
+                                      class="d-inline" onsubmit="return confirm('¿Eliminar política {{ policy.policy_name }}?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fa-solid fa-euro-sign fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No hay políticas de consumo mínimo configuradas</p>
+            <a href="{{ url_for('beach.beach_config.minimum_consumption_create') }}" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Crear primera política
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <h6 class="card-title mb-0"><i class="fa-solid fa-info-circle"></i> Información sobre Consumo Mínimo</h6>
+        </div>
+        <div class="card-body">
+            <p class="mb-2 small">Las políticas de consumo mínimo establecen montos obligatorios de gasto:</p>
+            <ul class="mb-0 small">
+                <li><strong>Por Reserva:</strong> Monto fijo para toda la reserva</li>
+                <li><strong>Por Persona:</strong> Monto que se multiplica por el número de personas</li>
+                <li><strong>Prioridad:</strong> Mayor prioridad = más específica. Las políticas más específicas se aplican primero</li>
+            </ul>
+        </div>
+    </div>
+</div>

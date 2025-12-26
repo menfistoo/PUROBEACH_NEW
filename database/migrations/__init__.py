@@ -35,6 +35,10 @@ from .furniture_extensions import (
     migrate_furniture_fill_color,
     migrate_add_temporary_furniture_permission
 )
+from .pricing import (
+    migrate_create_beach_packages,
+    migrate_minimum_consumption_calculation_type
+)
 
 
 # Ordered list of all migrations
@@ -78,6 +82,10 @@ MIGRATIONS = [
 
     # Phase 8: UI consolidation - Zones to furniture manager
     ('zones_to_furniture_manager', migrate_zones_to_furniture_manager),
+
+    # Phase 9: Packages and pricing
+    ('create_beach_packages', migrate_create_beach_packages),
+    ('minimum_consumption_calculation_type', migrate_minimum_consumption_calculation_type),
 ]
 
 
@@ -159,4 +167,6 @@ __all__ = [
     'migrate_add_blocking_permission',
     'migrate_furniture_fill_color',
     'migrate_add_temporary_furniture_permission',
+    'migrate_create_beach_packages',
+    'migrate_minimum_consumption_calculation_type',
 ]

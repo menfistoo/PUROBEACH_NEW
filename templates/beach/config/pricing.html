@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% set page_title = "Precios" %}
+
+{% block title %}Precios - PuroBeach{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Tab Navigation */
+.pricing-tabs {
+    border-bottom: 2px solid var(--color-accent, #F5E6D3);
+    margin-bottom: 0;
+    background: #fff;
+    padding: 0 1rem;
+}
+
+.pricing-tabs .nav-link {
+    color: var(--color-secondary, #1A3A5C);
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    padding: 0.875rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    margin-bottom: -2px;
+}
+
+.pricing-tabs .nav-link:hover {
+    color: var(--color-primary, #D4AF37);
+    border-bottom-color: rgba(212, 175, 55, 0.3);
+    background: transparent;
+}
+
+.pricing-tabs .nav-link.active {
+    color: var(--color-primary, #D4AF37);
+    background: transparent;
+    border-bottom-color: var(--color-primary, #D4AF37);
+}
+
+.pricing-tabs .nav-link i {
+    margin-right: 0.5rem;
+}
+
+.tab-content {
+    background: #f8f9fa;
+}
+
+.tab-pane {
+    min-height: 500px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fas fa-tags me-2"></i>Precios</h4>
+</div>
+
+<!-- Tab Navigation -->
+<ul class="nav nav-tabs pricing-tabs" id="pricingTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'packages' %}active{% endif %}"
+                id="packages-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#packages-pane"
+                type="button" role="tab"
+                aria-controls="packages-pane"
+                aria-selected="{{ 'true' if active_tab == 'packages' else 'false' }}">
+            <i class="fas fa-box"></i> Paquetes
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'minimum-consumption' %}active{% endif %}"
+                id="minimum-consumption-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#minimum-consumption-pane"
+                type="button" role="tab"
+                aria-controls="minimum-consumption-pane"
+                aria-selected="{{ 'true' if active_tab == 'minimum-consumption' else 'false' }}">
+            <i class="fas fa-euro-sign"></i> Consumo Mínimo
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="pricingTabContent">
+    <!-- Packages Tab -->
+    <div class="tab-pane fade {% if active_tab == 'packages' %}show active{% endif %}"
+         id="packages-pane" role="tabpanel" aria-labelledby="packages-tab">
+        {% include 'beach/config/_packages_tab.html' %}
+    </div>
+
+    <!-- Minimum Consumption Tab -->
+    <div class="tab-pane fade {% if active_tab == 'minimum-consumption' %}show active{% endif %}"
+         id="minimum-consumption-pane" role="tabpanel" aria-labelledby="minimum-consumption-tab">
+        {% include 'beach/config/_minimum_consumption_tab.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update URL when tab changes for bookmarking
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+            const targetId = event.target.dataset.bsTarget.replace('#', '').replace('-pane', '');
+            const url = new URL(window.location);
+            url.searchParams.set('tab', targetId);
+            window.history.replaceState({}, '', url);
+        });
+    });
+});
+</script>
+{% endblock %}
