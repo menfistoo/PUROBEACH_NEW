@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% set page_title = "Consumo Mínimo" %}
+
+{% block title %}Consumo Mínimo - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fa-solid fa-receipt"></i> Políticas de Consumo Mínimo</h2>
+    <a href="{{ url_for('beach.minimum_consumption.new_policy') }}" class="btn btn-primary">
+        <i class="fa-solid fa-plus"></i> Nueva Política
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="customer_type" class="form-label">Tipo de Cliente</label>
+                <select class="form-select" id="customer_type" name="customer_type">
+                    <option value="">Todos</option>
+                    <option value="interno" {% if request.args.get('customer_type') == 'interno' %}selected{% endif %}>Interno</option>
+                    <option value="externo" {% if request.args.get('customer_type') == 'externo' %}selected{% endif %}>Externo</option>
+                    <option value="both" {% if request.args.get('customer_type') == 'both' %}selected{% endif %}>Ambos</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="zone_id" class="form-label">Zona</label>
+                <select class="form-select" id="zone_id" name="zone_id">
+                    <option value="">Todas las zonas</option>
+                    {% for zone in zones %}
+                    <option value="{{ zone.id }}" {% if request.args.get('zone_id') == zone.id|string %}selected{% endif %}>
+                        {{ zone.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="active_only" class="form-label">Estado</label>
+                <select class="form-select" id="active_only" name="active_only">
+                    <option value="1" {% if request.args.get('active_only', '1') == '1' %}selected{% endif %}>Solo Activas</option>
+                    <option value="0" {% if request.args.get('active_only') == '0' %}selected{% endif %}>Todas</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fa-solid fa-filter"></i> Filtrar
+                </button>
+                <a href="{{ url_for('beach.minimum_consumption.list_policies') }}" class="btn btn-secondary">
+                    <i class="fa-solid fa-times"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Policies Table -->
+<div class="card">
+    <div class="card-body">
+        {% if policies %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Tipo de Mobiliario</th>
+                        <th>Tipo de Cliente</th>
+                        <th>Zona</th>
+                        <th>Consumo Mínimo</th>
+                        <th>Vigencia</th>
+                        <th style="width: 80px;">Estado</th>
+                        <th style="width: 150px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for policy in policies %}
+                    <tr>
+                        <td>
+                            <strong>{{ policy.name }}</strong>
+                            {% if policy.description %}
+                            <br><small class="text-muted">{{ policy.description[:60] }}{% if policy.description|length > 60 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if policy.furniture_type_name %}
+                            <span class="badge bg-light text-dark">{{ policy.furniture_type_name }}</span>
+                            {% else %}
+                            <span class="text-muted">Todos</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if policy.customer_type == 'interno' %}
+                            <span class="badge bg-info">Interno</span>
+                            {% elif policy.customer_type == 'externo' %}
+                            <span class="badge bg-warning">Externo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Ambos</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if policy.zone_name %}
+                            <span class="badge bg-light text-dark">{{ policy.zone_name }}</span>
+                            {% else %}
+                            <span class="text-muted">Todas</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>€{{ "%.2f"|format(policy.minimum_amount) }}</strong>
+                            {% if policy.calculation_type == 'per_person' %}
+                            <br><small class="text-muted">por persona</small>
+                            {% else %}
+                            <br><small class="text-muted">por reserva</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if policy.valid_from or policy.valid_to %}
+                            <small class="text-muted">
+                                {% if policy.valid_from %}Desde {{ policy.valid_from }}{% endif %}
+                                {% if policy.valid_to %}<br>Hasta {{ policy.valid_to }}{% endif %}
+                            </small>
+                            {% else %}
+                            <span class="text-muted">Siempre</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if policy.active %}
+                            <span class="badge bg-success">Activa</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactiva</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('beach.minimum_consumption.edit_policy', policy_id=policy.id) }}"
+                                   class="btn btn-outline-primary" title="Editar">
+                                    <i class="fa-solid fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('beach.minimum_consumption.toggle_policy_route', policy_id=policy.id) }}"
+                                      class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit"
+                                            class="btn btn-outline-{% if policy.active %}warning{% else %}success{% endif %}"
+                                            title="{% if policy.active %}Desactivar{% else %}Activar{% endif %}">
+                                        <i class="fa-solid fa-{% if policy.active %}eye-slash{% else %}eye{% endif %}"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('beach.minimum_consumption.delete_policy_route', policy_id=policy.id) }}"
+                                      class="d-inline" onsubmit="return confirm('¿Eliminar política {{ policy.name }}? Esta acción no se puede deshacer.')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-outline-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fa-solid fa-receipt fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No hay políticas de consumo mínimo configuradas</p>
+            <a href="{{ url_for('beach.minimum_consumption.new_policy') }}" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Crear primera política
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fa-solid fa-info-circle"></i> Cómo funcionan las políticas de consumo mínimo</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-2">Las políticas de consumo mínimo definen el gasto mínimo requerido para ciertas reservas:</p>
+        <ul class="mb-3">
+            <li><strong>Tipo de Mobiliario:</strong> Aplica a balinesas, hamacas VIP, etc. o a todos los tipos</li>
+            <li><strong>Tipo de Cliente:</strong> Define si aplica a internos, externos o ambos</li>
+            <li><strong>Zona:</strong> Opcionalmente restringe la política a una zona específica</li>
+            <li><strong>Cálculo:</strong>
+                <ul>
+                    <li><strong>Por Persona:</strong> El consumo mínimo se multiplica por el número de personas</li>
+                    <li><strong>Por Reserva:</strong> Consumo mínimo total independiente del número de personas</li>
+                </ul>
+            </li>
+            <li><strong>Prioridad de Aplicación:</strong> Si múltiples políticas coinciden, se aplica la más específica:
+                <ol>
+                    <li>Tipo de mobiliario + Tipo de cliente + Zona (más específica)</li>
+                    <li>Tipo de mobiliario + Tipo de cliente</li>
+                    <li>Tipo de cliente + Zona</li>
+                    <li>Solo tipo de mobiliario</li>
+                    <li>Solo tipo de cliente</li>
+                    <li>Política general (menos específica)</li>
+                </ol>
+            </li>
+        </ul>
+        <p class="mb-0 text-muted small">
+            <i class="fa-solid fa-lightbulb"></i>
+            <strong>Consejo:</strong> Las políticas inactivas no se aplican a nuevas reservas, pero se mantienen en el historial de reservas existentes.
+        </p>
+    </div>
+</div>
+
+<!-- Examples Card -->
+<div class="card mt-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fa-solid fa-book"></i> Ejemplos de Políticas</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Política para Balinesas VIP</h6>
+                <ul class="small mb-3">
+                    <li>Tipo: Balinesa</li>
+                    <li>Cliente: Externos</li>
+                    <li>Consumo: €100 por reserva</li>
+                    <li><em>Un grupo de 4 externos en balinesa debe gastar €100 total</em></li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6>Política General para Zona Premium</h6>
+                <ul class="small mb-3">
+                    <li>Zona: Primera Línea</li>
+                    <li>Cliente: Todos</li>
+                    <li>Consumo: €30 por persona</li>
+                    <li><em>Cualquier mobiliario en primera línea requiere €30/persona</em></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

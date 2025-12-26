@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% set page_title = "Crear Paquete" if mode == 'create' else "Editar Paquete" %}
+
+{% block title %}{{ page_title }} - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fa-solid fa-box"></i>
+        {{ page_title }}
+    </h2>
+    <a href="{{ url_for('beach.packages.list_packages') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" id="packageForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- Section 1: Basic Information -->
+                    <h5 class="mb-3"><i class="fa-solid fa-info-circle"></i> Información Básica</h5>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Título del Paquete <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title"
+                               value="{{ package.title if package else '' }}"
+                               required maxlength="200" placeholder="Ej: Día de Lujo VIP">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="3" maxlength="1000">{{ package.description if package else '' }}</textarea>
+                        <div class="form-text">Descripción detallada del paquete y lo que incluye</div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Section 2: Availability & Restrictions -->
+                    <h5 class="mb-3"><i class="fa-solid fa-filter"></i> Disponibilidad y Restricciones</h5>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customer_type" class="form-label">Tipo de Cliente <span class="text-danger">*</span></label>
+                                <select class="form-select" id="customer_type" name="customer_type" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="interno" {% if package and package.customer_type == 'interno' %}selected{% endif %}>
+                                        Interno (Huéspedes del hotel)
+                                    </option>
+                                    <option value="externo" {% if package and package.customer_type == 'externo' %}selected{% endif %}>
+                                        Externo (Visitantes)
+                                    </option>
+                                    <option value="both" {% if package and package.customer_type == 'both' %}selected{% endif %}>
+                                        Ambos
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="zone_id" class="form-label">Zona Restringida</label>
+                                <select class="form-select" id="zone_id" name="zone_id">
+                                    <option value="">Todas las zonas</option>
+                                    {% for zone in zones %}
+                                    <option value="{{ zone.id }}" {% if package and package.zone_id == zone.id %}selected{% endif %}>
+                                        {{ zone.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Dejar en blanco para aplicar a todas las zonas</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="valid_from" class="form-label">Válido Desde</label>
+                                <input type="date" class="form-control" id="valid_from" name="valid_from"
+                                       value="{{ package.valid_from if package else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="valid_to" class="form-label">Válido Hasta</label>
+                                <input type="date" class="form-control" id="valid_to" name="valid_to"
+                                       value="{{ package.valid_to if package else '' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Section 3: Pricing -->
+                    <h5 class="mb-3"><i class="fa-solid fa-euro-sign"></i> Precio</h5>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="price" class="form-label">Precio <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">€</span>
+                                    <input type="number" class="form-control" id="price" name="price"
+                                           value="{{ package.price if package else '' }}"
+                                           required min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="price_type" class="form-label">Tipo de Precio <span class="text-danger">*</span></label>
+                                <select class="form-select" id="price_type" name="price_type" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="per_person" {% if package and package.price_type == 'per_person' %}selected{% endif %}>
+                                        Por Persona
+                                    </option>
+                                    <option value="per_package" {% if package and package.price_type == 'per_package' %}selected{% endif %}>
+                                        Por Paquete (precio fijo)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Price Preview -->
+                    <div class="alert alert-info" id="pricePreview" style="display: none;">
+                        <i class="fa-solid fa-calculator"></i>
+                        <strong>Ejemplo de cálculo:</strong>
+                        <span id="priceExampleText"></span>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Section 4: Capacity -->
+                    <h5 class="mb-3"><i class="fa-solid fa-users"></i> Capacidad</h5>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="min_capacity" class="form-label">
+                                    Capacidad Mínima <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="min_capacity" name="min_capacity"
+                                       value="{{ package.min_capacity if package else '1' }}"
+                                       required min="1" max="100">
+                                <div class="form-text">Personas mínimas requeridas</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="standard_capacity" class="form-label">
+                                    Capacidad Estándar <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="standard_capacity" name="standard_capacity"
+                                       value="{{ package.standard_capacity if package else '2' }}"
+                                       required min="1" max="100">
+                                <div class="form-text">Capacidad recomendada</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="max_capacity" class="form-label">
+                                    Capacidad Máxima <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="max_capacity" name="max_capacity"
+                                       value="{{ package.max_capacity if package else '4' }}"
+                                       required min="1" max="100">
+                                <div class="form-text">Personas máximas permitidas</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning" id="capacityWarning" style="display: none;">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        <span id="capacityWarningText"></span>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Section 5: Services Included -->
+                    <h5 class="mb-3"><i class="fa-solid fa-list-check"></i> Servicios Incluidos</h5>
+
+                    <div class="mb-3">
+                        <label for="services_included" class="form-label">Lista de Servicios</label>
+                        <textarea class="form-control" id="services_included" name="services_included"
+                                  rows="5" maxlength="2000">{{ package.services_included if package else '' }}</textarea>
+                        <div class="form-text">Ingrese los servicios incluidos, uno por línea</div>
+                    </div>
+
+                    {% if mode == 'edit' %}
+                    <hr class="my-4">
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="active" name="active" value="1"
+                                   {% if package.active %}checked{% endif %}>
+                            <label class="form-check-label" for="active">
+                                <strong>Paquete activo</strong>
+                                <small class="text-muted d-block">Los paquetes inactivos no aparecen al crear reservas</small>
+                            </label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save"></i>
+                            {{ 'Crear Paquete' if mode == 'create' else 'Guardar Cambios' }}
+                        </button>
+                        <a href="{{ url_for('beach.packages.list_packages') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar with help -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fa-solid fa-question-circle"></i> Ayuda</h5>
+            </div>
+            <div class="card-body">
+                <h6>Tipo de Precio</h6>
+                <p class="small mb-3">
+                    <strong>Por Persona:</strong> El precio se multiplica por el número de personas.<br>
+                    <strong>Por Paquete:</strong> Precio fijo independientemente del número de personas (dentro de la capacidad permitida).
+                </p>
+
+                <h6>Capacidad</h6>
+                <p class="small mb-3">
+                    La capacidad estándar debe estar entre la mínima y la máxima. El sistema validará automáticamente que las reservas respeten estos límites.
+                </p>
+
+                <h6>Servicios Incluidos</h6>
+                <p class="small mb-0">
+                    Ejemplos de servicios:
+                </p>
+                <ul class="small mb-0">
+                    <li>2 hamacas premium</li>
+                    <li>Sombrilla privada</li>
+                    <li>Toallas de playa</li>
+                    <li>Champagne de bienvenida</li>
+                    <li>Frutas frescas</li>
+                    <li>Servicio de camarero dedicado</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fa-solid fa-lightbulb"></i> Ejemplos de Paquetes</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Paquete VIP Pareja</strong>
+                    <ul class="small mb-0">
+                        <li>€150 por paquete</li>
+                        <li>Capacidad: 2 personas</li>
+                        <li>2 hamacas, sombrilla, champagne</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <strong>Día de Lujo</strong>
+                    <ul class="small mb-0">
+                        <li>€80 por persona</li>
+                        <li>Capacidad: 2-6 personas</li>
+                        <li>Balinesa, toallas, frutas, bebidas</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>Familia Premium</strong>
+                    <ul class="small mb-0">
+                        <li>€250 por paquete</li>
+                        <li>Capacidad: 4-6 personas</li>
+                        <li>4 hamacas, 2 sombrillas, zona infantil</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Price calculation preview
+function updatePricePreview() {
+    const price = parseFloat(document.getElementById('price').value) || 0;
+    const priceType = document.getElementById('price_type').value;
+    const standardCapacity = parseInt(document.getElementById('standard_capacity').value) || 2;
+
+    const preview = document.getElementById('pricePreview');
+    const exampleText = document.getElementById('priceExampleText');
+
+    if (price > 0 && priceType) {
+        let text = '';
+        if (priceType === 'per_person') {
+            const total = price * standardCapacity;
+            text = `Para ${standardCapacity} personas: €${price.toFixed(2)} × ${standardCapacity} = €${total.toFixed(2)}`;
+        } else {
+            text = `Para cualquier grupo (dentro de capacidad): €${price.toFixed(2)} (precio fijo)`;
+        }
+        exampleText.textContent = text;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Capacity validation
+function validateCapacity() {
+    const minCap = parseInt(document.getElementById('min_capacity').value) || 0;
+    const stdCap = parseInt(document.getElementById('standard_capacity').value) || 0;
+    const maxCap = parseInt(document.getElementById('max_capacity').value) || 0;
+
+    const warning = document.getElementById('capacityWarning');
+    const warningText = document.getElementById('capacityWarningText');
+
+    let errors = [];
+
+    if (minCap > stdCap) {
+        errors.push('La capacidad mínima no puede ser mayor que la estándar');
+    }
+    if (stdCap > maxCap) {
+        errors.push('La capacidad estándar no puede ser mayor que la máxima');
+    }
+    if (minCap > maxCap) {
+        errors.push('La capacidad mínima no puede ser mayor que la máxima');
+    }
+    if (minCap < 1) {
+        errors.push('La capacidad mínima debe ser al menos 1');
+    }
+
+    if (errors.length > 0) {
+        warningText.textContent = errors.join('. ');
+        warning.style.display = 'block';
+        return false;
+    } else {
+        warning.style.display = 'none';
+        return true;
+    }
+}
+
+// Event listeners
+document.getElementById('price').addEventListener('input', updatePricePreview);
+document.getElementById('price_type').addEventListener('change', updatePricePreview);
+document.getElementById('standard_capacity').addEventListener('input', function() {
+    validateCapacity();
+    updatePricePreview();
+});
+document.getElementById('min_capacity').addEventListener('input', validateCapacity);
+document.getElementById('max_capacity').addEventListener('input', validateCapacity);
+
+// Form validation
+document.getElementById('packageForm').addEventListener('submit', function(e) {
+    if (!validateCapacity()) {
+        e.preventDefault();
+        alert('Por favor corrija los errores de capacidad antes de continuar');
+        return false;
+    }
+});
+
+// Initial validation
+validateCapacity();
+updatePricePreview();
+</script>
+{% endblock %}

@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% set page_title = "Crear Política de Consumo Mínimo" if mode == 'create' else "Editar Política de Consumo Mínimo" %}
+
+{% block title %}{{ page_title }} - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fa-solid fa-receipt"></i>
+        {{ page_title }}
+    </h2>
+    <a href="{{ url_for('beach.minimum_consumption.list_policies') }}" class="btn btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" id="policyForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- Section 1: Basic Information -->
+                    <h5 class="mb-3"><i class="fa-solid fa-info-circle"></i> Información Básica</h5>
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nombre de la Política <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               value="{{ policy.name if policy else '' }}"
+                               required maxlength="200" placeholder="Ej: Consumo Mínimo Balinesas VIP">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="2" maxlength="500">{{ policy.description if policy else '' }}</textarea>
+                        <div class="form-text">Descripción breve de cuándo aplica esta política</div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Section 2: Applicability Rules -->
+                    <h5 class="mb-3"><i class="fa-solid fa-filter"></i> Reglas de Aplicación</h5>
+
+                    <div class="alert alert-info">
+                        <i class="fa-solid fa-info-circle"></i>
+                        <strong>Nota:</strong> Cuantos más criterios especifiques, más específica será la política.
+                        Las políticas más específicas tienen prioridad sobre las generales.
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="furniture_type_id" class="form-label">Tipo de Mobiliario</label>
+                                <select class="form-select" id="furniture_type_id" name="furniture_type_id">
+                                    <option value="">Todos los tipos</option>
+                                    {% for ft in furniture_types %}
+                                    <option value="{{ ft.id }}" {% if policy and policy.furniture_type_id == ft.id %}selected{% endif %}>
+                                        {{ ft.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Dejar en blanco para aplicar a todos los tipos</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customer_type" class="form-label">Tipo de Cliente</label>
+                                <select class="form-select" id="customer_type" name="customer_type">
+                                    <option value="">Todos los tipos</option>
+                                    <option value="interno" {% if policy and policy.customer_type == 'interno' %}selected{% endif %}>
+                                        Interno (Huéspedes)
+                                    </option>
+                                    <option value="externo" {% if policy and policy.customer_type == 'externo' %}selected{% endif %}>
+                                        Externo (Visitantes)
+                                    </option>
+                                    <option value="both" {% if policy and policy.customer_type == 'both' %}selected{% endif %}>
+                                        Ambos
+                                    </option>
+                                </select>
+                                <div class="form-text">Dejar en blanco para aplicar a todos</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="zone_id" class="form-label">Zona</label>
+                        <select class="form-select" id="zone_id" name="zone_id">
+                            <option value="">Todas las zonas</option>
+                            {% for zone in zones %}
+                            <option value="{{ zone.id }}" {% if policy and policy.zone_id == zone.id %}selected{% endif %}>
+                                {{ zone.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Dejar en blanco para aplicar a todas las zonas</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="valid_from" class="form-label">Válido Desde</label>
+                                <input type="date" class="form-control" id="valid_from" name="valid_from"
+                                       value="{{ policy.valid_from if policy else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="valid_to" class="form-label">Válido Hasta</label>
+                                <input type="date" class="form-control" id="valid_to" name="valid_to"
+                                       value="{{ policy.valid_to if policy else '' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Section 3: Minimum Consumption Amount -->
+                    <h5 class="mb-3"><i class="fa-solid fa-euro-sign"></i> Consumo Mínimo Requerido</h5>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="minimum_amount" class="form-label">Importe Mínimo <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">€</span>
+                                    <input type="number" class="form-control" id="minimum_amount" name="minimum_amount"
+                                           value="{{ policy.minimum_amount if policy else '' }}"
+                                           required min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="calculation_type" class="form-label">Tipo de Cálculo <span class="text-danger">*</span></label>
+                                <select class="form-select" id="calculation_type" name="calculation_type" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="per_person" {% if policy and policy.calculation_type == 'per_person' %}selected{% endif %}>
+                                        Por Persona
+                                    </option>
+                                    <option value="per_reservation" {% if policy and policy.calculation_type == 'per_reservation' %}selected{% endif %}>
+                                        Por Reserva (total)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calculation Preview -->
+                    <div class="alert alert-info" id="calculationPreview" style="display: none;">
+                        <i class="fa-solid fa-calculator"></i>
+                        <strong>Ejemplo de cálculo:</strong>
+                        <span id="calculationExampleText"></span>
+                    </div>
+
+                    {% if mode == 'edit' %}
+                    <hr class="my-4">
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="active" name="active" value="1"
+                                   {% if policy.active %}checked{% endif %}>
+                            <label class="form-check-label" for="active">
+                                <strong>Política activa</strong>
+                                <small class="text-muted d-block">Las políticas inactivas no se aplican a nuevas reservas</small>
+                            </label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-save"></i>
+                            {{ 'Crear Política' if mode == 'create' else 'Guardar Cambios' }}
+                        </button>
+                        <a href="{{ url_for('beach.minimum_consumption.list_policies') }}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar with help -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fa-solid fa-question-circle"></i> Ayuda</h5>
+            </div>
+            <div class="card-body">
+                <h6>Tipo de Cálculo</h6>
+                <p class="small mb-3">
+                    <strong>Por Persona:</strong> El consumo mínimo se multiplica por el número de personas en la reserva.<br>
+                    <em>Ejemplo: €20/persona × 4 personas = €80 total</em>
+                </p>
+                <p class="small mb-3">
+                    <strong>Por Reserva:</strong> Consumo mínimo total independiente del número de personas.<br>
+                    <em>Ejemplo: €100 total para cualquier grupo</em>
+                </p>
+
+                <h6>Prioridad de Políticas</h6>
+                <p class="small mb-3">
+                    Si múltiples políticas coinciden para una reserva, se aplica la más específica.
+                    El sistema asigna puntos:
+                </p>
+                <ul class="small mb-0">
+                    <li>Tipo de mobiliario: +4 puntos</li>
+                    <li>Tipo de cliente: +2 puntos</li>
+                    <li>Zona específica: +1 punto</li>
+                </ul>
+                <p class="small mt-2">
+                    La política con más puntos tiene prioridad.
+                </p>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fa-solid fa-lightbulb"></i> Ejemplos de Políticas</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Política Específica</strong>
+                    <ul class="small mb-0">
+                        <li>Mobiliario: Balinesa</li>
+                        <li>Cliente: Externo</li>
+                        <li>Zona: Primera Línea</li>
+                        <li>Consumo: €150 por reserva</li>
+                        <li class="text-primary"><em>Puntos: 7 (4+2+1) - Muy específica</em></li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <strong>Política Media</strong>
+                    <ul class="small mb-0">
+                        <li>Mobiliario: Hamaca VIP</li>
+                        <li>Cliente: Todos</li>
+                        <li>Zona: Todas</li>
+                        <li>Consumo: €30 por persona</li>
+                        <li class="text-warning"><em>Puntos: 4 - Solo tipo de mobiliario</em></li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>Política General</strong>
+                    <ul class="small mb-0">
+                        <li>Mobiliario: Todos</li>
+                        <li>Cliente: Externo</li>
+                        <li>Zona: Todas</li>
+                        <li>Consumo: €20 por persona</li>
+                        <li class="text-secondary"><em>Puntos: 2 - Solo tipo de cliente</em></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3 border-warning">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h5 class="card-title mb-0"><i class="fa-solid fa-exclamation-triangle text-warning"></i> Importante</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-0">
+                    Asegúrate de que las políticas no sean demasiado restrictivas.
+                    Si todas las políticas tienen requisitos muy altos, los clientes pueden preferir no reservar.
+                    Balancea entre maximizar ingresos y mantener la ocupación.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Calculation preview
+function updateCalculationPreview() {
+    const amount = parseFloat(document.getElementById('minimum_amount').value) || 0;
+    const calculationType = document.getElementById('calculation_type').value;
+
+    const preview = document.getElementById('calculationPreview');
+    const exampleText = document.getElementById('calculationExampleText');
+
+    if (amount > 0 && calculationType) {
+        let text = '';
+        if (calculationType === 'per_person') {
+            const examplePeople = 4;
+            const total = amount * examplePeople;
+            text = `Para ${examplePeople} personas: €${amount.toFixed(2)} × ${examplePeople} = €${total.toFixed(2)} consumo mínimo total`;
+        } else {
+            text = `Para cualquier grupo: €${amount.toFixed(2)} consumo mínimo total (independiente del número de personas)`;
+        }
+        exampleText.textContent = text;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Event listeners
+document.getElementById('minimum_amount').addEventListener('input', updateCalculationPreview);
+document.getElementById('calculation_type').addEventListener('change', updateCalculationPreview);
+
+// Initial preview
+updateCalculationPreview();
+</script>
+{% endblock %}

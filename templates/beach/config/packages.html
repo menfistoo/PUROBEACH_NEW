@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% set page_title = "Paquetes" %}
+
+{% block title %}Paquetes - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fa-solid fa-box"></i> Paquetes de Servicios</h2>
+    <a href="{{ url_for('beach.packages.new_package') }}" class="btn btn-primary">
+        <i class="fa-solid fa-plus"></i> Nuevo Paquete
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="customer_type" class="form-label">Tipo de Cliente</label>
+                <select class="form-select" id="customer_type" name="customer_type">
+                    <option value="">Todos</option>
+                    <option value="interno" {% if request.args.get('customer_type') == 'interno' %}selected{% endif %}>Interno</option>
+                    <option value="externo" {% if request.args.get('customer_type') == 'externo' %}selected{% endif %}>Externo</option>
+                    <option value="both" {% if request.args.get('customer_type') == 'both' %}selected{% endif %}>Ambos</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="zone_id" class="form-label">Zona</label>
+                <select class="form-select" id="zone_id" name="zone_id">
+                    <option value="">Todas las zonas</option>
+                    {% for zone in zones %}
+                    <option value="{{ zone.id }}" {% if request.args.get('zone_id') == zone.id|string %}selected{% endif %}>
+                        {{ zone.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="active_only" class="form-label">Estado</label>
+                <select class="form-select" id="active_only" name="active_only">
+                    <option value="1" {% if request.args.get('active_only', '1') == '1' %}selected{% endif %}>Solo Activos</option>
+                    <option value="0" {% if request.args.get('active_only') == '0' %}selected{% endif %}>Todos</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fa-solid fa-filter"></i> Filtrar
+                </button>
+                <a href="{{ url_for('beach.packages.list_packages') }}" class="btn btn-secondary">
+                    <i class="fa-solid fa-times"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Packages Table -->
+<div class="card">
+    <div class="card-body">
+        {% if packages %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Tipo de Cliente</th>
+                        <th>Zona</th>
+                        <th>Precio</th>
+                        <th>Capacidad</th>
+                        <th>Vigencia</th>
+                        <th style="width: 80px;">Estado</th>
+                        <th style="width: 150px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pkg in packages %}
+                    <tr>
+                        <td>
+                            <strong>{{ pkg.title }}</strong>
+                            {% if pkg.description %}
+                            <br><small class="text-muted">{{ pkg.description[:60] }}{% if pkg.description|length > 60 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if pkg.customer_type == 'interno' %}
+                            <span class="badge bg-info">Interno</span>
+                            {% elif pkg.customer_type == 'externo' %}
+                            <span class="badge bg-warning">Externo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Ambos</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if pkg.zone_name %}
+                            <span class="badge bg-light text-dark">{{ pkg.zone_name }}</span>
+                            {% else %}
+                            <span class="text-muted">Todas</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>€{{ "%.2f"|format(pkg.price) }}</strong>
+                            {% if pkg.price_type == 'per_person' %}
+                            <br><small class="text-muted">por persona</small>
+                            {% else %}
+                            <br><small class="text-muted">por paquete</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-muted small">
+                                Min: {{ pkg.min_capacity }} |
+                                Std: {{ pkg.standard_capacity }} |
+                                Max: {{ pkg.max_capacity }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if pkg.valid_from or pkg.valid_to %}
+                            <small class="text-muted">
+                                {% if pkg.valid_from %}Desde {{ pkg.valid_from }}{% endif %}
+                                {% if pkg.valid_to %}<br>Hasta {{ pkg.valid_to }}{% endif %}
+                            </small>
+                            {% else %}
+                            <span class="text-muted">Siempre</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if pkg.active %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('beach.packages.edit_package', package_id=pkg.id) }}"
+                                   class="btn btn-outline-primary" title="Editar">
+                                    <i class="fa-solid fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('beach.packages.toggle_package_route', package_id=pkg.id) }}"
+                                      class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit"
+                                            class="btn btn-outline-{% if pkg.active %}warning{% else %}success{% endif %}"
+                                            title="{% if pkg.active %}Desactivar{% else %}Activar{% endif %}">
+                                        <i class="fa-solid fa-{% if pkg.active %}eye-slash{% else %}eye{% endif %}"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('beach.packages.delete_package_route', package_id=pkg.id) }}"
+                                      class="d-inline" onsubmit="return confirm('¿Eliminar paquete {{ pkg.title }}? Esta acción no se puede deshacer.')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-outline-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fa-solid fa-box fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No hay paquetes configurados</p>
+            <a href="{{ url_for('beach.packages.new_package') }}" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Crear primer paquete
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fa-solid fa-info-circle"></i> Cómo funcionan los paquetes</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-2">Los paquetes permiten ofrecer servicios agrupados a precios especiales:</p>
+        <ul class="mb-3">
+            <li><strong>Tipo de Cliente:</strong> Define si el paquete está disponible para huéspedes internos, externos o ambos</li>
+            <li><strong>Zona:</strong> Opcionalmente restringe el paquete a una zona específica del club</li>
+            <li><strong>Precio por Persona vs Precio por Paquete:</strong> El precio total se calcula según el tipo seleccionado</li>
+            <li><strong>Capacidad:</strong> Mínima (necesaria), estándar (recomendada) y máxima (permitida)</li>
+            <li><strong>Servicios Incluidos:</strong> Lista de servicios que incluye el paquete</li>
+        </ul>
+        <p class="mb-0 text-muted small">
+            <i class="fa-solid fa-lightbulb"></i>
+            <strong>Consejo:</strong> Los paquetes inactivos no se muestran al crear reservas, pero se mantienen en el historial de reservas existentes.
+        </p>
+    </div>
+</div>
+{% endblock %}
