@@ -28,6 +28,14 @@ beach_bp = Blueprint('beach', __name__, template_folder='../../templates/beach')
 from blueprints.beach.routes.config import config_bp
 beach_bp.register_blueprint(config_bp)
 
+# Package configuration routes
+from blueprints.beach.routes.config.packages import packages_bp
+beach_bp.register_blueprint(packages_bp)
+
+# Minimum consumption configuration routes
+from blueprints.beach.routes.config.minimum_consumption import minimum_consumption_bp
+beach_bp.register_blueprint(minimum_consumption_bp)
+
 # API routes (all REST endpoints)
 from blueprints.beach.routes.api import api_bp
 beach_bp.register_blueprint(api_bp, url_prefix='/api')
