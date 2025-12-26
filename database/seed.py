@@ -52,9 +52,9 @@ def seed_database(db):
         ('admin.hotel_guests.view', 'Huéspedes Hotel', 'admin', 1, 14, 'fa-hotel', '/admin/hotel-guests', menu_admin_id),
 
         # Configuración children
-        ('beach.zones.view', 'Zonas', 'config', 1, 21, 'fa-layer-group', '/beach/config/zones', menu_config_id),
+        # Note: zones.view is now a non-menu permission (integrated into furniture-manager)
         ('beach.furniture_types.view', 'Tipos de Mobiliario', 'config', 1, 22, 'fa-shapes', '/beach/config/furniture-types', menu_config_id),
-        ('beach.furniture.view', 'Mobiliario', 'config', 1, 23, 'fa-couch', '/beach/config/furniture', menu_config_id),
+        ('beach.furniture.view', 'Gestor de Mobiliario', 'config', 1, 23, 'fa-couch', '/beach/config/furniture-manager', menu_config_id),
         ('beach.pricing.view', 'Precios', 'config', 1, 24, 'fa-tags', '/beach/config/pricing', menu_config_id),
         ('beach.states.view', 'Estados', 'config', 1, 25, 'fa-toggle-on', '/beach/config/states', menu_config_id),
 
@@ -89,6 +89,7 @@ def seed_database(db):
         ('beach.customers.create', 'Crear Clientes', 'operations'),
         ('beach.customers.edit', 'Editar Clientes', 'operations'),
         ('beach.customers.merge', 'Fusionar Clientes', 'operations'),
+        ('beach.zones.view', 'Ver Zonas', 'config'),  # Non-menu, integrated into furniture-manager
         ('beach.zones.manage', 'Gestionar Zonas', 'config'),
         ('beach.furniture_types.manage', 'Gestionar Tipos Mobiliario', 'config'),
         ('beach.furniture.manage', 'Gestionar Mobiliario', 'config'),

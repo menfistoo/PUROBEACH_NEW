@@ -134,6 +134,67 @@ def migrate_add_map_edit_permission() -> bool:
         raise
 
 
+def migrate_zones_to_furniture_manager() -> bool:
+    """
+    Migration: Remove zones from sidebar menu (integrated into furniture-manager).
+
+    This migration removes the 'beach.zones.view' permission from the sidebar
+    menu since zones are now accessed through the Furniture Manager tabs.
+
+    Returns:
+        bool: True if migration applied, False if already applied
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if zones.view is still a menu item
+    cursor.execute('''
+        SELECT id, is_menu_item, menu_url FROM permissions
+        WHERE code = 'beach.zones.view'
+    ''')
+    row = cursor.fetchone()
+
+    if not row:
+        print("Permission 'beach.zones.view' not found, creating as non-menu...")
+        try:
+            cursor.execute('''
+                INSERT INTO permissions (code, name, module, is_menu_item)
+                VALUES ('beach.zones.view', 'Ver Zonas', 'config', 0)
+            ''')
+            db.commit()
+            print("Created beach.zones.view as non-menu permission")
+            return True
+        except Exception as e:
+            db.rollback()
+            print(f"Failed to create permission: {e}")
+            return False
+
+    if row['is_menu_item'] == 0:
+        print("Zones permission already converted to non-menu item.")
+        return False
+
+    print("Converting zones permission from menu item to non-menu...")
+
+    try:
+        cursor.execute('''
+            UPDATE permissions SET
+                is_menu_item = 0,
+                menu_order = NULL,
+                menu_icon = NULL,
+                menu_url = NULL,
+                parent_permission_id = NULL
+            WHERE code = 'beach.zones.view'
+        ''')
+        db.commit()
+        print("Zones permission converted to non-menu successfully!")
+        return True
+
+    except Exception as e:
+        db.rollback()
+        print(f"Migration failed: {e}")
+        raise
+
+
 def migrate_add_map_editor_permission() -> bool:
     """
     Migration: Add menu item and permission for Map Editor in config.

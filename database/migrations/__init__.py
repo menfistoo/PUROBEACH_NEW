@@ -23,7 +23,8 @@ from .states import (
 from .permissions import (
     migrate_add_furniture_types_menu,
     migrate_add_map_edit_permission,
-    migrate_add_map_editor_permission
+    migrate_add_map_editor_permission,
+    migrate_zones_to_furniture_manager
 )
 from .zones import migrate_zone_canvas_properties
 from .furniture_manager_menu import migrate_furniture_manager_menu
@@ -74,6 +75,9 @@ MIGRATIONS = [
     # Phase 7C: Furniture customization
     ('furniture_fill_color', migrate_furniture_fill_color),
     ('add_temporary_furniture_permission', migrate_add_temporary_furniture_permission),
+
+    # Phase 8: UI consolidation - Zones to furniture manager
+    ('zones_to_furniture_manager', migrate_zones_to_furniture_manager),
 ]
 
 
@@ -147,6 +151,7 @@ __all__ = [
     'migrate_add_furniture_types_menu',
     'migrate_add_map_edit_permission',
     'migrate_add_map_editor_permission',
+    'migrate_zones_to_furniture_manager',
     'migrate_zone_canvas_properties',
     'migrate_furniture_manager_menu',
     'migrate_furniture_blocks_table',

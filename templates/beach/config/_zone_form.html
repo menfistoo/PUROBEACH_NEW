@@ -1,0 +1,136 @@
+{# Inline Zone Form for Furniture Manager Zones Tab #}
+<form method="POST" action="{{ url_for('beach.beach_config.zones_save') }}" id="zone-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="zone_id" value="{{ selected_zone.id if selected_zone else '' }}">
+    <input type="hidden" name="redirect_tab" value="1">
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label for="zone_name" class="form-label">Nombre <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="zone_name" name="name"
+                       value="{{ selected_zone.name if selected_zone else '' }}" required maxlength="100"
+                       placeholder="Ej: Primera Linea">
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="mb-3">
+                <label for="zone_color" class="form-label">Color</label>
+                <div class="input-group">
+                    <input type="color" class="form-control form-control-color" id="zone_color" name="color"
+                           value="{{ selected_zone.color if selected_zone else '#F5E6D3' }}" style="width: 60px;"
+                           aria-label="Selector de color">
+                    <input type="text" class="form-control" id="zone_color_text"
+                           value="{{ selected_zone.color if selected_zone else '#F5E6D3' }}" readonly
+                           aria-label="Código de color hexadecimal">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="zone_description" class="form-label">Descripcion</label>
+        <textarea class="form-control" id="zone_description" name="description"
+                  rows="2" maxlength="500" placeholder="Descripcion opcional de la zona"
+                  >{{ selected_zone.description if selected_zone else '' }}</textarea>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label for="zone_parent" class="form-label">Zona Padre</label>
+                <select class="form-select" id="zone_parent" name="parent_zone_id">
+                    <option value="">-- Sin zona padre --</option>
+                    {% for pz in zones_for_parent %}
+                    {% if not selected_zone or pz.id != selected_zone.id %}
+                    <option value="{{ pz.id }}"
+                            {% if selected_zone and selected_zone.parent_zone_id == pz.id %}selected{% endif %}>
+                        {{ pz.name }}
+                    </option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+                <div class="form-text">Opcional. Seleccionar si es una subzona.</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            {% if zones_mode == 'edit' and selected_zone %}
+            <div class="mb-3">
+                <label class="form-label">Estado</label>
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" id="zone_active" name="active" value="1"
+                           {% if selected_zone.active %}checked{% endif %}>
+                    <label class="form-check-label" for="zone_active">Zona activa</label>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if zones_mode == 'edit' and selected_zone %}
+    <div class="alert alert-light border mb-3">
+        <div class="row text-center">
+            <div class="col">
+                <div class="fs-4 fw-bold text-primary">{{ selected_zone.furniture_count or 0 }}</div>
+                <small class="text-muted">Mobiliario</small>
+            </div>
+            <div class="col">
+                <div class="fs-4 fw-bold text-info">{{ selected_zone.child_count or 0 }}</div>
+                <small class="text-muted">Subzonas</small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <hr>
+
+    <div class="d-flex justify-content-between">
+        <div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-save me-1"></i>
+                {{ 'Crear Zona' if zones_mode == 'create' else 'Guardar Cambios' }}
+            </button>
+            <a href="{{ url_for('beach.beach_config.furniture_manager', tab='zones') }}" class="btn btn-secondary ms-2">
+                Cancelar
+            </a>
+        </div>
+
+        {% if zones_mode == 'edit' and selected_zone %}
+        {% if (selected_zone.furniture_count or 0) == 0 and (selected_zone.child_count or 0) == 0 %}
+        <button type="button" class="btn btn-outline-danger" id="btn-delete-zone"
+                data-zone-id="{{ selected_zone.id }}"
+                data-zone-name="{{ selected_zone.name }}">
+            <i class="fa-solid fa-trash me-1"></i> Eliminar
+        </button>
+        {% else %}
+        <button type="button" class="btn btn-outline-secondary" disabled
+                title="{% if (selected_zone.furniture_count or 0) > 0 %}Tiene {{ selected_zone.furniture_count }} mobiliario{% elif (selected_zone.child_count or 0) > 0 %}Tiene {{ selected_zone.child_count }} subzona(s){% endif %}">
+            <i class="fa-solid fa-trash me-1"></i> Eliminar
+        </button>
+        {% endif %}
+        {% endif %}
+    </div>
+</form>
+
+{# Separate delete form outside the main form #}
+{% if zones_mode == 'edit' and selected_zone %}
+<form method="POST" action="{{ url_for('beach.beach_config.zones_delete', zone_id=selected_zone.id) }}"
+      id="delete-zone-form" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="redirect_tab" value="1">
+</form>
+{% endif %}
+
+<script>
+document.getElementById('zone_color')?.addEventListener('input', function() {
+    document.getElementById('zone_color_text').value = this.value;
+});
+
+// Delete zone handler
+document.getElementById('btn-delete-zone')?.addEventListener('click', function() {
+    const zoneName = this.dataset.zoneName;
+    if (confirm('¿Eliminar zona ' + zoneName + '?')) {
+        document.getElementById('delete-zone-form').submit();
+    }
+});
+</script>

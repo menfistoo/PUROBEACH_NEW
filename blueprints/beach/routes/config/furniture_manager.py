@@ -1,12 +1,12 @@
 """
 Furniture Manager - Unified configuration page.
-Consolidates Map Editor, Furniture List, and Furniture Types into a tabbed interface.
+Consolidates Map Editor, Furniture List, Furniture Types, and Zones into a tabbed interface.
 """
 
 from flask import render_template, request, redirect, url_for
 from flask_login import login_required
 from utils.decorators import permission_required
-from models.zone import get_all_zones
+from models.zone import get_all_zones, get_zone_by_id
 from models.furniture import get_all_furniture
 from models.furniture_type import get_all_furniture_types
 
@@ -29,6 +29,7 @@ def register_routes(bp):
 
         # Get common data
         zones = get_all_zones(active_only=True)
+        zones_all = get_all_zones(active_only=False)
         furniture_types = get_all_furniture_types(active_only=True)
         furniture_types_all = get_all_furniture_types(active_only=False)
 
@@ -54,9 +55,24 @@ def register_routes(bp):
         elif request.args.get('create') == '1':
             mode = 'create'
 
+        # For zones tab - check if editing or creating
+        selected_zone = None
+        zones_mode = None
+        zones_for_parent = zones_all  # All zones can be parents
+        zone_edit_id = request.args.get('zone_id')
+        if zone_edit_id:
+            selected_zone = get_zone_by_id(int(zone_edit_id))
+            zones_mode = 'edit' if selected_zone else None
+            # Exclude current zone from parent list
+            if selected_zone:
+                zones_for_parent = [z for z in zones_all if z['id'] != selected_zone['id']]
+        elif request.args.get('create_zone') == '1':
+            zones_mode = 'create'
+
         return render_template('beach/config/furniture_manager.html',
                                active_tab=active_tab,
                                zones=zones,
+                               zones_all=zones_all,
                                furniture_types=furniture_types,
                                furniture_types_all=furniture_types_all,
                                furniture=all_furniture,
@@ -65,4 +81,8 @@ def register_routes(bp):
                                type_filter=type_filter,
                                active_filter=active_filter,
                                selected_type=selected_type,
-                               mode=mode)
+                               mode=mode,
+                               # Zones tab data
+                               selected_zone=selected_zone,
+                               zones_mode=zones_mode,
+                               zones_for_parent=zones_for_parent)

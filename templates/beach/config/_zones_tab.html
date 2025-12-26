@@ -1,0 +1,111 @@
+{# Zones Tab Content #}
+<div class="p-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0"><i class="fa-solid fa-layer-group me-2"></i>Zonas del Beach Club</h5>
+        {% if not zones_mode %}
+        <a href="{{ url_for('beach.beach_config.furniture_manager', tab='zones', create_zone=1) }}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Nueva Zona
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        {# Left Panel: List (30%) #}
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span><i class="fa-solid fa-list"></i> Zonas</span>
+                    <small class="text-muted">{{ zones_all|length if zones_all else 0 }} zonas</small>
+                </div>
+                <div class="card-body p-0">
+                    {% if zones_all %}
+                    <ul class="list-group list-group-flush" id="zones-list">
+                        {% for zone in zones_all %}
+                        <li class="list-group-item list-group-item-action d-flex align-items-center {% if selected_zone and selected_zone.id == zone.id %}active{% endif %}"
+                            data-zone-id="{{ zone.id }}">
+                            <a href="{{ url_for('beach.beach_config.furniture_manager', tab='zones', zone_id=zone.id) }}"
+                               class="d-flex align-items-center flex-grow-1 text-decoration-none {% if selected_zone and selected_zone.id == zone.id %}text-white{% else %}text-body{% endif %}">
+                                <span class="me-2" style="width: 24px;">
+                                    {% if zone.parent_zone_id %}
+                                    <i class="fa-solid fa-turn-up fa-rotate-90 text-{% if selected_zone and selected_zone.id == zone.id %}white-50{% else %}muted{% endif %}"></i>
+                                    {% else %}
+                                    <span class="color-badge" style="background-color: {{ zone.color }}; display: inline-block; width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);"></span>
+                                    {% endif %}
+                                </span>
+                                <span class="flex-grow-1">
+                                    <span class="fw-medium {% if zone.parent_zone_id %}ms-2{% endif %}">{{ zone.name }}</span>
+                                    {% if zone.description %}
+                                    <small class="d-block text-{% if selected_zone and selected_zone.id == zone.id %}white-50{% else %}muted{% endif %} text-truncate" style="max-width: 150px;">
+                                        {{ zone.description }}
+                                    </small>
+                                    {% endif %}
+                                </span>
+                                <span class="d-flex align-items-center gap-2">
+                                    <span class="badge {% if zone.active %}bg-{% if selected_zone and selected_zone.id == zone.id %}light text-dark{% else %}success{% endif %}{% else %}bg-secondary{% endif %}">
+                                        {{ zone.furniture_count or 0 }}
+                                    </span>
+                                </span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fa-solid fa-layer-group fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No hay zonas configuradas</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Right Panel: Form or Empty State (70%) #}
+        <div class="col-lg-8">
+            {% if zones_mode %}
+            <div class="card">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <span>
+                        {% if zones_mode == 'create' %}
+                        <i class="fa-solid fa-plus-circle"></i> Crear Nueva Zona
+                        {% else %}
+                        <i class="fa-solid fa-edit"></i> Editar: {{ selected_zone.name }}
+                        {% endif %}
+                    </span>
+                    <a href="{{ url_for('beach.beach_config.furniture_manager', tab='zones') }}" class="btn btn-sm btn-outline-secondary" aria-label="Cerrar formulario">
+                        <i class="fa-solid fa-times"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% include 'beach/config/_zone_form.html' %}
+                </div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fa-solid fa-hand-pointer fa-3x text-muted mb-3"></i>
+                    <h5>Selecciona una zona para editar</h5>
+                    <p class="text-muted mb-4">
+                        Haz clic en una zona de la lista o crea una nueva
+                    </p>
+                    <a href="{{ url_for('beach.beach_config.furniture_manager', tab='zones', create_zone=1) }}" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-plus"></i> Crear Nueva Zona
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+#zones-list .list-group-item {
+    padding: 0.5rem 0.75rem;
+    transition: background-color 0.15s;
+}
+#zones-list .list-group-item:hover:not(.active) {
+    background-color: rgba(0,0,0,0.02);
+}
+#zones-list .color-badge {
+    vertical-align: middle;
+}
+</style>
