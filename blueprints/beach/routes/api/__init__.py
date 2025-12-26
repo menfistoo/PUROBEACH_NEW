@@ -12,8 +12,10 @@ api_bp = Blueprint('api', __name__)
 from blueprints.beach.routes.api import customers
 from blueprints.beach.routes.api import reservations
 from blueprints.beach.routes.api import map
+from blueprints.beach.routes.api import pricing
 
 # Register all route functions on the blueprint
 customers.register_routes(api_bp)
 reservations.register_routes(api_bp)
 map.register_routes(api_bp)
+pricing.register_routes(api_bp)

@@ -1,0 +1,130 @@
+<!-- ========== STEP 3: PRICING ========== -->
+<div class="card reservation-card mb-4" id="pricingSection" style="display: none;">
+    <div class="card-header card-header-gold">
+        <div class="d-flex align-items-center">
+            <div class="step-icon me-3">
+                <i class="fas fa-euro-sign"></i>
+            </div>
+            <div>
+                <h5 class="mb-0">Paso 3: Precio y Pago</h5>
+                <small class="opacity-75">Selecciona paquete o consumo minimo</small>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Package Selection -->
+        <div class="package-selection mb-4">
+            <h6 class="section-title">
+                <i class="fas fa-box text-primary me-2"></i>Paquete
+                <small class="text-muted">(opcional)</small>
+            </h6>
+            <select id="packageSelect" name="package_id" class="form-select form-select-lg">
+                <option value="">Sin paquete - Consumo minimo</option>
+                <!-- Populated via AJAX based on restrictions -->
+            </select>
+            <small class="text-muted mt-1 d-block">
+                <i class="fas fa-info-circle"></i>
+                Solo se muestran paquetes disponibles segun tipo de cliente, zona y numero de personas
+            </small>
+        </div>
+
+        <!-- Minimum Consumption Display -->
+        <div class="minimum-consumption-display mb-4">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Consumo Minimo</label>
+                    <div class="pricing-display-box">
+                        <div class="amount-large">
+                            €<span id="minConsumptionAmount">0.00</span>
+                        </div>
+                        <small id="minConsumptionPolicy" class="text-muted"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Price Calculation -->
+        <div class="price-calculation mb-4">
+            <h6 class="section-title"><i class="fas fa-calculator text-primary me-2"></i>Precio</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Precio Calculado</label>
+                    <div id="calculatedPriceDisplay" class="pricing-display-box">
+                        <div class="amount-large text-primary">€0.00</div>
+                        <small id="priceBreakdown" class="text-muted"></small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="finalPrice" class="form-label">
+                        Precio Final
+                        <span class="text-muted">(editable)</span>
+                    </label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text">€</span>
+                        <input type="number" id="finalPrice" name="final_price"
+                               class="form-control" step="0.01" min="0" value="0.00">
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-edit"></i> Puedes ajustar el precio manualmente
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Information -->
+        <div class="payment-info">
+            <h6 class="section-title"><i class="fas fa-credit-card text-primary me-2"></i>Informacion de Pago</h6>
+
+            <!-- Paid Checkbox -->
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input type="checkbox" id="paidCheckbox" name="paid" value="1"
+                           class="form-check-input" style="width: 3em; height: 1.5em;">
+                    <label for="paidCheckbox" class="form-check-label ms-2">
+                        <strong>Marcar como pagado</strong>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Payment Ticket Number (PMS/POS) -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label for="paymentTicket" class="form-label">
+                        Numero de Ticket PMS/POS
+                        <span id="ticketRequired" class="text-danger" style="display:none;">*</span>
+                    </label>
+                    <input type="text" id="paymentTicket" name="payment_ticket_number"
+                           class="form-control" placeholder="Ej: TPV12345" disabled>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        Diferente del ticket de reserva (YYMMDDRR)
+                    </small>
+                </div>
+            </div>
+
+            <!-- Charge to Room (already in step 2, keep or move here?) -->
+            <!-- For now, keeping payment fields from step 2 there -->
+        </div>
+
+        <!-- Hidden Fields -->
+        <input type="hidden" id="calculatedPrice" name="price" value="0">
+        <input type="hidden" id="minConsumptionAmountField" name="minimum_consumption_amount" value="0">
+        <input type="hidden" id="minConsumptionPolicyId" name="minimum_consumption_policy_id" value="">
+    </div>
+</div>
+
+<style>
+.pricing-display-box {
+    background: linear-gradient(135deg, var(--color-background) 0%, var(--color-surface) 100%);
+    border: 2px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    padding: 16px;
+    text-align: center;
+}
+.amount-large {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 4px;
+}
+</style>

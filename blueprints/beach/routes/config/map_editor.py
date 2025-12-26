@@ -19,14 +19,14 @@ def register_routes(bp):
 
     @bp.route('/map-editor')
     @login_required
-    @permission_required('beach.map_editor.view')
+    @permission_required('beach.config.map_editor.view')
     def map_editor():
         """Map editor - redirect to unified furniture manager."""
         return redirect(url_for('beach.beach_config.furniture_manager', tab='map-editor'))
 
     @bp.route('/map-editor/zone/<int:zone_id>')
     @login_required
-    @permission_required('beach.map_editor.view')
+    @permission_required('beach.config.map_editor.view')
     def map_editor_zone_data(zone_id):
         """Get zone data with furniture for editor canvas."""
         zone = get_zone_with_furniture(zone_id)
@@ -44,7 +44,7 @@ def register_routes(bp):
 
     @bp.route('/map-editor/zone/<int:zone_id>/settings', methods=['POST'])
     @login_required
-    @permission_required('beach.map_editor.edit')
+    @permission_required('beach.config.map_editor.edit')
     def map_editor_zone_settings(zone_id):
         """Update zone canvas settings."""
         try:
@@ -74,7 +74,7 @@ def register_routes(bp):
 
     @bp.route('/map-editor/furniture', methods=['POST'])
     @login_required
-    @permission_required('beach.map_editor.edit')
+    @permission_required('beach.config.map_editor.edit')
     def map_editor_create_furniture():
         """Create new furniture item on map."""
         data = request.get_json()
@@ -113,7 +113,7 @@ def register_routes(bp):
 
     @bp.route('/map-editor/furniture/<int:furniture_id>/position', methods=['PUT'])
     @login_required
-    @permission_required('beach.map_editor.edit')
+    @permission_required('beach.config.map_editor.edit')
     def map_editor_update_position(furniture_id):
         """Update furniture position on map."""
         data = request.get_json()
@@ -140,7 +140,7 @@ def register_routes(bp):
 
     @bp.route('/map-editor/furniture/<int:furniture_id>', methods=['PUT'])
     @login_required
-    @permission_required('beach.map_editor.edit')
+    @permission_required('beach.config.map_editor.edit')
     def map_editor_update_furniture(furniture_id):
         """Update furniture properties."""
         furniture = get_furniture_by_id(furniture_id)
@@ -163,7 +163,7 @@ def register_routes(bp):
 
     @bp.route('/map-editor/furniture/<int:furniture_id>', methods=['DELETE'])
     @login_required
-    @permission_required('beach.map_editor.edit')
+    @permission_required('beach.config.map_editor.edit')
     def map_editor_delete_furniture(furniture_id):
         """Delete furniture from map."""
         try:
@@ -179,7 +179,7 @@ def register_routes(bp):
 
     @bp.route('/map-editor/furniture/next-number/<int:zone_id>/<furniture_type>')
     @login_required
-    @permission_required('beach.map_editor.view')
+    @permission_required('beach.config.map_editor.view')
     def map_editor_next_number(zone_id, furniture_type):
         """Get next available number for furniture type in zone."""
         from models.furniture_type import get_furniture_type_by_code, get_next_number_for_type
@@ -199,7 +199,7 @@ def register_routes(bp):
 
     @bp.route('/map-editor/features')
     @login_required
-    @permission_required('beach.map_editor.view')
+    @permission_required('beach.config.map_editor.view')
     def map_editor_get_features():
         """Get available furniture features from preferences."""
         from models.preference import get_all_preferences
@@ -222,7 +222,7 @@ def register_routes(bp):
 
     @bp.route('/map-editor/furniture/<int:furniture_id>/duplicate', methods=['POST'])
     @login_required
-    @permission_required('beach.map_editor.edit')
+    @permission_required('beach.config.map_editor.edit')
     def map_editor_duplicate_furniture(furniture_id):
         """Duplicate furniture item horizontally or vertically."""
         furniture = get_furniture_by_id(furniture_id)
@@ -303,7 +303,7 @@ def register_routes(bp):
 
     @bp.route('/map-editor/furniture/batch-position', methods=['PUT'])
     @login_required
-    @permission_required('beach.map_editor.edit')
+    @permission_required('beach.config.map_editor.edit')
     def map_editor_batch_position():
         """Update positions for multiple furniture items in batch."""
         data = request.get_json()
@@ -336,7 +336,7 @@ def register_routes(bp):
 
     @bp.route('/map-editor/furniture/batch-delete', methods=['DELETE'])
     @login_required
-    @permission_required('beach.map_editor.edit')
+    @permission_required('beach.config.map_editor.edit')
     def map_editor_batch_delete():
         """Delete multiple furniture items in batch."""
         data = request.get_json()

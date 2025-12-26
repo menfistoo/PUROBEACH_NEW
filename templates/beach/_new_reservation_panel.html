@@ -198,6 +198,59 @@
                 </div>
             </section>
 
+            <!-- Pricing Section -->
+            <section class="panel-section pricing-section">
+                <div class="panel-section-title">
+                    <i class="fas fa-euro-sign"></i>
+                    Precio
+                </div>
+                <div class="pricing-display" id="newPanelPricingDisplay">
+                    <div class="pricing-loading" style="display: none;">
+                        <span class="spinner-border spinner-border-sm"></span>
+                        Calculando precio...
+                    </div>
+                    <div class="pricing-content" id="newPanelPricingContent">
+                        <!-- Package Selection Dropdown -->
+                        <div class="pricing-type-selector" id="newPanelPricingTypeSelector" style="display: none;">
+                            <label class="detail-label" for="newPanelPricingTypeSelect">Tipo de precio:</label>
+                            <select class="form-select pricing-select" id="newPanelPricingTypeSelect">
+                                <option value="">Consumo mínimo</option>
+                                <!-- Package options populated dynamically -->
+                            </select>
+                        </div>
+
+                        <!-- Price Display with Edit Option -->
+                        <div class="pricing-row pricing-amount">
+                            <div class="pricing-display-group">
+                                <label class="detail-label">Precio final:</label>
+                                <div class="pricing-input-group">
+                                    <span class="pricing-currency">€</span>
+                                    <input type="number"
+                                           class="pricing-input"
+                                           id="newPanelFinalPriceInput"
+                                           min="0"
+                                           step="0.01"
+                                           placeholder="0.00">
+                                    <button type="button"
+                                            class="pricing-reset-btn"
+                                            id="newPanelPriceResetBtn"
+                                            title="Restablecer precio calculado"
+                                            style="display: none;">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                </div>
+                                <div class="pricing-calculated" id="newPanelCalculatedPrice" style="display: none;">
+                                    Precio calculado: <span class="calculated-amount">€0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pricing-breakdown" id="newPanelPricingBreakdown" style="display: none;"></div>
+                        <input type="hidden" id="newPanelPriceOverride" value="">
+                    </div>
+                </div>
+                <input type="hidden" id="newPanelSelectedPackageId" value="">
+            </section>
+
             <!-- Preferences Section -->
             <section class="panel-section preferences-section">
                 <div class="panel-section-title">

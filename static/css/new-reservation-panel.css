@@ -921,3 +921,236 @@
 .furniture-item.swap-source {
     will-change: stroke-opacity;
 }
+
+/* =============================================================================
+   PRICING SECTION
+   ============================================================================= */
+.pricing-section .pricing-display {
+    margin-top: var(--space-3);
+}
+
+.pricing-section .pricing-loading {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+    font-size: 14px;
+    padding: var(--space-3);
+}
+
+.pricing-section .pricing-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.pricing-section .pricing-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+}
+
+.pricing-section .pricing-row.pricing-amount {
+    border-top: 2px solid var(--color-secondary);
+    padding-top: var(--space-3);
+    margin-top: var(--space-2);
+}
+
+.pricing-section .pricing-label {
+    font-size: 14px;
+    color: var(--color-text);
+    font-weight: 500;
+}
+
+.pricing-section .pricing-value {
+    font-size: 16px;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.pricing-section .pricing-amount .pricing-value {
+    font-size: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Editable Price Input */
+.pricing-section .pricing-display-group {
+    width: 100%;
+}
+
+.pricing-section .pricing-display-group .detail-label {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text, #1F2937);
+}
+
+.pricing-section .pricing-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.pricing-section .pricing-currency {
+    position: absolute;
+    left: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-primary, #D4AF37);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.pricing-section .pricing-input {
+    flex: 1;
+    padding: 10px 12px 10px 28px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-primary, #D4AF37);
+    background: white;
+    border: 2px solid rgba(26, 58, 92, 0.15);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.pricing-section .pricing-input:hover {
+    border-color: var(--color-primary, #D4AF37);
+    background: rgba(245, 230, 211, 0.1);
+}
+
+.pricing-section .pricing-input:focus {
+    outline: none;
+    border-color: var(--color-primary, #D4AF37);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    background: white;
+}
+
+.pricing-section .pricing-input.modified {
+    border-color: var(--color-warning, #E5A33D);
+    background: rgba(229, 163, 61, 0.05);
+}
+
+.pricing-section .pricing-reset-btn {
+    padding: 8px 12px;
+    background: rgba(26, 58, 92, 0.08);
+    border: 1px solid rgba(26, 58, 92, 0.15);
+    border-radius: 6px;
+    color: var(--color-text, #1F2937);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.pricing-section .pricing-reset-btn:hover {
+    background: var(--color-primary, #D4AF37);
+    border-color: var(--color-primary, #D4AF37);
+    color: white;
+    transform: scale(1.05);
+}
+
+.pricing-section .pricing-calculated {
+    margin-top: var(--space-2);
+    padding: var(--space-2);
+    background: rgba(26, 58, 92, 0.05);
+    border-left: 3px solid var(--color-primary, #D4AF37);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--color-text-muted, #6B7280);
+}
+
+.pricing-section .pricing-calculated .calculated-amount {
+    font-weight: 600;
+    color: var(--color-text, #1F2937);
+}
+
+.pricing-section .pricing-breakdown {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    padding: var(--space-2);
+    background: rgba(26, 58, 92, 0.05);
+    border-radius: var(--border-radius);
+    margin-top: var(--space-2);
+    transition: all 0.3s ease;
+    opacity: 1;
+}
+
+/* Animación cuando el precio actualiza */
+@keyframes priceUpdate {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); color: var(--color-primary); }
+    100% { transform: scale(1); }
+}
+
+.pricing-section .pricing-amount .pricing-value.updating {
+    animation: priceUpdate 0.4s ease;
+}
+
+.pricing-section .pricing-type {
+    background: var(--color-primary-light, #F5E6D3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--space-2);
+}
+
+.pricing-section .pricing-type .pricing-label {
+    color: var(--color-primary);
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.pricing-section .pricing-type .pricing-value {
+    color: var(--color-primary);
+    font-size: 14px;
+}
+
+/* Pricing Type Selector - Compact Dropdown */
+.pricing-section .pricing-type-selector {
+    margin-bottom: var(--space-4);
+}
+
+.pricing-section .pricing-type-selector .detail-label {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text, #1F2937);
+}
+
+.pricing-section .pricing-select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--color-text, #1F2937);
+    background-color: white;
+    border: 1.5px solid rgba(26, 58, 92, 0.2);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.pricing-section .pricing-select:hover {
+    border-color: var(--color-primary, #D4AF37);
+    background-color: rgba(245, 230, 211, 0.3);
+}
+
+.pricing-section .pricing-select:focus {
+    outline: none;
+    border-color: var(--color-primary, #D4AF37);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    background-color: white;
+}
+
+.pricing-section .pricing-select option {
+    padding: 8px;
+    font-size: 14px;
+}
+
+.pricing-section .pricing-select option[value=""] {
+    font-weight: 500;
+}

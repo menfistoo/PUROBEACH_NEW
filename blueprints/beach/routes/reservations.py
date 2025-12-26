@@ -90,6 +90,15 @@ def create():
         charge_to_room = 1 if request.form.get('charge_to_room') else 0
         charge_reference = request.form.get('charge_reference', '').strip()
 
+        # Pricing fields
+        package_id = request.form.get('package_id', type=int) or None
+        payment_ticket_number = request.form.get('payment_ticket_number', '').strip() or None
+        price = request.form.get('price', 0.0, type=float)
+        final_price = request.form.get('final_price', 0.0, type=float)
+        paid = 1 if request.form.get('paid') else 0
+        minimum_consumption_amount = request.form.get('minimum_consumption_amount', 0.0, type=float)
+        minimum_consumption_policy_id = request.form.get('minimum_consumption_policy_id', type=int) or None
+
         # If hotel_guest_id is provided but no customer_id, create customer now
         if hotel_guest_id and not customer_id:
             try:
@@ -131,6 +140,14 @@ def create():
                                    mode='create', zones=zones, furniture_types=furniture_types,
                                    preferences=preferences, tags=tags, states=states)
 
+        # Validate payment ticket requirement
+        if paid and not payment_ticket_number:
+            flash('Número de ticket requerido para reservas pagadas', 'error')
+            return render_template('beach/reservation_form.html',
+                                   mode='create', zones=zones, furniture_types=furniture_types,
+                                   preferences=preferences, tags=tags, states=states,
+                                   form_data=request.form)
+
         # Check availability for each furniture
         for furn_id in furniture_ids:
             if not check_furniture_availability(furn_id, reservation_date, reservation_date):
@@ -152,6 +169,13 @@ def create():
                 payment_status=payment_status,
                 charge_to_room=charge_to_room,
                 charge_reference=charge_reference,
+                price=price,
+                final_price=final_price,
+                paid=paid,
+                minimum_consumption_amount=minimum_consumption_amount,
+                minimum_consumption_policy_id=minimum_consumption_policy_id,
+                package_id=package_id,
+                payment_ticket_number=payment_ticket_number,
                 preferences=preferences_csv,
                 observations=notes,
                 created_by=current_user.username if current_user else None

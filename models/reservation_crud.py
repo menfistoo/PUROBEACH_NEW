@@ -123,7 +123,9 @@ def create_beach_reservation(
     parent_reservation_id: int = None,
     minimum_consumption_policy_id: int = None,
     minimum_consumption_amount: float = 0.0,
-    reservation_type: str = 'normal'
+    reservation_type: str = 'normal',
+    package_id: int = None,
+    payment_ticket_number: str = None
 ) -> tuple:
     """
     Create a complete reservation with all validations.
@@ -152,6 +154,8 @@ def create_beach_reservation(
         minimum_consumption_policy_id: Consumption policy ID
         minimum_consumption_amount: Minimum consumption amount
         reservation_type: 'normal' or 'bloqueo'
+        package_id: Selected package ID
+        payment_ticket_number: PMS/POS payment ticket number
 
     Returns:
         tuple: (reservation_id, ticket_number)
@@ -159,6 +163,10 @@ def create_beach_reservation(
     Raises:
         ValueError: If validations fail
     """
+    # Validate payment ticket requirement
+    if paid and not payment_ticket_number:
+        raise ValueError("Número de ticket requerido para reservas pagadas")
+
     db = get_db()
     cursor = db.cursor()
 
@@ -181,12 +189,14 @@ def create_beach_reservation(
                 payment_status, price, final_price, hamaca_included, price_catalog_id, paid,
                 charge_to_room, charge_reference,
                 minimum_consumption_amount, minimum_consumption_policy_id,
+                package_id, payment_ticket_number,
                 check_in_date, check_out_date, preferences, notes,
                 parent_reservation_id, reservation_type, created_by, created_at
             ) VALUES (
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?,
+                ?, ?,
                 ?, ?,
                 ?, ?,
                 ?, ?, ?, ?,
@@ -198,6 +208,7 @@ def create_beach_reservation(
             payment_status, price, final_price, hamaca_included, price_catalog_id, paid,
             charge_to_room, charge_reference,
             minimum_consumption_amount, minimum_consumption_policy_id,
+            package_id, payment_ticket_number,
             check_in_date, check_out_date, preferences, observations,
             parent_reservation_id, reservation_type, created_by
         ))
@@ -225,11 +236,13 @@ def create_beach_reservation(
                 ''', (reservation_id, furniture_id, reservation_date))
 
         # Record initial state in history
-        cursor.execute('''
-            INSERT INTO reservation_status_history
-            (reservation_id, status_type, action, changed_by, notes, created_at)
-            VALUES (?, ?, 'added', ?, 'Creacion de reserva', CURRENT_TIMESTAMP)
-        ''', (reservation_id, initial_state, created_by))
+        state_id = default_state.get('id')
+        if state_id:
+            cursor.execute('''
+                INSERT INTO reservation_status_history
+                (reservation_id, old_state_id, new_state_id, changed_by, reason, created_at)
+                VALUES (?, NULL, ?, ?, 'Creacion de reserva', CURRENT_TIMESTAMP)
+            ''', (reservation_id, state_id, created_by))
 
         db.commit()
 
@@ -267,9 +280,14 @@ def get_beach_reservation_by_id(reservation_id: int) -> dict:
                c.customer_type,
                c.room_number as customer_room,
                c.email as customer_email,
-               c.phone as customer_phone
+               c.phone as customer_phone,
+               pkg.package_name,
+               pkg.package_description,
+               mcp.policy_name as minimum_consumption_policy_name
         FROM beach_reservations r
         JOIN beach_customers c ON r.customer_id = c.id
+        LEFT JOIN beach_packages pkg ON r.package_id = pkg.id
+        LEFT JOIN beach_minimum_consumption_policies mcp ON r.minimum_consumption_policy_id = mcp.id
         WHERE r.id = ?
     ''', (reservation_id,))
 
@@ -357,6 +375,7 @@ def update_beach_reservation(reservation_id: int, **kwargs) -> bool:
         'payment_status', 'price', 'final_price', 'hamaca_included',
         'price_catalog_id', 'paid', 'charge_to_room', 'charge_reference',
         'minimum_consumption_amount', 'minimum_consumption_policy_id',
+        'package_id', 'payment_ticket_number',
         'check_in_date', 'check_out_date', 'preferences', 'notes', 'observations'
     ]
 

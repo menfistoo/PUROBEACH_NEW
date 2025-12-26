@@ -1,0 +1,324 @@
+            <!-- ========== STEP 1: CUSTOMER ========== -->
+            <div class="card reservation-card mb-4" id="customerSection">
+                <div class="card-header card-header-primary">
+                    <div class="d-flex align-items-center">
+                        <div class="step-icon me-3">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">Paso 1: Cliente</h5>
+                            <small class="opacity-75">Busca un cliente existente o crea uno nuevo</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if mode == 'create' %}
+                    <!-- Unified Search Bar -->
+                    <div class="customer-search-section">
+                        <div class="search-input-wrapper">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="customerSearch" class="form-control form-control-lg ps-5"
+                                   placeholder="Buscar por nombre, habitacion o telefono..."
+                                   autocomplete="off">
+                            <div class="search-loading" id="searchLoading" style="display: none;">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+
+                        <!-- Search Results Container -->
+                        <div id="searchResults" class="search-results-container" style="display: none;">
+                            <!-- Beach Club Customers Section -->
+                            <div id="beachClubResults" class="results-section" style="display: none;">
+                                <div class="results-header">
+                                    <i class="fas fa-umbrella-beach"></i> Clientes Beach Club
+                                </div>
+                                <div id="beachClubList" class="results-list"></div>
+                            </div>
+
+                            <!-- Hotel Guests Section -->
+                            <div id="hotelGuestsResults" class="results-section" style="display: none;">
+                                <div class="results-header">
+                                    <i class="fas fa-hotel"></i> Huespedes Hotel
+                                </div>
+                                <div id="hotelGuestsList" class="results-list"></div>
+                            </div>
+
+                            <!-- No Results + Create Option -->
+                            <div id="noResultsSection" class="no-results-section" style="display: none;">
+                                <div class="no-results-message">
+                                    <i class="fas fa-search"></i>
+                                    <span>No se encontraron resultados para "<span id="searchQueryDisplay"></span>"</span>
+                                </div>
+                            </div>
+
+                            <!-- Create New Customer Option -->
+                            <div class="create-customer-option" id="createCustomerOption">
+                                <div class="divider-line"><span>o</span></div>
+                                <button type="button" class="btn btn-outline-primary w-100" id="showCreateFormBtn">
+                                    <i class="fas fa-plus-circle me-2"></i>Crear nuevo cliente externo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Inline Create Customer Form -->
+                    <div id="createCustomerForm" class="create-customer-form" style="display: none;">
+                        <div class="form-header">
+                            <h6><i class="fas fa-user-plus me-2"></i>Crear Cliente Externo</h6>
+                            <button type="button" class="btn btn-sm btn-link" id="cancelCreateBtn">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <input type="text" id="newFirstName" class="form-control" placeholder="Nombre">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Apellidos</label>
+                                <input type="text" id="newLastName" class="form-control" placeholder="Apellidos">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefono <span class="text-danger">*</span></label>
+                                <div class="phone-input-group">
+                                    <select id="newCountryCode" class="form-select country-select">
+                                        <option value="+34" data-flag="ES">&#x1F1EA;&#x1F1F8; +34</option>
+                                        <option value="+49" data-flag="DE">&#x1F1E9;&#x1F1EA; +49</option>
+                                        <option value="+44" data-flag="GB">&#x1F1EC;&#x1F1E7; +44</option>
+                                        <option value="+33" data-flag="FR">&#x1F1EB;&#x1F1F7; +33</option>
+                                        <option value="+39" data-flag="IT">&#x1F1EE;&#x1F1F9; +39</option>
+                                        <option value="+31" data-flag="NL">&#x1F1F3;&#x1F1F1; +31</option>
+                                        <option value="+351" data-flag="PT">&#x1F1F5;&#x1F1F9; +351</option>
+                                        <option value="+41" data-flag="CH">&#x1F1E8;&#x1F1ED; +41</option>
+                                        <option value="+43" data-flag="AT">&#x1F1E6;&#x1F1F9; +43</option>
+                                        <option value="+7" data-flag="RU">&#x1F1F7;&#x1F1FA; +7</option>
+                                        <option value="+1" data-flag="US">&#x1F1FA;&#x1F1F8; +1</option>
+                                    </select>
+                                    <input type="tel" id="newPhone" class="form-control" placeholder="612 345 678">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" id="newEmail" class="form-control" placeholder="email@ejemplo.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Idioma</label>
+                                <select id="newLanguage" class="form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="ES">&#x1F1EA;&#x1F1F8; Espanol</option>
+                                    <option value="EN">&#x1F1EC;&#x1F1E7; Ingles</option>
+                                    <option value="DE">&#x1F1E9;&#x1F1EA; Aleman</option>
+                                    <option value="FR">&#x1F1EB;&#x1F1F7; Frances</option>
+                                    <option value="IT">&#x1F1EE;&#x1F1F9; Italiano</option>
+                                    <option value="PT">&#x1F1F5;&#x1F1F9; Portugues</option>
+                                    <option value="NL">&#x1F1F3;&#x1F1F1; Holandes</option>
+                                    <option value="RU">&#x1F1F7;&#x1F1FA; Ruso</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Preferencias</label>
+                                <div class="preferences-inline">
+                                    {% for pref in preferences %}
+                                    <label class="preference-chip-inline">
+                                        <input type="checkbox" class="new-customer-pref" value="{{ pref.id }}" data-code="{{ pref.code }}">
+                                        <span class="chip-content">
+                                            {% if pref.icon %}<i class="fas {{ pref.icon }}"></i>{% endif %}
+                                            {{ pref.name }}
+                                        </span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Notas</label>
+                                <textarea id="newNotes" class="form-control" rows="2" placeholder="Observaciones sobre el cliente..."></textarea>
+                            </div>
+                        </div>
+
+                        <div id="createCustomerError" class="alert alert-danger mt-3" style="display: none;"></div>
+
+                        <div class="form-actions mt-3">
+                            <button type="button" class="btn btn-secondary" id="cancelCreate2Btn">Cancelar</button>
+                            <button type="button" class="btn btn-primary" id="saveNewCustomerBtn">
+                                <i class="fas fa-check me-1"></i> Crear y Seleccionar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Selected Customer Display -->
+                    <div id="selectedCustomer" class="selected-customer-card" style="display: none;">
+                        <div class="customer-header">
+                            <div class="customer-avatar" id="customerAvatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="customer-main-info">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <h4 class="mb-0" id="customerName">-</h4>
+                                    <span id="customerVipBadge" class="badge bg-warning text-dark" style="display: none;">
+                                        <i class="fas fa-star"></i> VIP
+                                    </span>
+                                    <span id="customerTypeBadge" class="badge bg-info">Interno</span>
+                                </div>
+                                <div class="customer-subtitle mt-1" id="customerSubtitle">
+                                    <span id="customerRoomInfo">
+                                        <i class="fas fa-door-open"></i> <span id="customerRoom">-</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="customer-actions">
+                                <a href="#" class="btn btn-sm btn-outline-primary me-1" id="viewCustomerProfileBtn" style="display: none;" target="_blank" title="Ver perfil completo">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="clearCustomerBtn">
+                                    <i class="fas fa-times"></i> Cambiar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Hotel Guest Info -->
+                        <div id="hotelInfoSection" class="hotel-info-section" style="display: none;">
+                            <div class="row g-2">
+                                <div class="col-auto">
+                                    <div class="info-badge">
+                                        <i class="fas fa-calendar-check"></i>
+                                        <span>Check-in: <strong id="customerArrival">-</strong></span>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="info-badge">
+                                        <i class="fas fa-calendar-times"></i>
+                                        <span>Check-out: <strong id="customerDeparture">-</strong></span>
+                                    </div>
+                                </div>
+                                <div class="col-auto" id="bookingRefBadge" style="display: none;">
+                                    <div class="info-badge">
+                                        <i class="fas fa-ticket-alt"></i>
+                                        <span>Reserva: <strong id="customerBookingRef">-</strong></span>
+                                    </div>
+                                </div>
+                                <div class="col-auto" id="languageBadge" style="display: none;">
+                                    <div class="info-badge">
+                                        <i class="fas fa-globe"></i>
+                                        <span id="customerLanguage">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Stats (for all customers) -->
+                        <div id="customerStatsSection" class="customer-stats-section mt-2" style="display: none;">
+                            <div class="row g-2">
+                                <div class="col-auto" id="customerLanguageBadge" style="display: none;">
+                                    <div class="info-badge">
+                                        <i class="fas fa-globe"></i>
+                                        <span id="customerLanguageText">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto" id="customerVisitsBadge" style="display: none;">
+                                    <div class="info-badge">
+                                        <i class="fas fa-chart-line"></i>
+                                        <span><span id="customerTotalVisits">0</span> visitas</span>
+                                    </div>
+                                </div>
+                                <div class="col-auto" id="customerSpentBadge" style="display: none;">
+                                    <div class="info-badge">
+                                        <i class="fas fa-euro-sign"></i>
+                                        <span><span id="customerTotalSpent">0</span> EUR</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Guest Selector -->
+                        <div id="guestSelectorSection" class="guest-selector-section" style="display: none;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-user-friends text-primary"></i>
+                                <span class="text-muted small"><span id="guestCount">2</span> huespedes en habitacion:</span>
+                                <select id="guestSelector" class="form-select form-select-sm flex-grow-1"></select>
+                            </div>
+                        </div>
+
+                        <!-- Editable Fields -->
+                        <div class="customer-additional-fields mt-3">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">Telefono</label>
+                                    <div class="phone-input-group phone-input-small">
+                                        <select id="customerCountryCode" class="form-select form-select-sm country-select">
+                                            <option value="+34">&#x1F1EA;&#x1F1F8; +34</option>
+                                            <option value="+49">&#x1F1E9;&#x1F1EA; +49</option>
+                                            <option value="+44">&#x1F1EC;&#x1F1E7; +44</option>
+                                            <option value="+33">&#x1F1EB;&#x1F1F7; +33</option>
+                                            <option value="+39">&#x1F1EE;&#x1F1F9; +39</option>
+                                            <option value="+31">&#x1F1F3;&#x1F1F1; +31</option>
+                                            <option value="+351">&#x1F1F5;&#x1F1F9; +351</option>
+                                            <option value="+7">&#x1F1F7;&#x1F1FA; +7</option>
+                                            <option value="+1">&#x1F1FA;&#x1F1F8; +1</option>
+                                        </select>
+                                        <input type="tel" id="customerPhone" class="form-control form-control-sm" placeholder="Telefono">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">Email</label>
+                                    <input type="email" id="customerEmail" class="form-control form-control-sm" placeholder="Email">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes & Preferences -->
+                        <div id="customerPrefsNotesSection" class="customer-prefs-notes mt-3" style="display: none;">
+                            <div id="customerNotesDisplay" class="notes-display" style="display: none;">
+                                <i class="fas fa-sticky-note text-warning"></i>
+                                <span id="customerNotesText"></span>
+                            </div>
+                            <div id="customerPrefsDisplay" class="prefs-display" style="display: none;">
+                                <span class="prefs-label">Preferencias:</span>
+                                <span id="customerPrefsBadges"></span>
+                            </div>
+                        </div>
+
+                        <!-- History -->
+                        <div id="customerHistorySection" class="history-section mt-3" style="display: none;">
+                            <div class="history-header">
+                                <span><i class="fas fa-history text-primary"></i> <span id="customerVisitsCount">0</span> visitas anteriores</span>
+                                <button type="button" class="btn btn-link btn-sm p-0" id="toggleHistoryBtn">
+                                    Ver <i class="fas fa-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div id="customerHistoryList" class="history-list" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="emptyState" class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h5>Busca o crea un cliente</h5>
+                        <p class="text-muted mb-0">Escribe nombre, numero de habitacion o telefono</p>
+                    </div>
+
+                    {% else %}
+                    <!-- Edit mode -->
+                    <div class="selected-customer-card">
+                        <div class="customer-header">
+                            <div class="customer-avatar {% if reservation.customer_type == 'interno' %}hotel{% endif %}">
+                                <i class="fas {% if reservation.customer_type == 'interno' %}fa-hotel{% else %}fa-user{% endif %}"></i>
+                            </div>
+                            <div class="customer-main-info">
+                                <h4 class="mb-0">{{ reservation.customer_name }}</h4>
+                                <div class="customer-subtitle mt-1">
+                                    {% if reservation.customer_type == 'interno' %}
+                                    <span class="badge bg-info">Huesped Hotel</span>
+                                    <span class="ms-2"><i class="fas fa-door-open"></i> Hab. {{ reservation.customer_room or '-' }}</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Cliente Externo</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>

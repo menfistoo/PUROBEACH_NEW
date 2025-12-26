@@ -153,7 +153,15 @@ def register_routes(bp):
                     charge_to_room=charge_to_room,
                     preferences=preferences_str,
                     observations=notes,
-                    created_by=current_user.username if current_user else 'system'
+                    created_by=current_user.username if current_user else 'system',
+                    # Pricing fields (defaults for quick map reservation)
+                    price=0.0,
+                    final_price=0.0,
+                    paid=0,
+                    package_id=None,
+                    payment_ticket_number=None,
+                    minimum_consumption_amount=0.0,
+                    minimum_consumption_policy_id=None
                 )
 
                 if result.get('success'):
@@ -185,7 +193,15 @@ def register_routes(bp):
                     charge_to_room=charge_to_room,
                     preferences=preferences_str,
                     observations=notes,
-                    created_by=current_user.username if current_user else 'system'
+                    created_by=current_user.username if current_user else 'system',
+                    # Pricing fields (defaults for quick map reservation)
+                    price=0.0,
+                    final_price=0.0,
+                    paid=0,
+                    package_id=None,
+                    payment_ticket_number=None,
+                    minimum_consumption_amount=0.0,
+                    minimum_consumption_policy_id=None
                 )
 
                 # Two-way sync: Update customer preferences from reservation
@@ -202,4 +218,7 @@ def register_routes(bp):
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
-            return jsonify({'success': False, 'error': 'Error al crear reserva'}), 500
+            # Log the actual error for debugging
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'error': f'Error al crear reserva: {str(e)}'}), 500

@@ -82,7 +82,7 @@ def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
 
     try:
         # Get current reservation data
-        cursor.execute('SELECT customer_id, current_states FROM beach_reservations WHERE id = ?',
+        cursor.execute('SELECT customer_id, current_states, current_state FROM beach_reservations WHERE id = ?',
                       (reservation_id,))
         row = cursor.fetchone()
         if not row:
@@ -90,6 +90,7 @@ def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
 
         customer_id = row['customer_id']
         current_states = row['current_states'] or ''
+        old_state_name = row['current_state']
 
         # Add to CSV (avoid duplicates)
         states_list = [s.strip() for s in current_states.split(',') if s.strip()]
@@ -107,12 +108,21 @@ def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
             WHERE id = ?
         ''', (new_states_csv, state_type, reservation_id))
 
-        # Record in history
-        cursor.execute('''
-            INSERT INTO reservation_status_history
-            (reservation_id, status_type, action, changed_by, notes, created_at)
-            VALUES (?, ?, 'added', ?, ?, CURRENT_TIMESTAMP)
-        ''', (reservation_id, state_type, changed_by, notes))
+        # Record in history - get state IDs
+        old_state_id = None
+        if old_state_name:
+            old_state = get_state_by_name(old_state_name)
+            old_state_id = old_state['id'] if old_state else None
+
+        new_state = get_state_by_name(state_type)
+        new_state_id = new_state['id'] if new_state else None
+
+        if new_state_id:
+            cursor.execute('''
+                INSERT INTO reservation_status_history
+                (reservation_id, old_state_id, new_state_id, changed_by, reason, created_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (reservation_id, old_state_id, new_state_id, changed_by, notes or 'Estado añadido'))
 
         # Auto-create incident for states with creates_incident=1
         state_info = get_state_by_name(state_type)
@@ -183,12 +193,21 @@ def remove_reservation_state(reservation_id: int, state_type: str, changed_by: s
             WHERE id = ?
         ''', (new_states_csv, new_current_state, reservation_id))
 
-        # Record in history
-        cursor.execute('''
-            INSERT INTO reservation_status_history
-            (reservation_id, status_type, action, changed_by, notes, created_at)
-            VALUES (?, ?, 'removed', ?, ?, CURRENT_TIMESTAMP)
-        ''', (reservation_id, state_type, changed_by, notes))
+        # Record in history - get state IDs
+        removed_state = get_state_by_name(state_type)
+        removed_state_id = removed_state['id'] if removed_state else None
+
+        new_state_id = None
+        if new_current_state:
+            new_state = get_state_by_name(new_current_state)
+            new_state_id = new_state['id'] if new_state else None
+
+        if removed_state_id:
+            cursor.execute('''
+                INSERT INTO reservation_status_history
+                (reservation_id, old_state_id, new_state_id, changed_by, reason, created_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (reservation_id, removed_state_id, new_state_id, changed_by, notes or 'Estado eliminado'))
 
         db.commit()
 
@@ -239,12 +258,22 @@ def change_reservation_state(reservation_id: int, new_state: str, changed_by: st
             WHERE id = ?
         ''', (new_state, new_state, reservation_id))
 
-        # Record history
-        cursor.execute('''
-            INSERT INTO reservation_status_history
-            (reservation_id, status_type, action, changed_by, notes, created_at)
-            VALUES (?, ?, 'changed', ?, ?, CURRENT_TIMESTAMP)
-        ''', (reservation_id, new_state, changed_by, f'Cambio de {old_state} a {new_state}. {reason}'))
+        # Record history - get state IDs
+        old_state_id = None
+        if old_state:
+            old_state_obj = get_state_by_name(old_state)
+            old_state_id = old_state_obj['id'] if old_state_obj else None
+
+        new_state_obj = get_state_by_name(new_state)
+        new_state_id = new_state_obj['id'] if new_state_obj else None
+
+        if new_state_id:
+            reason_text = f'Cambio de {old_state} a {new_state}. {reason}' if reason else f'Cambio de {old_state} a {new_state}'
+            cursor.execute('''
+                INSERT INTO reservation_status_history
+                (reservation_id, old_state_id, new_state_id, changed_by, reason, created_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (reservation_id, old_state_id, new_state_id, changed_by, reason_text))
 
         db.commit()
 
