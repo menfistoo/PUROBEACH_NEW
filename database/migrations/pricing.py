@@ -185,44 +185,56 @@ def migrate_add_package_permissions():
 
     permissions = [
         {
+            'code': 'packages_view',
             'name': 'beach.config.packages.view',
-            'description': 'Ver lista de paquetes',
+            'description': 'Paquetes',
+            'module': 'beach',
             'category': 'beach_config',
             'is_menu_item': 1,
-            'menu_label': 'Paquetes',
+            'menu_url': '/beach/config/packages',
             'menu_icon': 'fa-box',
             'menu_order': 60
         },
         {
+            'code': 'packages_create',
             'name': 'beach.config.packages.create',
             'description': 'Crear nuevos paquetes',
+            'module': 'beach',
             'category': 'beach_config',
             'is_menu_item': 0
         },
         {
+            'code': 'packages_edit',
             'name': 'beach.config.packages.edit',
             'description': 'Editar paquetes existentes',
+            'module': 'beach',
             'category': 'beach_config',
             'is_menu_item': 0
         },
         {
+            'code': 'packages_delete',
             'name': 'beach.config.packages.delete',
             'description': 'Eliminar paquetes',
+            'module': 'beach',
             'category': 'beach_config',
             'is_menu_item': 0
         },
         {
+            'code': 'minimum_consumption_view',
             'name': 'beach.config.minimum_consumption.view',
-            'description': 'Ver políticas de consumo mínimo',
+            'description': 'Consumo Mínimo',
+            'module': 'beach',
             'category': 'beach_config',
             'is_menu_item': 1,
-            'menu_label': 'Consumo Mínimo',
+            'menu_url': '/beach/config/minimum-consumption',
             'menu_icon': 'fa-dollar-sign',
             'menu_order': 61
         },
         {
+            'code': 'minimum_consumption_manage',
             'name': 'beach.config.minimum_consumption.manage',
             'description': 'Gestionar políticas de consumo mínimo',
+            'module': 'beach',
             'category': 'beach_config',
             'is_menu_item': 0
         },
@@ -238,15 +250,17 @@ def migrate_add_package_permissions():
         print(f"Adding permission: {perm['name']}")
         cursor.execute('''
             INSERT INTO permissions (
-                name, description, category, is_menu_item,
-                menu_label, menu_icon, menu_order
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                code, name, description, module, category, is_menu_item,
+                menu_url, menu_icon, menu_order
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
+            perm['code'],
             perm['name'],
             perm['description'],
+            perm['module'],
             perm['category'],
             perm.get('is_menu_item', 0),
-            perm.get('menu_label'),
+            perm.get('menu_url'),
             perm.get('menu_icon'),
             perm.get('menu_order')
         ))
