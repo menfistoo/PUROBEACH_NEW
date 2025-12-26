@@ -74,14 +74,17 @@ def get_hotel_guest_by_id(guest_id: int) -> Optional[Dict[str, Any]]:
 
 def get_guests_by_room(room_number: str, check_date: date = None) -> List[Dict[str, Any]]:
     """
-    Get hotel guests by room number.
+    Get unique hotel guests by room number.
+
+    Deduplicates guests by name, preferring records where is_main_guest=1,
+    then preferring the most recent record by ID.
 
     Args:
         room_number: Room number to search
         check_date: Optional date to filter active guests
 
     Returns:
-        List of hotel guest dicts for the room (main guest first)
+        List of unique hotel guest dicts for the room (main guest first)
     """
     db = get_db()
     cursor = db.cursor()
@@ -92,47 +95,50 @@ def get_guests_by_room(room_number: str, check_date: date = None) -> List[Dict[s
             WHERE room_number = ?
               AND arrival_date <= ?
               AND departure_date >= ?
-            ORDER BY is_main_guest DESC, guest_name
+            ORDER BY is_main_guest DESC, id DESC
         ''', (room_number, check_date.isoformat(), check_date.isoformat()))
     else:
         cursor.execute('''
             SELECT * FROM hotel_guests
             WHERE room_number = ?
-            ORDER BY is_main_guest DESC, guest_name
+            ORDER BY is_main_guest DESC, id DESC
         ''', (room_number,))
 
     rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+
+    # Deduplicate by guest_name (case-insensitive)
+    # Keep the first occurrence (which is the one with is_main_guest=1 or highest ID)
+    seen_names = set()
+    unique_guests = []
+    for row in rows:
+        guest = dict(row)
+        name_key = guest['guest_name'].upper().strip() if guest['guest_name'] else ''
+        if name_key and name_key not in seen_names:
+            seen_names.add(name_key)
+            unique_guests.append(guest)
+
+    # Sort by is_main_guest DESC, then guest_name for consistent ordering
+    unique_guests.sort(key=lambda g: (-g.get('is_main_guest', 0), g.get('guest_name', '')))
+
+    return unique_guests
 
 
 def get_room_guest_count(room_number: str, check_date: date = None) -> int:
     """
-    Get the count of guests in a room.
+    Get the count of unique guests in a room.
+
+    Uses the same deduplication logic as get_guests_by_room for consistency.
 
     Args:
         room_number: Room number
         check_date: Optional date to filter active guests
 
     Returns:
-        Number of guests in the room
+        Number of unique guests in the room
     """
-    db = get_db()
-    cursor = db.cursor()
-
-    if check_date:
-        cursor.execute('''
-            SELECT COUNT(*) as count FROM hotel_guests
-            WHERE room_number = ?
-              AND arrival_date <= ?
-              AND departure_date >= ?
-        ''', (room_number, check_date.isoformat(), check_date.isoformat()))
-    else:
-        cursor.execute('''
-            SELECT COUNT(*) as count FROM hotel_guests
-            WHERE room_number = ?
-        ''', (room_number,))
-
-    return cursor.fetchone()['count']
+    # Reuse get_guests_by_room for consistent deduplication
+    guests = get_guests_by_room(room_number, check_date)
+    return len(guests)
 
 
 def search_guests(query: str, limit: int = 10) -> List[Dict[str, Any]]:

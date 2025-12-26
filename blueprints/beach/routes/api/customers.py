@@ -10,6 +10,8 @@ from models.customer import (
     create_customer, set_customer_preferences, search_customers_unified,
     create_customer_from_hotel_guest
 )
+from models.preference import get_all_preferences
+from models.reservation import sync_preferences_to_customer
 from models.reservation import get_customer_reservation_history, get_customer_preferred_furniture
 from models.hotel_guest import get_guests_by_room, search_guests
 from datetime import date
@@ -313,6 +315,110 @@ def register_routes(bp):
             return jsonify({'success': False, 'error': str(e)}), 500
 
     # ============================================================================
+    # PREFERENCES API ROUTES
+    # ============================================================================
+
+    @bp.route('/preferences')
+    @login_required
+    @permission_required('beach.customers.view')
+    def list_preferences():
+        """Get all available customer preferences."""
+        active_only = request.args.get('active', 'true').lower() == 'true'
+        preferences = get_all_preferences(active_only=active_only)
+
+        return jsonify({
+            'success': True,
+            'preferences': [{
+                'id': p['id'],
+                'code': p['code'],
+                'name': p['name'],
+                'description': p.get('description'),
+                'icon': p.get('icon'),
+                'maps_to_feature': p.get('maps_to_feature')
+            } for p in preferences]
+        })
+
+    @bp.route('/customers/<int:customer_id>/preferences', methods=['PUT'])
+    @login_required
+    @permission_required('beach.customers.edit')
+    def update_customer_preferences(customer_id):
+        """
+        Update customer preferences with bidirectional sync.
+        Updates the customer profile and syncs to all active/future reservations.
+
+        Request body:
+            preference_codes: List of preference codes (e.g., ['pref_sombra', 'pref_vip'])
+
+        Returns:
+            JSON with success status and number of reservations updated
+        """
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+
+        preference_codes = data.get('preference_codes', [])
+
+        # Validate customer exists
+        customer = get_customer_by_id(customer_id)
+        if not customer:
+            return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
+
+        # Validate preference codes
+        if not isinstance(preference_codes, list):
+            return jsonify({'success': False, 'error': 'preference_codes debe ser una lista'}), 400
+
+        try:
+            # Convert list to CSV for sync function
+            preferences_csv = ','.join(preference_codes) if preference_codes else ''
+
+            # Sync to customer and all reservations (bidirectional)
+            success = sync_preferences_to_customer(customer_id, preferences_csv, replace=True)
+
+            if success:
+                # Get updated preferences for response
+                updated_prefs = get_customer_preferences(customer_id)
+
+                # Count reservations updated (get from sync function if possible)
+                from models.reservation import get_customer_preference_codes
+                from database import get_db
+
+                # Count active/future reservations for this customer
+                with get_db() as conn:
+                    cursor = conn.execute('''
+                        SELECT COUNT(*) as count
+                        FROM beach_reservations
+                        WHERE customer_id = ?
+                        AND reservation_date >= date('now')
+                    ''', (customer_id,))
+                    result = cursor.fetchone()
+                    reservations_updated = result['count'] if result else 0
+
+                return jsonify({
+                    'success': True,
+                    'customer_id': customer_id,
+                    'preferences': [{
+                        'id': p['id'],
+                        'code': p['code'],
+                        'name': p['name'],
+                        'icon': p.get('icon')
+                    } for p in updated_prefs],
+                    'reservations_updated': reservations_updated,
+                    'message': 'Preferencias actualizadas'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Error al actualizar preferencias'
+                }), 500
+
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': 'Error al actualizar preferencias'
+            }), 500
+
+    # ============================================================================
     # HOTEL GUEST API ROUTES
     # ============================================================================
 
@@ -331,6 +437,8 @@ def register_routes(bp):
             'guest_count': len(guests),
             'guests': [{
                 'id': g['id'],
+                'source': 'hotel_guest',
+                'customer_type': 'interno',
                 'guest_name': g['guest_name'],
                 'room_number': g['room_number'],
                 'arrival_date': g['arrival_date'],

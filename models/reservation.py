@@ -56,6 +56,7 @@ from .reservation_crud import (
     # Preferences
     sync_preferences_to_customer,
     get_customer_preference_codes,
+    sync_customer_preferences_to_reservations,
 )
 
 # Query operations
@@ -78,6 +79,7 @@ from .reservation_queries import (
 from .reservation_availability import (
     check_furniture_availability_bulk,
     check_duplicate_reservation,
+    check_duplicate_by_room,
     get_furniture_availability_map,
     get_conflicting_reservations,
 )
@@ -139,6 +141,7 @@ __all__ = [
     # Preferences
     'sync_preferences_to_customer',
     'get_customer_preference_codes',
+    'sync_customer_preferences_to_reservations',
 
     # Queries
     'get_all_beach_reservations',
@@ -156,6 +159,7 @@ __all__ = [
     # Bulk availability (Phase 6B)
     'check_furniture_availability_bulk',
     'check_duplicate_reservation',
+    'check_duplicate_by_room',
     'get_furniture_availability_map',
     'get_conflicting_reservations',
 

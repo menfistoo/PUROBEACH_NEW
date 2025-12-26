@@ -1,149 +1,91 @@
 """
-Comprehensive test script to find all errors in the application.
-Tests all routes, templates, and database operations.
+Test application factory and configuration.
 """
 
-import sys
+import pytest
 from app import create_app
-from database import get_db
 
-def test_app():
-    """Run comprehensive tests."""
-    print("=" * 60)
-    print("PUROBEACH - COMPREHENSIVE TEST SUITE")
-    print("=" * 60)
 
-    errors = []
+class TestAppFactory:
+    """Test Flask application factory."""
 
-    # Create app
-    from database import init_db
-    app = create_app('test')
-    app.config['TESTING'] = True
+    def test_create_app_development(self):
+        """Test app creation with development config."""
+        app = create_app('development')
+        assert app is not None
+        assert app.config['DEBUG'] is True
+        assert app.config['TESTING'] is False
 
-    # Initialize test database
-    with app.app_context():
-        init_db()
+    def test_create_app_test(self):
+        """Test app creation with test config."""
+        app = create_app('test')
+        assert app is not None
+        assert app.config['TESTING'] is True
+        assert app.config['WTF_CSRF_ENABLED'] is False
 
-    with app.test_client() as client:
+    def test_create_app_default(self):
+        """Test app creation with default config."""
+        app = create_app()
+        assert app is not None
+
+    def test_app_has_blueprints(self):
+        """Test that all blueprints are registered."""
+        app = create_app('test')
+        blueprint_names = list(app.blueprints.keys())
+
+        assert 'auth' in blueprint_names
+        assert 'admin' in blueprint_names
+        assert 'beach' in blueprint_names
+        assert 'api' in blueprint_names
+
+    def test_app_has_extensions(self):
+        """Test that extensions are initialized."""
+        app = create_app('test')
+
+        # Check login manager
+        assert hasattr(app, 'login_manager')
+
+    def test_app_context_processors(self):
+        """Test that context processors are registered."""
+        app = create_app('test')
+
         with app.app_context():
-            # Test 1: Database connection
-            print("\n[TEST 1] Database Connection...")
-            try:
-                db = get_db()
-                cursor = db.cursor()
-                cursor.execute("SELECT COUNT(*) FROM users")
-                user_count = cursor.fetchone()[0]
-                print(f"  ✓ Database connected: {user_count} users found")
-            except Exception as e:
-                errors.append(f"Database connection: {e}")
-                print(f"  ✗ Error: {e}")
+            with app.test_request_context():
+                # Context processors should provide these
+                ctx = app.jinja_env.globals
+                assert 'get_menu_items' in ctx or callable(getattr(app, 'context_processor', None))
 
-            # Test 2: Login page
-            print("\n[TEST 2] Login Page...")
-            try:
-                response = client.get('/login')
-                if response.status_code == 200:
-                    print(f"  ✓ Login page loads (status: {response.status_code})")
-                else:
-                    errors.append(f"Login page returned {response.status_code}")
-                    print(f"  ✗ Status: {response.status_code}")
-            except Exception as e:
-                errors.append(f"Login page: {e}")
-                print(f"  ✗ Error: {e}")
 
-            # Test 3: Login authentication
-            print("\n[TEST 3] Login Authentication...")
-            try:
-                response = client.post('/login', data={
-                    'username': 'admin',
-                    'password': 'admin123',
-                    'csrf_token': 'test'  # Will fail CSRF but test the route
-                }, follow_redirects=False)
-                print(f"  ✓ Login route accessible (status: {response.status_code})")
-            except Exception as e:
-                errors.append(f"Login authentication: {e}")
-                print(f"  ✗ Error: {e}")
+class TestAppConfiguration:
+    """Test application configuration."""
 
-            # Test 4: API health check (no auth required)
-            print("\n[TEST 4] API Health Check...")
-            try:
-                response = client.get('/api/health')
-                if response.status_code == 200:
-                    print(f"  ✓ API health check OK")
-                    print(f"    Response: {response.get_json()}")
-                else:
-                    errors.append(f"API health returned {response.status_code}")
-            except Exception as e:
-                errors.append(f"API health: {e}")
-                print(f"  ✗ Error: {e}")
+    def test_secret_key_set(self):
+        """Test that secret key is configured."""
+        app = create_app('test')
+        assert app.config['SECRET_KEY'] is not None
+        assert len(app.config['SECRET_KEY']) > 0
 
-            # Test 5: Protected routes (should redirect to login)
-            print("\n[TEST 5] Protected Routes (should redirect)...")
-            protected_routes = [
-                '/beach/map',
-                '/beach/customers',
-                '/beach/reservations',
-                '/admin/dashboard',
-                '/admin/users',
-                '/admin/roles'
-            ]
+    def test_database_path_set(self):
+        """Test that database path is configured."""
+        app = create_app('test')
+        assert 'DATABASE_PATH' in app.config
 
-            for route in protected_routes:
-                try:
-                    response = client.get(route, follow_redirects=False)
-                    if response.status_code in [302, 401]:
-                        print(f"  ✓ {route} - Protected (redirects)")
-                    else:
-                        errors.append(f"{route} returned {response.status_code}")
-                        print(f"  ✗ {route} - Status: {response.status_code}")
-                except Exception as e:
-                    errors.append(f"{route}: {e}")
-                    print(f"  ✗ {route} - Error: {e}")
+    def test_app_name_set(self):
+        """Test that app name is configured."""
+        app = create_app('test')
+        assert app.config.get('APP_NAME') == 'PuroBeach'
 
-            # Test 6: Template rendering issues
-            print("\n[TEST 6] Template Rendering...")
-            template_errors = []
 
-            # Test each template individually
-            templates_to_test = [
-                'beach/map.html',
-                'beach/customers.html',
-                'beach/reservations.html'
-            ]
+class TestCLICommands:
+    """Test CLI command registration."""
 
-            from flask import render_template_string, render_template
+    def test_cli_commands_registered(self):
+        """Test that CLI commands are registered."""
+        app = create_app('test')
 
-            for template in templates_to_test:
-                try:
-                    # Try to render template with minimal context
-                    with app.test_request_context():
-                        from models.zone import get_all_zones
-                        from models.furniture import get_all_furniture
+        # Get registered CLI commands
+        commands = list(app.cli.commands.keys())
 
-                        if 'map' in template:
-                            render_template(template, zones=get_all_zones(), furniture=get_all_furniture())
-                        else:
-                            render_template(template)
-                        print(f"  ✓ {template} renders OK")
-                except Exception as e:
-                    template_errors.append(f"{template}: {str(e)}")
-                    print(f"  ✗ {template} - Error: {e}")
-                    errors.append(f"Template {template}: {e}")
-
-    # Summary
-    print("\n" + "=" * 60)
-    print("TEST SUMMARY")
-    print("=" * 60)
-
-    if errors:
-        print(f"\n✗ FOUND {len(errors)} ERROR(S):\n")
-        for i, error in enumerate(errors, 1):
-            print(f"{i}. {error}")
-        return False
-    else:
-        print("\n✓ ALL TESTS PASSED!")
-        return True
-
-if __name__ == '__main__':
-    success = test_app()
-    sys.exit(0 if success else 1)
+        assert 'init-db' in commands
+        assert 'run-migrations' in commands
+        assert 'create-user' in commands

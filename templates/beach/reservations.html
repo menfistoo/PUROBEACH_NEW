@@ -181,11 +181,6 @@
                     </td>
                     <td>
                         <div>{{ res.reservation_date or res.start_date }}</div>
-                        {% if res.time_slot and res.time_slot != 'all_day' %}
-                        <small class="text-muted">
-                            {% if res.time_slot == 'morning' %}Mañana{% elif res.time_slot == 'afternoon' %}Tarde{% endif %}
-                        </small>
-                        {% endif %}
                     </td>
                     <td>
                         <span class="badge bg-secondary">

@@ -1,0 +1,245 @@
+{#
+    Reservation Panel Partial
+    A slide-in panel for viewing/editing reservations from the map
+    Include this in map.html
+#}
+
+<!-- Panel Backdrop -->
+<div class="reservation-panel-backdrop" id="reservationPanelBackdrop"></div>
+
+<!-- Reservation Panel -->
+<div class="reservation-panel" id="reservationPanel" role="dialog" aria-labelledby="panelTicket" aria-modal="true">
+    <!-- Header -->
+    <div class="panel-header">
+        <button type="button" class="panel-close-btn" id="panelCloseBtn"
+                aria-label="Cerrar panel" title="Cerrar">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+        <div class="panel-title">
+            <span class="panel-ticket" id="panelTicket">Cargando...</span>
+            <span class="panel-date" id="panelDate"></span>
+        </div>
+        <button type="button" class="panel-edit-btn" id="panelEditBtn"
+                aria-label="Editar reserva" title="Editar">
+            <i class="fas fa-pen" id="panelEditIcon"></i>
+        </button>
+    </div>
+
+    <!-- Body (scrollable) -->
+    <div class="panel-body">
+        <!-- Loading State -->
+        <div class="panel-loading" id="panelLoading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-3 text-muted">Cargando reserva...</p>
+        </div>
+
+        <!-- Panel Content (hidden while loading) -->
+        <div class="panel-content" id="panelContent" style="display: none;">
+
+            <!-- Customer Section -->
+            <section class="panel-section customer-section" id="customerSection">
+                <div class="panel-section-title">
+                    <i class="fas fa-user"></i>
+                    Cliente
+                    <button type="button" class="customer-change-btn" id="customerChangeBtn">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                </div>
+                <!-- Compact customer display -->
+                <div class="customer-display-compact" id="customerDisplay">
+                    <div class="customer-name-row">
+                        <span class="customer-name" id="customerName">-</span>
+                        <span class="customer-room-badge" id="customerRoomBadge" style="display: none;">
+                            <i class="fas fa-door-open"></i>
+                            <span id="customerRoom">-</span>
+                        </span>
+                        <span class="customer-vip-badge" id="customerVipBadge" style="display: none;">VIP</span>
+                    </div>
+                    <div class="customer-hotel-info" id="customerHotelInfo" style="display: none;">
+                        <span class="hotel-info-item" id="customerCheckinItem">
+                            <i class="fas fa-sign-in-alt"></i> <span id="customerCheckin">-</span>
+                        </span>
+                        <span class="hotel-info-separator">→</span>
+                        <span class="hotel-info-item" id="customerCheckoutItem">
+                            <i class="fas fa-sign-out-alt"></i> <span id="customerCheckout">-</span>
+                        </span>
+                        <span class="hotel-info-item booking-ref" id="customerBookingItem" style="display: none;">
+                            <i class="fas fa-hashtag"></i><span id="customerBookingRef">-</span>
+                        </span>
+                    </div>
+                    <div class="customer-contact" id="customerContact" style="display: none;">
+                        <span id="customerPhone"></span>
+                    </div>
+                </div>
+
+                <!-- Customer Search (Edit Mode) -->
+                <div class="customer-search-wrapper" id="customerSearchWrapper" style="display: none;">
+                    <input type="text"
+                           id="panelCustomerSearch"
+                           class="form-control"
+                           placeholder="Buscar cliente por nombre, habitacion o telefono..."
+                           autocomplete="off">
+                    <div class="customer-search-results" id="panelCustomerResults" style="display: none;"></div>
+                </div>
+            </section>
+
+            <!-- Preferences Section -->
+            <section class="panel-section preferences-section" id="preferencesSection">
+                <div class="panel-section-title">
+                    <i class="fas fa-heart"></i>
+                    Preferencias
+                </div>
+                <!-- View Mode -->
+                <div class="preferences-view-mode" id="preferencesViewMode">
+                    <div class="preferences-chips" id="panelPreferencesChips">
+                        <!-- Preferences chips populated dynamically -->
+                    </div>
+                </div>
+                <!-- Edit Mode (shown when main edit mode is active) -->
+                <div class="preferences-edit-mode" id="preferencesEditMode" style="display: none;">
+                    <div class="preferences-all-chips" id="panelAllPreferencesChips">
+                        <!-- All available preferences as toggleable chips -->
+                    </div>
+                    <p class="preferences-sync-note">
+                        <i class="fas fa-sync-alt"></i>
+                        Los cambios se aplicaran al cliente
+                    </p>
+                </div>
+            </section>
+
+            <!-- State Section -->
+            <section class="panel-section state-section" id="stateSection">
+                <div class="panel-section-title">
+                    <i class="fas fa-flag"></i>
+                    Estado
+                </div>
+                <div class="state-chips" id="panelStateChips">
+                    <!-- State chips populated dynamically -->
+                </div>
+            </section>
+
+            <!-- Furniture Section -->
+            <section class="panel-section furniture-section" id="furnitureSection">
+                <div class="panel-section-title">
+                    <i class="fas fa-umbrella-beach"></i>
+                    Mobiliario
+                </div>
+
+                <!-- Normal View (hidden in reassignment mode) -->
+                <div class="furniture-view-mode" id="furnitureViewMode">
+                    <div class="furniture-chips" id="panelFurnitureChips">
+                        <!-- Furniture chips populated dynamically -->
+                    </div>
+                    <button type="button" class="furniture-change-btn" id="panelChangeFurnitureBtn">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Cambiar mobiliario</span>
+                    </button>
+                    <div class="furniture-summary" id="furnitureSummary"></div>
+                </div>
+
+                <!-- Reassignment Mode (hidden by default) -->
+                <div class="furniture-reassignment-mode" id="furnitureReassignmentMode" style="display: none;">
+                    <!-- Original furniture (locked, for reference) -->
+                    <div class="reassignment-original">
+                        <span class="reassignment-label">Original:</span>
+                        <div class="reassignment-chips reassignment-original-chips" id="reassignmentOriginalChips">
+                            <!-- Original furniture chips (dimmed) -->
+                        </div>
+                    </div>
+
+                    <!-- New selection (live updated) -->
+                    <div class="reassignment-new">
+                        <span class="reassignment-label">Nueva seleccion:</span>
+                        <div class="reassignment-chips reassignment-new-chips" id="reassignmentNewChips">
+                            <!-- Selected furniture chips (live updated) -->
+                        </div>
+                        <div class="reassignment-counter" id="reassignmentCounter">0 / 2 seleccionados</div>
+                        <div class="reassignment-hint">
+                            <i class="fas fa-hand-pointer"></i>
+                            Toca en el mapa para seleccionar
+                        </div>
+                    </div>
+
+                    <!-- Reassignment actions -->
+                    <div class="reassignment-actions">
+                        <button type="button" class="reassignment-cancel-btn" id="reassignmentCancelBtn">
+                            Cancelar
+                        </button>
+                        <button type="button" class="reassignment-save-btn" id="reassignmentSaveBtn">
+                            <i class="fas fa-check"></i>
+                            Guardar cambios
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Details Section -->
+            <section class="panel-section details-section" id="detailsSection">
+                <div class="panel-section-title">
+                    <i class="fas fa-info-circle"></i>
+                    Detalles
+                </div>
+
+                <!-- View Mode -->
+                <div class="details-grid" id="detailsViewMode">
+                    <div class="detail-item">
+                        <span class="detail-label">Personas</span>
+                        <span class="detail-value" id="detailNumPeople">-</span>
+                    </div>
+                    <div class="detail-item full-width">
+                        <span class="detail-label">Notas</span>
+                        <div class="notes-display" id="detailNotes">Sin notas</div>
+                    </div>
+                </div>
+
+                <!-- Edit Mode -->
+                <div class="details-grid" id="detailsEditMode" style="display: none;">
+                    <div class="detail-item">
+                        <label class="detail-label" for="editNumPeople">Personas</label>
+                        <input type="number"
+                               class="detail-input"
+                               id="editNumPeople"
+                               min="1"
+                               max="20"
+                               value="1">
+                    </div>
+                    <div class="detail-item full-width">
+                        <label class="detail-label" for="editNotes">Notas</label>
+                        <textarea class="notes-textarea"
+                                  id="editNotes"
+                                  placeholder="Agregar notas sobre la reserva..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- View Full Details Link -->
+            <a href="#" class="view-more-link" id="viewMoreLink" target="_blank">
+                <i class="fas fa-external-link-alt me-1"></i>
+                Ver todos los detalles
+            </a>
+
+        </div>
+    </div>
+
+    <!-- Footer (Edit Mode Only) -->
+    <div class="panel-footer" id="panelFooter">
+        <button type="button" class="panel-cancel-btn" id="panelCancelBtn">
+            Cancelar
+        </button>
+        <button type="button" class="panel-save-btn" id="panelSaveBtn">
+            <span class="save-text">
+                <i class="fas fa-check me-1"></i>
+                Guardar
+            </span>
+            <span class="save-loading" style="display: none;">
+                <span class="spinner-border spinner-border-sm" role="status"></span>
+                Guardando...
+            </span>
+        </button>
+    </div>
+</div>
+
+<!-- Hidden form for CSRF token -->
+<input type="hidden" id="panelCsrfToken" value="{{ csrf_token() }}">

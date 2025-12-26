@@ -1,0 +1,246 @@
+{#
+    New Reservation Panel Partial
+    A slide-in panel for creating new reservations from the map
+    Consistent with ReservationPanel design pattern
+#}
+
+<!-- Panel Backdrop -->
+<div class="new-reservation-panel-backdrop" id="newReservationPanelBackdrop"></div>
+
+<!-- New Reservation Panel -->
+<div class="new-reservation-panel" id="newReservationPanel" role="dialog" aria-labelledby="newPanelTitle" aria-modal="true">
+    <!-- Header -->
+    <div class="panel-header">
+        <button type="button" class="panel-close-btn" id="newPanelCloseBtn"
+                aria-label="Cerrar panel" title="Cerrar">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+        <div class="panel-title">
+            <span class="panel-ticket" id="newPanelTitle">Nueva Reserva</span>
+            <span class="panel-date" id="newPanelDate"></span>
+        </div>
+        <div style="width: 44px;"></div> <!-- Spacer for symmetry -->
+    </div>
+
+    <!-- Body (scrollable) -->
+    <div class="panel-body">
+        <!-- Panel Content -->
+        <div class="panel-content" id="newPanelContent">
+
+            <!-- Furniture Section -->
+            <section class="panel-section furniture-section">
+                <div class="panel-section-title">
+                    <i class="fas fa-umbrella-beach"></i>
+                    Mobiliario Seleccionado
+                </div>
+                <div class="furniture-chips" id="newPanelFurnitureChips">
+                    <!-- Furniture chips populated dynamically -->
+                </div>
+                <div class="furniture-summary" id="newPanelFurnitureSummary"></div>
+            </section>
+
+            <!-- Customer Section - Uses shared CustomerSearch component -->
+            <section class="panel-section customer-section">
+                <div class="panel-section-title">
+                    <i class="fas fa-user"></i>
+                    Cliente
+                    <button type="button" class="customer-clear-btn" id="newPanelCustomerClearBtn"
+                            style="display: none;" title="Cambiar cliente">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <!-- Customer Search (shown when no customer selected) -->
+                <div class="customer-search-wrapper" id="newPanelCustomerWrapper">
+                    <input type="text"
+                           id="newPanelCustomerSearch"
+                           class="form-control"
+                           placeholder="Buscar cliente por nombre, habitacion o telefono..."
+                           autocomplete="off">
+                    <div class="customer-search-results cs-results" id="newPanelCustomerResults"></div>
+                </div>
+                <!-- Inline Create Customer Form (shown when clicking create button) -->
+                <div class="create-customer-inline" id="newPanelCreateCustomerForm" style="display: none;">
+                    <div class="create-form-header">
+                        <span><i class="fas fa-user-plus"></i> Nuevo Cliente Externo</span>
+                        <button type="button" class="create-form-cancel" id="newPanelCancelCreateBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="create-form-body">
+                        <div class="create-form-row">
+                            <div class="create-form-group">
+                                <label>Nombre *</label>
+                                <input type="text" id="newCustFirstName" class="form-control form-control-sm" placeholder="Nombre">
+                            </div>
+                            <div class="create-form-group">
+                                <label>Apellido</label>
+                                <input type="text" id="newCustLastName" class="form-control form-control-sm" placeholder="Apellido">
+                            </div>
+                        </div>
+                        <div class="create-form-row">
+                            <div class="create-form-group">
+                                <label>Telefono *</label>
+                                <input type="tel" id="newCustPhone" class="form-control form-control-sm" placeholder="+34 600 000 000">
+                            </div>
+                            <div class="create-form-group">
+                                <label>Email</label>
+                                <input type="email" id="newCustEmail" class="form-control form-control-sm" placeholder="email@ejemplo.com">
+                            </div>
+                        </div>
+                        <div class="create-form-row">
+                            <div class="create-form-group">
+                                <label>Idioma</label>
+                                <select id="newCustLanguage" class="form-select form-select-sm">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="es">Espanol</option>
+                                    <option value="en">English</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="fr">Francais</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="create-form-error" id="newCustError" style="display: none;"></div>
+                        <button type="button" class="btn btn-primary btn-sm w-100" id="newPanelSaveCustomerBtn">
+                            <i class="fas fa-check"></i> Crear Cliente
+                        </button>
+                    </div>
+                </div>
+                <!-- Guest Selector for hotel rooms with multiple guests -->
+                <div class="guest-selector-wrapper" id="newPanelGuestSelectorWrapper" style="display: none;">
+                    <div class="guest-selector-row">
+                        <i class="fas fa-user-friends"></i>
+                        <span class="guest-count-text">
+                            <span id="newPanelGuestCount">2</span> huespedes en habitacion:
+                        </span>
+                        <select id="newPanelGuestSelector" class="form-select form-select-sm"></select>
+                    </div>
+                </div>
+                <!-- Selected Customer Display (shown after selection) -->
+                <div class="customer-selected-display" id="newPanelCustomerDisplay" style="display: none;">
+                    <div class="customer-display-compact">
+                        <div class="customer-main-info">
+                            <div class="customer-name" id="newPanelCustomerName">-</div>
+                            <div class="customer-meta" id="newPanelCustomerMeta"></div>
+                        </div>
+                    </div>
+                    <div class="customer-details-inline" id="newPanelCustomerDetailsGrid">
+                        <span class="detail-inline" id="newPanelRoomItem">
+                            <i class="fas fa-door-open"></i>
+                            <span id="newPanelCustomerRoom">-</span>
+                        </span>
+                        <span class="detail-inline" id="newPanelCheckinItem">
+                            <i class="fas fa-calendar-check"></i>
+                            <span id="newPanelCustomerCheckin">-</span>
+                        </span>
+                        <span class="detail-inline" id="newPanelCheckoutItem">
+                            <span class="detail-separator">-</span>
+                            <span id="newPanelCustomerCheckout">-</span>
+                        </span>
+                        <span class="detail-inline" id="newPanelBookingItem" style="display: none;">
+                            <i class="fas fa-hashtag"></i>
+                            <span id="newPanelCustomerBookingRef">-</span>
+                        </span>
+                    </div>
+                </div>
+                <!-- Hidden elements for backwards compatibility -->
+                <span id="newPanelCustomerAvatar" style="display:none;"><span id="newPanelCustomerInitials"></span></span>
+                <input type="hidden" id="newPanelCustomerId" value="">
+                <input type="hidden" id="newPanelCustomerSource" value="customer">
+            </section>
+
+            <!-- Date Section - Uses shared DatePicker component -->
+            <section class="panel-section date-section">
+                <div class="panel-section-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    Fechas
+                </div>
+                <div id="newPanelDatePicker">
+                    <!-- DatePicker component will be initialized here -->
+                </div>
+            </section>
+
+            <!-- Details Section -->
+            <section class="panel-section details-section">
+                <div class="panel-section-title">
+                    <i class="fas fa-info-circle"></i>
+                    Detalles
+                </div>
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <label class="detail-label" for="newPanelNumPeople">Personas</label>
+                        <input type="number"
+                               class="detail-input"
+                               id="newPanelNumPeople"
+                               min="1"
+                               max="20"
+                               value="2">
+                    </div>
+                    <!-- SG-06: Charge to room option (only visible for hotel guests) -->
+                    <div class="detail-item charge-to-room-wrapper" id="newPanelChargeToRoomWrapper" style="display: none;">
+                        <label class="form-check charge-to-room-check">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   id="newPanelChargeToRoom"
+                                   name="charge_to_room"
+                                   value="1">
+                            <span class="form-check-label">
+                                <i class="fas fa-hotel me-1"></i>
+                                Cargar a habitacion
+                            </span>
+                        </label>
+                    </div>
+                    <div class="detail-item full-width">
+                        <label class="detail-label" for="newPanelNotes">Notas</label>
+                        <textarea class="notes-textarea"
+                                  id="newPanelNotes"
+                                  placeholder="Agregar notas sobre la reserva..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Preferences Section -->
+            <section class="panel-section preferences-section">
+                <div class="panel-section-title">
+                    <i class="fas fa-star"></i>
+                    Preferencias
+                </div>
+                <div class="preference-chips" id="newPanelPreferenceChips">
+                    <button type="button" class="pref-chip" data-pref="pref_primera_linea">
+                        <i class="fas fa-water"></i> Primera linea
+                    </button>
+                    <button type="button" class="pref-chip" data-pref="pref_sombra">
+                        <i class="fas fa-umbrella-beach"></i> Sombra
+                    </button>
+                    <button type="button" class="pref-chip" data-pref="pref_cerca_piscina">
+                        <i class="fas fa-swimming-pool"></i> Cerca piscina
+                    </button>
+                    <button type="button" class="pref-chip" data-pref="pref_cerca_bar">
+                        <i class="fas fa-cocktail"></i> Cerca bar
+                    </button>
+                </div>
+                <input type="hidden" id="newPanelPreferences" value="">
+            </section>
+
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="panel-footer" id="newPanelFooter">
+        <button type="button" class="panel-cancel-btn" id="newPanelCancelBtn">
+            Cancelar
+        </button>
+        <button type="button" class="panel-save-btn" id="newPanelCreateBtn">
+            <span class="save-text">
+                <i class="fas fa-check me-1"></i>
+                Crear Reserva
+            </span>
+            <span class="save-loading" style="display: none;">
+                <span class="spinner-border spinner-border-sm" role="status"></span>
+                Creando...
+            </span>
+        </button>
+    </div>
+</div>
+
+<!-- Hidden form for CSRF token -->
+<input type="hidden" id="newPanelCsrfToken" value="{{ csrf_token() }}">

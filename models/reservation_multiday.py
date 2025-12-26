@@ -113,13 +113,26 @@ def create_linked_multiday_reservations(
 
     # Validate availability
     if validate_availability:
-        avail_result = check_furniture_availability_bulk(all_furniture_ids, dates)
-        if not avail_result['all_available']:
-            unavail = avail_result['unavailable'][0]
-            raise ValueError(
-                f"Mobiliario {unavail['furniture_id']} no disponible el {unavail['date']} "
-                f"(reserva {unavail['ticket_number']})"
-            )
+        if furniture_by_date and furniture_ids is None:
+            # Per-date availability check when using furniture_by_date
+            # Each date has specific furniture, check only those for that date
+            for date, date_furniture_ids in furniture_by_date.items():
+                avail_result = check_furniture_availability_bulk(date_furniture_ids, [date])
+                if not avail_result['all_available']:
+                    unavail = avail_result['unavailable'][0]
+                    raise ValueError(
+                        f"Mobiliario {unavail['furniture_id']} no disponible el {unavail['date']} "
+                        f"(reserva {unavail['ticket_number']})"
+                    )
+        else:
+            # Same furniture for all days - check all against all
+            avail_result = check_furniture_availability_bulk(all_furniture_ids, dates)
+            if not avail_result['all_available']:
+                unavail = avail_result['unavailable'][0]
+                raise ValueError(
+                    f"Mobiliario {unavail['furniture_id']} no disponible el {unavail['date']} "
+                    f"(reserva {unavail['ticket_number']})"
+                )
 
     # Check for duplicates
     if validate_duplicates:

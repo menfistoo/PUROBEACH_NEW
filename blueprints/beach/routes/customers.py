@@ -12,7 +12,8 @@ from models.customer import (
     set_customer_preferences, set_customer_tags, find_duplicates,
     merge_customers, find_potential_duplicates_for_customer
 )
-from models.preference import get_all_preferences
+from models.preference import get_all_preferences, get_preference_by_id
+from models.reservation import sync_preferences_to_customer
 from models.tag import get_all_tags
 
 customers_bp = Blueprint('customers', __name__)
@@ -187,9 +188,19 @@ def edit(customer_id):
                 vip_status=vip_status
             )
 
-            # Update preferences
+            # Update preferences with bidirectional sync to reservations
             pref_ids = request.form.getlist('preferences')
-            set_customer_preferences(customer_id, [int(p) for p in pref_ids] if pref_ids else [])
+            if pref_ids:
+                # Convert preference IDs to codes for sync
+                pref_codes = []
+                for pid in pref_ids:
+                    pref = get_preference_by_id(int(pid))
+                    if pref:
+                        pref_codes.append(pref['code'])
+                preferences_csv = ','.join(pref_codes)
+            else:
+                preferences_csv = ''
+            sync_preferences_to_customer(customer_id, preferences_csv, replace=True)
 
             # Update tags
             tag_ids = request.form.getlist('tags')

@@ -412,17 +412,9 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-semibold">
-                                    <i class="fas fa-clock text-primary me-1"></i> Horario
-                                </label>
-                                <select name="time_slot" class="form-select form-select-lg">
-                                    <option value="all_day" {% if not reservation or reservation.time_slot == 'all_day' %}selected{% endif %}>Todo el dia</option>
-                                    <option value="morning" {% if reservation and reservation.time_slot == 'morning' %}selected{% endif %}>Manana</option>
-                                    <option value="afternoon" {% if reservation and reservation.time_slot == 'afternoon' %}selected{% endif %}>Tarde</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
+                            <!-- Hidden time_slot field - always all_day -->
+                            <input type="hidden" name="time_slot" value="all_day">
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold">
                                     <i class="fas fa-users text-primary me-1"></i> Personas
                                 </label>
@@ -568,10 +560,6 @@
                         <div class="summary-row">
                             <span class="summary-label">Fecha</span>
                             <span class="summary-value" id="summaryDate">-</span>
-                        </div>
-                        <div class="summary-row">
-                            <span class="summary-label">Horario</span>
-                            <span class="summary-value" id="summaryTime">Todo el dia</span>
                         </div>
                         <div class="summary-row">
                             <span class="summary-label">Personas</span>
@@ -785,8 +773,6 @@ function updateSummary(){
     const sc=document.getElementById('summaryCustomer');
     currentCustomerData?sc.textContent=currentCustomerData.display_name||currentCustomerData.guest_name||`${currentCustomerData.first_name||''} ${currentCustomerData.last_name||''}`.trim()||'No seleccionado':sc.textContent='No seleccionado';
     document.getElementById('summaryDate').textContent=reservationDate.value?formatDate(reservationDate.value):'-';
-    const ts=document.querySelector('select[name="time_slot"]').value;
-    document.getElementById('summaryTime').textContent={'all_day':'Todo el dia','morning':'Manana','afternoon':'Tarde'}[ts]||'Todo el dia';
     document.getElementById('summaryPeople').textContent=document.getElementById('numPeople').value||'2';
     document.getElementById('summaryFurniture').textContent=`${selectedFurniture.size} items`;
     const sfl=document.getElementById('summaryFurnitureList');
@@ -1115,7 +1101,6 @@ document.getElementById('refreshFurniture')?.addEventListener('click',loadFurnit
 document.getElementById('furnitureZoneFilter')?.addEventListener('change',loadFurnitureAvailability);
 document.getElementById('furnitureTypeFilter')?.addEventListener('change',loadFurnitureAvailability);
 chargeToRoom?.addEventListener('change',function(){chargeRefContainer.style.display=this.checked?'block':'none'});
-document.querySelector('select[name="time_slot"]')?.addEventListener('change',updateSummary);
 document.getElementById('numPeople')?.addEventListener('change',updateSummary);
 
 // ============================================================================
@@ -1464,7 +1449,7 @@ form.addEventListener('submit',async function(e){
                     dates:dates,
                     num_people:parseInt(document.getElementById('numPeople').value)||2,
                     furniture_ids:Array.from(selectedFurniture),
-                    time_slot:document.querySelector('select[name="time_slot"]').value,
+                    time_slot:'all_day',
                     payment_status:document.querySelector('select[name="payment_status"]').value,
                     charge_to_room:document.getElementById('chargeToRoom')?.checked?1:0,
                     charge_reference:document.getElementById('chargeReference')?.value||'',
@@ -1497,6 +1482,63 @@ form.addEventListener('submit',async function(e){
 
 {% if mode == 'edit' and reservation.furniture %}{% for f in reservation.furniture %}selectedFurniture.add({{ f.furniture_id }});{% endfor %}{% endif %}
 if(reservationDate.value)loadFurnitureAvailability();
+
+// Handle preselected customer from deep link (map "Más opciones" button)
+{% if preselected_customer %}
+(function(){
+    const customer = {
+        id: {{ preselected_customer.id }},
+        first_name: "{{ preselected_customer.first_name|e }}",
+        last_name: "{{ preselected_customer.last_name|default('')|e }}",
+        customer_type: "{{ preselected_customer.customer_type }}",
+        room_number: "{{ preselected_customer.room_number|default('')|e }}",
+        phone: "{{ preselected_customer.phone|default('')|e }}",
+        email: "{{ preselected_customer.email|default('')|e }}",
+        vip_status: {{ preselected_customer.vip_status|default(0) }},
+        notes: "{{ preselected_customer.notes|default('')|e }}",
+        source: 'customer',
+        preferences: {{ preselected_customer.preference_codes|default([])|tojson }}
+    };
+    selectCustomer(customer);
+    // Auto-select preferences that match
+    if(customer.preferences && customer.preferences.length > 0) {
+        customer.preferences.forEach(prefCode => {
+            const cb = document.querySelector(`.preference-check[value="${prefCode}"]`);
+            if(cb) cb.checked = true;
+        });
+    }
+})();
+{% endif %}
+
+{% if preselected_hotel_guest %}
+(function(){
+    const guest = {
+        id: {{ preselected_hotel_guest.id }},
+        guest_name: "{{ preselected_hotel_guest.guest_name|e }}",
+        room_number: "{{ preselected_hotel_guest.room_number|e }}",
+        arrival_date: "{{ preselected_hotel_guest.arrival_date|default('')|e }}",
+        departure_date: "{{ preselected_hotel_guest.departure_date|default('')|e }}",
+        vip_code: "{{ preselected_hotel_guest.vip_code|default('')|e }}",
+        nationality: "{{ preselected_hotel_guest.nationality|default('')|e }}",
+        email: "{{ preselected_hotel_guest.email|default('')|e }}",
+        phone: "{{ preselected_hotel_guest.phone|default('')|e }}",
+        notes: "{{ preselected_hotel_guest.notes|default('')|e }}"
+    };
+    selectHotelGuest(guest, 1);
+})();
+{% endif %}
+
+// Handle preselected multi-day dates from deep link
+{% if selected_dates and selected_dates|length > 0 %}
+(function(){
+    const preselectedDates = {{ selected_dates|tojson }};
+    preselectedDates.forEach(d => {
+        if(d && d.trim()) selectedDates.add(d.trim());
+    });
+    updatePreviewText();
+})();
+{% endif %}
+
 updateSummary();
 });
 </script>

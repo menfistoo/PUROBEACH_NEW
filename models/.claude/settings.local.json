@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(sqlite3:*)",
+      "Skill(code-standards)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(timeout 5 python:*)",
+      "Bash(blueprints/beach/routes/config/__init__.py )",
+      "Bash(blueprints/beach/routes/config/furniture.py )",
+      "Bash(blueprints/beach/routes/config/furniture_types.py )",
+      "Bash(blueprints/beach/routes/config/map_editor.py )",
+      "Bash(blueprints/beach/routes/config/furniture_manager.py )",
+      "Bash(database/migrations.py )",
+      "Bash(database/migrations/__init__.py )",
+      "Bash(database/migrations/furniture_manager_menu.py )",
+      "Bash(templates/beach/config/_furniture_type_form.html )",
+      "Bash(templates/beach/config/_furniture_list_tab.html )",
+      "Bash(templates/beach/config/_furniture_types_tab.html )",
+      "Bash(templates/beach/config/_map_editor_css.html )",
+      "Bash(templates/beach/config/_map_editor_tab.html )",
+      "Bash(templates/beach/config/furniture_manager.html)",
+      "Bash(blueprints/beach/routes/api/map.py )",
+      "Bash(database/migrations/furniture_extensions.py )",
+      "Bash(database/schema.py )",
+      "Bash(models/furniture_block.py )",
+      "Bash(static/js/map.js )",
+      "Bash(templates/beach/map.html)",
+      "Bash(models/furniture.py )",
+      "Bash(static/js/map-editor.js )"
+    ]
+  }
+}

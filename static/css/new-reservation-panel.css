@@ -1,0 +1,923 @@
+/**
+ * New Reservation Panel Styles
+ * Consistent with ReservationPanel design pattern
+ * Uses CSS variables from main.css
+ */
+
+/* =============================================================================
+   BACKDROP
+   ============================================================================= */
+.new-reservation-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 58, 92, 0.6);
+    z-index: var(--z-modal-backdrop);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-slow), visibility var(--transition-slow);
+}
+
+.new-reservation-panel-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* =============================================================================
+   PANEL CONTAINER
+   ============================================================================= */
+.new-reservation-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--color-white);
+    z-index: var(--z-modal);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.new-reservation-panel.open {
+    transform: translateX(0);
+}
+
+/* Swipe indicator for mobile */
+.new-reservation-panel::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 8px;
+    width: 4px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    transform: translateY(-50%);
+}
+
+/* Desktop: Fixed width panel */
+@media (min-width: 768px) {
+    .new-reservation-panel {
+        width: 400px;
+        border-radius: var(--border-radius-xl) 0 0 var(--border-radius-xl);
+    }
+
+    .new-reservation-panel::before {
+        display: none;
+    }
+}
+
+@media (min-width: 1200px) {
+    .new-reservation-panel {
+        width: 450px;
+    }
+}
+
+/* =============================================================================
+   HEADER - Reuses reservation-panel styles
+   ============================================================================= */
+.new-reservation-panel .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    background: linear-gradient(135deg, var(--color-secondary) 0%, #2a4a6c 100%);
+    color: var(--color-white);
+    min-height: 60px;
+    flex-shrink: 0;
+}
+
+.new-reservation-panel .panel-close-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: var(--border-radius-lg);
+    color: var(--color-white);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.new-reservation-panel .panel-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.new-reservation-panel .panel-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.new-reservation-panel .panel-ticket {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.new-reservation-panel .panel-date {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* =============================================================================
+   BODY - Scrollable content area
+   ============================================================================= */
+.new-reservation-panel .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-4);
+    background: var(--color-background);
+}
+
+/* =============================================================================
+   SECTIONS - Consistent with ReservationPanel
+   ============================================================================= */
+.new-reservation-panel .panel-section {
+    background: var(--color-accent);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.new-reservation-panel .panel-section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--color-secondary);
+    margin-bottom: var(--space-3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.new-reservation-panel .panel-section-title i {
+    color: var(--color-primary);
+    font-size: 14px;
+}
+
+/* =============================================================================
+   FURNITURE SECTION
+   ============================================================================= */
+.new-reservation-panel .furniture-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.new-reservation-panel .furniture-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 6px 12px;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-full);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.new-reservation-panel .furniture-summary {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+/* Capacity warning when guest count exceeds furniture capacity */
+.new-reservation-panel .capacity-warning {
+    display: none;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    background: rgba(229, 163, 61, 0.1);
+    border: 1px solid var(--color-warning, #E5A33D);
+    border-radius: var(--border-radius-md);
+    font-size: 13px;
+    color: var(--color-text);
+}
+
+.new-reservation-panel .capacity-warning i {
+    color: var(--color-warning, #E5A33D);
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.new-reservation-panel .capacity-warning strong {
+    font-weight: 600;
+    color: var(--color-secondary);
+}
+
+.new-reservation-panel .btn-add-furniture {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-warning, #E5A33D);
+    border: none;
+    border-radius: var(--border-radius-md);
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    align-self: flex-start;
+    margin-top: var(--space-1);
+}
+
+.new-reservation-panel .btn-add-furniture:hover {
+    background: var(--color-warning-dark, #c78a2a);
+    transform: translateY(-1px);
+}
+
+.new-reservation-panel .btn-add-furniture:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(229, 163, 61, 0.3);
+}
+
+/* =============================================================================
+   CUSTOMER SECTION - Uses shared CustomerSearch component (customer-search.css)
+   ============================================================================= */
+.new-reservation-panel .customer-search-wrapper {
+    position: relative;
+}
+
+.new-reservation-panel .customer-search-wrapper input {
+    width: 100%;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    font-size: 14px;
+}
+
+.new-reservation-panel .customer-search-wrapper input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+/* Selected Customer Display - Compact Layout */
+.new-reservation-panel .customer-selected-display {
+    background: var(--color-white);
+    border-radius: var(--border-radius-md);
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+}
+
+.new-reservation-panel .customer-display-compact {
+    display: flex;
+    align-items: flex-start;
+}
+
+.new-reservation-panel .customer-main-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.new-reservation-panel .customer-main-info .customer-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
+    line-height: 1.3;
+    word-wrap: break-word;
+}
+
+.new-reservation-panel .customer-main-info .customer-meta {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--color-text, #333);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.new-reservation-panel .customer-meta .badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    font-weight: 600;
+}
+
+.new-reservation-panel .customer-meta .vip-badge {
+    color: var(--color-warning, #E5A33D);
+}
+
+/* Customer Details - Inline compact layout */
+.new-reservation-panel .customer-details-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border);
+    font-size: 12px;
+    color: var(--color-text-muted, #6c757d);
+}
+
+.new-reservation-panel .detail-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.new-reservation-panel .detail-inline i {
+    color: var(--color-primary, #D4AF37);
+    font-size: 11px;
+}
+
+.new-reservation-panel .detail-inline .detail-separator {
+    color: var(--color-text-muted);
+    margin: 0 2px;
+}
+
+/* Guest Selector for hotel rooms with multiple guests - Compact */
+.new-reservation-panel .guest-selector-wrapper {
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: rgba(26, 58, 92, 0.05);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-border);
+}
+
+.new-reservation-panel .guest-selector-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.new-reservation-panel .guest-selector-row i {
+    color: var(--color-primary);
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.new-reservation-panel .guest-count-text {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.new-reservation-panel .guest-selector-row select {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    padding: 4px 8px;
+}
+
+/* Inline Create Customer Form */
+.new-reservation-panel .create-customer-inline {
+    background: linear-gradient(135deg, var(--color-background) 0%, var(--color-white) 100%);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+}
+
+.new-reservation-panel .create-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-primary);
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.new-reservation-panel .create-form-header i {
+    margin-right: 6px;
+}
+
+.new-reservation-panel .create-form-cancel {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 4px 8px;
+    opacity: 0.8;
+    transition: opacity 0.15s;
+}
+
+.new-reservation-panel .create-form-cancel:hover {
+    opacity: 1;
+}
+
+.new-reservation-panel .create-form-body {
+    padding: var(--space-3);
+}
+
+.new-reservation-panel .create-form-row {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.new-reservation-panel .create-form-group {
+    flex: 1;
+    min-width: 0;
+}
+
+.new-reservation-panel .create-form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.new-reservation-panel .create-form-error {
+    padding: var(--space-2);
+    margin-bottom: var(--space-2);
+    background: rgba(193, 68, 79, 0.1);
+    border: 1px solid var(--color-error);
+    border-radius: var(--border-radius-sm);
+    font-size: 12px;
+    color: var(--color-error);
+}
+
+/* =============================================================================
+   DATE SECTION - Uses shared DatePicker component (date-picker.css)
+   ============================================================================= */
+
+/* =============================================================================
+   DETAILS SECTION
+   ============================================================================= */
+.new-reservation-panel .details-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+}
+
+.new-reservation-panel .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.new-reservation-panel .detail-label {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.new-reservation-panel .detail-input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    font-size: 14px;
+}
+
+.new-reservation-panel .notes-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    font-size: 14px;
+    resize: vertical;
+}
+
+/* =============================================================================
+   PREFERENCES SECTION
+   ============================================================================= */
+.new-reservation-panel .preference-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.new-reservation-panel .pref-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 8px 12px;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-full);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.new-reservation-panel .pref-chip:hover {
+    border-color: var(--color-primary);
+}
+
+.new-reservation-panel .pref-chip:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+
+.new-reservation-panel .pref-chip:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.new-reservation-panel .pref-chip.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+}
+
+.new-reservation-panel .pref-chip i {
+    font-size: 11px;
+}
+
+/* =============================================================================
+   FOOTER
+   ============================================================================= */
+.new-reservation-panel .panel-footer {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    background: var(--color-white);
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.new-reservation-panel .panel-cancel-btn {
+    flex: 1;
+    padding: var(--space-3);
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.new-reservation-panel .panel-cancel-btn:hover {
+    background: var(--color-background);
+}
+
+.new-reservation-panel .panel-save-btn {
+    flex: 2;
+    padding: var(--space-3);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark, #B8960C) 100%);
+    border: none;
+    border-radius: var(--border-radius-lg);
+    color: var(--color-white);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.new-reservation-panel .panel-save-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
+}
+
+.new-reservation-panel .panel-save-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+
+.new-reservation-panel .panel-save-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.new-reservation-panel .save-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+}
+
+/* =============================================================================
+   MINIMIZED STATE (during conflict resolution)
+   ============================================================================= */
+
+.new-reservation-panel.minimized {
+    transform: translateX(calc(100% - 50px));
+    pointer-events: none;
+}
+
+.new-reservation-panel.minimized::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 50px;
+    background: linear-gradient(90deg,
+        rgba(212, 175, 55, 0.95) 0%,
+        rgba(212, 175, 55, 0.8) 100%);
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.new-reservation-panel.minimized::after {
+    content: 'Seleccionando alternativa...';
+    position: absolute;
+    left: 25px;
+    top: 50%;
+    transform: rotate(-90deg) translateX(-50%);
+    transform-origin: left center;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+}
+
+/* =============================================================================
+   CONFLICT RESOLUTION - Highlighting blocked furniture
+   ============================================================================= */
+.furniture-item.conflict-blocked rect,
+.furniture-item.conflict-blocked ellipse,
+.furniture-item.conflict-blocked circle {
+    stroke: var(--color-error, #C1444F) !important;
+    stroke-width: 4px !important;
+    animation: conflict-pulse 1.5s infinite;
+}
+
+@keyframes conflict-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.furniture-item.conflict-blocked {
+    will-change: opacity;
+}
+
+/* =============================================================================
+   CONFLICT RESOLUTION - Instruction panel
+   ============================================================================= */
+.conflict-instruction-panel {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: calc(var(--z-modal, 400) + 50);
+    max-width: 320px;
+    width: 90%;
+}
+
+.conflict-instruction-header {
+    background: var(--color-warning, #E5A33D);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 12px 12px 0 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.conflict-instruction-body {
+    padding: 16px;
+    text-align: center;
+}
+
+.conflict-instruction-body p {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: var(--color-text, #1A3A5C);
+}
+
+.conflict-selection-counter {
+    font-size: 1.1rem;
+    margin: 12px 0;
+}
+
+.conflict-selection-counter strong {
+    color: var(--color-primary, #D4AF37);
+}
+
+.conflict-replacing-list {
+    font-size: 12px;
+    color: var(--color-text-muted, #6c757d);
+    margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+    .new-reservation-panel.minimized {
+        transform: translateY(calc(100% - 60px));
+    }
+
+    .new-reservation-panel.minimized::before {
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: auto;
+        width: auto;
+        height: 60px;
+        background: linear-gradient(180deg,
+            rgba(212, 175, 55, 0.95) 0%,
+            rgba(212, 175, 55, 0.8) 100%);
+    }
+
+    .new-reservation-panel.minimized::after {
+        left: 50%;
+        top: 30px;
+        transform: translateX(-50%);
+    }
+}
+
+/* =============================================================================
+   SG-02: AVAILABILITY WARNING
+   ============================================================================= */
+.new-reservation-panel .availability-warning {
+    display: none;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: rgba(193, 68, 79, 0.1);
+    border: 1px solid var(--color-error);
+    border-radius: var(--border-radius-md);
+    font-size: 12px;
+    color: var(--color-error);
+}
+
+.new-reservation-panel .availability-warning i {
+    flex-shrink: 0;
+    font-size: 14px;
+}
+
+.new-reservation-panel .availability-warning strong {
+    font-weight: 600;
+}
+
+/* =============================================================================
+   SG-06: CHARGE TO ROOM OPTION
+   ============================================================================= */
+.new-reservation-panel .charge-to-room-wrapper {
+    margin-top: var(--space-2);
+}
+
+.new-reservation-panel .charge-to-room-check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: rgba(26, 58, 92, 0.05);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.new-reservation-panel .charge-to-room-check:hover {
+    background: rgba(26, 58, 92, 0.1);
+    border-color: var(--color-secondary);
+}
+
+.new-reservation-panel .charge-to-room-check .form-check-input {
+    margin: 0;
+    cursor: pointer;
+}
+
+.new-reservation-panel .charge-to-room-check .form-check-input:checked {
+    background-color: var(--color-secondary);
+    border-color: var(--color-secondary);
+}
+
+.new-reservation-panel .charge-to-room-check .form-check-label {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-secondary);
+}
+
+/* =============================================================================
+   QUICK SWAP MODAL
+   ============================================================================= */
+.quick-swap-modal {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-modal, 400) + 70);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quick-swap-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 58, 92, 0.6);
+    backdrop-filter: blur(2px);
+}
+
+.quick-swap-content {
+    position: relative;
+    width: 90%;
+    max-width: 360px;
+    background: white;
+    border-radius: var(--border-radius-xl, 16px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.quick-swap-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    padding: 14px 16px;
+    background: var(--color-warning, #E5A33D);
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.quick-swap-header i {
+    font-size: 18px;
+}
+
+.quick-swap-body {
+    padding: 16px;
+}
+
+.quick-swap-body p {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: var(--color-text, #1A3A5C);
+}
+
+.quick-swap-reservation-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: var(--color-background, #f8f9fa);
+    border-radius: var(--border-radius-md, 8px);
+    margin-bottom: 12px;
+}
+
+.quick-swap-customer,
+.quick-swap-furniture {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.quick-swap-customer i,
+.quick-swap-furniture i {
+    color: var(--color-primary, #D4AF37);
+    width: 18px;
+    text-align: center;
+}
+
+.quick-swap-instruction {
+    font-size: 13px;
+    color: var(--color-text-muted, #6c757d);
+}
+
+.quick-swap-footer {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--color-border, #dee2e6);
+    background: var(--color-background, #f8f9fa);
+}
+
+.quick-swap-footer .btn {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+}
+
+/* Quick swap in "select destination" mode */
+.quick-swap-modal.selecting-destination .quick-swap-content {
+    max-width: 300px;
+}
+
+.quick-swap-modal.selecting-destination .quick-swap-footer {
+    display: none;
+}
+
+/* Furniture highlighted as swap source */
+.furniture-item.swap-source rect,
+.furniture-item.swap-source ellipse,
+.furniture-item.swap-source circle {
+    stroke: var(--color-warning, #E5A33D) !important;
+    stroke-width: 4px !important;
+    animation: swap-pulse 1s infinite;
+}
+
+@keyframes swap-pulse {
+    0%, 100% { stroke-opacity: 1; }
+    50% { stroke-opacity: 0.5; }
+}
+
+.furniture-item.swap-source {
+    will-change: stroke-opacity;
+}

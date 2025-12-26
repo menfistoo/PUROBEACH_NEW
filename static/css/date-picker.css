@@ -1,0 +1,310 @@
+/**
+ * DatePicker - Shared multi-day date picker styles
+ *
+ * Used by both reservation form and map quick reservation modal.
+ * Follows Beach Club design system.
+ */
+
+/* Container */
+.dp-container {
+    position: relative;
+}
+
+/* Collapsed view */
+.dp-collapsed {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #dee2e6);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dp-collapsed:hover {
+    border-color: var(--color-primary, #D4AF37);
+    background: var(--color-primary-light-bg, #fffbf0);
+}
+
+.dp-preview {
+    display: flex;
+    align-items: center;
+}
+
+.dp-preview-text {
+    color: var(--color-text, #1A3A5C);
+}
+
+/* Expanded calendar dropdown */
+.dp-expanded {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    margin-top: 5px;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #dee2e6);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 15px;
+}
+
+.dp-footer {
+    border-top: 1px solid var(--color-border, #dee2e6);
+    margin-top: 10px;
+    padding-top: 10px;
+    text-align: center;
+}
+
+/* Calendar header */
+.cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 5px;
+    margin-bottom: 10px;
+}
+
+.cal-header .cal-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-text, #1A3A5C);
+}
+
+.cal-header button {
+    background: none;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    color: var(--color-text-muted, #6c757d);
+}
+
+.cal-header button:hover {
+    background: var(--color-light-gray, #f8f9fa);
+}
+
+.cal-header button:focus {
+    outline: 2px solid var(--color-primary, #D4AF37);
+    outline-offset: 2px;
+}
+
+/* Calendar weekdays */
+.cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #6c757d);
+    margin-bottom: 5px;
+}
+
+/* Calendar days grid */
+.cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+
+.cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    background: transparent;
+    color: var(--color-text, #1A3A5C);
+}
+
+.cal-day:hover:not(.disabled):not(.selected) {
+    background: var(--color-light-gray, #f8f9fa);
+}
+
+.cal-day:focus {
+    outline: 2px solid var(--color-primary, #D4AF37);
+    outline-offset: 2px;
+}
+
+.cal-day.today {
+    font-weight: 700;
+    color: var(--color-primary, #D4AF37);
+}
+
+.cal-day.selected {
+    background: var(--color-primary, #D4AF37);
+    color: var(--color-surface, #fff);
+    font-weight: 600;
+}
+
+.cal-day.disabled {
+    color: #767676;
+    cursor: not-allowed;
+}
+
+.cal-day.other-month {
+    color: #767676;
+}
+
+/* Selected date tags */
+.dp-selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+}
+
+.date-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: var(--color-sand, #F5E6D3);
+    border: 1px solid var(--color-primary, #D4AF37);
+    border-radius: 16px;
+    font-size: 0.8rem;
+    color: var(--color-text, #1A3A5C);
+}
+
+.date-tag .remove {
+    cursor: pointer;
+    font-weight: bold;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.date-tag .remove:hover {
+    opacity: 1;
+}
+
+/* Compact mode for modals/sheets */
+.dp-compact .dp-collapsed {
+    padding: 8px 10px;
+    border-radius: 6px;
+}
+
+.dp-compact .dp-expanded {
+    position: relative;
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: none;
+    border: 1px solid var(--color-border, #dee2e6);
+}
+
+.dp-compact .cal-header {
+    padding: 4px 0;
+    margin-bottom: 6px;
+}
+
+.dp-compact .cal-header .cal-title {
+    font-size: 0.85rem;
+}
+
+.dp-compact .cal-header button {
+    padding: 3px 8px;
+    font-size: 0.8rem;
+}
+
+.dp-compact .cal-weekdays {
+    font-size: 0.65rem;
+    margin-bottom: 3px;
+}
+
+.dp-compact .cal-days {
+    gap: 2px;
+}
+
+.dp-compact .cal-day {
+    font-size: 0.75rem;
+    aspect-ratio: auto;
+    padding: 4px 2px;
+    min-width: 24px;
+    min-height: 24px;
+    border-radius: 4px;
+}
+
+.dp-compact .dp-footer {
+    margin-top: 6px;
+    padding-top: 6px;
+}
+
+.dp-compact .dp-selected-tags {
+    gap: 4px;
+}
+
+.dp-compact .date-tag {
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    border-radius: 12px;
+}
+
+.dp-compact .dp-footer small {
+    font-size: 0.7rem;
+}
+
+/* =============================================================================
+   OCCUPANCY VISUALIZATION
+   ============================================================================= */
+
+/* Loading indicator */
+.dp-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--color-primary, #D4AF37);
+    font-size: 1.5rem;
+    z-index: 10;
+}
+
+/* Medium occupancy (50-79%) - subtle warning */
+.cal-day.occupancy-medium {
+    background: rgba(229, 163, 61, 0.12);
+}
+
+.cal-day.occupancy-medium:hover:not(.disabled):not(.selected) {
+    background: rgba(229, 163, 61, 0.2);
+}
+
+/* High occupancy (80-99%) - visible warning */
+.cal-day.occupancy-high {
+    background: rgba(229, 163, 61, 0.25);
+    border: 1px solid var(--color-warning, #E5A33D);
+}
+
+.cal-day.occupancy-high:hover:not(.disabled):not(.selected) {
+    background: rgba(229, 163, 61, 0.35);
+}
+
+/* Full occupancy (100%) - blocked */
+.cal-day.occupancy-full {
+    background: rgba(193, 68, 79, 0.12);
+    border: 1px solid var(--color-error, #C1444F);
+    color: var(--color-error, #C1444F) !important;
+    cursor: not-allowed;
+}
+
+.cal-day.occupancy-full:not(.selected) {
+    opacity: 0.7;
+}
+
+/* Selected states with occupancy */
+.cal-day.selected.occupancy-high {
+    background: var(--color-warning, #E5A33D);
+    border-color: var(--color-warning, #E5A33D);
+    color: var(--color-surface, #fff);
+}
+
+.cal-day.selected.occupancy-full {
+    background: var(--color-error, #C1444F);
+    border-color: var(--color-error, #C1444F);
+    color: var(--color-surface, #fff) !important;
+}

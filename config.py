@@ -64,6 +64,15 @@ class ProductionConfig(Config):
     if not SECRET_KEY:
         raise ValueError("SECRET_KEY environment variable must be set in production")
 
+    # Validate SECRET_KEY strength (minimum 32 characters)
+    if len(SECRET_KEY) < 32:
+        raise ValueError("SECRET_KEY must be at least 32 characters in production")
+
+    # Ensure DATABASE_PATH is explicitly set (not using default)
+    DATABASE_PATH = os.environ.get('DATABASE_PATH')
+    if not DATABASE_PATH:
+        raise ValueError("DATABASE_PATH environment variable must be set in production")
+
 
 class TestConfig(Config):
     """Testing environment configuration."""

@@ -126,14 +126,41 @@ def register_error_handlers(app):
 
 def register_cli_commands(app):
     """Register Flask CLI commands."""
+    import re
+
+    def validate_email(email: str) -> bool:
+        """Validate email format."""
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return bool(re.match(pattern, email))
+
+    def validate_password(password: str) -> tuple[bool, str]:
+        """
+        Validate password strength.
+        Returns (is_valid, error_message).
+        """
+        if len(password) < 8:
+            return False, "Password must be at least 8 characters"
+        if not re.search(r'[A-Z]', password):
+            return False, "Password must contain at least one uppercase letter"
+        if not re.search(r'[a-z]', password):
+            return False, "Password must contain at least one lowercase letter"
+        if not re.search(r'\d', password):
+            return False, "Password must contain at least one digit"
+        return True, ""
 
     @app.cli.command('init-db')
     def init_db_command():
         """Initialize database with schema and seed data."""
         click.echo('Initializing database...')
         with app.app_context():
-            init_db()
-        click.echo('Database initialized successfully!')
+            try:
+                init_db()
+                app.logger.info('Database initialized via CLI')
+                click.echo('Database initialized successfully!')
+            except Exception as e:
+                app.logger.error(f'Database initialization failed: {e}')
+                click.echo(f'Error: {e}', err=True)
+                raise SystemExit(1)
 
     @app.cli.command('run-migrations')
     def run_migrations_command():
@@ -153,6 +180,7 @@ def register_cli_commands(app):
         )
 
         click.echo('Running migrations...')
+        failed_count = 0
         with app.app_context():
             migrations = [
                 ('furniture_types_v2', migrate_furniture_types_v2),
@@ -171,19 +199,43 @@ def register_cli_commands(app):
             for name, func in migrations:
                 try:
                     func()
+                    app.logger.info(f'Migration {name} completed')
                 except Exception as e:
+                    failed_count += 1
+                    app.logger.error(f'Migration {name} failed: {e}')
                     click.echo(f'  Migration {name} failed: {e}', err=True)
 
-        click.echo('Migrations complete!')
+        if failed_count > 0:
+            app.logger.warning(f'Migrations completed with {failed_count} failures')
+            click.echo(f'Migrations complete with {failed_count} failures!', err=True)
+        else:
+            app.logger.info('All migrations completed successfully')
+            click.echo('Migrations complete!')
 
     @app.cli.command('create-user')
     @click.argument('username')
     @click.argument('email')
     @click.password_option()
     def create_user_command(username, email, password):
-        """Create a new user."""
+        """Create a new user with validation."""
         from models.user import create_user
         from models.role import get_role_by_name
+
+        # Validate email format
+        if not validate_email(email):
+            click.echo('Error: Invalid email format', err=True)
+            raise SystemExit(1)
+
+        # Validate password strength
+        is_valid, error_msg = validate_password(password)
+        if not is_valid:
+            click.echo(f'Error: {error_msg}', err=True)
+            raise SystemExit(1)
+
+        # Validate username (alphanumeric, 3-50 chars)
+        if not username or len(username) < 3 or len(username) > 50:
+            click.echo('Error: Username must be 3-50 characters', err=True)
+            raise SystemExit(1)
 
         with app.app_context():
             # Get admin role
@@ -196,9 +248,12 @@ def register_cli_commands(app):
                     password=password,
                     role_id=admin_role['id']
                 )
+                app.logger.info(f'User created via CLI: {username} (ID: {user_id})')
                 click.echo(f'User created successfully! ID: {user_id}')
             except Exception as e:
+                app.logger.error(f'Failed to create user {username}: {e}')
                 click.echo(f'Error creating user: {str(e)}', err=True)
+                raise SystemExit(1)
 
 
 def register_context_processors(app):

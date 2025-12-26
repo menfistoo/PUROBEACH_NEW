@@ -165,13 +165,39 @@ def create():
         except Exception as e:
             flash(f'Error al crear reserva: {str(e)}', 'error')
 
-    # For GET request, pre-select date if provided
+    # For GET request, pre-select date and other parameters if provided (deep link from map)
     selected_date = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+
+    # Pre-select customer if provided (deep link with state)
+    preselected_customer = None
+    preselected_hotel_guest = None
+
+    customer_id_param = request.args.get('customer_id', type=int)
+    hotel_guest_id_param = request.args.get('hotel_guest_id', type=int)
+
+    if customer_id_param:
+        from models.customer import get_customer_by_id, get_customer_preferences
+        preselected_customer = get_customer_by_id(customer_id_param)
+        if preselected_customer:
+            # Get customer preferences for auto-fill
+            prefs = get_customer_preferences(customer_id_param)
+            preselected_customer['preference_codes'] = [p['code'] for p in prefs]
+
+    elif hotel_guest_id_param:
+        from models.hotel_guest import get_hotel_guest_by_id
+        preselected_hotel_guest = get_hotel_guest_by_id(hotel_guest_id_param)
+
+    # Pre-select multiple dates if provided (comma-separated)
+    selected_dates = request.args.get('dates', '').split(',') if request.args.get('dates') else []
+    selected_dates = [d.strip() for d in selected_dates if d.strip()]
 
     return render_template('beach/reservation_form.html',
                            mode='create', zones=zones, furniture_types=furniture_types,
                            preferences=preferences, tags=tags, states=states,
-                           selected_date=selected_date)
+                           selected_date=selected_date,
+                           selected_dates=selected_dates,
+                           preselected_customer=preselected_customer,
+                           preselected_hotel_guest=preselected_hotel_guest)
 
 
 @reservations_bp.route('/<int:reservation_id>')

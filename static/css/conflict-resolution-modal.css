@@ -1,0 +1,323 @@
+/**
+ * ConflictResolutionModal - Styles
+ *
+ * Modal for handling multi-day reservation conflicts.
+ * Follows Beach Club design system.
+ */
+
+/* =============================================================================
+   MODAL CONTAINER
+   ============================================================================= */
+
+.conflict-modal {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-modal, 400) + 60);
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.conflict-modal.open {
+    display: flex;
+}
+
+.conflict-modal.minimized {
+    display: none;
+}
+
+/* Backdrop */
+.conflict-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 58, 92, 0.6);
+    backdrop-filter: blur(2px);
+}
+
+/* =============================================================================
+   MODAL CONTENT
+   ============================================================================= */
+
+.conflict-modal-content {
+    position: relative;
+    width: 95%;
+    max-width: 500px;
+    max-height: 80vh;
+    background: var(--color-surface, #fff);
+    border-radius: var(--border-radius-xl, 16px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header */
+.conflict-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--color-secondary, #1A3A5C) 0%, #2a4a6c 100%);
+    color: white;
+}
+
+.conflict-modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+/* Ensure h3 inherits white color from header */
+.conflict-modal-header h3,
+.conflict-modal-header h3 * {
+    color: inherit;
+}
+
+.conflict-modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.conflict-modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Body */
+.conflict-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.conflict-intro {
+    margin: 0 0 16px 0;
+    color: var(--color-text-muted, #6c757d);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Footer */
+.conflict-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--color-border, #dee2e6);
+    background: var(--color-background, #f8f9fa);
+}
+
+/* =============================================================================
+   CONFLICT LIST
+   ============================================================================= */
+
+.conflict-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Empty state */
+.conflict-empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--color-success, #4A7C59);
+}
+
+.conflict-empty i {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+.conflict-empty p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* Date group */
+.conflict-date-group {
+    border: 1px solid var(--color-border, #dee2e6);
+    border-radius: var(--border-radius-lg, 12px);
+    padding: 12px;
+    background: var(--color-surface, #fff);
+    transition: all 0.2s;
+}
+
+.conflict-date-group.resolved {
+    border-color: var(--color-success, #4A7C59);
+    background: rgba(74, 124, 89, 0.05);
+}
+
+/* Date header */
+.conflict-date-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.conflict-date {
+    font-weight: 600;
+    color: var(--color-text, #1A3A5C);
+    font-size: 0.95rem;
+}
+
+/* Conflict items */
+.conflict-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.conflict-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    background: var(--color-background, #f8f9fa);
+    border-radius: var(--border-radius-md, 8px);
+    font-size: 0.85rem;
+}
+
+.conflict-furniture {
+    font-weight: 500;
+    color: var(--color-text, #1A3A5C);
+}
+
+.conflict-blocker {
+    color: var(--color-text-muted, #6c757d);
+    font-size: 0.8rem;
+}
+
+/* Action buttons */
+.conflict-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.conflict-actions .btn {
+    flex: 1;
+    min-width: 120px;
+    min-height: 44px; /* Touch target size */
+}
+
+.conflict-actions .btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
+}
+
+.conflict-actions .btn:focus-visible {
+    outline: 2px solid var(--color-primary, #D4AF37);
+    outline-offset: 2px;
+}
+
+/* =============================================================================
+   SUMMARY
+   ============================================================================= */
+
+.conflict-summary {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--color-border, #dee2e6);
+}
+
+.conflict-summary-success,
+.conflict-summary-pending {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: var(--border-radius-md, 8px);
+    font-size: 0.9rem;
+}
+
+.conflict-summary-success {
+    background: rgba(74, 124, 89, 0.1);
+    color: var(--color-success, #4A7C59);
+}
+
+.conflict-summary-pending {
+    background: rgba(229, 163, 61, 0.1);
+    color: var(--color-warning-dark, #b87d1a);
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
+
+@media (max-width: 576px) {
+    .conflict-modal-content {
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .conflict-modal-body {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .conflict-modal-footer {
+        padding: 12px 16px;
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .conflict-actions {
+        flex-direction: column;
+    }
+
+    .conflict-actions .btn {
+        width: 100%;
+        padding: 10px;
+        font-size: 0.95rem;
+    }
+}
+
+/* =============================================================================
+   BUTTON STATES
+   ============================================================================= */
+
+.conflict-retry-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.navigate-to-day-btn {
+    border-color: var(--color-primary, #D4AF37);
+    color: var(--color-primary, #D4AF37);
+}
+
+.navigate-to-day-btn:hover {
+    background: var(--color-primary, #D4AF37);
+    border-color: var(--color-primary, #D4AF37);
+    color: white;
+}
+
+.navigate-to-day-btn:focus {
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
+}
+
+.remove-day-btn {
+    border-color: var(--color-error, #C1444F);
+    color: var(--color-error, #C1444F);
+}
+
+.remove-day-btn:hover {
+    background: var(--color-error, #C1444F);
+    border-color: var(--color-error, #C1444F);
+    color: white;
+}
+
+.remove-day-btn:focus {
+    box-shadow: 0 0 0 3px rgba(193, 68, 79, 0.3);
+}

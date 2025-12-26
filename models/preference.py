@@ -231,3 +231,63 @@ def remove_preference_from_customer(customer_id: int, preference_id: int) -> boo
 
     db.commit()
     return cursor.rowcount > 0
+
+
+def get_preference_ids_by_codes(codes: list) -> list:
+    """
+    Get preference IDs from preference codes.
+
+    Args:
+        codes: List of preference codes (e.g., ['pref_sombra', 'pref_primera_linea'])
+
+    Returns:
+        List of preference IDs
+    """
+    if not codes:
+        return []
+
+    db = get_db()
+    cursor = db.cursor()
+
+    placeholders = ','.join(['?' for _ in codes])
+    cursor.execute(f'''
+        SELECT id FROM beach_preferences
+        WHERE code IN ({placeholders})
+    ''', codes)
+
+    return [row['id'] for row in cursor.fetchall()]
+
+
+def set_customer_preferences_by_codes(customer_id: int, codes: list) -> bool:
+    """
+    Set customer preferences by codes, replacing all existing preferences.
+    This is the main function for two-way sync between reservations and customer profile.
+
+    Args:
+        customer_id: Customer ID
+        codes: List of preference codes (e.g., ['pref_sombra', 'pref_primera_linea'])
+
+    Returns:
+        True if updated successfully
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Get preference IDs from codes
+    preference_ids = get_preference_ids_by_codes(codes)
+
+    # Delete existing preferences
+    cursor.execute('''
+        DELETE FROM beach_customer_preferences
+        WHERE customer_id = ?
+    ''', (customer_id,))
+
+    # Insert new preferences
+    for pref_id in preference_ids:
+        cursor.execute('''
+            INSERT OR IGNORE INTO beach_customer_preferences (customer_id, preference_id)
+            VALUES (?, ?)
+        ''', (customer_id, pref_id))
+
+    db.commit()
+    return True

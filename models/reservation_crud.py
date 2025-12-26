@@ -7,6 +7,7 @@ from database import get_db
 from datetime import datetime
 from .reservation_state import calculate_reservation_color, update_customer_statistics
 from .state import get_default_state
+from .reservation_availability import check_furniture_availability_bulk
 
 
 # =============================================================================
@@ -194,8 +195,19 @@ def create_beach_reservation(
 
         reservation_id = cursor.lastrowid
 
-        # Assign furniture
+        # Assign furniture (with availability check)
         if furniture_ids:
+            # Check furniture availability before assigning
+            availability = check_furniture_availability_bulk(
+                furniture_ids=furniture_ids,
+                dates=[reservation_date],
+                exclude_reservation_id=None
+            )
+            if availability.get('conflicts'):
+                conflict_ids = list(availability['conflicts'].keys())
+                db.rollback()
+                raise ValueError(f"Mobiliario no disponible: {conflict_ids}")
+
             for furniture_id in furniture_ids:
                 cursor.execute('''
                     INSERT INTO beach_reservation_furniture
@@ -393,6 +405,16 @@ def update_reservation_with_furniture(
             return False
         res_date = row['reservation_date']
 
+        # Check furniture availability (excluding current reservation)
+        availability = check_furniture_availability_bulk(
+            furniture_ids=furniture_ids,
+            dates=[res_date],
+            exclude_reservation_id=reservation_id
+        )
+        if availability.get('conflicts'):
+            conflict_ids = list(availability['conflicts'].keys())
+            raise ValueError(f"Mobiliario no disponible: {conflict_ids}")
+
         # Clear existing assignments
         cursor.execute('''
             DELETE FROM beach_reservation_furniture
@@ -505,32 +527,42 @@ def create_reservation_with_furniture(
 # PREFERENCE SYNC
 # =============================================================================
 
-def sync_preferences_to_customer(customer_id: int, preferences_csv: str) -> bool:
+def sync_preferences_to_customer(customer_id: int, preferences_csv: str,
+                                  replace: bool = True) -> bool:
     """
     Sync reservation preferences to customer profile.
+    Updates customer's preferences and propagates to all active reservations.
 
     Args:
         customer_id: Customer ID
-        preferences_csv: CSV of preference codes
+        preferences_csv: CSV of preference codes (e.g., 'pref_sombra,pref_vip')
+        replace: If True, replaces all existing preferences. If False, only adds.
 
     Returns:
         bool: Success status
     """
-    if not preferences_csv:
-        return True
-
     db = get_db()
     cursor = db.cursor()
 
     try:
-        pref_codes = [p.strip() for p in preferences_csv.split(',') if p.strip()]
+        pref_codes = []
+        if preferences_csv:
+            pref_codes = [p.strip() for p in preferences_csv.split(',') if p.strip()]
 
+        if replace:
+            # Delete existing customer preferences
+            cursor.execute(
+                'DELETE FROM beach_customer_preferences WHERE customer_id = ?',
+                (customer_id,)
+            )
+
+        # Get preference IDs for the codes
+        pref_ids = []
         for code in pref_codes:
-            # Get preference ID
             cursor.execute('SELECT id FROM beach_preferences WHERE code = ?', (code,))
             row = cursor.fetchone()
             if row:
-                # Insert if not exists
+                pref_ids.append(row['id'])
                 cursor.execute('''
                     INSERT OR IGNORE INTO beach_customer_preferences
                     (customer_id, preference_id)
@@ -538,6 +570,10 @@ def sync_preferences_to_customer(customer_id: int, preferences_csv: str) -> bool
                 ''', (customer_id, row['id']))
 
         db.commit()
+
+        # Propagate to all active/future reservations
+        sync_customer_preferences_to_reservations(customer_id, preferences_csv)
+
         return True
 
     except Exception:
@@ -563,3 +599,61 @@ def get_customer_preference_codes(customer_id: int) -> list:
         WHERE cp.customer_id = ?
     ''', (customer_id,))
     return [row['code'] for row in cursor.fetchall()]
+
+
+def sync_customer_preferences_to_reservations(customer_id: int,
+                                               preferences_csv: str = None) -> int:
+    """
+    Sync customer preferences to all their active/future reservations.
+    Called when customer preferences are updated.
+
+    Args:
+        customer_id: Customer ID
+        preferences_csv: CSV of preference codes. If None, fetches from customer profile.
+
+    Returns:
+        int: Number of reservations updated
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    try:
+        # Get preferences CSV if not provided
+        if preferences_csv is None:
+            codes = get_customer_preference_codes(customer_id)
+            preferences_csv = ','.join(codes) if codes else None
+
+        # Get all active/future reservations for this customer
+        # Only update reservations that haven't been completed or cancelled
+        cursor.execute('''
+            SELECT r.id
+            FROM beach_reservations r
+            LEFT JOIN beach_reservation_daily_states rds
+                ON rds.reservation_id = r.id
+                AND rds.state_date = r.reservation_date
+            LEFT JOIN beach_reservation_states rs
+                ON rs.name = rds.state_name
+            WHERE r.customer_id = ?
+            AND r.reservation_date >= date('now')
+            AND (rs.is_availability_releasing IS NULL OR rs.is_availability_releasing = 0)
+        ''', (customer_id,))
+
+        reservation_ids = [row['id'] for row in cursor.fetchall()]
+
+        if not reservation_ids:
+            return 0
+
+        # Update all matching reservations
+        placeholders = ','.join('?' * len(reservation_ids))
+        cursor.execute(f'''
+            UPDATE beach_reservations
+            SET preferences = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id IN ({placeholders})
+        ''', [preferences_csv] + reservation_ids)
+
+        db.commit()
+        return len(reservation_ids)
+
+    except Exception:
+        db.rollback()
+        return 0

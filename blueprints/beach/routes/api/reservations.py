@@ -9,11 +9,11 @@ from models.reservation import (
     get_reservation_with_details, get_available_furniture,
     get_status_history, add_reservation_state, remove_reservation_state,
     check_furniture_availability_bulk, check_duplicate_reservation,
-    get_furniture_availability_map, get_conflicting_reservations,
-    create_linked_multiday_reservations, get_multiday_summary,
-    cancel_multiday_reservations, update_multiday_reservations,
-    suggest_furniture_for_reservation, build_furniture_occupancy_map,
-    validate_cluster_contiguity
+    check_duplicate_by_room, get_furniture_availability_map,
+    get_conflicting_reservations, create_linked_multiday_reservations,
+    get_multiday_summary, cancel_multiday_reservations,
+    update_multiday_reservations, suggest_furniture_for_reservation,
+    build_furniture_occupancy_map, validate_cluster_contiguity
 )
 from datetime import date
 
@@ -69,9 +69,27 @@ def register_routes(bp):
 
         try:
             current_states = reservation.get('current_states', '')
-            has_state = state_name in [s.strip() for s in current_states.split(',') if s.strip()]
+            current_state_list = [s.strip() for s in current_states.split(',') if s.strip()]
+            has_state = state_name in current_state_list
 
-            if action == 'add' or (action == 'toggle' and not has_state):
+            # Set action: remove all existing states and set the new one
+            if action == 'set':
+                # Remove all existing states first
+                for existing_state in current_state_list:
+                    if existing_state != state_name:
+                        remove_reservation_state(
+                            reservation_id, existing_state,
+                            changed_by=current_user.username if current_user else 'system'
+                        )
+                # Add the new state if not already present
+                if not has_state:
+                    add_reservation_state(
+                        reservation_id, state_name,
+                        changed_by=current_user.username if current_user else 'system'
+                    )
+                return jsonify({'success': True, 'action': 'set', 'state': state_name})
+
+            elif action == 'add' or (action == 'toggle' and not has_state):
                 add_reservation_state(
                     reservation_id, state_name,
                     changed_by=current_user.username if current_user else 'system'
@@ -160,20 +178,59 @@ def register_routes(bp):
 
         return jsonify(result)
 
-    @bp.route('/reservations/check-duplicate', methods=['POST'])
+    @bp.route('/reservations/check-duplicate', methods=['GET', 'POST'])
     @login_required
     @permission_required('beach.reservations.view')
     def check_duplicate():
-        """Check for duplicate reservation (same customer + dates)."""
-        data = request.get_json()
-        customer_id = data.get('customer_id')
-        dates = data.get('dates', [])
-        exclude_reservation_id = data.get('exclude_reservation_id')
+        """Check for duplicate reservation (same customer + dates).
 
-        if not customer_id:
-            return jsonify({'error': 'customer_id requerido'}), 400
-        if not dates:
-            return jsonify({'error': 'dates requeridos'}), 400
+        Supports both GET (query params) and POST (JSON body).
+        GET: ?customer_id=123&date=2024-12-24 or ?hotel_guest_id=456&date=...
+        POST: { customer_id: 123, dates: [...] }
+
+        For hotel guests, checks by room number to find any customer
+        with the same room who already has a reservation.
+        """
+        if request.method == 'GET':
+            customer_id = request.args.get('customer_id', type=int)
+            hotel_guest_id = request.args.get('hotel_guest_id', type=int)
+            date = request.args.get('date')
+            exclude_reservation_id = request.args.get('exclude_reservation_id', type=int)
+
+            # If hotel_guest_id provided, look up by room number
+            if hotel_guest_id and not customer_id:
+                from models.hotel_guest import get_hotel_guest_by_id
+                hotel_guest = get_hotel_guest_by_id(hotel_guest_id)
+                if hotel_guest and hotel_guest.get('room_number'):
+                    # Check for any reservation with a customer from this room
+                    room_number = hotel_guest['room_number']
+                    is_duplicate, existing = check_duplicate_by_room(
+                        room_number=room_number,
+                        dates=[date] if date else [],
+                        exclude_reservation_id=exclude_reservation_id
+                    )
+                    return jsonify({
+                        'has_duplicate': is_duplicate,
+                        'is_duplicate': is_duplicate,
+                        'existing_reservation': existing
+                    })
+
+            if not customer_id:
+                return jsonify({'has_duplicate': False, 'existing_reservation': None})
+            if not date:
+                return jsonify({'error': 'date requerido'}), 400
+
+            dates = [date]
+        else:
+            data = request.get_json()
+            customer_id = data.get('customer_id')
+            dates = data.get('dates', [])
+            exclude_reservation_id = data.get('exclude_reservation_id')
+
+            if not customer_id:
+                return jsonify({'error': 'customer_id requerido'}), 400
+            if not dates:
+                return jsonify({'error': 'dates requeridos'}), 400
 
         is_duplicate, existing = check_duplicate_reservation(
             customer_id=customer_id,
@@ -182,7 +239,8 @@ def register_routes(bp):
         )
 
         return jsonify({
-            'is_duplicate': is_duplicate,
+            'has_duplicate': is_duplicate,
+            'is_duplicate': is_duplicate,  # backward compat
             'existing_reservation': existing
         })
 
