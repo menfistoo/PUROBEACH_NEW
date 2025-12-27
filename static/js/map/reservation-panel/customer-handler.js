@@ -2,7 +2,7 @@
  * CustomerHandler - Manages customer selection, creation, and display
  * Handles customer search, inline creation form, hotel guest integration
  */
-export class CustomerHandler {
+class CustomerHandler {
     constructor(panel) {
         this.panel = panel;
         this.state = {

@@ -2,7 +2,7 @@
  * ConflictResolver - Handles multi-day furniture conflicts
  * Shows conflict modal, navigates to conflict days, retries with per-day selections
  */
-export class ConflictResolver {
+class ConflictResolver {
     constructor(panel) {
         this.panel = panel;
         this.conflictModal = null;

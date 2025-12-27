@@ -8,15 +8,16 @@
  * - PricingCalculator: Pricing fetch, display, editing
  * - ConflictResolver: Conflict modal, per-day selections
  * - SafeguardChecks: All validation checks (SG-01 to SG-07)
+ *
+ * Dependencies (must be loaded before this file):
+ * - customer-handler.js
+ * - date-availability.js
+ * - pricing-calculator.js
+ * - conflict-resolver.js
+ * - safeguard-checks.js
  */
 
-import { CustomerHandler } from './customer-handler.js';
-import { DateAvailabilityHandler } from './date-availability.js';
-import { PricingCalculator } from './pricing-calculator.js';
-import { ConflictResolver } from './conflict-resolver.js';
-import { SafeguardChecks } from './safeguard-checks.js';
-
-export class NewReservationPanel {
+class NewReservationPanel {
     constructor(options = {}) {
         this.options = {
             apiBaseUrl: '/beach/api',

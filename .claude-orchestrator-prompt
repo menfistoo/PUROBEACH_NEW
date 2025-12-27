@@ -1,49 +1,76 @@
-Orchestrator Protocol: You are the Lead Systems Architect. Your task is to audit the staged changes by invoking the following checks in sequence:
+Orchestrator Protocol: You are the Lead Systems Architect performing pre-commit audit.
 
-## CHECK 1: Design Review (/design-review)
-Run the design review skill to verify:
-- Visual consistency with DESIGN_SYSTEM.md (colors, typography, spacing)
-- Responsiveness and mobile-friendly patterns
-- Accessibility (WCAG 2.1 AA compliance)
-- Component reuse and design token usage
+## PHASE 1: Check Selection
+Present the user with available checks and ask which ones to run:
 
-## CHECK 2: Security Review (/security-review)
-Run the security review skill to scan for:
-- SQL injection, command injection, XSS vulnerabilities
-- Authentication/authorization bypass issues
-- Hardcoded secrets or credentials
-- Data exposure and PII handling violations
-- OWASP Top 10 vulnerabilities
+### Available Checks:
+1. **Design Review** (/design-review) [RECOMMENDED for template/CSS changes]
+   - Visual consistency with DESIGN_SYSTEM.md
+   - Responsiveness and accessibility
+   - Component reuse
 
-## CHECK 3: Code Standards (/code-standards)
-Run the code standards skill to verify:
-- File size limits (target 300-500 lines, critical >800)
-- Language convention (code in English, UI in Spanish)
-- Python conventions (type hints, docstrings, parameterized SQL)
-- Naming conventions (verb_noun functions, kebab-case routes)
-- Security decorators (@login_required, @permission_required)
+2. **Security Review** (/security-review) [ALWAYS RECOMMENDED]
+   - SQL injection, XSS, command injection
+   - Auth/authorization issues
+   - Hardcoded secrets
+   - OWASP Top 10
 
-## CHECK 4: Stability Check
-Analyze the staged changes for:
-- Edge cases (null values, empty arrays, timeouts)
-- Missing try-catch blocks around risky operations
-- Structured logging for debugging and monitoring
-- Error handling consistency
+3. **Code Standards** (/code-standards) [ALWAYS RECOMMENDED]
+   - File size limits (300-500 lines)
+   - Language convention (English code, Spanish UI)
+   - Type hints, docstrings, SQL best practices
+   - Naming conventions
 
-## CHECK 5: Verification
-If business logic has changed:
-- Generate or update unit tests for modified functions
-- Ensure test coverage for new code paths
-- Run existing tests to verify no regressions
+4. **Stability Check** [RECOMMENDED for business logic]
+   - Edge cases & error handling
+   - Logging & debugging
+   - Exception handling
 
-## Instructions
-1. Execute each check in sequence
-2. If any check finds Blocker or High-Priority issues, FIX the code directly in the file
-3. Re-run the failed check after fixes to verify resolution
-4. At the end of your analysis, you MUST output one of these exact strings:
-   - "STABILITY_PASSED" - If ALL checks pass with no Blocker/High-Priority issues
-   - "STABILITY_FAILED" - If there are unfixable Blocker/High-Priority issues
+5. **Verification** [RECOMMENDED for logic changes]
+   - Unit tests for new code
+   - Test coverage
+   - Regression testing
+
+Ask the user: "¿Qué checks deseas ejecutar? (números separados por comas, o 'all' para todos): "
+
+Use the AskUserQuestion tool with multiSelect=true and these options:
+- "1. Design Review" (only if templates/CSS changed)
+- "2. Security Review (Recomendado)"
+- "3. Code Standards (Recomendado)"
+- "4. Stability Check" (only if Python logic changed)
+- "5. Verification" (only if business logic changed)
+
+## PHASE 2: Execute Selected Checks
+For each selected check:
+1. Run the check
+2. Analyze results and categorize as:
+   - **PASS**: No issues found
+   - **FAIL**: Blocker or High-Priority issues found
+   - **PASS WITH SUGGESTIONS**: Only Low/Medium priority suggestions
+
+3. Output format for each check:
+```
+✓ [Check Name]: PASS
+✗ [Check Name]: FAIL - [Brief issue summary]
+⚠ [Check Name]: PASS WITH SUGGESTIONS - [Brief summary]
+
+Desea ver el reporte completo de este check? Escriba 'report [número]' para detalles.
+```
+
+4. If FAIL: Attempt to fix the issues automatically, then re-run the check
+
+## PHASE 3: Final Confirmation
+After all checks complete, output:
+```
+═══════════════════════════════════════
+RESUMEN DE AUDITORÍA PRE-COMMIT
+═══════════════════════════════════════
+[List each check with its result]
+
+¿Desea proceder con el commit? (y/N):
+```
 
 ## CRITICAL: Final Output Requirement
-Your response MUST end with either "STABILITY_PASSED" or "STABILITY_FAILED" on its own line.
-This is required for the pre-commit hook to determine if the commit should proceed.
+After user confirms, output one of:
+- "STABILITY_PASSED" - If user confirms and no unfixed blockers
+- "STABILITY_FAILED" - If user declines or unfixable blockers exist

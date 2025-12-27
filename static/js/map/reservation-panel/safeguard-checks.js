@@ -7,7 +7,7 @@
  * SG-05: Past dates error
  * SG-07: Furniture contiguity check
  */
-export class SafeguardChecks {
+class SafeguardChecks {
     constructor(panel) {
         this.panel = panel;
     }

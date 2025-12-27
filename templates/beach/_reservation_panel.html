@@ -11,9 +11,9 @@
 <div class="reservation-panel" id="reservationPanel" role="dialog" aria-labelledby="panelTicket" aria-modal="true">
     <!-- Header -->
     <div class="panel-header">
-        <button type="button" class="panel-close-btn" id="panelCloseBtn"
-                aria-label="Cerrar panel" title="Cerrar">
-            <i class="fas fa-chevron-right"></i>
+        <button type="button" class="panel-toggle-btn" id="panelToggleBtn"
+                aria-label="Colapsar panel" title="Colapsar">
+            <i class="fas fa-chevron-right" id="panelToggleIcon"></i>
         </button>
         <div class="panel-title">
             <span class="panel-ticket" id="panelTicket">Cargando...</span>
@@ -22,6 +22,10 @@
         <button type="button" class="panel-edit-btn" id="panelEditBtn"
                 aria-label="Editar reserva" title="Editar">
             <i class="fas fa-pen" id="panelEditIcon"></i>
+        </button>
+        <button type="button" class="panel-close-btn" id="panelCloseBtn"
+                aria-label="Cerrar panel" title="Cerrar">
+            <i class="fas fa-times"></i>
         </button>
     </div>
 

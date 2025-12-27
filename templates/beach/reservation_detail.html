@@ -185,6 +185,61 @@
 
     <!-- Sidebar -->
     <div class="col-lg-4">
+        <!-- Pricing Information -->
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-euro-sign"></i> Información de Precio</h5>
+            </div>
+            <div class="card-body">
+                {% if reservation.package_id and reservation.package_name %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <h6 class="text-muted mb-2">Paquete</h6>
+                    <p class="mb-1 fw-bold">{{ reservation.package_name }}</p>
+                    {% if reservation.package_description %}
+                    <small class="text-muted">{{ reservation.package_description }}</small>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if reservation.minimum_consumption_policy_id and reservation.minimum_consumption_policy_name %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <h6 class="text-muted mb-2">Consumo Mínimo</h6>
+                    <p class="mb-1">
+                        <strong>€{{ "%.2f"|format(reservation.minimum_consumption_amount or 0) }}</strong>
+                    </p>
+                    <small class="text-muted">{{ reservation.minimum_consumption_policy_name }}</small>
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">Precio Final</h6>
+                    <h3 class="text-success mb-0">€{{ "%.2f"|format(reservation.final_price or 0) }}</h3>
+                </div>
+
+                <div class="mb-0">
+                    <h6 class="text-muted mb-2">Estado de Pago</h6>
+                    {% if reservation.paid %}
+                    <div>
+                        <span class="badge bg-success fs-6">
+                            <i class="fas fa-check-circle"></i> PAGADO
+                        </span>
+                    </div>
+                    {% if reservation.payment_ticket_number %}
+                    <small class="text-muted d-block mt-2">
+                        <i class="fas fa-receipt"></i> Ticket: <strong>{{ reservation.payment_ticket_number }}</strong>
+                    </small>
+                    {% endif %}
+                    {% else %}
+                    <div>
+                        <span class="badge bg-warning text-dark fs-6">
+                            <i class="fas fa-clock"></i> PENDIENTE
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
         <!-- Toggle States -->
         <div class="card mb-4">
             <div class="card-header">

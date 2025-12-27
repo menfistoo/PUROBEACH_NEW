@@ -1010,6 +1010,13 @@
 <script src="{{ url_for('static', filename='js/map/reservation-panel.js') }}"></script>
 <script src="{{ url_for('static', filename='js/map/safeguard-modal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/conflict-resolution-modal.js') }}"></script>
+<!-- NewReservationPanel modules (must be loaded in dependency order) -->
+<script src="{{ url_for('static', filename='js/map/reservation-panel/customer-handler.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map/reservation-panel/date-availability.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map/reservation-panel/pricing-calculator.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map/reservation-panel/conflict-resolver.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map/reservation-panel/safeguard-checks.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map/reservation-panel/panel-core.js') }}"></script>
 <script src="{{ url_for('static', filename='js/map/new-reservation-panel.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='js/map/index.js') }}"></script>
 <script type="module">

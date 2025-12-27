@@ -20,6 +20,7 @@ class ReservationPanel {
         // State
         this.state = {
             isOpen: false,
+            isCollapsed: false,
             mode: 'view', // 'view', 'edit', or 'reassignment'
             reservationId: null,
             currentDate: null,
@@ -76,6 +77,8 @@ class ReservationPanel {
         }
 
         // Header elements
+        this.toggleBtn = document.getElementById('panelToggleBtn');
+        this.toggleIcon = document.getElementById('panelToggleIcon');
         this.closeBtn = document.getElementById('panelCloseBtn');
         this.editBtn = document.getElementById('panelEditBtn');
         this.editIcon = document.getElementById('panelEditIcon');
@@ -157,6 +160,9 @@ class ReservationPanel {
      */
     attachListeners() {
         if (!this.panel) return;
+
+        // Toggle button (collapse/expand)
+        this.toggleBtn?.addEventListener('click', () => this.toggleCollapse());
 
         // Close button
         this.closeBtn?.addEventListener('click', () => this.close());
@@ -322,12 +328,14 @@ class ReservationPanel {
         }
 
         this.state.isOpen = false;
+        this.state.isCollapsed = false;
         this.state.mode = 'view';
         this.state.isDirty = false;
 
         // Hide panel
         this.backdrop.classList.remove('show');
         this.panel.classList.remove('open');
+        this.panel.classList.remove('collapsed');
         this.panel.classList.remove('edit-mode');
         this.panel.style.transform = '';
         document.body.style.overflow = '';
@@ -344,6 +352,50 @@ class ReservationPanel {
         // Callback
         if (this.options.onClose) {
             this.options.onClose();
+        }
+    }
+
+    /**
+     * Toggle collapsed state
+     */
+    toggleCollapse() {
+        if (!this.state.isOpen) return;
+
+        this.state.isCollapsed = !this.state.isCollapsed;
+
+        // Get map canvas wrapper
+        const mapWrapper = document.querySelector('.map-canvas-wrapper');
+
+        if (this.state.isCollapsed) {
+            this.panel.classList.add('collapsed');
+            // Hide backdrop - allow map interaction
+            if (this.backdrop) {
+                this.backdrop.classList.remove('show');
+            }
+            // Remove map adjustment - let map fill full width
+            if (mapWrapper) {
+                mapWrapper.classList.remove('panel-open');
+            }
+            // Update button label
+            if (this.toggleBtn) {
+                this.toggleBtn.setAttribute('aria-label', 'Expandir panel');
+                this.toggleBtn.setAttribute('title', 'Expandir');
+            }
+        } else {
+            this.panel.classList.remove('collapsed');
+            // Show backdrop again
+            if (this.backdrop) {
+                this.backdrop.classList.add('show');
+            }
+            // Add map adjustment - make room for panel
+            if (mapWrapper) {
+                mapWrapper.classList.add('panel-open');
+            }
+            // Update button label
+            if (this.toggleBtn) {
+                this.toggleBtn.setAttribute('aria-label', 'Colapsar panel');
+                this.toggleBtn.setAttribute('title', 'Colapsar');
+            }
         }
     }
 
@@ -369,6 +421,9 @@ class ReservationPanel {
         if (this.editIcon) {
             this.editIcon.className = 'fas fa-eye';
         }
+
+        // Highlight furniture on map
+        this.highlightReservationFurniture();
 
         // Show edit fields, hide view fields
         if (this.detailsViewMode) this.detailsViewMode.style.display = 'none';
@@ -414,6 +469,9 @@ class ReservationPanel {
         if (this.editIcon) {
             this.editIcon.className = 'fas fa-pen';
         }
+
+        // Remove furniture highlight
+        this.unhighlightReservationFurniture();
 
         // Show view fields, hide edit fields
         if (this.detailsViewMode) this.detailsViewMode.style.display = 'grid';
@@ -1045,9 +1103,34 @@ class ReservationPanel {
         const selected = this.reassignmentState.selectedFurniture;
         const max = this.reassignmentState.maxAllowed;
 
-        // Update counter
+        // Calculate total capacity
+        const totalCapacity = selected.reduce((sum, f) => sum + (f.capacity || 2), 0);
+        const numPeople = this.state.data?.reservation?.num_people || max;
+
+        // Determine capacity status
+        let capacityStatus = '';
+        let capacityClass = '';
+        if (selected.length > 0) {
+            if (totalCapacity < numPeople) {
+                capacityStatus = ` ⚠️ Capacidad insuficiente: ${totalCapacity}/${numPeople} personas`;
+                capacityClass = 'capacity-insufficient';
+            } else if (totalCapacity > numPeople) {
+                capacityStatus = ` ℹ️ Capacidad excedente: ${totalCapacity}/${numPeople} personas`;
+                capacityClass = 'capacity-excess';
+            } else {
+                capacityStatus = ` ✓ Capacidad correcta: ${totalCapacity}/${numPeople} personas`;
+                capacityClass = 'capacity-correct';
+            }
+        }
+
+        // Update counter with capacity info
         if (this.reassignmentCounter) {
-            this.reassignmentCounter.textContent = `${selected.length} / ${max} seleccionados`;
+            this.reassignmentCounter.innerHTML = `
+                ${selected.length} / ${max} seleccionados
+                <span class="${capacityClass}" style="display: block; font-size: 11px; margin-top: 4px;">
+                    ${capacityStatus}
+                </span>
+            `;
         }
 
         // Update new chips
@@ -1060,15 +1143,29 @@ class ReservationPanel {
                     <span class="furniture-chip">
                         <span class="furniture-type-icon">${this.getFurnitureIcon(f.type_name)}</span>
                         ${f.number || f.furniture_number || `#${f.id}`}
+                        <span style="font-size: 10px; opacity: 0.7;">(${f.capacity || 2}p)</span>
                     </span>
                 `).join('');
                 this.reassignmentNewChips.innerHTML = chipsHtml;
             }
         }
 
-        // Enable/disable save button
+        // Enable/disable save button based on selection and capacity
         if (this.reassignmentSaveBtn) {
-            this.reassignmentSaveBtn.disabled = selected.length === 0;
+            const hasSelection = selected.length > 0;
+            const hasInsufficientCapacity = totalCapacity < numPeople;
+
+            // Disable button if no selection OR insufficient capacity
+            this.reassignmentSaveBtn.disabled = !hasSelection || hasInsufficientCapacity;
+
+            // Update button text to indicate why it's disabled
+            if (hasInsufficientCapacity) {
+                const icon = this.reassignmentSaveBtn.querySelector('i');
+                const iconHtml = icon ? `<i class="${icon.className}"></i> ` : '';
+                this.reassignmentSaveBtn.innerHTML = `${iconHtml}Capacidad insuficiente`;
+            } else {
+                this.reassignmentSaveBtn.innerHTML = '<i class="fas fa-check"></i> Guardar cambios';
+            }
         }
     }
 
@@ -1140,19 +1237,34 @@ class ReservationPanel {
                 // Reload reservation data to get updated furniture
                 await this.loadReservation(this.state.reservationId, this.state.currentDate);
 
-                this.showToast('Mobiliario actualizado exitosamente', 'success');
+                // Show success message
+                let message = 'Mobiliario actualizado exitosamente';
+
+                // Show capacity warning if present
+                if (result.warning) {
+                    this.showToast(result.warning, 'warning');
+                    // Delay success message slightly so both toasts are visible
+                    setTimeout(() => {
+                        this.showToast(message, 'success');
+                    }, 100);
+                } else {
+                    this.showToast(message, 'success');
+                }
 
                 // Notify map to refresh
                 if (this.options.onSave) {
                     this.options.onSave(this.state.reservationId, { furniture_changed: true });
                 }
             } else {
+                // Handle error response (e.g., insufficient capacity)
                 throw new Error(result.error || 'Error al guardar');
             }
 
         } catch (error) {
             console.error('Reassignment save error:', error);
-            this.showToast(error.message, 'error');
+            // Show error with more details if available
+            const errorMsg = error.message || 'Error al actualizar mobiliario';
+            this.showToast(errorMsg, 'error');
         } finally {
             // Reset button state
             if (this.reassignmentSaveBtn) {
@@ -1578,6 +1690,35 @@ class ReservationPanel {
         } else {
             console.log(`[${type}] ${message}`);
         }
+    }
+
+    /**
+     * Highlight reservation's furniture on the map with red aura
+     */
+    highlightReservationFurniture() {
+        if (!this.state.data?.furniture) return;
+
+        // Get furniture IDs for this reservation
+        const furnitureIds = this.state.data.furniture.map(f => f.id || f.furniture_id);
+
+        // Find and highlight each furniture element on the map
+        furnitureIds.forEach(id => {
+            const furnitureEl = document.querySelector(`[data-furniture-id="${id}"]`);
+            if (furnitureEl) {
+                furnitureEl.classList.add('furniture-editing');
+            }
+        });
+    }
+
+    /**
+     * Remove highlight from reservation's furniture
+     */
+    unhighlightReservationFurniture() {
+        // Remove highlight from all furniture elements
+        const highlightedElements = document.querySelectorAll('.furniture-editing');
+        highlightedElements.forEach(el => {
+            el.classList.remove('furniture-editing');
+        });
     }
 
     /**

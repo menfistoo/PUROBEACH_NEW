@@ -1184,6 +1184,21 @@ html.sidebar-collapsed .nav-child.active i {
     stroke: var(--color-primary-dark);
 }
 
+/* Furniture being edited - red aura highlight */
+.furniture-editing {
+    filter: drop-shadow(0 0 8px rgba(193, 68, 79, 0.8)) drop-shadow(0 0 16px rgba(193, 68, 79, 0.4));
+    animation: pulse-red 2s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% {
+        filter: drop-shadow(0 0 8px rgba(193, 68, 79, 0.8)) drop-shadow(0 0 16px rgba(193, 68, 79, 0.4));
+    }
+    50% {
+        filter: drop-shadow(0 0 12px rgba(193, 68, 79, 1)) drop-shadow(0 0 24px rgba(193, 68, 79, 0.6));
+    }
+}
+
 .date-navigator {
     display: flex;
     align-items: center;

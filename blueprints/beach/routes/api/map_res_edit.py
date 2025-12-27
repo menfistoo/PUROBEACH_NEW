@@ -83,6 +83,32 @@ def register_routes(bp):
                         'conflicts': conflict_ids
                     }), 409
 
+        # Get furniture capacities and validate against num_people
+        furniture_list = get_all_furniture(active_only=True)
+        furniture_map = {f['id']: f for f in furniture_list}
+
+        total_capacity = 0
+        for fid in furniture_ids:
+            furniture_info = furniture_map.get(fid)
+            if furniture_info:
+                total_capacity += furniture_info.get('capacity', 2)
+
+        num_people = reservation.get('num_people', 1)
+        capacity_warning = None
+
+        # CRITICAL: Block if capacity is smaller than num_people
+        if total_capacity < num_people:
+            return jsonify({
+                'success': False,
+                'error': f'Capacidad insuficiente: {total_capacity} personas vs {num_people} requeridas',
+                'total_capacity': total_capacity,
+                'num_people': num_people
+            }), 400
+
+        # Warn if capacity is larger than num_people (but allow the operation)
+        if total_capacity > num_people:
+            capacity_warning = f'La capacidad total ({total_capacity} personas) es mayor que el numero de personas ({num_people})'
+
         try:
             # Update furniture assignments for this date
             with get_db() as conn:
@@ -102,23 +128,30 @@ def register_routes(bp):
                 conn.commit()
 
             # Get updated furniture info for response
-            furniture_list = get_all_furniture(active_only=True)
-            furniture_map = {f['id']: f for f in furniture_list}
             updated_furniture = [
                 {
                     'id': fid,
-                    'number': furniture_map.get(fid, {}).get('number', str(fid))
+                    'number': furniture_map.get(fid, {}).get('number', str(fid)),
+                    'capacity': furniture_map.get(fid, {}).get('capacity', 2)
                 }
                 for fid in furniture_ids
             ]
 
-            return jsonify({
+            response_data = {
                 'success': True,
                 'reservation_id': reservation_id,
                 'date': date_str,
                 'furniture': updated_furniture,
+                'total_capacity': total_capacity,
+                'num_people': num_people,
                 'message': 'Mobiliario actualizado exitosamente'
-            })
+            }
+
+            # Add warning if capacity is larger
+            if capacity_warning:
+                response_data['warning'] = capacity_warning
+
+            return jsonify(response_data)
 
         except Exception as e:
             return jsonify({'success': False, 'error': 'Error al actualizar mobiliario'}), 500
@@ -135,6 +168,7 @@ def register_routes(bp):
             num_people: int - Update headcount
             time_slot: str - 'all_day', 'morning', 'afternoon'
             observations: str - Notes/observations
+            reservation_date: str - YYYY-MM-DD format
 
         Returns:
             JSON with success status and updated fields
@@ -150,6 +184,7 @@ def register_routes(bp):
             return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
 
         # Allowed fields for partial update
+        # Note: For date changes, use the dedicated /change-dates endpoint
         allowed_fields = ['num_people', 'time_slot', 'observations']
         updates = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
 
@@ -187,6 +222,7 @@ def register_routes(bp):
                     SET {set_clauses}, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 ''', values)
+
                 conn.commit()
 
             return jsonify({

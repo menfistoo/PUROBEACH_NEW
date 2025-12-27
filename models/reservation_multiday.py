@@ -45,7 +45,13 @@ def create_linked_multiday_reservations(
     check_out_date: str = None,
     hamaca_included: int = 1,
     validate_availability: bool = True,
-    validate_duplicates: bool = True
+    validate_duplicates: bool = True,
+    final_price: float = 0.0,
+    paid: int = 0,
+    minimum_consumption_amount: float = 0.0,
+    minimum_consumption_policy_id: int = None,
+    package_id: int = None,
+    payment_ticket_number: str = None
 ) -> dict:
     """
     Create linked reservations for multiple consecutive days.
@@ -168,23 +174,29 @@ def create_linked_multiday_reservations(
                     INSERT INTO beach_reservations (
                         customer_id, ticket_number, reservation_date, start_date, end_date,
                         num_people, time_slot, current_states, current_state,
-                        payment_status, price, charge_to_room, charge_reference,
+                        payment_status, price, final_price, paid, charge_to_room, charge_reference,
                         hamaca_included, preferences, notes,
+                        minimum_consumption_amount, minimum_consumption_policy_id,
+                        package_id, payment_ticket_number,
                         check_in_date, check_out_date,
                         parent_reservation_id, reservation_type, created_by, created_at
                     ) VALUES (
                         ?, ?, ?, ?, ?,
                         ?, ?, ?, ?,
-                        ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?,
                         ?, ?, ?,
+                        ?, ?,
+                        ?, ?,
                         ?, ?,
                         NULL, 'normal', ?, CURRENT_TIMESTAMP
                     )
                 ''', (
                     customer_id, ticket_number, date, dates[0], dates[-1],
                     num_people, time_slot, initial_state, initial_state,
-                    payment_status, price, charge_to_room, charge_reference,
+                    payment_status, price, final_price, paid, charge_to_room, charge_reference,
                     hamaca_included, preferences, observations,
+                    minimum_consumption_amount, minimum_consumption_policy_id,
+                    package_id, payment_ticket_number,
                     check_in_date, check_out_date,
                     created_by
                 ))
@@ -193,11 +205,13 @@ def create_linked_multiday_reservations(
                 parent_ticket = ticket_number
 
                 # Record initial state
-                cursor.execute('''
-                    INSERT INTO reservation_status_history
-                    (reservation_id, status_type, action, changed_by, notes, created_at)
-                    VALUES (?, ?, 'added', ?, 'Creacion de reserva multi-dia (parent)', CURRENT_TIMESTAMP)
-                ''', (parent_id, initial_state, created_by))
+                state_id = default_state.get('id')
+                if state_id:
+                    cursor.execute('''
+                        INSERT INTO reservation_status_history
+                        (reservation_id, old_state_id, new_state_id, changed_by, reason, created_at)
+                        VALUES (?, NULL, ?, ?, 'Creacion de reserva multi-dia (parent)', CURRENT_TIMESTAMP)
+                    ''', (parent_id, state_id, created_by))
 
             else:
                 # Following dates: create child reservations
@@ -207,23 +221,29 @@ def create_linked_multiday_reservations(
                     INSERT INTO beach_reservations (
                         customer_id, ticket_number, reservation_date, start_date, end_date,
                         num_people, time_slot, current_states, current_state,
-                        payment_status, price, charge_to_room, charge_reference,
+                        payment_status, price, final_price, paid, charge_to_room, charge_reference,
                         hamaca_included, preferences, notes,
+                        minimum_consumption_amount, minimum_consumption_policy_id,
+                        package_id, payment_ticket_number,
                         check_in_date, check_out_date,
                         parent_reservation_id, reservation_type, created_by, created_at
                     ) VALUES (
                         ?, ?, ?, ?, ?,
                         ?, ?, ?, ?,
-                        ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?,
                         ?, ?, ?,
+                        ?, ?,
+                        ?, ?,
                         ?, ?,
                         ?, 'normal', ?, CURRENT_TIMESTAMP
                     )
                 ''', (
                     customer_id, child_ticket, date, dates[0], dates[-1],
                     num_people, time_slot, initial_state, initial_state,
-                    payment_status, price, charge_to_room, charge_reference,
+                    payment_status, price, final_price, paid, charge_to_room, charge_reference,
                     hamaca_included, preferences, observations,
+                    minimum_consumption_amount, minimum_consumption_policy_id,
+                    package_id, payment_ticket_number,
                     check_in_date, check_out_date,
                     parent_id, created_by
                 ))
@@ -231,11 +251,12 @@ def create_linked_multiday_reservations(
                 child_id = cursor.lastrowid
 
                 # Record initial state
-                cursor.execute('''
-                    INSERT INTO reservation_status_history
-                    (reservation_id, status_type, action, changed_by, notes, created_at)
-                    VALUES (?, ?, 'added', ?, 'Creacion de reserva multi-dia (child)', CURRENT_TIMESTAMP)
-                ''', (child_id, initial_state, created_by))
+                if state_id:
+                    cursor.execute('''
+                        INSERT INTO reservation_status_history
+                        (reservation_id, old_state_id, new_state_id, changed_by, reason, created_at)
+                        VALUES (?, NULL, ?, ?, 'Creacion de reserva multi-dia (child)', CURRENT_TIMESTAMP)
+                    ''', (child_id, state_id, created_by))
 
                 children.append({
                     'id': child_id,
@@ -405,8 +426,18 @@ def cancel_multiday_reservations(
         if not cancel_children:
             reservation_ids = [parent_id]
 
+        # Get Cancelada state ID
+        from .state import get_state_by_name
+        cancelada_state = get_state_by_name('Cancelada')
+        cancelada_state_id = cancelada_state['id'] if cancelada_state else None
+
         # Cancel each reservation
         for res_id in reservation_ids:
+            # Get current state before update
+            cursor.execute('SELECT current_state FROM beach_reservations WHERE id = ?', (res_id,))
+            current_row = cursor.fetchone()
+            old_state_name = current_row['current_state'] if current_row else None
+
             # Update state
             cursor.execute('''
                 UPDATE beach_reservations
@@ -419,12 +450,18 @@ def cancel_multiday_reservations(
                 WHERE id = ?
             ''', (res_id,))
 
-            # Record in history
-            cursor.execute('''
-                INSERT INTO reservation_status_history
-                (reservation_id, status_type, action, changed_by, notes, created_at)
-                VALUES (?, 'Cancelada', 'added', ?, ?, CURRENT_TIMESTAMP)
-            ''', (res_id, cancelled_by, notes or 'Cancelacion de reserva multi-dia'))
+            # Record in history - get old state ID
+            old_state_id = None
+            if old_state_name:
+                old_state = get_state_by_name(old_state_name)
+                old_state_id = old_state['id'] if old_state else None
+
+            if cancelada_state_id:
+                cursor.execute('''
+                    INSERT INTO reservation_status_history
+                    (reservation_id, old_state_id, new_state_id, changed_by, reason, created_at)
+                    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ''', (res_id, old_state_id, cancelada_state_id, cancelled_by, notes or 'Cancelacion de reserva multi-dia'))
 
             cancelled_ids.append(res_id)
 

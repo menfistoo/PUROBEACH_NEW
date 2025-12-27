@@ -52,6 +52,26 @@
     transform: translateX(0);
 }
 
+/* Collapsed state - slide partially left to show just header */
+.reservation-panel.collapsed {
+    transform: translateX(calc(100% - 80px)) !important;
+}
+
+.reservation-panel.collapsed .panel-body {
+    overflow: hidden;
+}
+
+/* When collapsed, flip the chevron to point left */
+.reservation-panel.collapsed .panel-toggle-btn i {
+    transform: scaleX(-1);
+}
+
+@media (min-width: 768px) {
+    .reservation-panel.collapsed {
+        transform: translateX(calc(100% - 80px)) !important;
+    }
+}
+
 /* Swipe indicator for mobile */
 .reservation-panel::before {
     content: '';
@@ -116,6 +136,7 @@
     }
 }
 
+.reservation-panel .panel-toggle-btn,
 .reservation-panel .panel-close-btn,
 .reservation-panel .panel-edit-btn {
     width: 44px;
@@ -133,14 +154,21 @@
     transition: background var(--transition-fast);
 }
 
+.reservation-panel .panel-toggle-btn:hover,
 .reservation-panel .panel-close-btn:hover,
 .reservation-panel .panel-edit-btn:hover {
     background: rgba(255, 255, 255, 0.25);
 }
 
+.reservation-panel .panel-toggle-btn:active,
 .reservation-panel .panel-close-btn:active,
 .reservation-panel .panel-edit-btn:active {
     background: rgba(255, 255, 255, 0.35);
+}
+
+/* Toggle button icon transition */
+.reservation-panel .panel-toggle-btn i {
+    transition: transform var(--transition-fast);
 }
 
 .reservation-panel .panel-title {

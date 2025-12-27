@@ -2,7 +2,7 @@
  * DateAvailabilityHandler - Manages date picker and real-time availability checking
  * SG-02: Real-time availability check when dates change
  */
-export class DateAvailabilityHandler {
+class DateAvailabilityHandler {
     constructor(panel) {
         this.panel = panel;
         this._availabilityCheckTimeout = null;

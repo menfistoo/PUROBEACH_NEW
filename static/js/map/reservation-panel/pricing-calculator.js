@@ -2,7 +2,7 @@
  * PricingCalculator - Manages pricing calculations and display
  * Handles package fetching, selection, price calculation, and manual editing
  */
-export class PricingCalculator {
+class PricingCalculator {
     constructor(panel) {
         this.panel = panel;
         this._lastCalculatedPrice = 0;
