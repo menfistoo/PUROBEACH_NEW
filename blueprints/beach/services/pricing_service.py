@@ -17,6 +17,7 @@ from models.package import (
 from models.pricing import get_applicable_minimum_consumption_policy
 from models.furniture import get_furniture_by_id
 from models.customer import get_customer_by_id
+from models.hotel_guest import get_hotel_guest_by_id
 
 
 def get_furniture_details(furniture_ids: List[int]) -> Dict[str, Any]:
@@ -73,9 +74,14 @@ def get_eligible_packages(
     Returns:
         List of eligible packages with calculated prices
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     furniture_details = get_furniture_details(furniture_ids)
     furniture_types = furniture_details["furniture_types"]
     zone_id = furniture_details["zone_id"]
+
+    logger.info(f"[Pricing] get_eligible_packages - customer_type={customer_type}, furniture_types={furniture_types}, zone_id={zone_id}, num_people={num_people}, date={reservation_date}")
 
     # Get packages matching customer type and date
     packages = get_active_packages_for_date(
@@ -84,19 +90,27 @@ def get_eligible_packages(
         zone_id=zone_id
     )
 
+    logger.info(f"[Pricing] Found {len(packages)} packages from database")
+    for pkg in packages:
+        logger.info(f"[Pricing]   - {pkg['package_name']}: furniture_types={pkg.get('furniture_types_included')}, min={pkg['min_people']}, max={pkg['max_people']}")
+
     eligible_packages = []
 
     for package in packages:
         # Check people capacity
         if num_people < package["min_people"] or num_people > package["max_people"]:
+            logger.info(f"[Pricing] Filtered out {package['package_name']}: people count {num_people} not in range [{package['min_people']}, {package['max_people']}]")
             continue
 
         # Check furniture type compatibility
-        if package["furniture_types_included"]:
-            included_types = [t.strip().lower() for t in package["furniture_types_included"].split(",")]
+        # Skip if furniture_types_included is None, empty, or the string 'None'
+        furniture_types_str = package["furniture_types_included"]
+        if furniture_types_str and str(furniture_types_str).lower() != 'none':
+            included_types = [t.strip().lower() for t in furniture_types_str.split(",")]
 
             # At least one selected furniture must match an included type (case-insensitive)
             if not any(ftype.lower() in included_types for ftype in furniture_types):
+                logger.info(f"[Pricing] Filtered out {package['package_name']}: furniture types {furniture_types} not in {included_types}")
                 continue
 
         # Calculate price for this package
@@ -208,7 +222,8 @@ def calculate_reservation_pricing(
     furniture_ids: List[int],
     reservation_date: Date,
     num_people: int,
-    package_id: Optional[int] = None
+    package_id: Optional[int] = None,
+    customer_source: str = "customer"
 ) -> Dict[str, Any]:
     """
     Main pricing orchestrator. Calculates complete pricing for a reservation.
@@ -220,11 +235,12 @@ def calculate_reservation_pricing(
     - Final price is editable by staff
 
     Args:
-        customer_id: Customer ID
+        customer_id: Customer ID (from beach_customers or hotel_guests)
         furniture_ids: List of selected furniture IDs
         reservation_date: Date of reservation
         num_people: Number of people
         package_id: Optional selected package ID
+        customer_source: Source of customer ("customer" or "hotel_guest")
 
     Returns:
         dict with complete pricing information:
@@ -239,12 +255,20 @@ def calculate_reservation_pricing(
             'has_minimum_consumption': bool
         }
     """
-    # Get customer details
-    customer = get_customer_by_id(customer_id)
-    if not customer:
-        raise ValueError(f"Customer {customer_id} not found")
-
-    customer_type = customer["customer_type"]
+    # Get customer details based on source
+    if customer_source == "hotel_guest":
+        # Look up in hotel_guests table
+        customer = get_hotel_guest_by_id(customer_id)
+        if not customer:
+            raise ValueError(f"Hotel guest {customer_id} not found")
+        # Hotel guests are always 'interno'
+        customer_type = "interno"
+    else:
+        # Look up in beach_customers table
+        customer = get_customer_by_id(customer_id)
+        if not customer:
+            raise ValueError(f"Customer {customer_id} not found")
+        customer_type = customer["customer_type"]
 
     result = {
         "package": None,

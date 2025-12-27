@@ -170,9 +170,9 @@ class CustomerHandler {
         // External customers can't charge to room
         this.updateChargeToRoomVisibility('externo', false);
 
-        // Set num_people from the form if provided
+        // Set num_people from the form if provided (only if not manually edited)
         const numPeopleInput = document.getElementById('newPanelNumPeople');
-        if (customer.num_people && numPeopleInput) {
+        if (customer.num_people && numPeopleInput && !this.panel.numPeopleManuallyEdited) {
             numPeopleInput.value = customer.num_people;
         }
 
@@ -308,10 +308,10 @@ class CustomerHandler {
                 this.state.selectedGuest = null;
             }
 
-            // Auto-set num_people based on guest count
+            // Auto-set num_people based on guest count (only if not manually edited)
             const capacity = this.panel.calculateCapacity();
             const numPeopleInput = document.getElementById('newPanelNumPeople');
-            if (numPeopleInput && guestCount > 0) {
+            if (numPeopleInput && guestCount > 0 && !this.panel.numPeopleManuallyEdited) {
                 numPeopleInput.value = guestCount;
             }
 
@@ -560,6 +560,9 @@ class CustomerHandler {
             notesInput.value = guest.notes;
         }
 
+        // Calculate pricing after hotel guest selection
+        this.panel.pricingCalculator.calculateAndDisplayPricing();
+
         // Fetch all guests in the room
         await this.fetchRoomGuestsForGuest(guest);
     }
@@ -584,10 +587,10 @@ class CustomerHandler {
                 this.hideGuestSelector();
             }
 
-            // Auto-set num_people based on guest count
+            // Auto-set num_people based on guest count (only if not manually edited)
             const capacity = this.panel.calculateCapacity();
             const numPeopleInput = document.getElementById('newPanelNumPeople');
-            if (numPeopleInput) {
+            if (numPeopleInput && !this.panel.numPeopleManuallyEdited) {
                 numPeopleInput.value = guestCount;
             }
 
@@ -601,9 +604,9 @@ class CustomerHandler {
         } catch (error) {
             console.error('Error fetching room guests:', error);
             this.hideGuestSelector();
-            // Set default num_people to 1 if fetch fails
+            // Set default num_people to 1 if fetch fails (only if not manually edited)
             const numPeopleInput = document.getElementById('newPanelNumPeople');
-            if (numPeopleInput) {
+            if (numPeopleInput && !this.panel.numPeopleManuallyEdited) {
                 numPeopleInput.value = 1;
             }
         }

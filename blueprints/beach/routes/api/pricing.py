@@ -103,7 +103,8 @@ def register_routes(bp):
             "furniture_ids": [1, 2],
             "reservation_date": "2025-12-26",
             "num_people": 4,
-            "package_id": 5  // optional
+            "package_id": 5,  // optional
+            "customer_source": "customer" | "hotel_guest"  // optional
         }
 
         Response JSON:
@@ -148,7 +149,8 @@ def register_routes(bp):
                 furniture_ids=data["furniture_ids"],
                 reservation_date=reservation_date,
                 num_people=data["num_people"],
-                package_id=data.get("package_id")
+                package_id=data.get("package_id"),
+                customer_source=data.get("customer_source", "customer")
             )
 
             return jsonify({

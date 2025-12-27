@@ -28,7 +28,8 @@ class ReservationPanel {
             originalData: null,   // Original data for dirty checking
             isDirty: false,
             isLoading: false,
-            isSubmitting: false
+            isSubmitting: false,
+            numPeopleManuallyEdited: false  // Track if user manually edited num_people
         };
 
         // Reassignment state (separate for clarity)
@@ -209,7 +210,10 @@ class ReservationPanel {
         this.setupSwipeGestures();
 
         // Track dirty state on edit inputs
-        this.editNumPeople?.addEventListener('input', () => this.markDirty());
+        this.editNumPeople?.addEventListener('input', () => {
+            this.state.numPeopleManuallyEdited = true;
+            this.markDirty();
+        });
         this.editNotes?.addEventListener('input', () => this.markDirty());
     }
 
@@ -288,6 +292,7 @@ class ReservationPanel {
         this.state.mode = mode;
         this.state.isOpen = true;
         this.state.isDirty = false;
+        this.state.numPeopleManuallyEdited = false;  // Reset flag when opening new reservation
 
         // Show loading state
         this.showLoading(true);
@@ -429,10 +434,10 @@ class ReservationPanel {
         if (this.detailsViewMode) this.detailsViewMode.style.display = 'none';
         if (this.detailsEditMode) this.detailsEditMode.style.display = 'grid';
 
-        // Pre-fill edit fields with current values
+        // Pre-fill edit fields with current values (only if not manually edited)
         if (this.state.data) {
             const data = this.state.data;
-            if (this.editNumPeople) {
+            if (this.editNumPeople && !this.state.numPeopleManuallyEdited) {
                 this.editNumPeople.value = data.reservation?.num_people || 1;
             }
             if (this.editNotes) {
@@ -463,6 +468,7 @@ class ReservationPanel {
 
         this.state.mode = 'view';
         this.state.isDirty = false;
+        this.state.numPeopleManuallyEdited = false;  // Reset flag when exiting edit mode
         this.panel.classList.remove('edit-mode');
 
         // Update edit button icon
@@ -894,8 +900,8 @@ class ReservationPanel {
             this.detailNotes.classList.add('empty');
         }
 
-        // Pre-fill edit fields
-        if (this.editNumPeople) {
+        // Pre-fill edit fields (only if not manually edited)
+        if (this.editNumPeople && !this.state.numPeopleManuallyEdited) {
             this.editNumPeople.value = reservation.num_people || 1;
         }
         if (this.editNotes) {
@@ -1552,6 +1558,7 @@ class ReservationPanel {
 
             // Exit edit mode
             this.state.isDirty = false;
+            this.state.numPeopleManuallyEdited = false;  // Reset flag after successful save
             this.exitEditMode(false);
 
             // Callback

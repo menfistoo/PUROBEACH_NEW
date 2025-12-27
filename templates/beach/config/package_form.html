@@ -135,7 +135,7 @@
                     <div class="mb-3">
                         <label for="furniture_types_included" class="form-label">Tipos de Mobiliario Incluidos</label>
                         <input type="text" class="form-control" id="furniture_types_included" name="furniture_types_included"
-                               value="{{ package.furniture_types_included if package else '' }}"
+                               value="{{ package.furniture_types_included|default('', true) if package else '' }}"
                                placeholder="hamaca, balinesa (separados por comas)">
                         <div class="form-text">Tipos de mobiliario que incluye el paquete, separados por comas</div>
                     </div>

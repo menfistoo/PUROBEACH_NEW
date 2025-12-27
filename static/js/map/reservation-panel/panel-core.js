@@ -150,14 +150,30 @@ class NewReservationPanel {
             }
         });
 
-        // Auto-update num_people based on furniture capacity
+        // Track manual edits to num_people
+        this.numPeopleManuallyEdited = false;
+
+        // Track changes to num_people for pricing calculation
         this.numPeopleInput?.addEventListener('change', () => {
-            const capacity = this.calculateCapacity();
-            if (parseInt(this.numPeopleInput.value) > capacity) {
-                this.numPeopleInput.value = capacity;
-            }
+            // Mark as manually edited when user changes the value
+            this.numPeopleManuallyEdited = true;
+
             // Calculate pricing when num_people changes
             this.pricingCalculator.calculateAndDisplayPricing();
+
+            // Show capacity warning if exceeded (but don't prevent it)
+            const capacity = this.calculateCapacity();
+            const numPeople = parseInt(this.numPeopleInput.value) || 0;
+            if (numPeople > capacity) {
+                this.showCapacityWarning(numPeople, capacity);
+            } else {
+                this.hideCapacityWarning();
+            }
+        });
+
+        // Also track input events (typing) as manual edits
+        this.numPeopleInput?.addEventListener('input', () => {
+            this.numPeopleManuallyEdited = true;
         });
     }
 
@@ -175,6 +191,9 @@ class NewReservationPanel {
         this.state.selectedFurniture = furniture;
         this.state.currentDate = date;
         this.state.preferences = [];
+
+        // Reset manual edit flag when opening new reservation
+        this.numPeopleManuallyEdited = false;
 
         // Reset form
         this.resetForm();

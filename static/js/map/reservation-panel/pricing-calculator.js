@@ -122,6 +122,7 @@ class PricingCalculator {
      */
     async calculatePricingOnly() {
         const customerId = document.getElementById('newPanelCustomerId').value;
+        const customerSource = document.getElementById('newPanelCustomerSource')?.value || 'customer';
         const furniture = this.panel.state.selectedFurniture.map(f => f.id);
         const dates = this.panel.datePicker ? this.panel.datePicker.getSelectedDates() : [];
         const numPeople = parseInt(document.getElementById('newPanelNumPeople')?.value) || 2;
@@ -146,6 +147,7 @@ class PricingCalculator {
 
             const requestBody = {
                 customer_id: parseInt(customerId),
+                customer_source: customerSource,
                 furniture_ids: furniture,
                 reservation_date: dates[0],
                 num_people: numPeople
@@ -214,9 +216,18 @@ class PricingCalculator {
         }
 
         try {
-            // Determine customer type based on source
-            // 'hotel_guest' = interno, 'customer' = externo
-            const customerType = customerSource === 'hotel_guest' ? 'interno' : 'externo';
+            // Determine customer type based on source and actual customer data
+            // Hotel guests are always 'interno'
+            // For beach_customers, use the actual customer_type from the customer record
+            let customerType;
+            if (customerSource === 'hotel_guest') {
+                customerType = 'interno';
+            } else {
+                // Try to get customer_type from the selected customer object
+                customerType = this.panel.customerHandler?.state?.selectedCustomer?.customer_type || 'externo';
+            }
+
+            console.log('[Pricing] Determined customer_type:', customerType);
 
             // First, fetch available packages to populate the selector
             const packages = await this.fetchAvailablePackages(
@@ -235,6 +246,7 @@ class PricingCalculator {
             console.log('[Pricing] Calling API:', `${this.panel.options.apiBaseUrl}/pricing/calculate`);
             const requestBody = {
                 customer_id: parseInt(customerId),
+                customer_source: customerSource,
                 furniture_ids: furniture,
                 reservation_date: dates[0], // Use first date for pricing
                 num_people: numPeople
