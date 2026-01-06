@@ -676,11 +676,6 @@
                                     title="Editar rápido">
                                 <i class="fas fa-pen"></i>
                             </button>
-                            <a href="{{ url_for('beach.map') }}?date={{ res.reservation_date or res.start_date }}&reservation={{ res.id }}"
-                               class="btn btn-outline-secondary"
-                               title="Ver en mapa">
-                                <i class="fas fa-map"></i>
-                            </a>
                             <button type="button"
                                     class="btn btn-outline-danger"
                                     onclick="confirmDelete({{ res.id }}, '{{ res.ticket_number or res.id }}')"

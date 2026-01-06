@@ -303,11 +303,6 @@ def register_routes(bp):
             })
 
         except Exception as e:
-            import traceback
-            print(f"Error updating reservation {reservation_id}:")
-            print(f"Updates: {updates}")
-            print(f"Values: {values}")
-            traceback.print_exc()
             return jsonify({'success': False, 'error': f'Error al actualizar reserva: {str(e)}'}), 500
 
     @bp.route('/map/reservations/<int:reservation_id>/change-customer', methods=['POST'])

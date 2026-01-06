@@ -122,7 +122,8 @@ from blueprints.beach.routes.reservations import (
     detail as reservations_detail_view,
     edit as reservations_edit_view,
     delete as reservations_delete_view,
-    cancel as reservations_cancel_view
+    cancel as reservations_cancel_view,
+    export as reservations_export_view
 )
 
 
@@ -172,3 +173,11 @@ def reservations_delete(reservation_id):
 def reservations_cancel(reservation_id):
     """Cancel reservation."""
     return reservations_cancel_view(reservation_id)
+
+
+@beach_bp.route('/reservations/export')
+@login_required
+@permission_required('beach.reservations.view')
+def reservations_export():
+    """Export reservations to Excel."""
+    return reservations_export_view()

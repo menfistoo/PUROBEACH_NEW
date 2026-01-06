@@ -306,8 +306,30 @@ Warning:          #E5A33D
 
 ---
 
+## Issue Management
+
+**CRITICAL: Always read `Documentation/puro beach club/Issues/_WORKFLOW.md` when working with issues.**
+
+### Workflow
+```
+PENDING → IN PROGRESS → PENDING USER REVIEW → DONE
+                ↑                │
+                └────────────────┘ (if rejected)
+```
+
+### Quick Actions
+| User Says | Action |
+|-----------|--------|
+| Reports issue | Create file in `Issues/PENDING/` |
+| "Work on X" | Move to `IN PROGRESS/`, fix it |
+| "OK" / "Approved" | Move to `DONE/` |
+| "Not fixed" | Move back to `IN PROGRESS/` |
+
+---
+
 ## Extended Documentation
 
+- **Issue Workflow:** `Documentation/puro beach club/Issues/_WORKFLOW.md`
 - **Design System:** `DESIGN_SYSTEM.md` (colors, typography, components)
 - **Development Plan:** `docs/DEVELOPMENT_PLAN.md` (living document)
 - **Code Review Standards:** `code-review/README.md`
