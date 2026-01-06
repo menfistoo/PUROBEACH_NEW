@@ -97,7 +97,18 @@ def register_routes(bp):
                 'created_at': reservation.get('created_at'),
                 'furniture': reservation.get('furniture', []),
                 'tags': reservation.get('tags', []),
-                'preferences': reservation.get('preferences')
+                'preferences': reservation.get('preferences'),
+                # Pricing fields
+                'price': reservation.get('price', 0.0),
+                'final_price': reservation.get('final_price', 0.0),
+                'package_id': reservation.get('package_id'),
+                'package_name': reservation.get('package_name'),
+                'minimum_consumption_amount': reservation.get('minimum_consumption_amount', 0.0),
+                'minimum_consumption_policy_id': reservation.get('minimum_consumption_policy_id'),
+                'minimum_consumption_policy_name': reservation.get('minimum_consumption_policy_name'),
+                'paid': reservation.get('paid', 0),
+                'payment_ticket_number': reservation.get('payment_ticket_number'),
+                'payment_method': reservation.get('payment_method')
             },
             'customer': {
                 'id': customer['id'],

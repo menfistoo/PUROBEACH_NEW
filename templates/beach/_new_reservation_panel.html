@@ -253,6 +253,32 @@
                 <input type="hidden" id="newPanelSelectedPackageId" value="">
             </section>
 
+            <!-- Payment Section -->
+            <section class="panel-section payment-section">
+                <div class="panel-section-title">
+                    <i class="fas fa-receipt"></i>
+                    Pago
+                </div>
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <label class="detail-label" for="newPanelPaymentTicket">Nº ticket</label>
+                        <input type="text"
+                               class="detail-input"
+                               id="newPanelPaymentTicket"
+                               placeholder="Ej: 12345">
+                    </div>
+                    <div class="detail-item">
+                        <label class="detail-label" for="newPanelPaymentMethod">Forma de pago</label>
+                        <select class="form-select detail-input" id="newPanelPaymentMethod">
+                            <option value="">Seleccionar...</option>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="tarjeta">Tarjeta</option>
+                            <option value="cargo_habitacion">Cargo a habitación</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
             <!-- Preferences Section -->
             <section class="panel-section preferences-section">
                 <div class="panel-section-title">

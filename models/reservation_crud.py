@@ -125,7 +125,8 @@ def create_beach_reservation(
     minimum_consumption_amount: float = 0.0,
     reservation_type: str = 'normal',
     package_id: int = None,
-    payment_ticket_number: str = None
+    payment_ticket_number: str = None,
+    payment_method: str = None
 ) -> tuple:
     """
     Create a complete reservation with all validations.
@@ -156,6 +157,7 @@ def create_beach_reservation(
         reservation_type: 'normal' or 'bloqueo'
         package_id: Selected package ID
         payment_ticket_number: PMS/POS payment ticket number
+        payment_method: Payment method (efectivo, tarjeta, cargo_habitacion)
 
     Returns:
         tuple: (reservation_id, ticket_number)
@@ -163,9 +165,7 @@ def create_beach_reservation(
     Raises:
         ValueError: If validations fail
     """
-    # Validate payment ticket requirement
-    if paid and not payment_ticket_number:
-        raise ValueError("Número de ticket requerido para reservas pagadas")
+    # Payment ticket and method are optional (for auditing purposes)
 
     db = get_db()
     cursor = db.cursor()
@@ -189,7 +189,7 @@ def create_beach_reservation(
                 payment_status, price, final_price, hamaca_included, price_catalog_id, paid,
                 charge_to_room, charge_reference,
                 minimum_consumption_amount, minimum_consumption_policy_id,
-                package_id, payment_ticket_number,
+                package_id, payment_ticket_number, payment_method,
                 check_in_date, check_out_date, preferences, notes,
                 parent_reservation_id, reservation_type, created_by, created_at
             ) VALUES (
@@ -198,7 +198,7 @@ def create_beach_reservation(
                 ?, ?, ?, ?, ?, ?,
                 ?, ?,
                 ?, ?,
-                ?, ?,
+                ?, ?, ?,
                 ?, ?, ?, ?,
                 ?, ?, ?, CURRENT_TIMESTAMP
             )
@@ -208,7 +208,7 @@ def create_beach_reservation(
             payment_status, price, final_price, hamaca_included, price_catalog_id, paid,
             charge_to_room, charge_reference,
             minimum_consumption_amount, minimum_consumption_policy_id,
-            package_id, payment_ticket_number,
+            package_id, payment_ticket_number, payment_method,
             check_in_date, check_out_date, preferences, observations,
             parent_reservation_id, reservation_type, created_by
         ))
@@ -375,7 +375,7 @@ def update_beach_reservation(reservation_id: int, **kwargs) -> bool:
         'payment_status', 'price', 'final_price', 'hamaca_included',
         'price_catalog_id', 'paid', 'charge_to_room', 'charge_reference',
         'minimum_consumption_amount', 'minimum_consumption_policy_id',
-        'package_id', 'payment_ticket_number',
+        'package_id', 'payment_ticket_number', 'payment_method',
         'check_in_date', 'check_out_date', 'preferences', 'notes', 'observations'
     ]
 

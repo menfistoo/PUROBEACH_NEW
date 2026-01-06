@@ -14,6 +14,7 @@ from models.reservation import (
 from models.reservation_multiday import create_linked_multiday_reservations
 from models.customer import get_customer_by_id
 from models.preference import set_customer_preferences_by_codes
+from blueprints.beach.services.pricing_service import calculate_reservation_pricing
 
 
 def register_routes(bp):
@@ -56,6 +57,33 @@ def register_routes(bp):
         notes = data.get('notes', '')
         # SG-06: Charge to room option (only for hotel guests)
         charge_to_room = 1 if data.get('charge_to_room') else 0
+
+        # Pricing fields from frontend
+        package_id = data.get('package_id')
+        if package_id:
+            try:
+                package_id = int(package_id)
+            except (ValueError, TypeError):
+                package_id = None
+
+        price_override = data.get('price_override')
+        if price_override:
+            try:
+                price_override = float(price_override)
+            except (ValueError, TypeError):
+                price_override = None
+
+        # Payment tracking fields
+        payment_ticket_number = data.get('payment_ticket_number')
+        if payment_ticket_number:
+            payment_ticket_number = str(payment_ticket_number).strip() or None
+
+        payment_method = data.get('payment_method')
+        if payment_method and payment_method not in ('efectivo', 'tarjeta', 'cargo_habitacion'):
+            payment_method = None
+
+        # Paid status (auto-toggled when payment details provided)
+        paid = 1 if data.get('paid') else 0
 
         # Handle single date or array of dates
         if not dates and date_str:
@@ -140,6 +168,40 @@ def register_routes(bp):
         # Convert preferences list to comma-separated string
         preferences_str = ','.join(preferences) if preferences else None
 
+        # Calculate pricing
+        calculated_price = 0.0
+        calculated_min_consumption = 0.0
+        min_consumption_policy_id = None
+
+        if price_override is not None:
+            # Manual price override - use it directly
+            calculated_price = price_override
+        else:
+            # Calculate pricing based on package or minimum consumption
+            from datetime import datetime
+            try:
+                first_date = datetime.strptime(dates[0], '%Y-%m-%d').date()
+                pricing = calculate_reservation_pricing(
+                    customer_id=customer_id,
+                    furniture_ids=all_furniture_ids,
+                    reservation_date=first_date,
+                    num_people=num_people,
+                    package_id=package_id
+                )
+
+                if pricing.get('has_package'):
+                    calculated_price = pricing.get('package_price', 0.0)
+                elif pricing.get('has_minimum_consumption'):
+                    calculated_min_consumption = pricing.get('minimum_consumption_amount', 0.0)
+                    min_consumption_policy_id = pricing.get('minimum_consumption', {}).get('policy_id')
+                    calculated_price = calculated_min_consumption
+
+            except Exception as pricing_error:
+                # Log error but continue with zero price
+                import traceback
+                print(f"Warning: Pricing calculation failed: {pricing_error}")
+                traceback.print_exc()
+
         try:
             # Multi-day reservation
             if len(dates) > 1:
@@ -154,14 +216,15 @@ def register_routes(bp):
                     preferences=preferences_str,
                     observations=notes,
                     created_by=current_user.username if current_user else 'system',
-                    # Pricing fields (defaults for quick map reservation)
-                    price=0.0,
-                    final_price=0.0,
-                    paid=0,
-                    package_id=None,
-                    payment_ticket_number=None,
-                    minimum_consumption_amount=0.0,
-                    minimum_consumption_policy_id=None
+                    # Pricing fields from calculation
+                    price=calculated_price,
+                    final_price=calculated_price,
+                    paid=paid,
+                    package_id=package_id,
+                    payment_ticket_number=payment_ticket_number,
+                    payment_method=payment_method,
+                    minimum_consumption_amount=calculated_min_consumption,
+                    minimum_consumption_policy_id=min_consumption_policy_id
                 )
 
                 if result.get('success'):
@@ -194,14 +257,15 @@ def register_routes(bp):
                     preferences=preferences_str,
                     observations=notes,
                     created_by=current_user.username if current_user else 'system',
-                    # Pricing fields (defaults for quick map reservation)
-                    price=0.0,
-                    final_price=0.0,
-                    paid=0,
-                    package_id=None,
-                    payment_ticket_number=None,
-                    minimum_consumption_amount=0.0,
-                    minimum_consumption_policy_id=None
+                    # Pricing fields from calculation
+                    price=calculated_price,
+                    final_price=calculated_price,
+                    paid=paid,
+                    package_id=package_id,
+                    payment_ticket_number=payment_ticket_number,
+                    payment_method=payment_method,
+                    minimum_consumption_amount=calculated_min_consumption,
+                    minimum_consumption_policy_id=min_consumption_policy_id
                 )
 
                 # Two-way sync: Update customer preferences from reservation

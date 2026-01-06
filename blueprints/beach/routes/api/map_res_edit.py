@@ -185,8 +185,26 @@ def register_routes(bp):
 
         # Allowed fields for partial update
         # Note: For date changes, use the dedicated /change-dates endpoint
-        allowed_fields = ['num_people', 'time_slot', 'observations']
-        updates = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+        allowed_fields = [
+            'num_people', 'time_slot', 'notes',
+            'paid', 'payment_ticket_number', 'payment_method', 'preferences',
+            # Pricing fields
+            'price', 'final_price', 'package_id',
+            'minimum_consumption_amount', 'minimum_consumption_policy_id'
+        ]
+
+        # Map frontend field names to database column names
+        field_mapping = {
+            'observations': 'notes',  # Frontend uses 'observations', DB uses 'notes'
+            'total_price': 'final_price'  # Frontend uses 'total_price', DB uses 'final_price'
+        }
+
+        # Apply mapping and filter to allowed fields
+        updates = {}
+        for k, v in data.items():
+            db_field = field_mapping.get(k, k)  # Map or use original
+            if db_field in allowed_fields:
+                updates[db_field] = v
 
         if not updates:
             return jsonify({'success': True, 'message': 'Sin cambios'})
@@ -211,6 +229,58 @@ def register_routes(bp):
                     'error': 'Numero de personas no valido (1-50)'
                 }), 400
 
+        # Validate paid if provided (should be 0 or 1)
+        if 'paid' in updates:
+            updates['paid'] = 1 if updates['paid'] else 0
+
+        # payment_ticket_number can be string or None
+        if 'payment_ticket_number' in updates:
+            if updates['payment_ticket_number'] == '':
+                updates['payment_ticket_number'] = None
+
+        # preferences should be comma-separated string or empty
+        if 'preferences' in updates:
+            if updates['preferences'] is None:
+                updates['preferences'] = ''
+
+        # Validate and convert pricing fields
+        if 'final_price' in updates:
+            try:
+                updates['final_price'] = float(updates['final_price']) if updates['final_price'] else 0.0
+            except (ValueError, TypeError):
+                updates['final_price'] = 0.0
+
+        if 'price' in updates:
+            try:
+                updates['price'] = float(updates['price']) if updates['price'] else 0.0
+            except (ValueError, TypeError):
+                updates['price'] = 0.0
+
+        if 'minimum_consumption_amount' in updates:
+            try:
+                updates['minimum_consumption_amount'] = float(updates['minimum_consumption_amount']) if updates['minimum_consumption_amount'] else 0.0
+            except (ValueError, TypeError):
+                updates['minimum_consumption_amount'] = 0.0
+
+        if 'package_id' in updates:
+            # package_id can be None (no package) or a valid integer
+            if updates['package_id'] in (None, '', 0, '0'):
+                updates['package_id'] = None
+            else:
+                try:
+                    updates['package_id'] = int(updates['package_id'])
+                except (ValueError, TypeError):
+                    updates['package_id'] = None
+
+        if 'minimum_consumption_policy_id' in updates:
+            if updates['minimum_consumption_policy_id'] in (None, '', 0, '0'):
+                updates['minimum_consumption_policy_id'] = None
+            else:
+                try:
+                    updates['minimum_consumption_policy_id'] = int(updates['minimum_consumption_policy_id'])
+                except (ValueError, TypeError):
+                    updates['minimum_consumption_policy_id'] = None
+
         try:
             with get_db() as conn:
                 # Build dynamic UPDATE query
@@ -233,7 +303,12 @@ def register_routes(bp):
             })
 
         except Exception as e:
-            return jsonify({'success': False, 'error': 'Error al actualizar reserva'}), 500
+            import traceback
+            print(f"Error updating reservation {reservation_id}:")
+            print(f"Updates: {updates}")
+            print(f"Values: {values}")
+            traceback.print_exc()
+            return jsonify({'success': False, 'error': f'Error al actualizar reserva: {str(e)}'}), 500
 
     @bp.route('/map/reservations/<int:reservation_id>/change-customer', methods=['POST'])
     @login_required

@@ -48,8 +48,69 @@ def register_routes(bp):
             'furniture': reservation.get('furniture', []),
             'tags': reservation.get('tags', []),
             'notes': reservation.get('notes'),
-            'preferences': reservation.get('preferences')
+            'observations': reservation.get('observations'),
+            'preferences': reservation.get('preferences'),
+            'paid': reservation.get('paid', 0),
+            'final_price': reservation.get('final_price', 0)
         })
+
+    @bp.route('/reservations/<int:reservation_id>', methods=['PATCH'])
+    @login_required
+    @permission_required('beach.reservations.edit')
+    def reservation_update(reservation_id):
+        """Quick update reservation fields."""
+        from models.reservation import update_beach_reservation
+
+        reservation = get_reservation_with_details(reservation_id)
+        if not reservation:
+            return jsonify({'error': 'Reserva no encontrada'}), 404
+
+        data = request.get_json()
+        allowed_fields = ['num_people', 'paid', 'notes', 'final_price',
+                          'payment_ticket_number', 'payment_method']
+
+        # Map frontend field names to database column names
+        field_mapping = {'observations': 'notes'}
+        mapped_data = {}
+        for k, v in data.items():
+            mapped_key = field_mapping.get(k, k)
+            if mapped_key in allowed_fields:
+                mapped_data[mapped_key] = v
+        updates = mapped_data
+
+        try:
+            # Handle state change separately
+            if 'state_id' in data:
+                state_id = data['state_id']
+                # Get state name from ID
+                from database import get_db
+                with get_db() as conn:
+                    state = conn.execute(
+                        'SELECT name FROM beach_reservation_states WHERE id = ?',
+                        (state_id,)
+                    ).fetchone()
+                    if state:
+                        # Remove current states and add new one
+                        current_states = reservation.get('current_states', '')
+                        current_state_list = [s.strip() for s in current_states.split(',') if s.strip()]
+                        for existing_state in current_state_list:
+                            remove_reservation_state(
+                                reservation_id, existing_state,
+                                changed_by=current_user.username if current_user else 'system'
+                            )
+                        add_reservation_state(
+                            reservation_id, state['name'],
+                            changed_by=current_user.username if current_user else 'system'
+                        )
+
+            # Update other fields
+            if updates:
+                update_beach_reservation(reservation_id, **updates)
+
+            return jsonify({'success': True})
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
     @bp.route('/reservations/<int:reservation_id>/toggle-state', methods=['POST'])
     @login_required

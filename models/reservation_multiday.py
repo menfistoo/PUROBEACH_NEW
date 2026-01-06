@@ -51,7 +51,8 @@ def create_linked_multiday_reservations(
     minimum_consumption_amount: float = 0.0,
     minimum_consumption_policy_id: int = None,
     package_id: int = None,
-    payment_ticket_number: str = None
+    payment_ticket_number: str = None,
+    payment_method: str = None
 ) -> dict:
     """
     Create linked reservations for multiple consecutive days.
@@ -177,7 +178,7 @@ def create_linked_multiday_reservations(
                         payment_status, price, final_price, paid, charge_to_room, charge_reference,
                         hamaca_included, preferences, notes,
                         minimum_consumption_amount, minimum_consumption_policy_id,
-                        package_id, payment_ticket_number,
+                        package_id, payment_ticket_number, payment_method,
                         check_in_date, check_out_date,
                         parent_reservation_id, reservation_type, created_by, created_at
                     ) VALUES (
@@ -186,7 +187,7 @@ def create_linked_multiday_reservations(
                         ?, ?, ?, ?, ?, ?,
                         ?, ?, ?,
                         ?, ?,
-                        ?, ?,
+                        ?, ?, ?,
                         ?, ?,
                         NULL, 'normal', ?, CURRENT_TIMESTAMP
                     )
@@ -196,7 +197,7 @@ def create_linked_multiday_reservations(
                     payment_status, price, final_price, paid, charge_to_room, charge_reference,
                     hamaca_included, preferences, observations,
                     minimum_consumption_amount, minimum_consumption_policy_id,
-                    package_id, payment_ticket_number,
+                    package_id, payment_ticket_number, payment_method,
                     check_in_date, check_out_date,
                     created_by
                 ))
@@ -224,7 +225,7 @@ def create_linked_multiday_reservations(
                         payment_status, price, final_price, paid, charge_to_room, charge_reference,
                         hamaca_included, preferences, notes,
                         minimum_consumption_amount, minimum_consumption_policy_id,
-                        package_id, payment_ticket_number,
+                        package_id, payment_ticket_number, payment_method,
                         check_in_date, check_out_date,
                         parent_reservation_id, reservation_type, created_by, created_at
                     ) VALUES (
@@ -233,7 +234,7 @@ def create_linked_multiday_reservations(
                         ?, ?, ?, ?, ?, ?,
                         ?, ?, ?,
                         ?, ?,
-                        ?, ?,
+                        ?, ?, ?,
                         ?, ?,
                         ?, 'normal', ?, CURRENT_TIMESTAMP
                     )
@@ -243,7 +244,7 @@ def create_linked_multiday_reservations(
                     payment_status, price, final_price, paid, charge_to_room, charge_reference,
                     hamaca_included, preferences, observations,
                     minimum_consumption_amount, minimum_consumption_policy_id,
-                    package_id, payment_ticket_number,
+                    package_id, payment_ticket_number, payment_method,
                     check_in_date, check_out_date,
                     parent_id, created_by
                 ))

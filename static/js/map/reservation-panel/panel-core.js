@@ -274,6 +274,12 @@ class NewReservationPanel {
         // Reset inputs
         if (this.notesInput) this.notesInput.value = '';
 
+        // Clear payment fields
+        const paymentTicketInput = document.getElementById('newPanelPaymentTicket');
+        const paymentMethodSelect = document.getElementById('newPanelPaymentMethod');
+        if (paymentTicketInput) paymentTicketInput.value = '';
+        if (paymentMethodSelect) paymentMethodSelect.value = '';
+
         // Clear preferences
         this.clearPreferences();
     }
@@ -429,6 +435,14 @@ class NewReservationPanel {
             const priceOverrideInput = document.getElementById('newPanelPriceOverride');
             const priceOverride = priceOverrideInput?.value || '';
 
+            // Get payment fields
+            const paymentTicketInput = document.getElementById('newPanelPaymentTicket');
+            const paymentMethodSelect = document.getElementById('newPanelPaymentMethod');
+
+            // Get payment values for auto-toggle paid logic
+            const paymentTicketValue = paymentTicketInput?.value.trim() || null;
+            const paymentMethodValue = paymentMethodSelect?.value || null;
+
             // Create reservation using map quick-reservation endpoint
             const payload = {
                 customer_id: finalCustomerId,
@@ -438,7 +452,11 @@ class NewReservationPanel {
                 time_slot: 'all_day',
                 notes: this.notesInput.value.trim(),
                 preferences: this.state.preferences,
-                charge_to_room: document.getElementById('newPanelChargeToRoom')?.checked || false
+                charge_to_room: document.getElementById('newPanelChargeToRoom')?.checked || false,
+                payment_ticket_number: paymentTicketValue,
+                payment_method: paymentMethodValue,
+                // Auto-toggle paid when payment details are provided
+                paid: (paymentTicketValue || paymentMethodValue) ? 1 : 0
             };
 
             // Add package_id if selected (otherwise use minimum consumption)

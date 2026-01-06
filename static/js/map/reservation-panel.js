@@ -9,6 +9,7 @@ class ReservationPanel {
             apiBaseUrl: '/beach/api',
             animationDuration: 300,
             swipeThreshold: 100,
+            context: 'map', // 'map' or 'standalone'
             onClose: null,
             onSave: null,
             onStateChange: null,
@@ -16,6 +17,9 @@ class ReservationPanel {
             onCustomerChange: null,
             ...options
         };
+
+        // Context mode (map = inside map page, standalone = reservations list page)
+        this.context = this.options.context;
 
         // State
         this.state = {
@@ -47,6 +51,15 @@ class ReservationPanel {
             originalCodes: []         // Original codes for dirty checking
         };
 
+        // Pricing editing state
+        this.pricingEditState = {
+            originalPrice: 0,         // Original price from reservation
+            calculatedPrice: 0,       // System-calculated price
+            availablePackages: [],    // Available packages from API
+            selectedPackageId: null,  // Currently selected package
+            isModified: false         // Whether user manually modified price
+        };
+
         // Touch gesture tracking
         this.swipe = {
             startX: 0,
@@ -59,6 +72,9 @@ class ReservationPanel {
 
         // Map data reference (set by BeachMap)
         this.mapData = null;
+
+        // States data (can be set independently for standalone mode)
+        this.states = [];
 
         // Initialize
         this.cacheElements();
@@ -119,6 +135,12 @@ class ReservationPanel {
         // State section
         this.stateChipsContainer = document.getElementById('panelStateChips');
 
+        // State history section (collapsible)
+        this.stateHistorySection = document.getElementById('stateHistorySection');
+        this.stateHistoryToggle = document.getElementById('stateHistoryToggle');
+        this.stateHistoryContent = document.getElementById('stateHistoryContent');
+        this.stateHistoryList = document.getElementById('stateHistoryList');
+
         // Furniture section - View mode
         this.furnitureViewMode = document.getElementById('furnitureViewMode');
         this.furnitureChipsContainer = document.getElementById('panelFurnitureChips');
@@ -142,6 +164,33 @@ class ReservationPanel {
         this.detailsEditMode = document.getElementById('detailsEditMode');
         this.editNumPeople = document.getElementById('editNumPeople');
         this.editNotes = document.getElementById('editNotes');
+
+        // Pricing section - View mode
+        this.pricingSection = document.getElementById('pricingSection');
+        this.pricingViewMode = document.getElementById('pricingViewMode');
+        this.detailTotalPrice = document.getElementById('detailTotalPrice');
+        this.detailPricingBreakdown = document.getElementById('detailPricingBreakdown');
+
+        // Pricing section - Edit mode
+        this.pricingEditMode = document.getElementById('pricingEditMode');
+        this.panelPricingDisplay = document.getElementById('panelPricingDisplay');
+        this.panelPricingTypeSelector = document.getElementById('panelPricingTypeSelector');
+        this.panelPricingTypeSelect = document.getElementById('panelPricingTypeSelect');
+        this.panelFinalPriceInput = document.getElementById('panelFinalPriceInput');
+        this.panelPriceResetBtn = document.getElementById('panelPriceResetBtn');
+        this.panelCalculatedPrice = document.getElementById('panelCalculatedPrice');
+        this.panelPricingBreakdown = document.getElementById('panelPricingBreakdown');
+        this.panelPriceOverride = document.getElementById('panelPriceOverride');
+        this.panelSelectedPackageId = document.getElementById('panelSelectedPackageId');
+
+        // Payment section
+        this.paymentSection = document.getElementById('paymentSection');
+        this.paymentViewMode = document.getElementById('paymentViewMode');
+        this.paymentEditMode = document.getElementById('paymentEditMode');
+        this.detailPaymentTicket = document.getElementById('detailPaymentTicket');
+        this.detailPaymentMethod = document.getElementById('detailPaymentMethod');
+        this.editPaymentTicket = document.getElementById('editPaymentTicket');
+        this.editPaymentMethod = document.getElementById('editPaymentMethod');
 
         // View more link
         this.viewMoreLink = document.getElementById('viewMoreLink');
@@ -183,6 +232,9 @@ class ReservationPanel {
         // Customer change button
         this.customerChangeBtn?.addEventListener('click', () => this.showCustomerSearch());
 
+        // State history toggle
+        this.stateHistoryToggle?.addEventListener('click', () => this.toggleStateHistory());
+
         // Customer search input
         this.customerSearchInput?.addEventListener('input', (e) => this.handleCustomerSearch(e));
 
@@ -215,6 +267,57 @@ class ReservationPanel {
             this.markDirty();
         });
         this.editNotes?.addEventListener('input', () => this.markDirty());
+
+        // Pricing event listeners
+        this.setupPricingEventListeners();
+    }
+
+    /**
+     * Setup pricing-related event listeners
+     */
+    setupPricingEventListeners() {
+        // Price input manual change
+        this.panelFinalPriceInput?.addEventListener('input', () => {
+            const manualPrice = parseFloat(this.panelFinalPriceInput.value) || 0;
+            const calculatedPrice = this.pricingEditState.calculatedPrice || 0;
+
+            if (Math.abs(manualPrice - calculatedPrice) > 0.01) {
+                // Price has been manually modified
+                this.panelFinalPriceInput.classList.add('modified');
+                this.panelPriceOverride.value = manualPrice.toFixed(2);
+                if (this.panelCalculatedPrice) this.panelCalculatedPrice.style.display = 'block';
+                if (this.panelPriceResetBtn) this.panelPriceResetBtn.style.display = 'block';
+                this.pricingEditState.isModified = true;
+            } else {
+                // Price matches calculated, remove override
+                this.panelFinalPriceInput.classList.remove('modified');
+                this.panelPriceOverride.value = '';
+                if (this.panelCalculatedPrice) this.panelCalculatedPrice.style.display = 'none';
+                if (this.panelPriceResetBtn) this.panelPriceResetBtn.style.display = 'none';
+                this.pricingEditState.isModified = false;
+            }
+            this.markDirty();
+        });
+
+        // Reset button
+        this.panelPriceResetBtn?.addEventListener('click', () => {
+            const calculatedPrice = this.pricingEditState.calculatedPrice || 0;
+            this.panelFinalPriceInput.value = calculatedPrice.toFixed(2);
+            this.panelFinalPriceInput.classList.remove('modified');
+            this.panelPriceOverride.value = '';
+            if (this.panelCalculatedPrice) this.panelCalculatedPrice.style.display = 'none';
+            if (this.panelPriceResetBtn) this.panelPriceResetBtn.style.display = 'none';
+            this.pricingEditState.isModified = false;
+        });
+
+        // Package selector change
+        this.panelPricingTypeSelect?.addEventListener('change', () => {
+            const selectedValue = this.panelPricingTypeSelect.value;
+            this.panelSelectedPackageId.value = selectedValue;
+            this.pricingEditState.selectedPackageId = selectedValue ? parseInt(selectedValue) : null;
+            this.calculateAndUpdatePricing();
+            this.markDirty();
+        });
     }
 
     /**
@@ -273,6 +376,44 @@ class ReservationPanel {
      */
     setMapData(data) {
         this.mapData = data;
+        // Also extract states from mapData
+        if (data?.states) {
+            this.states = data.states;
+        }
+    }
+
+    /**
+     * Set states independently (for standalone mode without full map data)
+     * @param {Array} states - Array of state objects [{id, name, code, color, icon, ...}]
+     */
+    setStates(states) {
+        this.states = states || [];
+    }
+
+    /**
+     * Fetch states from API (for standalone mode)
+     */
+    async fetchStates() {
+        try {
+            const response = await fetch(`${this.options.apiBaseUrl}/states`);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.states) {
+                    this.states = result.states;
+                    return result.states;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch states:', error);
+        }
+        return [];
+    }
+
+    /**
+     * Check if running in standalone mode
+     */
+    isStandalone() {
+        return this.context === 'standalone';
     }
 
     /**
@@ -300,12 +441,28 @@ class ReservationPanel {
         // Show panel
         this.backdrop.classList.add('show');
         this.panel.classList.add('open');
-        document.body.style.overflow = 'hidden';
 
-        // Adjust map canvas if on tablet/desktop
-        const mapWrapper = document.querySelector('.map-canvas-wrapper');
-        if (mapWrapper && window.innerWidth >= 768) {
-            mapWrapper.classList.add('panel-open');
+        // Add standalone class if in standalone mode
+        if (this.isStandalone()) {
+            this.panel.classList.add('standalone');
+            this.backdrop.classList.add('standalone');
+            // Don't lock body scroll in standalone mode - page should scroll normally
+        } else {
+            // Only lock body scroll in map context (overlay mode)
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Adjust map canvas if on tablet/desktop (only in map context)
+        if (!this.isStandalone()) {
+            const mapWrapper = document.querySelector('.map-canvas-wrapper');
+            if (mapWrapper && window.innerWidth >= 768) {
+                mapWrapper.classList.add('panel-open');
+            }
+        }
+
+        // In standalone mode, fetch states if not already loaded
+        if (this.isStandalone() && this.states.length === 0) {
+            await this.fetchStates();
         }
 
         // Load reservation data
@@ -342,13 +499,17 @@ class ReservationPanel {
         this.panel.classList.remove('open');
         this.panel.classList.remove('collapsed');
         this.panel.classList.remove('edit-mode');
+        this.panel.classList.remove('standalone');
+        this.backdrop.classList.remove('standalone');
         this.panel.style.transform = '';
         document.body.style.overflow = '';
 
-        // Remove map canvas adjustment
-        const mapWrapper = document.querySelector('.map-canvas-wrapper');
-        if (mapWrapper) {
-            mapWrapper.classList.remove('panel-open');
+        // Remove map canvas adjustment (only in map context)
+        if (!this.isStandalone()) {
+            const mapWrapper = document.querySelector('.map-canvas-wrapper');
+            if (mapWrapper) {
+                mapWrapper.classList.remove('panel-open');
+            }
         }
 
         // Hide customer search
@@ -434,6 +595,14 @@ class ReservationPanel {
         if (this.detailsViewMode) this.detailsViewMode.style.display = 'none';
         if (this.detailsEditMode) this.detailsEditMode.style.display = 'grid';
 
+        // Show pricing edit mode, hide view mode
+        if (this.pricingViewMode) this.pricingViewMode.style.display = 'none';
+        if (this.pricingEditMode) this.pricingEditMode.style.display = 'block';
+
+        // Show payment edit mode, hide view mode
+        if (this.paymentViewMode) this.paymentViewMode.style.display = 'none';
+        if (this.paymentEditMode) this.paymentEditMode.style.display = 'grid';
+
         // Pre-fill edit fields with current values (only if not manually edited)
         if (this.state.data) {
             const data = this.state.data;
@@ -443,16 +612,29 @@ class ReservationPanel {
             if (this.editNotes) {
                 this.editNotes.value = data.reservation?.notes || '';
             }
+            // Pre-fill payment fields
+            if (this.editPaymentTicket) {
+                this.editPaymentTicket.value = data.reservation?.payment_ticket_number || '';
+            }
+            if (this.editPaymentMethod) {
+                this.editPaymentMethod.value = data.reservation?.payment_method || '';
+            }
         }
 
         // Store original data for dirty checking
         this.state.originalData = {
             num_people: this.editNumPeople?.value,
-            notes: this.editNotes?.value
+            notes: this.editNotes?.value,
+            price: this.panelFinalPriceInput?.value,
+            payment_ticket_number: this.editPaymentTicket?.value,
+            payment_method: this.editPaymentMethod?.value
         };
 
         // Also enter preferences edit mode
         await this.enterPreferencesEditMode();
+
+        // Enter pricing edit mode - fetch packages and calculate pricing
+        await this.enterPricingEditMode();
     }
 
     /**
@@ -483,8 +665,19 @@ class ReservationPanel {
         if (this.detailsViewMode) this.detailsViewMode.style.display = 'grid';
         if (this.detailsEditMode) this.detailsEditMode.style.display = 'none';
 
+        // Show pricing view mode, hide edit mode
+        if (this.pricingViewMode) this.pricingViewMode.style.display = 'block';
+        if (this.pricingEditMode) this.pricingEditMode.style.display = 'none';
+
+        // Show payment view mode, hide edit mode
+        if (this.paymentViewMode) this.paymentViewMode.style.display = 'grid';
+        if (this.paymentEditMode) this.paymentEditMode.style.display = 'none';
+
         // Exit preferences edit mode
         this.exitPreferencesEditMode(discard);
+
+        // Exit pricing edit mode
+        this.exitPricingEditMode(discard);
 
         // Hide customer search
         this.hideCustomerSearch();
@@ -558,6 +751,11 @@ class ReservationPanel {
         this.renderStateSection(res);
         this.renderFurnitureSection(res);
         this.renderDetailsSection(res);
+        this.renderPricingSection(res);
+        this.renderPaymentSection(res);
+
+        // Load state history (async, non-blocking)
+        this.loadStateHistory(res.id);
     }
 
     /**
@@ -735,6 +933,225 @@ class ReservationPanel {
         }
     }
 
+    // =========================================================================
+    // PRICING EDIT MODE METHODS
+    // =========================================================================
+
+    /**
+     * Enter pricing edit mode - fetch packages and set up pricing
+     */
+    async enterPricingEditMode() {
+        if (!this.state.data?.reservation) return;
+
+        const reservation = this.state.data.reservation;
+        const customer = this.state.data.customer;
+
+        // Reset pricing state
+        this.pricingEditState.isModified = false;
+        this.pricingEditState.selectedPackageId = reservation.package_id || null;
+
+        // Set current price in input (API returns final_price)
+        const currentPrice = reservation.final_price || reservation.total_price || reservation.price || 0;
+        if (this.panelFinalPriceInput) {
+            this.panelFinalPriceInput.value = parseFloat(currentPrice).toFixed(2);
+            this.panelFinalPriceInput.classList.remove('modified');
+        }
+        if (this.panelPriceOverride) {
+            this.panelPriceOverride.value = '';
+        }
+        if (this.panelCalculatedPrice) {
+            this.panelCalculatedPrice.style.display = 'none';
+        }
+        if (this.panelPriceResetBtn) {
+            this.panelPriceResetBtn.style.display = 'none';
+        }
+
+        // Fetch available packages for this reservation
+        await this.fetchAvailablePackages();
+
+        // Store calculated price for reference
+        this.pricingEditState.calculatedPrice = currentPrice;
+    }
+
+    /**
+     * Exit pricing edit mode
+     */
+    exitPricingEditMode(discard = false) {
+        // Reset state
+        this.pricingEditState.isModified = false;
+
+        // Re-render view mode with current reservation data
+        const reservation = this.state.data?.reservation;
+        if (reservation) {
+            this.renderPricingSection(reservation);
+        }
+    }
+
+    /**
+     * Fetch available packages for the current reservation
+     */
+    async fetchAvailablePackages() {
+        if (!this.state.data?.reservation || !this.state.data?.customer) return;
+
+        const reservation = this.state.data.reservation;
+        const customer = this.state.data.customer;
+
+        // Determine customer type
+        const customerType = customer.customer_type || 'externo';
+
+        // Get furniture IDs for this date
+        const furniture = (reservation.furniture || []).filter(f => {
+            const assignDate = this.parseDateToYMD(f.assignment_date);
+            return assignDate === this.state.currentDate;
+        });
+        const furnitureIds = furniture.map(f => f.furniture_id || f.id);
+
+        try {
+            const response = await fetch(`${this.options.apiBaseUrl}/pricing/packages/available`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
+                },
+                body: JSON.stringify({
+                    customer_type: customerType,
+                    furniture_ids: furnitureIds,
+                    reservation_date: this.state.currentDate,
+                    num_people: reservation.num_people || 1
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.pricingEditState.availablePackages = result.packages || [];
+                this.updatePackageSelector();
+            }
+        } catch (error) {
+            console.error('[Pricing] Error fetching packages:', error);
+        }
+    }
+
+    /**
+     * Update package selector UI with available options
+     */
+    updatePackageSelector() {
+        if (!this.panelPricingTypeSelector || !this.panelPricingTypeSelect) return;
+
+        const packages = this.pricingEditState.availablePackages;
+        const currentPackageId = this.pricingEditState.selectedPackageId;
+
+        // Hide selector if no packages
+        if (!packages || packages.length === 0) {
+            this.panelPricingTypeSelector.style.display = 'none';
+            return;
+        }
+
+        // Clear and rebuild options
+        this.panelPricingTypeSelect.innerHTML = '<option value="">Consumo minimo</option>';
+
+        packages.forEach(pkg => {
+            const option = document.createElement('option');
+            option.value = pkg.id;
+            option.textContent = `${pkg.package_name} - €${pkg.calculated_price.toFixed(2)}`;
+            this.panelPricingTypeSelect.appendChild(option);
+        });
+
+        // Select current package if any
+        if (currentPackageId) {
+            this.panelPricingTypeSelect.value = currentPackageId.toString();
+        } else {
+            this.panelPricingTypeSelect.value = '';
+        }
+
+        // Show selector
+        this.panelPricingTypeSelector.style.display = 'block';
+    }
+
+    /**
+     * Calculate and update pricing based on current selections
+     */
+    async calculateAndUpdatePricing() {
+        if (!this.state.data?.reservation || !this.state.data?.customer) return;
+
+        const reservation = this.state.data.reservation;
+        const customer = this.state.data.customer;
+
+        // Get furniture IDs
+        const furniture = (reservation.furniture || []).filter(f => {
+            const assignDate = this.parseDateToYMD(f.assignment_date);
+            return assignDate === this.state.currentDate;
+        });
+        const furnitureIds = furniture.map(f => f.furniture_id || f.id);
+
+        // Show loading
+        const loadingEl = this.panelPricingDisplay?.querySelector('.pricing-loading');
+        const contentEl = this.panelPricingDisplay?.querySelector('.pricing-content');
+
+        if (loadingEl && contentEl) {
+            loadingEl.style.display = 'flex';
+            contentEl.style.display = 'none';
+        }
+
+        try {
+            const requestBody = {
+                customer_id: customer.id,
+                customer_source: 'customer',
+                furniture_ids: furnitureIds,
+                reservation_date: this.state.currentDate,
+                num_people: parseInt(this.editNumPeople?.value) || reservation.num_people || 1
+            };
+
+            // Add package_id if selected
+            const packageId = this.panelSelectedPackageId?.value;
+            if (packageId) {
+                requestBody.package_id = parseInt(packageId);
+            }
+
+            const response = await fetch(`${this.options.apiBaseUrl}/pricing/calculate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.pricing) {
+                const calculatedPrice = result.pricing.calculated_price;
+                this.pricingEditState.calculatedPrice = calculatedPrice;
+
+                // Update display if not manually modified
+                if (!this.pricingEditState.isModified) {
+                    if (this.panelFinalPriceInput) {
+                        this.panelFinalPriceInput.value = calculatedPrice.toFixed(2);
+                    }
+                }
+
+                // Update calculated price display
+                const calculatedAmountEl = this.panelCalculatedPrice?.querySelector('.calculated-amount');
+                if (calculatedAmountEl) {
+                    calculatedAmountEl.textContent = `€${calculatedPrice.toFixed(2)}`;
+                }
+
+                // Show breakdown if available
+                if (this.panelPricingBreakdown && result.pricing.breakdown) {
+                    this.panelPricingBreakdown.textContent = result.pricing.breakdown;
+                    this.panelPricingBreakdown.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error('[Pricing] Calculation error:', error);
+        } finally {
+            if (loadingEl && contentEl) {
+                loadingEl.style.display = 'none';
+                contentEl.style.display = 'flex';
+            }
+        }
+    }
+
     /**
      * Load all available preferences from server
      */
@@ -808,8 +1225,9 @@ class ReservationPanel {
      */
     renderStateSection(reservation) {
         const currentState = reservation.current_state;
-        const states = this.mapData?.states || [];
-        const activeStates = states.filter(s => s.active);
+        // Use this.states (populated from mapData or setStates/fetchStates)
+        const states = this.states || [];
+        const activeStates = states.filter(s => s.active !== false);
 
         if (activeStates.length === 0) {
             this.stateChipsContainer.innerHTML = `
@@ -842,6 +1260,108 @@ class ReservationPanel {
         this.stateChipsContainer.querySelectorAll('.state-chip').forEach(chip => {
             chip.addEventListener('click', (e) => this.handleStateChange(e));
         });
+    }
+
+    /**
+     * Load and render state history
+     */
+    async loadStateHistory(reservationId) {
+        try {
+            const response = await fetch(
+                `${this.options.apiBaseUrl}/reservations/${reservationId}/history`
+            );
+
+            if (!response.ok) return;
+
+            const result = await response.json();
+
+            if (result.success && result.history && result.history.length > 0) {
+                this.renderStateHistory(result.history);
+                if (this.stateHistorySection) {
+                    this.stateHistorySection.style.display = 'block';
+                }
+            } else {
+                // Hide section if no history
+                if (this.stateHistorySection) {
+                    this.stateHistorySection.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load state history:', error);
+        }
+    }
+
+    /**
+     * Render state history items
+     */
+    renderStateHistory(history) {
+        if (!this.stateHistoryList) return;
+
+        const historyHtml = history.map(item => {
+            // Format date
+            const date = new Date(item.created_at);
+            const dateStr = date.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // Get action icon and color
+            let actionIcon = 'fa-circle';
+            let actionClass = '';
+            if (item.action === 'add' || item.action === 'added') {
+                actionIcon = 'fa-plus-circle';
+                actionClass = 'action-add';
+            } else if (item.action === 'remove' || item.action === 'removed') {
+                actionIcon = 'fa-minus-circle';
+                actionClass = 'action-remove';
+            } else if (item.action === 'change' || item.action === 'changed' || item.action === 'set') {
+                actionIcon = 'fa-exchange-alt';
+                actionClass = 'action-change';
+            }
+
+            // Get state color from our states array
+            const state = this.states.find(s => s.name === item.status_type);
+            const stateColor = state?.color || '#6C757D';
+
+            return `
+                <div class="history-item ${actionClass}">
+                    <div class="history-icon">
+                        <i class="fas ${actionIcon}"></i>
+                    </div>
+                    <div class="history-content">
+                        <span class="history-state" style="color: ${stateColor};">
+                            ${item.status_type}
+                        </span>
+                        <span class="history-meta">
+                            ${dateStr}
+                            ${item.changed_by ? `• ${item.changed_by}` : ''}
+                        </span>
+                        ${item.notes ? `<span class="history-notes">${item.notes}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        this.stateHistoryList.innerHTML = historyHtml;
+    }
+
+    /**
+     * Toggle state history section visibility
+     */
+    toggleStateHistory() {
+        if (!this.stateHistoryContent || !this.stateHistoryToggle) return;
+
+        const isExpanded = this.stateHistoryContent.style.display !== 'none';
+
+        if (isExpanded) {
+            this.stateHistoryContent.style.display = 'none';
+            this.stateHistoryToggle.classList.remove('expanded');
+        } else {
+            this.stateHistoryContent.style.display = 'block';
+            this.stateHistoryToggle.classList.add('expanded');
+        }
     }
 
     /**
@@ -906,6 +1426,76 @@ class ReservationPanel {
         }
         if (this.editNotes) {
             this.editNotes.value = notes || '';
+        }
+    }
+
+    /**
+     * Render pricing section (view mode)
+     */
+    renderPricingSection(reservation) {
+        if (!this.pricingSection) return;
+
+        // Get price from reservation (API returns final_price, fallback to total_price/price for backward compat)
+        const totalPrice = reservation.final_price || reservation.total_price || reservation.price || 0;
+        const packageName = reservation.package_name || null;
+        const priceBreakdown = reservation.price_breakdown || null;
+
+        // Store original price for comparison
+        this.pricingEditState.originalPrice = totalPrice;
+
+        // Update view mode
+        if (this.detailTotalPrice) {
+            this.detailTotalPrice.textContent = `€${parseFloat(totalPrice).toFixed(2)}`;
+        }
+
+        // Show package name if available
+        if (this.detailPricingBreakdown) {
+            if (packageName) {
+                this.detailPricingBreakdown.innerHTML = `<span class="package-name">${packageName}</span>`;
+                this.detailPricingBreakdown.style.display = 'block';
+            } else if (priceBreakdown) {
+                this.detailPricingBreakdown.textContent = priceBreakdown;
+                this.detailPricingBreakdown.style.display = 'block';
+            } else {
+                this.detailPricingBreakdown.style.display = 'none';
+            }
+        }
+
+        // Pre-fill edit mode with current price
+        if (this.panelFinalPriceInput) {
+            this.panelFinalPriceInput.value = parseFloat(totalPrice).toFixed(2);
+        }
+    }
+
+    /**
+     * Render payment section (view mode)
+     */
+    renderPaymentSection(reservation) {
+        if (!this.paymentSection) return;
+
+        // Payment ticket number
+        const ticketNumber = reservation.payment_ticket_number || '-';
+        if (this.detailPaymentTicket) {
+            this.detailPaymentTicket.textContent = ticketNumber;
+        }
+        if (this.editPaymentTicket) {
+            this.editPaymentTicket.value = reservation.payment_ticket_number || '';
+        }
+
+        // Payment method - translate to Spanish for display
+        const methodLabels = {
+            'efectivo': 'Efectivo',
+            'tarjeta': 'Tarjeta',
+            'cargo_habitacion': 'Cargo a habitación'
+        };
+        const methodValue = reservation.payment_method || '';
+        const methodDisplay = methodLabels[methodValue] || '-';
+
+        if (this.detailPaymentMethod) {
+            this.detailPaymentMethod.textContent = methodDisplay;
+        }
+        if (this.editPaymentMethod) {
+            this.editPaymentMethod.value = methodValue;
         }
     }
 
@@ -986,6 +1576,15 @@ class ReservationPanel {
     enterReassignmentMode() {
         const reservation = this.state.data?.reservation;
         if (!reservation) return;
+
+        // In standalone mode, navigate to map for furniture selection
+        if (this.isStandalone()) {
+            // Build return URL with current location
+            const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            const mapUrl = `/beach/map?mode=furniture_select&reservation_id=${reservation.id}&date=${this.state.currentDate}&return_url=${returnUrl}`;
+            window.location.href = mapUrl;
+            return;
+        }
 
         // Get current furniture for this date
         const currentFurniture = (reservation.furniture || []).filter(f => {
@@ -1464,6 +2063,7 @@ class ReservationPanel {
         const updates = {};
         let hasChanges = false;
         let preferencesChanged = false;
+        let priceChanged = false;
 
         // Collect changed values
         if (this.editNumPeople && this.editNumPeople.value !== this.state.originalData?.num_people) {
@@ -1474,6 +2074,53 @@ class ReservationPanel {
         if (this.editNotes && this.editNotes.value !== this.state.originalData?.notes) {
             updates.observations = this.editNotes.value;
             hasChanges = true;
+        }
+
+        // Check if price has changed
+        if (this.panelFinalPriceInput) {
+            const currentPrice = this.panelFinalPriceInput.value;
+            const originalPrice = this.state.originalData?.price;
+            if (currentPrice !== originalPrice) {
+                updates.total_price = parseFloat(currentPrice) || 0;
+                priceChanged = true;
+                hasChanges = true;
+            }
+
+            // Also include package_id if changed
+            const selectedPackageId = this.panelSelectedPackageId?.value;
+            if (selectedPackageId) {
+                updates.package_id = parseInt(selectedPackageId);
+            }
+        }
+
+        // Check if payment fields have changed
+        if (this.editPaymentTicket) {
+            const currentTicket = this.editPaymentTicket.value.trim();
+            const originalTicket = this.state.originalData?.payment_ticket_number || '';
+            if (currentTicket !== originalTicket) {
+                updates.payment_ticket_number = currentTicket || null;
+                hasChanges = true;
+            }
+        }
+
+        if (this.editPaymentMethod) {
+            const currentMethod = this.editPaymentMethod.value;
+            const originalMethod = this.state.originalData?.payment_method || '';
+            if (currentMethod !== originalMethod) {
+                updates.payment_method = currentMethod || null;
+                hasChanges = true;
+            }
+        }
+
+        // Auto-toggle paid when payment details are filled
+        const hasPaymentTicket = this.editPaymentTicket?.value.trim();
+        const hasPaymentMethod = this.editPaymentMethod?.value;
+        if (hasPaymentTicket || hasPaymentMethod) {
+            const currentPaid = this.state.data?.reservation?.paid;
+            if (!currentPaid) {
+                updates.paid = 1;
+                hasChanges = true;
+            }
         }
 
         // Check if preferences have changed
@@ -1518,8 +2165,10 @@ class ReservationPanel {
                     Object.assign(this.state.data.reservation, updates);
                 }
 
-                // Re-render details with new data
+                // Re-render details, pricing and payment with new data
                 this.renderDetailsSection(this.state.data.reservation);
+                this.renderPricingSection(this.state.data.reservation);
+                this.renderPaymentSection(this.state.data.reservation);
             }
 
             // Save preferences if changed

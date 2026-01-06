@@ -1,113 +1,554 @@
 {% extends "base.html" %}
 
-{% set page_title = "Gestión de Reservas" %}
+{% set page_title = "Reservas" %}
 
-{% block title %}Gestión de Reservas - PuroBeach{% endblock %}
+{% block title %}Reservas - PuroBeach{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Reservations Database Styles */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.page-header h2 {
+    color: var(--color-secondary, #1A3A5C);
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.page-header .header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+/* Compact filter bar */
+.filter-bar {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid var(--color-border, #E8E8E8);
+}
+
+.filter-bar .row {
+    align-items: flex-end;
+}
+
+.filter-bar .form-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary, #4B5563);
+    margin-bottom: 4px;
+}
+
+.filter-bar .form-control,
+.filter-bar .form-select {
+    font-size: 14px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+}
+
+.filter-bar .btn {
+    padding: 0.5rem 1rem;
+}
+
+/* Results info */
+.results-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-size: 13px;
+    color: var(--color-text-secondary, #4B5563);
+}
+
+/* Clean table */
+.reservations-table {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid var(--color-border, #E8E8E8);
+    overflow: hidden;
+}
+
+.reservations-table table {
+    margin-bottom: 0;
+}
+
+.reservations-table thead th {
+    background: var(--color-accent, #F5E6D3);
+    color: var(--color-secondary, #1A3A5C);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--color-primary, #D4AF37);
+    padding: 0.875rem 1rem;
+    white-space: nowrap;
+}
+
+.reservations-table tbody td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-border, #E8E8E8);
+    font-size: 14px;
+}
+
+.reservations-table tbody tr:hover {
+    background: #FAFAFA;
+}
+
+.reservations-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Customer cell */
+.customer-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.customer-cell .customer-name {
+    font-weight: 500;
+    color: var(--color-text, #1F2937);
+}
+
+.customer-cell .customer-type {
+    font-size: 12px;
+    color: var(--color-text-secondary, #4B5563);
+}
+
+.customer-cell .customer-type i {
+    margin-right: 4px;
+    opacity: 0.7;
+}
+
+/* Furniture list */
+.furniture-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.furniture-badge {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #F3F4F6;
+    color: var(--color-text-secondary, #4B5563);
+    border: 1px solid #E5E7EB;
+}
+
+/* State badges */
+.state-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid transparent;
+}
+
+/* Price cell */
+.price-cell {
+    font-weight: 600;
+    color: var(--color-success, #4A7C59);
+}
+
+.price-cell.unpaid {
+    color: var(--color-warning, #E5A33D);
+}
+
+/* Action buttons */
+.action-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    flex-wrap: nowrap;
+}
+
+.action-buttons .btn {
+    padding: 0.35rem 0.5rem;
+    font-size: 13px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.action-buttons .btn i {
+    font-size: 12px;
+}
+
+/* Fix table actions column */
+.reservations-table td:last-child {
+    white-space: nowrap;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-text-secondary, #4B5563);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    opacity: 0.3;
+    margin-bottom: 1rem;
+}
+
+/* Pagination */
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.pagination .page-link {
+    color: var(--color-secondary, #1A3A5C);
+    border-radius: 6px;
+    margin: 0 2px;
+    border: 1px solid var(--color-border, #E8E8E8);
+}
+
+.pagination .page-item.active .page-link {
+    background: var(--color-primary, #D4AF37);
+    border-color: var(--color-primary, #D4AF37);
+    color: #fff;
+}
+
+/* Quick edit modal */
+.quick-edit-modal .modal-header {
+    background: linear-gradient(135deg, #1A3A5C 0%, #2A4A6C 100%);
+    color: #fff;
+    border-radius: 16px 16px 0 0;
+    padding: 1rem 1.5rem;
+}
+
+.quick-edit-modal .modal-content {
+    border-radius: 16px;
+    border: none;
+    overflow: hidden;
+}
+
+.quick-edit-modal .modal-footer {
+    background: #FAFAFA;
+    border-top: 1px solid var(--color-border, #E8E8E8);
+    padding: 1rem 1.5rem;
+}
+
+/* Info bar */
+#quickEditModal .edit-info-bar {
+    background: #F5E6D3 !important;
+    padding: 0.875rem 1.5rem;
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+#quickEditModal .edit-info-bar .info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 14px;
+    color: #1A3A5C;
+}
+
+#quickEditModal .edit-info-bar .info-item i {
+    color: #D4AF37;
+    font-size: 13px;
+}
+
+#quickEditModal .info-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #1A3A5C;
+    color: #fff;
+    margin-left: 6px;
+}
+
+/* State chips */
+#quickEditModal .state-chips {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#quickEditModal .state-chip {
+    padding: 10px 18px !important;
+    border-radius: 25px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    border: 2px solid var(--chip-color, #6C757D) !important;
+    transition: all 0.2s ease;
+    background: transparent !important;
+    color: var(--chip-color, #6C757D) !important;
+}
+
+#quickEditModal .state-chip:hover {
+    transform: translateY(-2px);
+    opacity: 0.85;
+}
+
+#quickEditModal .state-chip.selected {
+    background: var(--chip-color, #6C757D) !important;
+    color: #fff !important;
+    border-color: var(--chip-color, #6C757D) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transform: scale(1.05);
+}
+
+/* People control */
+#quickEditModal .people-control {
+    display: flex !important;
+    align-items: center;
+    gap: 0;
+    background: #f8f9fa !important;
+    border-radius: 10px !important;
+    border: 2px solid #E8E8E8 !important;
+    overflow: hidden;
+    width: fit-content;
+}
+
+#quickEditModal .people-btn {
+    width: 44px !important;
+    height: 44px !important;
+    border: none !important;
+    background: transparent !important;
+    color: #1A3A5C !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+}
+
+#quickEditModal .people-btn:hover {
+    background: #D4AF37 !important;
+    color: #fff !important;
+}
+
+#quickEditModal .people-input {
+    width: 60px !important;
+    height: 44px !important;
+    border: none !important;
+    background: #fff !important;
+    text-align: center;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: #1A3A5C !important;
+    -moz-appearance: textfield;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
+
+#quickEditModal .people-input::-webkit-outer-spin-button,
+#quickEditModal .people-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Paid toggle */
+#quickEditModal .paid-toggle {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+#quickEditModal .toggle-switch {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    cursor: pointer;
+    display: inline-block;
+}
+
+#quickEditModal .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+#quickEditModal .toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ccc;
+    border-radius: 28px;
+    transition: 0.3s;
+}
+
+#quickEditModal .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+#quickEditModal .toggle-switch input:checked + .toggle-slider {
+    background: #4A7C59;
+}
+
+#quickEditModal .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+#quickEditModal .paid-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #4B5563;
+}
+
+#quickEditModal .paid-label.paid {
+    color: #4A7C59;
+    font-weight: 600;
+}
+
+#quickEditModal .price-display {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+#quickEditModal .price-label {
+    font-size: 13px;
+    color: #4B5563;
+}
+
+#quickEditModal .price-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #4A7C59;
+}
+
+/* Notes input */
+#quickEditModal .notes-input {
+    border: 2px solid #E8E8E8 !important;
+    border-radius: 10px !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+    resize: none;
+    width: 100%;
+}
+
+#quickEditModal .notes-input:focus {
+    border-color: #D4AF37 !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15) !important;
+}
+
+/* Form body */
+#quickEditModal .edit-form-body {
+    padding: 1.5rem;
+}
+
+#quickEditModal .edit-section {
+    margin-bottom: 1.25rem;
+}
+
+#quickEditModal .edit-section:last-child {
+    margin-bottom: 0;
+}
+
+#quickEditModal .edit-section-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1A3A5C;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#quickEditModal .edit-section-label i {
+    margin-right: 6px;
+    color: #D4AF37;
+}
+
+#quickEditModal .edit-row {
+    display: flex;
+    gap: 1.5rem;
+}
+
+#quickEditModal .edit-section-half {
+    flex: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .filter-bar .row > div {
+        margin-bottom: 0.5rem;
+    }
+
+    .reservations-table {
+        font-size: 13px;
+    }
+
+    .reservations-table thead th,
+    .reservations-table tbody td {
+        padding: 0.5rem;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- Page Header -->
+<div class="page-header">
     <div>
-        <h2><i class="fas fa-calendar-check"></i> Gestión de Reservas</h2>
-        <p class="text-muted mb-0">
-            {% if date_from %}
-            Reservas del {{ date_from }}{% if date_to and date_to != date_from %} al {{ date_to }}{% endif %}
-            {% else %}
-            Reservas de hoy
-            {% endif %}
-        </p>
+        <h2><i class="fas fa-database me-2"></i>Reservas</h2>
+        <small class="text-muted">Base de datos de reservaciones</small>
     </div>
-    <a href="{{ url_for('beach.reservations_create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Nueva Reserva
-    </a>
-</div>
-
-<!-- Stats Cards -->
-{% if stats %}
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body py-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="small text-white-50">Total Reservas</div>
-                        <div class="h3 mb-0">{{ stats.total }}</div>
-                    </div>
-                    <i class="fas fa-calendar-day fa-2x opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body py-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="small text-white-50">Confirmadas</div>
-                        <div class="h3 mb-0">{{ stats.confirmadas or 0 }}</div>
-                    </div>
-                    <i class="fas fa-check-circle fa-2x opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-info text-white">
-            <div class="card-body py-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="small text-white-50">Internos</div>
-                        <div class="h3 mb-0">{{ stats.interno or 0 }}</div>
-                    </div>
-                    <i class="fas fa-hotel fa-2x opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-dark">
-            <div class="card-body py-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="small">Externos</div>
-                        <div class="h3 mb-0">{{ stats.externo or 0 }}</div>
-                    </div>
-                    <i class="fas fa-user fa-2x opacity-50"></i>
-                </div>
-            </div>
-        </div>
+    <div class="header-actions">
+        <a href="{{ url_for('beach.reservations_export') }}?{{ request.query_string.decode() }}"
+           class="btn btn-outline-primary">
+            <i class="fas fa-download me-1"></i>Exportar Excel
+        </a>
+        <a href="{{ url_for('beach.map') }}" class="btn btn-primary">
+            <i class="fas fa-map me-1"></i>Ir al Mapa
+        </a>
     </div>
 </div>
 
-<!-- State summary pills -->
-{% if stats.by_state is mapping %}
-<div class="mb-4">
-    <div class="d-flex flex-wrap gap-2">
-        {% for state_name, count in stats.by_state.items() %}
-        {% if count > 0 %}
-        <span class="badge bg-secondary" style="font-size: 0.9em;">
-            {{ state_name }}: {{ count }}
-        </span>
-        {% endif %}
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-{% endif %}
-
-<!-- Filters -->
-<div class="card mb-3">
-    <div class="card-body">
-        <form method="GET" action="{{ url_for('beach.reservations') }}" class="row g-3">
-            <div class="col-md-2">
-                <label class="form-label small">Desde</label>
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('beach.reservations') }}">
+        <div class="row g-2">
+            <div class="col-md-2 col-6">
+                <label class="form-label">Desde</label>
                 <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
             </div>
-            <div class="col-md-2">
-                <label class="form-label small">Hasta</label>
+            <div class="col-md-2 col-6">
+                <label class="form-label">Hasta</label>
                 <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
             </div>
-            <div class="col-md-2">
-                <label class="form-label small">Estado</label>
+            <div class="col-md-2 col-6">
+                <label class="form-label">Estado</label>
                 <select name="state" class="form-select">
                     <option value="">Todos</option>
                     {% for state in states %}
@@ -117,131 +558,149 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label small">Tipo Cliente</label>
+            <div class="col-md-2 col-6">
+                <label class="form-label">Tipo</label>
                 <select name="type" class="form-select">
                     <option value="">Todos</option>
                     <option value="interno" {% if type_filter == 'interno' %}selected{% endif %}>Interno</option>
                     <option value="externo" {% if type_filter == 'externo' %}selected{% endif %}>Externo</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label small">Buscar</label>
-                <input type="text" name="search" class="form-control" placeholder="Cliente, ticket..."
-                       value="{{ search }}">
+            <div class="col-md-2 col-6">
+                <label class="form-label">Buscar</label>
+                <input type="text" name="search" class="form-control"
+                       placeholder="Cliente, ticket..." value="{{ search }}">
             </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-secondary w-100">
-                    <i class="fas fa-search"></i> Filtrar
+            <div class="col-md-2 col-6 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-secondary flex-grow-1">
+                    <i class="fas fa-search"></i>
                 </button>
+                {% if search or state_filter or type_filter or (date_to and date_to != date_from) %}
+                <a href="{{ url_for('beach.reservations') }}" class="btn btn-outline-secondary" title="Limpiar filtros">
+                    <i class="fas fa-times"></i>
+                </a>
+                {% endif %}
             </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>
 
-<!-- Results count -->
-<div class="mb-3 text-muted">
-    <small>Mostrando {{ reservations|length }} de {{ total }} reservas</small>
+<!-- Results Info -->
+<div class="results-info">
+    <span>
+        {% if reservations %}
+        Mostrando {{ reservations|length }} de {{ total }} reservas
+        {% else %}
+        Sin resultados
+        {% endif %}
+    </span>
+    {% if stats %}
+    <span>
+        <span class="badge bg-success">{{ stats.confirmadas or 0 }} confirmadas</span>
+        <span class="badge bg-info">{{ stats.interno or 0 }} internos</span>
+        <span class="badge bg-warning text-dark">{{ stats.externo or 0 }} externos</span>
+    </span>
+    {% endif %}
 </div>
 
 <!-- Reservations Table -->
-<div class="card">
+<div class="reservations-table">
     <div class="table-responsive">
-        <table class="table table-striped table-hover mb-0">
+        <table class="table mb-0">
             <thead>
                 <tr>
                     <th>Ticket</th>
                     <th>Cliente</th>
                     <th>Fecha</th>
+                    <th>Mobiliario</th>
                     <th>Personas</th>
                     <th>Estado</th>
                     <th>Precio</th>
-                    <th>Pago</th>
-                    <th>Acciones</th>
+                    <th style="width: 100px;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for res in reservations %}
-                <tr>
+                <tr data-reservation-id="{{ res.id }}">
                     <td>
-                        <a href="{{ url_for('beach.reservations_detail', reservation_id=res.id) }}"
-                           class="text-decoration-none">
-                            <strong>{{ res.ticket_number or '#' ~ res.id }}</strong>
-                        </a>
+                        <strong class="text-primary">{{ res.ticket_number or '#' ~ res.id }}</strong>
                     </td>
                     <td>
-                        <div>
-                            <strong>{{ res.customer_name }}</strong>
+                        <div class="customer-cell">
+                            <span class="customer-name">{{ res.customer_name }}</span>
+                            <span class="customer-type">
+                                {% if res.customer_type == 'interno' %}
+                                <i class="fas fa-hotel"></i>Hab. {{ res.room_number or '-' }}
+                                {% else %}
+                                <i class="fas fa-user"></i>Externo
+                                {% endif %}
+                            </span>
                         </div>
-                        <small class="text-muted">
-                            {% if res.customer_type == 'interno' %}
-                            <i class="fas fa-hotel"></i> Hab. {{ res.room_number or '-' }}
+                    </td>
+                    <td>{{ res.reservation_date or res.start_date }}</td>
+                    <td>
+                        <div class="furniture-list">
+                            {% if res.furniture_names %}
+                                {% for furn in res.furniture_names.split(',')[:3] %}
+                                <span class="furniture-badge">{{ furn|trim }}</span>
+                                {% endfor %}
+                                {% if res.furniture_names.split(',')|length > 3 %}
+                                <span class="furniture-badge">+{{ res.furniture_names.split(',')|length - 3 }}</span>
+                                {% endif %}
                             {% else %}
-                            <i class="fas fa-user"></i> Externo
+                            <span class="text-muted">-</span>
                             {% endif %}
-                        </small>
+                        </div>
                     </td>
                     <td>
-                        <div>{{ res.reservation_date or res.start_date }}</div>
+                        <span class="badge bg-secondary">{{ res.num_people }}</span>
                     </td>
                     <td>
-                        <span class="badge bg-secondary">
-                            <i class="fas fa-users"></i> {{ res.num_people }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge" style="background-color: {{ res.display_color or '#6C757D' }}">
+                        <span class="state-badge" style="background-color: {{ res.display_color or '#6C757D' }}20; color: {{ res.display_color or '#6C757D' }}; border-color: {{ res.display_color or '#6C757D' }};">
                             {{ res.current_state or 'Sin estado' }}
                         </span>
-                        {% if res.current_states and ',' in res.current_states %}
-                        <br><small class="text-muted" title="{{ res.current_states }}">
-                            +{{ res.current_states.split(',')|length - 1 }} más
-                        </small>
-                        {% endif %}
                     </td>
                     <td>
-                        <strong class="text-success">€{{ "%.2f"|format(res.final_price or 0) }}</strong>
-                    </td>
-                    <td>
-                        {% if res.paid %}
-                        <span class="badge bg-success">
-                            <i class="fas fa-check"></i> Pagado
+                        <span class="price-cell {% if not res.paid %}unpaid{% endif %}">
+                            €{{ "%.2f"|format(res.final_price or 0) }}
+                            {% if not res.paid %}
+                            <i class="fas fa-clock ms-1" title="Pendiente de pago" style="font-size: 11px;"></i>
+                            {% endif %}
                         </span>
-                        {% else %}
-                        <span class="badge bg-warning text-dark">
-                            Pendiente
-                        </span>
-                        {% endif %}
                     </td>
                     <td>
                         <div class="btn-group btn-group-sm">
-                            <a href="{{ url_for('beach.reservations_detail', reservation_id=res.id) }}"
-                               class="btn btn-outline-primary" title="Ver detalle">
-                                <i class="fas fa-eye"></i>
+                            <button type="button"
+                                    class="btn btn-outline-primary"
+                                    onclick="openQuickEdit({{ res.id }})"
+                                    title="Editar rápido">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <a href="{{ url_for('beach.map') }}?date={{ res.reservation_date or res.start_date }}&reservation={{ res.id }}"
+                               class="btn btn-outline-secondary"
+                               title="Ver en mapa">
+                                <i class="fas fa-map"></i>
                             </a>
-                            <a href="{{ url_for('beach.reservations_edit', reservation_id=res.id) }}"
-                               class="btn btn-outline-secondary" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <form method="POST"
-                                  action="{{ url_for('beach.reservations_delete', reservation_id=res.id) }}"
-                                  class="d-inline"
-                                  onsubmit="return confirm('¿Está seguro de eliminar esta reserva?')">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-outline-danger" title="Eliminar">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                            <button type="button"
+                                    class="btn btn-outline-danger"
+                                    onclick="confirmDelete({{ res.id }}, '{{ res.ticket_number or res.id }}')"
+                                    title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-5">
-                        <i class="fas fa-calendar-xmark fa-3x mb-3 d-block opacity-50"></i>
-                        No se encontraron reservas
+                    <td colspan="8" class="empty-state">
+                        <i class="fas fa-calendar-xmark d-block"></i>
+                        <p class="mb-1">No se encontraron reservas</p>
                         {% if search or date_from or date_to or state_filter or type_filter %}
-                        <br><small>Pruebe con otros filtros</small>
+                        <small>Pruebe con otros filtros</small>
+                        {% else %}
+                        <a href="{{ url_for('beach.map') }}" class="btn btn-primary btn-sm mt-2">
+                            <i class="fas fa-plus me-1"></i>Crear en el Mapa
+                        </a>
                         {% endif %}
                     </td>
                 </tr>
@@ -253,8 +712,8 @@
 
 <!-- Pagination -->
 {% if pages|default(0) > 1 %}
-<nav class="mt-3">
-    <ul class="pagination justify-content-center">
+<div class="pagination-wrapper">
+    <ul class="pagination mb-0">
         {% if page > 1 %}
         <li class="page-item">
             <a class="page-link" href="{{ url_for('beach.reservations', page=page-1, date_from=date_from, date_to=date_to, type=type_filter, state=state_filter, search=search) }}">
@@ -283,6 +742,336 @@
         </li>
         {% endif %}
     </ul>
-</nav>
+</div>
 {% endif %}
+
+<!-- Quick Edit Modal -->
+<div class="modal fade quick-edit-modal" id="quickEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-pen me-2"></i>
+                    Editar Reserva <span id="modal-ticket"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <form id="quick-edit-form">
+                    <input type="hidden" id="edit-reservation-id">
+
+                    <!-- Customer & Date Info (Read-only) -->
+                    <div class="edit-info-bar">
+                        <div class="info-item">
+                            <i class="fas fa-user"></i>
+                            <span id="edit-customer-name">-</span>
+                            <span class="info-badge" id="edit-customer-type"></span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-calendar"></i>
+                            <span id="edit-date">-</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-umbrella-beach"></i>
+                            <span id="edit-furniture">-</span>
+                        </div>
+                    </div>
+
+                    <div class="edit-form-body">
+                        <!-- State -->
+                        <div class="edit-section">
+                            <div class="edit-section-label">
+                                <i class="fas fa-flag"></i> Estado
+                            </div>
+                            <div class="state-chips" id="state-chips">
+                                {% for state in states %}
+                                <button type="button" class="state-chip"
+                                      data-state-id="{{ state.id }}"
+                                      data-state-name="{{ state.name }}"
+                                      data-color="{{ state.color }}"
+                                      style="--chip-color: {{ state.color }};">
+                                    {{ state.name }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="edit-row">
+                            <!-- Num People -->
+                            <div class="edit-section edit-section-half">
+                                <div class="edit-section-label">
+                                    <i class="fas fa-users"></i> Personas
+                                </div>
+                                <div class="people-control">
+                                    <button type="button" class="people-btn" onclick="adjustPeople(-1)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <input type="number" class="people-input" id="edit-num-people" min="1" max="20" value="2">
+                                    <button type="button" class="people-btn" onclick="adjustPeople(1)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Paid Status -->
+                            <div class="edit-section edit-section-half">
+                                <div class="edit-section-label">
+                                    <i class="fas fa-credit-card"></i> Pago
+                                </div>
+                                <div class="paid-toggle">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="edit-paid">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="paid-label" id="paid-label">Pendiente</span>
+                                </div>
+                                <div class="price-display">
+                                    <span class="price-label">Precio:</span>
+                                    <span class="price-value" id="edit-price">€0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Details -->
+                        <div class="edit-section">
+                            <div class="edit-section-label">
+                                <i class="fas fa-receipt"></i> Detalles de Pago
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label for="edit-payment-ticket" class="form-label small text-muted mb-1">Nº ticket</label>
+                                    <input type="text" class="form-control form-control-sm"
+                                           id="edit-payment-ticket" placeholder="Ej: 12345">
+                                </div>
+                                <div class="col-6">
+                                    <label for="edit-payment-method" class="form-label small text-muted mb-1">Forma de pago</label>
+                                    <select class="form-select form-select-sm" id="edit-payment-method">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="efectivo">Efectivo</option>
+                                        <option value="tarjeta">Tarjeta</option>
+                                        <option value="cargo_habitacion">Cargo a habitación</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="edit-section">
+                            <div class="edit-section-label">
+                                <i class="fas fa-sticky-note"></i> Notas
+                            </div>
+                            <textarea class="form-control notes-input" id="edit-notes" rows="2"
+                                      placeholder="Observaciones sobre la reserva..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveQuickEdit()">
+                    <i class="fas fa-check me-1"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-trash me-2"></i>Eliminar</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p>¿Eliminar reserva <strong id="delete-ticket"></strong>?</p>
+                <small class="text-muted">Esta acción no se puede deshacer</small>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="delete-form" method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
+
+{% block extra_js %}
+<script>
+// Quick Edit Modal
+let quickEditModal = null;
+let deleteModal = null;
+let currentReservation = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    quickEditModal = new bootstrap.Modal(document.getElementById('quickEditModal'));
+    deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    // State chip selection
+    document.querySelectorAll('.state-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            document.querySelectorAll('.state-chip').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+        });
+    });
+
+    // Paid checkbox change
+    document.getElementById('edit-paid').addEventListener('change', updatePaidLabel);
+
+    // Auto-toggle paid when payment details are filled
+    document.getElementById('edit-payment-ticket').addEventListener('input', function() {
+        if (this.value.trim()) {
+            document.getElementById('edit-paid').checked = true;
+            updatePaidLabel();
+        }
+    });
+
+    document.getElementById('edit-payment-method').addEventListener('change', function() {
+        if (this.value) {
+            document.getElementById('edit-paid').checked = true;
+            updatePaidLabel();
+        }
+    });
+});
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    } catch(e) {
+        return dateStr;
+    }
+}
+
+async function openQuickEdit(reservationId) {
+    try {
+        const response = await fetch(`/beach/api/reservations/${reservationId}`);
+        if (!response.ok) throw new Error('Error al cargar reserva');
+
+        const data = await response.json();
+        currentReservation = data;
+
+        // Basic info
+        document.getElementById('edit-reservation-id').value = reservationId;
+        document.getElementById('modal-ticket').textContent = data.ticket_number || `#${reservationId}`;
+
+        // Info bar
+        document.getElementById('edit-customer-name').textContent = data.customer_name || '-';
+        const typeEl = document.getElementById('edit-customer-type');
+        if (data.customer_type === 'interno') {
+            typeEl.textContent = 'Interno';
+            typeEl.style.background = '#4A90A4';
+        } else {
+            typeEl.textContent = 'Externo';
+            typeEl.style.background = '#1A3A5C';
+        }
+        document.getElementById('edit-date').textContent = formatDate(data.reservation_date || data.start_date);
+
+        // Furniture
+        const furnitureNames = data.furniture?.map(f => f.number || f.furniture_type).join(', ') || '-';
+        document.getElementById('edit-furniture').textContent = furnitureNames;
+
+        // Editable fields
+        document.getElementById('edit-num-people').value = data.num_people || 1;
+        document.getElementById('edit-paid').checked = data.paid == 1;
+        updatePaidLabel();
+        document.getElementById('edit-notes').value = data.observations || '';
+        document.getElementById('edit-price').textContent = `€${(data.final_price || 0).toFixed(2)}`;
+
+        // Payment details
+        document.getElementById('edit-payment-ticket').value = data.payment_ticket_number || '';
+        document.getElementById('edit-payment-method').value = data.payment_method || '';
+
+        // Select current state
+        document.querySelectorAll('.state-chip').forEach(chip => {
+            chip.classList.remove('selected');
+            if (chip.dataset.stateName === data.current_state) {
+                chip.classList.add('selected');
+            }
+        });
+
+        quickEditModal.show();
+    } catch (error) {
+        console.error(error);
+        alert('Error al cargar la reserva');
+    }
+}
+
+function adjustPeople(delta) {
+    const input = document.getElementById('edit-num-people');
+    let value = parseInt(input.value) || 1;
+    value = Math.max(1, Math.min(20, value + delta));
+    input.value = value;
+}
+
+function updatePaidLabel() {
+    const checkbox = document.getElementById('edit-paid');
+    const label = document.getElementById('paid-label');
+    if (checkbox.checked) {
+        label.textContent = 'Pagado';
+        label.classList.add('paid');
+    } else {
+        label.textContent = 'Pendiente';
+        label.classList.remove('paid');
+    }
+}
+
+async function saveQuickEdit() {
+    const reservationId = document.getElementById('edit-reservation-id').value;
+    const selectedState = document.querySelector('.state-chip.selected');
+
+    const updates = {
+        num_people: parseInt(document.getElementById('edit-num-people').value),
+        paid: document.getElementById('edit-paid').checked ? 1 : 0,
+        observations: document.getElementById('edit-notes').value,
+        payment_ticket_number: document.getElementById('edit-payment-ticket').value.trim() || null,
+        payment_method: document.getElementById('edit-payment-method').value || null
+    };
+
+    // Add state if changed
+    if (selectedState && selectedState.dataset.stateName !== currentReservation.current_state) {
+        updates.state_id = parseInt(selectedState.dataset.stateId);
+    }
+
+    try {
+        const response = await fetch(`/beach/api/reservations/${reservationId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            },
+            body: JSON.stringify(updates)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Error al guardar');
+        }
+
+        quickEditModal.hide();
+        location.reload();
+    } catch (error) {
+        console.error(error);
+        alert('Error al guardar: ' + error.message);
+    }
+}
+
+function confirmDelete(reservationId, ticketNumber) {
+    document.getElementById('delete-ticket').textContent = ticketNumber;
+    document.getElementById('delete-form').action = `/beach/reservations/${reservationId}/delete`;
+    deleteModal.show();
+}
+</script>
+{% endblock extra_js %}

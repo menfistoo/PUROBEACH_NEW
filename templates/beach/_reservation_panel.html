@@ -124,6 +124,20 @@
                 </div>
             </section>
 
+            <!-- State History Section (Collapsible) -->
+            <section class="panel-section state-history-section" id="stateHistorySection" style="display: none;">
+                <button type="button" class="panel-section-title collapsible" id="stateHistoryToggle">
+                    <i class="fas fa-history"></i>
+                    Historial de Estados
+                    <i class="fas fa-chevron-down toggle-icon"></i>
+                </button>
+                <div class="state-history-content" id="stateHistoryContent" style="display: none;">
+                    <div class="state-history-list" id="stateHistoryList">
+                        <!-- History items populated dynamically -->
+                    </div>
+                </div>
+            </section>
+
             <!-- Furniture Section -->
             <section class="panel-section furniture-section" id="furnitureSection">
                 <div class="panel-section-title">
@@ -214,6 +228,118 @@
                         <textarea class="notes-textarea"
                                   id="editNotes"
                                   placeholder="Agregar notas sobre la reserva..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pricing Section -->
+            <section class="panel-section pricing-section" id="pricingSection">
+                <div class="panel-section-title">
+                    <i class="fas fa-euro-sign"></i>
+                    Precio
+                </div>
+
+                <!-- View Mode -->
+                <div class="pricing-view-mode" id="pricingViewMode">
+                    <div class="pricing-display-row">
+                        <span class="pricing-label">Total:</span>
+                        <span class="pricing-value" id="detailTotalPrice">-</span>
+                    </div>
+                    <div class="pricing-breakdown-view" id="detailPricingBreakdown"></div>
+                </div>
+
+                <!-- Edit Mode -->
+                <div class="pricing-edit-mode" id="pricingEditMode" style="display: none;">
+                    <div class="pricing-display" id="panelPricingDisplay">
+                        <div class="pricing-loading" style="display: none;">
+                            <span class="spinner-border spinner-border-sm"></span>
+                            Calculando precio...
+                        </div>
+                        <div class="pricing-content" id="panelPricingContent">
+                            <!-- Package Selection Dropdown -->
+                            <div class="pricing-type-selector" id="panelPricingTypeSelector" style="display: none;">
+                                <label class="detail-label" for="panelPricingTypeSelect">Tipo de precio:</label>
+                                <select class="form-select pricing-select" id="panelPricingTypeSelect">
+                                    <option value="">Consumo minimo</option>
+                                    <!-- Package options populated dynamically -->
+                                </select>
+                            </div>
+
+                            <!-- Price Display with Edit Option -->
+                            <div class="pricing-row pricing-amount">
+                                <div class="pricing-display-group">
+                                    <label class="detail-label">Precio final:</label>
+                                    <div class="pricing-input-group">
+                                        <span class="pricing-currency" aria-hidden="true">€</span>
+                                        <input type="number"
+                                               class="pricing-input"
+                                               id="panelFinalPriceInput"
+                                               min="0"
+                                               step="0.01"
+                                               placeholder="0.00"
+                                               aria-label="Precio final en euros">
+                                        <button type="button"
+                                                class="pricing-reset-btn"
+                                                id="panelPriceResetBtn"
+                                                title="Restablecer precio calculado"
+                                                aria-label="Restablecer precio calculado"
+                                                style="display: none;">
+                                            <i class="fas fa-undo" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                    <div class="pricing-calculated" id="panelCalculatedPrice" style="display: none;">
+                                        Precio calculado: <span class="calculated-amount">€0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pricing-breakdown" id="panelPricingBreakdown" style="display: none;" aria-live="polite"></div>
+                            <input type="hidden" id="panelPriceOverride" value="">
+                        </div>
+                    </div>
+                    <input type="hidden" id="panelSelectedPackageId" value="">
+                </div>
+            </section>
+
+            <!-- Payment Section -->
+            <section class="panel-section payment-section" id="paymentSection">
+                <div class="panel-section-title">
+                    <i class="fas fa-receipt"></i>
+                    Pago
+                </div>
+
+                <!-- View Mode -->
+                <div class="payment-view-mode" id="paymentViewMode">
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Nº ticket</span>
+                            <span class="detail-value" id="detailPaymentTicket">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Forma de pago</span>
+                            <span class="detail-value" id="detailPaymentMethod">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Mode -->
+                <div class="payment-edit-mode" id="paymentEditMode" style="display: none;">
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <label class="detail-label" for="editPaymentTicket">Nº ticket</label>
+                            <input type="text"
+                                   class="detail-input"
+                                   id="editPaymentTicket"
+                                   placeholder="Ej: 12345">
+                        </div>
+                        <div class="detail-item">
+                            <label class="detail-label" for="editPaymentMethod">Forma de pago</label>
+                            <select class="form-select detail-input" id="editPaymentMethod">
+                                <option value="">Seleccionar...</option>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="tarjeta">Tarjeta</option>
+                                <option value="cargo_habitacion">Cargo a habitación</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </section>

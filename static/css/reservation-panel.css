@@ -1123,3 +1123,471 @@
     clip: rect(0, 0, 0, 0);
     border: 0;
 }
+
+/* =============================================================================
+   PRICING SECTION
+   ============================================================================= */
+
+/* View Mode */
+.pricing-view-mode {
+    padding: var(--space-2) 0;
+}
+
+.pricing-display-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+}
+
+.pricing-label {
+    font-size: 14px;
+    color: var(--color-text-muted, #6B7280);
+    font-weight: 500;
+}
+
+.pricing-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-primary, #D4AF37);
+}
+
+.pricing-breakdown-view {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    padding: var(--space-2);
+    background: rgba(26, 58, 92, 0.05);
+    border-radius: var(--border-radius);
+    margin-top: var(--space-2);
+}
+
+.pricing-breakdown-view .package-name {
+    color: var(--color-primary, #D4AF37);
+    font-weight: 500;
+}
+
+/* Edit Mode */
+.pricing-edit-mode {
+    padding: var(--space-2) 0;
+}
+
+.pricing-edit-mode .pricing-display {
+    margin-top: var(--space-2);
+}
+
+.pricing-edit-mode .pricing-loading {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+    font-size: 14px;
+    padding: var(--space-3);
+}
+
+.pricing-edit-mode .pricing-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.pricing-edit-mode .pricing-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) 0;
+}
+
+.pricing-edit-mode .pricing-row.pricing-amount {
+    border-top: 2px solid var(--color-secondary);
+    padding-top: var(--space-3);
+    margin-top: var(--space-2);
+}
+
+.pricing-edit-mode .pricing-display-group {
+    width: 100%;
+}
+
+.pricing-edit-mode .pricing-display-group .detail-label {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text, #1F2937);
+}
+
+.pricing-edit-mode .pricing-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.pricing-edit-mode .pricing-currency {
+    position: absolute;
+    left: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-primary, #D4AF37);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.pricing-edit-mode .pricing-input {
+    flex: 1;
+    padding: 10px 12px 10px 28px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-primary, #D4AF37);
+    background: white;
+    border: 2px solid rgba(26, 58, 92, 0.15);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.pricing-edit-mode .pricing-input:hover {
+    border-color: var(--color-primary, #D4AF37);
+    background: rgba(245, 230, 211, 0.1);
+}
+
+.pricing-edit-mode .pricing-input:focus {
+    outline: none;
+    border-color: var(--color-primary, #D4AF37);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    background: white;
+}
+
+.pricing-edit-mode .pricing-input.modified {
+    border-color: var(--color-warning, #E5A33D);
+    background: rgba(229, 163, 61, 0.05);
+}
+
+.pricing-edit-mode .pricing-reset-btn {
+    padding: 8px 12px;
+    background: rgba(26, 58, 92, 0.08);
+    border: 1px solid rgba(26, 58, 92, 0.15);
+    border-radius: 6px;
+    color: var(--color-text, #1F2937);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.pricing-edit-mode .pricing-reset-btn:hover {
+    background: var(--color-primary, #D4AF37);
+    border-color: var(--color-primary, #D4AF37);
+    color: white;
+    transform: scale(1.05);
+}
+
+.pricing-edit-mode .pricing-calculated {
+    margin-top: var(--space-2);
+    padding: var(--space-2);
+    background: rgba(26, 58, 92, 0.05);
+    border-left: 3px solid var(--color-primary, #D4AF37);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--color-text-muted, #6B7280);
+}
+
+.pricing-edit-mode .pricing-calculated .calculated-amount {
+    font-weight: 600;
+    color: var(--color-text, #1F2937);
+}
+
+.pricing-edit-mode .pricing-breakdown {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    padding: var(--space-2);
+    background: rgba(26, 58, 92, 0.05);
+    border-radius: var(--border-radius);
+    margin-top: var(--space-2);
+}
+
+/* Package Selector */
+.pricing-edit-mode .pricing-type-selector {
+    margin-bottom: var(--space-4);
+}
+
+.pricing-edit-mode .pricing-type-selector .detail-label {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text, #1F2937);
+}
+
+.pricing-edit-mode .pricing-select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--color-text, #1F2937);
+    background-color: white;
+    border: 1.5px solid rgba(26, 58, 92, 0.2);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.pricing-edit-mode .pricing-select:hover {
+    border-color: var(--color-primary, #D4AF37);
+    background-color: rgba(245, 230, 211, 0.3);
+}
+
+.pricing-edit-mode .pricing-select:focus {
+    outline: none;
+    border-color: var(--color-primary, #D4AF37);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    background-color: white;
+}
+
+/* Responsive: Mobile adjustments for pricing section */
+@media (max-width: 480px) {
+    .pricing-edit-mode .pricing-input-group {
+        flex-wrap: wrap;
+        gap: var(--space-3);
+    }
+
+    .pricing-edit-mode .pricing-reset-btn {
+        width: 100%;
+        margin-top: var(--space-1);
+    }
+
+    .pricing-edit-mode .pricing-currency {
+        font-size: 16px;
+    }
+
+    .pricing-edit-mode .pricing-input {
+        font-size: 16px;
+    }
+}
+
+/* =============================================================================
+   PAYMENT SECTION
+   ============================================================================= */
+
+.payment-section {
+    border-top: 1px solid var(--color-light-gray, #E5E7EB);
+    padding-top: var(--space-3);
+}
+
+.payment-section .details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+.payment-view-mode {
+    display: grid;
+}
+
+.payment-view-mode .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.payment-view-mode .detail-label {
+    font-size: 12px;
+    color: var(--color-text-muted, #6B7280);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.payment-view-mode .detail-value {
+    font-size: 14px;
+    color: var(--color-secondary, #1A3A5C);
+    font-weight: 500;
+}
+
+.payment-edit-mode {
+    display: none;
+}
+
+.payment-edit-mode .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.payment-edit-mode .detail-label {
+    font-size: 12px;
+    color: var(--color-text-muted, #6B7280);
+    font-weight: 500;
+}
+
+.payment-edit-mode .detail-input {
+    padding: var(--space-2);
+    border: 1px solid var(--color-light-gray, #E5E7EB);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    transition: border-color var(--transition-fast);
+}
+
+.payment-edit-mode .detail-input:focus {
+    outline: none;
+    border-color: var(--color-primary, #D4AF37);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+/* Mobile: Stack fields vertically */
+@media (max-width: 480px) {
+    .payment-section .details-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =============================================================================
+   STANDALONE MODE
+   Panel outside of map context (e.g., reservations list page)
+   ============================================================================= */
+
+/* Standalone backdrop - full overlay without map adjustments */
+.reservation-panel-backdrop.standalone {
+    pointer-events: auto;
+    background: rgba(26, 58, 92, 0.7);
+}
+
+/* Standalone panel adjustments */
+.reservation-panel.standalone {
+    /* Same panel, but without map-specific behaviors */
+}
+
+/* On standalone, don't show "Ver todos los detalles" link */
+.reservation-panel.standalone .view-more-link {
+    display: none;
+}
+
+/* =============================================================================
+   STATE HISTORY SECTION
+   Collapsible section showing state change history
+   ============================================================================= */
+
+.state-history-section {
+    border-top: 1px solid var(--color-light-gray, #E5E7EB);
+    padding-top: var(--space-3);
+    margin-top: var(--space-2);
+}
+
+/* Collapsible toggle button */
+.panel-section-title.collapsible {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-warm-sand, #F5E6D3);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background 0.2s ease;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.panel-section-title.collapsible:hover {
+    background: var(--color-sand-dark, #E5D6C3);
+}
+
+.panel-section-title.collapsible .toggle-icon {
+    transition: transform 0.2s ease;
+    font-size: 12px;
+    margin-left: auto;
+}
+
+.panel-section-title.collapsible.expanded .toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* History content container */
+.state-history-content {
+    padding: var(--space-3) 0;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+/* History list */
+.state-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+/* Individual history item */
+.history-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-light-gray, #F9FAFB);
+    border-radius: var(--border-radius);
+    font-size: 13px;
+}
+
+/* History icon */
+.history-item .history-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 12px;
+}
+
+.history-item.action-add .history-icon {
+    background: rgba(74, 124, 89, 0.15);
+    color: var(--color-success, #4A7C59);
+}
+
+.history-item.action-remove .history-icon {
+    background: rgba(193, 68, 79, 0.15);
+    color: var(--color-error, #C1444F);
+}
+
+.history-item.action-change .history-icon {
+    background: rgba(212, 175, 55, 0.15);
+    color: var(--color-primary, #D4AF37);
+}
+
+/* History content */
+.history-item .history-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.history-item .history-state {
+    font-weight: 600;
+}
+
+.history-item .history-meta {
+    font-size: 11px;
+    color: var(--color-text-muted, #6B7280);
+}
+
+.history-item .history-notes {
+    font-size: 12px;
+    color: var(--color-text-muted, #6B7280);
+    font-style: italic;
+    margin-top: 2px;
+}
+
+/* =============================================================================
+   RESERVATIONS LIST PAGE STYLES
+   ============================================================================= */
+
+/* Clickable reservation rows */
+.reservation-row:hover {
+    background-color: rgba(212, 175, 55, 0.08) !important;
+}
+
+.reservation-row:active {
+    background-color: rgba(212, 175, 55, 0.15) !important;
+}
