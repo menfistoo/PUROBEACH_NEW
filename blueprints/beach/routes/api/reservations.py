@@ -51,7 +51,9 @@ def register_routes(bp):
             'observations': reservation.get('observations'),
             'preferences': reservation.get('preferences'),
             'paid': reservation.get('paid', 0),
-            'final_price': reservation.get('final_price', 0)
+            'final_price': reservation.get('final_price', 0),
+            'payment_ticket_number': reservation.get('payment_ticket_number'),
+            'payment_method': reservation.get('payment_method')
         })
 
     @bp.route('/reservations/<int:reservation_id>', methods=['PATCH'])

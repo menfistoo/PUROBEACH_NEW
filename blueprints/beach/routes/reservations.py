@@ -1,24 +1,19 @@
 """
 Beach reservation routes.
-Handles reservation CRUD operations and views.
+Handles reservation list view, quick edit, and Excel export.
+Creation is done via the LiveMap.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from flask_login import login_required, current_user
 from utils.decorators import permission_required
-from models.zone import get_all_zones
-from models.furniture_type import get_all_furniture_types
-from models.preference import get_all_preferences
-from models.tag import get_all_tags
-from models.customer import create_customer_from_hotel_guest
 from models.reservation import (
     get_reservations_filtered, get_reservation_with_details,
-    get_reservation_stats, get_reservation_states, get_available_furniture,
-    create_beach_reservation, check_furniture_availability,
-    update_reservation_with_furniture, change_reservation_state,
+    get_reservation_stats, get_reservation_states,
     delete_reservation, cancel_beach_reservation, get_status_history
 )
 from datetime import date
+import io
 
 reservations_bp = Blueprint('reservations', __name__)
 
@@ -66,250 +61,158 @@ def list():
     )
 
 
-@reservations_bp.route('/create', methods=['GET', 'POST'])
+@reservations_bp.route('/create')
 @login_required
 @permission_required('beach.reservations.create')
 def create():
-    """Create new reservation."""
-    zones = get_all_zones()
-    furniture_types = get_all_furniture_types()
-    preferences = get_all_preferences()
-    tags = get_all_tags()
-    states = get_reservation_states()
-
-    if request.method == 'POST':
-        customer_id = request.form.get('customer_id', type=int)
-        hotel_guest_id = request.form.get('hotel_guest_id', type=int)
-        reservation_date = request.form.get('reservation_date')
-        num_people = request.form.get('num_people', 1, type=int)
-        time_slot = request.form.get('time_slot', 'all_day')
-        furniture_ids = request.form.getlist('furniture_ids', type=int)
-        selected_prefs = request.form.getlist('preferences')
-        notes = request.form.get('notes', '').strip()
-        payment_status = request.form.get('payment_status', 'NO')
-        charge_to_room = 1 if request.form.get('charge_to_room') else 0
-        charge_reference = request.form.get('charge_reference', '').strip()
-
-        # Pricing fields
-        package_id = request.form.get('package_id', type=int) or None
-        payment_ticket_number = request.form.get('payment_ticket_number', '').strip() or None
-        price = request.form.get('price', 0.0, type=float)
-        final_price = request.form.get('final_price', 0.0, type=float)
-        paid = 1 if request.form.get('paid') else 0
-        minimum_consumption_amount = request.form.get('minimum_consumption_amount', 0.0, type=float)
-        minimum_consumption_policy_id = request.form.get('minimum_consumption_policy_id', type=int) or None
-
-        # If hotel_guest_id is provided but no customer_id, create customer now
-        if hotel_guest_id and not customer_id:
-            try:
-                additional_data = {}
-                customer_phone = request.form.get('customer_phone', '').strip()
-                customer_email = request.form.get('customer_email', '').strip()
-                customer_country_code = request.form.get('customer_country_code', '+34').strip()
-                if customer_phone:
-                    additional_data['phone'] = customer_phone
-                if customer_email:
-                    additional_data['email'] = customer_email
-                if customer_country_code:
-                    additional_data['country_code'] = customer_country_code
-
-                result = create_customer_from_hotel_guest(hotel_guest_id, additional_data)
-                customer_id = result['customer_id']
-            except ValueError as e:
-                flash(f'Error al crear cliente: {str(e)}', 'error')
-                return render_template('beach/reservation_form.html',
-                                       mode='create', zones=zones, furniture_types=furniture_types,
-                                       preferences=preferences, tags=tags, states=states)
-
-        # Validation
-        if not customer_id:
-            flash('Debe seleccionar un cliente', 'error')
-            return render_template('beach/reservation_form.html',
-                                   mode='create', zones=zones, furniture_types=furniture_types,
-                                   preferences=preferences, tags=tags, states=states)
-
-        if not reservation_date:
-            flash('La fecha es requerida', 'error')
-            return render_template('beach/reservation_form.html',
-                                   mode='create', zones=zones, furniture_types=furniture_types,
-                                   preferences=preferences, tags=tags, states=states)
-
-        if not furniture_ids:
-            flash('Debe seleccionar al menos un mobiliario', 'error')
-            return render_template('beach/reservation_form.html',
-                                   mode='create', zones=zones, furniture_types=furniture_types,
-                                   preferences=preferences, tags=tags, states=states)
-
-        # Validate payment ticket requirement
-        if paid and not payment_ticket_number:
-            flash('Número de ticket requerido para reservas pagadas', 'error')
-            return render_template('beach/reservation_form.html',
-                                   mode='create', zones=zones, furniture_types=furniture_types,
-                                   preferences=preferences, tags=tags, states=states,
-                                   form_data=request.form)
-
-        # Check availability for each furniture
-        for furn_id in furniture_ids:
-            if not check_furniture_availability(furn_id, reservation_date, reservation_date):
-                flash(f'El mobiliario {furn_id} no está disponible para esta fecha', 'error')
-                return render_template('beach/reservation_form.html',
-                                       mode='create', zones=zones, furniture_types=furniture_types,
-                                       preferences=preferences, tags=tags, states=states,
-                                       form_data=request.form)
-
-        try:
-            preferences_csv = ','.join(selected_prefs) if selected_prefs else ''
-
-            reservation_id, ticket_number = create_beach_reservation(
-                customer_id=customer_id,
-                reservation_date=reservation_date,
-                num_people=num_people,
-                furniture_ids=furniture_ids,
-                time_slot=time_slot,
-                payment_status=payment_status,
-                charge_to_room=charge_to_room,
-                charge_reference=charge_reference,
-                price=price,
-                final_price=final_price,
-                paid=paid,
-                minimum_consumption_amount=minimum_consumption_amount,
-                minimum_consumption_policy_id=minimum_consumption_policy_id,
-                package_id=package_id,
-                payment_ticket_number=payment_ticket_number,
-                preferences=preferences_csv,
-                observations=notes,
-                created_by=current_user.username if current_user else None
-            )
-
-            flash(f'Reserva {ticket_number} creada exitosamente', 'success')
-            return redirect(url_for('beach.reservations_detail', reservation_id=reservation_id))
-
-        except ValueError as e:
-            flash(str(e), 'error')
-        except Exception as e:
-            flash(f'Error al crear reserva: {str(e)}', 'error')
-
-    # For GET request, pre-select date and other parameters if provided (deep link from map)
+    """Redirect to map for reservation creation."""
+    # Pass any query params to the map (date, customer_id, etc.)
     selected_date = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+    flash('Use el mapa interactivo para crear nuevas reservas', 'info')
+    return redirect(url_for('beach.map', date=selected_date))
 
-    # Pre-select customer if provided (deep link with state)
-    preselected_customer = None
-    preselected_hotel_guest = None
 
-    customer_id_param = request.args.get('customer_id', type=int)
-    hotel_guest_id_param = request.args.get('hotel_guest_id', type=int)
+@reservations_bp.route('/export')
+@login_required
+@permission_required('beach.reservations.view')
+def export():
+    """Export reservations to Excel."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        flash('Error: openpyxl no está instalado', 'error')
+        return redirect(url_for('beach.reservations'))
 
-    if customer_id_param:
-        from models.customer import get_customer_by_id, get_customer_preferences
-        preselected_customer = get_customer_by_id(customer_id_param)
-        if preselected_customer:
-            # Get customer preferences for auto-fill
-            prefs = get_customer_preferences(customer_id_param)
-            preselected_customer['preference_codes'] = [p['code'] for p in prefs]
+    # Get filter parameters
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    customer_type = request.args.get('type', '')
+    state = request.args.get('state', '')
+    search = request.args.get('search', '')
 
-    elif hotel_guest_id_param:
-        from models.hotel_guest import get_hotel_guest_by_id
-        preselected_hotel_guest = get_hotel_guest_by_id(hotel_guest_id_param)
+    if not date_from:
+        date_from = date.today().strftime('%Y-%m-%d')
 
-    # Pre-select multiple dates if provided (comma-separated)
-    selected_dates = request.args.get('dates', '').split(',') if request.args.get('dates') else []
-    selected_dates = [d.strip() for d in selected_dates if d.strip()]
+    # Get all reservations (no pagination for export)
+    result = get_reservations_filtered(
+        date_from=date_from if date_from else None,
+        date_to=date_to if date_to else None,
+        customer_type=customer_type if customer_type else None,
+        state=state if state else None,
+        search=search if search else None,
+        page=1,
+        per_page=10000  # Large number to get all
+    )
 
-    return render_template('beach/reservation_form.html',
-                           mode='create', zones=zones, furniture_types=furniture_types,
-                           preferences=preferences, tags=tags, states=states,
-                           selected_date=selected_date,
-                           selected_dates=selected_dates,
-                           preselected_customer=preselected_customer,
-                           preselected_hotel_guest=preselected_hotel_guest)
+    reservations = result['items']
+
+    # Create workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Reservas"
+
+    # Header style
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1A3A5C", end_color="1A3A5C", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    # Headers
+    headers = [
+        "Ticket", "Cliente", "Tipo", "Habitación", "Fecha",
+        "Personas", "Estado", "Mobiliario", "Precio", "Pagado", "Notas"
+    ]
+
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = thin_border
+
+    # Data rows
+    for row_idx, res in enumerate(reservations, 2):
+        ws.cell(row=row_idx, column=1, value=res.get('ticket_number') or f"#{res['id']}")
+        ws.cell(row=row_idx, column=2, value=res.get('customer_name', ''))
+        ws.cell(row=row_idx, column=3, value=res.get('customer_type', ''))
+        ws.cell(row=row_idx, column=4, value=res.get('room_number', ''))
+        ws.cell(row=row_idx, column=5, value=res.get('reservation_date') or res.get('start_date', ''))
+        ws.cell(row=row_idx, column=6, value=res.get('num_people', 0))
+        ws.cell(row=row_idx, column=7, value=res.get('current_state', ''))
+        ws.cell(row=row_idx, column=8, value=res.get('furniture_names', ''))
+        ws.cell(row=row_idx, column=9, value=res.get('final_price', 0))
+        ws.cell(row=row_idx, column=10, value="Sí" if res.get('paid') else "No")
+        ws.cell(row=row_idx, column=11, value=res.get('observations', ''))
+
+        # Apply border to data cells
+        for col in range(1, 12):
+            ws.cell(row=row_idx, column=col).border = thin_border
+
+    # Auto-adjust column widths
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except Exception:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column].width = adjusted_width
+
+    # Save to buffer
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Generate filename
+    filename = f"reservas_{date_from}"
+    if date_to and date_to != date_from:
+        filename += f"_a_{date_to}"
+    filename += ".xlsx"
+
+    return Response(
+        output.getvalue(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @reservations_bp.route('/<int:reservation_id>')
 @login_required
 @permission_required('beach.reservations.view')
 def detail(reservation_id):
-    """Display reservation detail view."""
+    """Display reservation detail page."""
     reservation = get_reservation_with_details(reservation_id)
     if not reservation:
         flash('Reserva no encontrada', 'error')
         return redirect(url_for('beach.reservations'))
 
-    history = get_status_history(reservation_id)
     states = get_reservation_states()
+    history = get_status_history(reservation_id)
 
-    return render_template('beach/reservation_detail.html',
-                           reservation=reservation, history=history, states=states)
+    return render_template(
+        'beach/reservation_unified.html',
+        reservation=reservation,
+        states=states,
+        history=history
+    )
 
 
-@reservations_bp.route('/<int:reservation_id>/edit', methods=['GET', 'POST'])
+@reservations_bp.route('/<int:reservation_id>/edit', methods=['GET'])
 @login_required
 @permission_required('beach.reservations.edit')
 def edit(reservation_id):
-    """Edit existing reservation."""
-    reservation = get_reservation_with_details(reservation_id)
-    if not reservation:
-        flash('Reserva no encontrada', 'error')
-        return redirect(url_for('beach.reservations'))
-
-    zones = get_all_zones()
-    furniture_types = get_all_furniture_types()
-    preferences = get_all_preferences()
-    tags = get_all_tags()
-    states = get_reservation_states()
-
-    if request.method == 'POST':
-        num_people = request.form.get('num_people', 1, type=int)
-        time_slot = request.form.get('time_slot', 'all_day')
-        furniture_ids = request.form.getlist('furniture_ids', type=int)
-        selected_prefs = request.form.getlist('preferences')
-        notes = request.form.get('notes', '').strip()
-        payment_status = request.form.get('payment_status', 'NO')
-        charge_to_room = 1 if request.form.get('charge_to_room') else 0
-        charge_reference = request.form.get('charge_reference', '').strip()
-
-        if not furniture_ids:
-            flash('Debe seleccionar al menos un mobiliario', 'error')
-            return render_template('beach/reservation_form.html',
-                                   mode='edit', reservation=reservation,
-                                   zones=zones, furniture_types=furniture_types,
-                                   preferences=preferences, tags=tags, states=states)
-
-        # Check availability (excluding current reservation)
-        for furn_id in furniture_ids:
-            if not check_furniture_availability(furn_id, reservation['reservation_date'],
-                                                 reservation['reservation_date'],
-                                                 exclude_reservation_id=reservation_id):
-                flash(f'El mobiliario {furn_id} no está disponible para esta fecha', 'error')
-                return render_template('beach/reservation_form.html',
-                                       mode='edit', reservation=reservation,
-                                       zones=zones, furniture_types=furniture_types,
-                                       preferences=preferences, tags=tags, states=states)
-
-        try:
-            preferences_csv = ','.join(selected_prefs) if selected_prefs else ''
-
-            update_reservation_with_furniture(
-                reservation_id,
-                furniture_ids=furniture_ids,
-                num_people=num_people,
-                time_slot=time_slot,
-                payment_status=payment_status,
-                charge_to_room=charge_to_room,
-                charge_reference=charge_reference,
-                preferences=preferences_csv,
-                notes=notes
-            )
-
-            flash('Reserva actualizada exitosamente', 'success')
-            return redirect(url_for('beach.reservations_detail', reservation_id=reservation_id))
-
-        except ValueError as e:
-            flash(str(e), 'error')
-
-    return render_template('beach/reservation_form.html',
-                           mode='edit', reservation=reservation,
-                           zones=zones, furniture_types=furniture_types,
-                           preferences=preferences, tags=tags, states=states)
+    """Redirect to unified detail/edit page."""
+    # Unified page handles both view and edit
+    return redirect(url_for('beach.reservations_detail', reservation_id=reservation_id))
 
 
 @reservations_bp.route('/<int:reservation_id>/delete', methods=['POST'])

@@ -162,28 +162,36 @@ export class NavigationManager {
      */
     setupKeyboard(handlers) {
         this.keydownHandler = (event) => {
+            // Skip if user is typing in an input field
+            const tagName = event.target.tagName.toLowerCase();
+            const isInputField = tagName === 'input' || tagName === 'textarea' || tagName === 'select';
+
             // Escape to clear selection
             if (event.key === 'Escape') {
                 if (handlers.onEscape) handlers.onEscape();
                 return;
             }
 
-            // Arrow keys for date navigation
-            if (event.key === 'ArrowLeft' && event.altKey) {
-                event.preventDefault();
-                if (handlers.onPrevDay) handlers.onPrevDay();
-            } else if (event.key === 'ArrowRight' && event.altKey) {
-                event.preventDefault();
-                if (handlers.onNextDay) handlers.onNextDay();
+            // Arrow keys for date navigation (only when not in input fields)
+            if (!isInputField) {
+                if (event.key === 'ArrowLeft' && event.altKey) {
+                    event.preventDefault();
+                    if (handlers.onPrevDay) handlers.onPrevDay();
+                } else if (event.key === 'ArrowRight' && event.altKey) {
+                    event.preventDefault();
+                    if (handlers.onNextDay) handlers.onNextDay();
+                }
             }
 
-            // Zoom with + and -
-            if (event.key === '+' || event.key === '=') {
-                this.zoomIn();
-                if (handlers.onZoom) handlers.onZoom();
-            } else if (event.key === '-') {
-                this.zoomOut();
-                if (handlers.onZoom) handlers.onZoom();
+            // Zoom with + and - (only when not in input fields)
+            if (!isInputField) {
+                if (event.key === '+' || event.key === '=') {
+                    this.zoomIn();
+                    if (handlers.onZoom) handlers.onZoom();
+                } else if (event.key === '-') {
+                    this.zoomOut();
+                    if (handlers.onZoom) handlers.onZoom();
+                }
             }
         };
 

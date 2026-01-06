@@ -126,12 +126,16 @@ def get_reservations_filtered(
     db = get_db()
     cursor = db.cursor()
 
-    # Build base query
+    # Build base query with furniture names subquery
     query = '''
         SELECT r.*,
                c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
                c.customer_type,
-               c.room_number
+               c.room_number,
+               (SELECT GROUP_CONCAT(f.number, ', ')
+                FROM beach_reservation_furniture rf
+                JOIN beach_furniture f ON rf.furniture_id = f.id
+                WHERE rf.reservation_id = r.id) as furniture_names
         FROM beach_reservations r
         JOIN beach_customers c ON r.customer_id = c.id
         WHERE 1=1
