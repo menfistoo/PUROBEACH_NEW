@@ -1,0 +1,369 @@
+/* =============================================================================
+   RESERVATION UNIFIED VIEW/EDIT PAGE STYLES
+   ============================================================================= */
+
+/* Container */
+.reservation-unified-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Header */
+.unified-header {
+    background: linear-gradient(135deg, var(--color-surface, #FFFFFF) 0%, var(--color-accent, #F5E6D3) 100%);
+    border-radius: var(--border-radius-lg, 12px);
+    padding: var(--space-6, 24px);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.unified-header h2 {
+    color: var(--color-secondary, #1A3A5C);
+}
+
+/* Cards */
+.unified-card {
+    border: none;
+    border-radius: var(--border-radius-lg, 12px);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+    transition: box-shadow var(--transition-normal, 0.2s ease);
+}
+
+.unified-card:hover {
+    box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.07));
+}
+
+.unified-card .card-header {
+    background: var(--color-surface, #FFFFFF);
+    border-bottom: 1px solid var(--color-border, #E8E8E8);
+    padding: var(--space-4, 16px) var(--space-5, 20px);
+}
+
+.unified-card .card-header h5 {
+    color: var(--color-secondary, #1A3A5C);
+    font-weight: 600;
+}
+
+.unified-card .card-header h5 i {
+    color: var(--color-primary, #D4AF37);
+    margin-right: var(--space-2, 8px);
+}
+
+.unified-card .card-body {
+    padding: var(--space-5, 20px);
+}
+
+/* Pricing Card */
+.card-pricing .card-header {
+    background: linear-gradient(135deg, var(--color-primary, #D4AF37) 0%, var(--color-primary-dark, #B8960C) 100%);
+    color: white;
+}
+
+.card-pricing .card-header h5 {
+    color: white;
+}
+
+.card-pricing .card-header h5 i {
+    color: white;
+}
+
+.pricing-row {
+    margin-bottom: 0;
+}
+
+.pricing-row label {
+    display: block;
+    margin-bottom: var(--space-1, 4px);
+}
+
+/* Customer Info */
+.customer-name {
+    color: var(--color-secondary, #1A3A5C);
+    margin-bottom: var(--space-2, 8px);
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    margin-bottom: var(--space-1, 4px);
+    color: var(--color-text, #1F2937);
+}
+
+.contact-item i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Furniture Grid */
+.furniture-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3, 12px);
+}
+
+.furniture-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-4, 16px) var(--space-5, 20px);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    color: white;
+    border-radius: var(--border-radius-lg);
+    min-width: 100px;
+    /* Shadow uses --color-primary (#D4AF37) at 30% opacity */
+    box-shadow: var(--shadow-primary-glow, 0 4px 12px rgba(212, 175, 55, 0.3));
+}
+
+.furniture-chip i {
+    font-size: 24px;
+    margin-bottom: var(--space-2, 8px);
+    opacity: 0.9;
+}
+
+.furniture-number {
+    font-size: 18px; /* H4 size per design system */
+    font-weight: 700;
+}
+
+.furniture-zone {
+    font-size: 12px; /* Caption size per design system */
+    opacity: 0.8;
+    margin-top: var(--space-1, 4px);
+}
+
+/* Editable Fields */
+.editable-field {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2, 8px);
+    position: relative;
+}
+
+.editable-field .display-value {
+    flex: 1;
+}
+
+.editable-field .edit-input {
+    flex: 1;
+}
+
+.editable-field .edit-btn {
+    color: var(--color-text-muted, #9CA3AF);
+    padding: 0;
+    opacity: 0.5;
+    transition: opacity var(--transition-normal, 0.2s ease);
+}
+
+.editable-field:hover .edit-btn {
+    opacity: 1;
+}
+
+.editable-field .edit-btn:hover {
+    color: var(--color-primary, #D4AF37);
+}
+
+.editable-field.editing .display-value {
+    display: none;
+}
+
+.editable-field.editing .edit-input {
+    display: block !important;
+}
+
+.editable-field.editing .edit-btn i::before {
+    content: "\f00c";  /* check icon */
+}
+
+.editable-textarea {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.editable-textarea .edit-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+/* State Toggle Buttons */
+.state-toggle {
+    border: 2px solid;
+    font-weight: 500;
+    transition: all var(--transition-normal, 0.2s ease);
+}
+
+.state-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.state-toggle.active {
+    color: white !important;
+}
+
+/* Preferences List */
+.preferences-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px);
+}
+
+.preference-item {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    background: var(--color-surface, #FFFFFF);
+    border: 2px solid var(--color-border, #E8E8E8);
+    border-radius: var(--border-radius-md, 8px);
+    cursor: pointer;
+    transition: all var(--transition-normal, 0.2s ease);
+    user-select: none;
+    position: relative;
+}
+
+.preference-item input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    cursor: pointer;
+    z-index: 1;
+    margin: 0;
+}
+
+.preference-item:hover {
+    border-color: var(--color-primary, #D4AF37);
+}
+
+.preference-item.selected,
+.preference-item:has(input:checked) {
+    background: var(--color-primary, #D4AF37);
+    border-color: var(--color-primary, #D4AF37);
+    color: white;
+}
+
+.preference-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px; /* Body Small per design system */
+    font-weight: 500;
+}
+
+/* Meta Info */
+.meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2, 8px) 0;
+    border-bottom: 1px solid var(--color-border, #E8E8E8);
+}
+
+.meta-row:last-child {
+    border-bottom: none;
+}
+
+.meta-label {
+    color: var(--color-text-muted, #9CA3AF);
+    font-size: 13px; /* Body Small per design system */
+}
+
+.meta-value {
+    font-weight: 500;
+    color: var(--color-text, #1F2937);
+}
+
+/* History Section */
+#historyCollapse .table {
+    margin-bottom: 0;
+}
+
+#historyCollapse .table th {
+    background: var(--color-background, #FAFAFA);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+}
+
+.toggle-icon {
+    transition: transform var(--transition-slow, 0.3s ease);
+}
+
+[data-bs-toggle="collapse"][aria-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* Save Button Animation */
+#saveAllBtn {
+    animation: fadeIn var(--transition-slow, 0.3s ease);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    bottom: var(--space-5, 20px);
+    right: var(--space-5, 20px);
+    z-index: var(--z-toast, 500);
+}
+
+/* Responsive */
+@media (max-width: 991.98px) {
+    .unified-header .d-flex {
+        flex-direction: column;
+        gap: var(--space-4, 16px);
+    }
+
+    .unified-header .d-flex > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2, 8px);
+    }
+
+    .furniture-chip {
+        min-width: 80px;
+        padding: var(--space-3, 12px) var(--space-4, 16px);
+    }
+
+    .furniture-chip i {
+        font-size: 20px;
+    }
+
+    .furniture-number {
+        font-size: 16px; /* Body Large per design system */
+    }
+}
+
+/* Focus States for Accessibility */
+.state-toggle:focus,
+.preference-item:focus-within,
+.edit-btn:focus {
+    outline: 2px solid var(--color-primary, #D4AF37);
+    outline-offset: 2px;
+}
+
+/* Dirty State Indicator */
+.unified-card.has-changes {
+    border-left: 4px solid var(--color-warning, #E5A33D);
+}
+
+.unified-card.has-changes .card-header::after {
+    content: " (modificado)";
+    font-size: 12px; /* Caption size per design system */
+    font-weight: normal;
+    color: var(--color-warning, #E5A33D);
+    margin-left: var(--space-2, 8px);
+}

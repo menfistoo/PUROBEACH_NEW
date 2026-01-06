@@ -1072,6 +1072,119 @@
         }
 
         // ==========================================================================
+        // FURNITURE SELECT MODE (from standalone panel navigation)
+        // When user clicks "Cambiar mobiliario" from reservations list page
+        // ==========================================================================
+        function checkFurnitureSelectMode() {
+            const params = new URLSearchParams(window.location.search);
+            const mode = params.get('mode');
+            const reservationId = params.get('reservation_id');
+            const returnUrl = params.get('return_url');
+            const date = params.get('date');
+
+            if (mode === 'furniture_select' && reservationId) {
+                // Store return URL for after save
+                window.furnitureSelectReturnUrl = returnUrl ? decodeURIComponent(returnUrl) : '/beach/reservations';
+
+                // Set the date if provided
+                if (date) {
+                    map.setCurrentDate(date);
+                }
+
+                // Wait for map data to load, then open panel in reassignment mode
+                setTimeout(() => {
+                    const currentDate = date || map.getCurrentDate();
+                    reservationPanel.setMapData(map.getData());
+                    reservationPanel.open(parseInt(reservationId), currentDate, 'edit');
+
+                    // Wait for panel data to load, then enter reassignment mode
+                    function waitForDataAndEnterReassignment(attempts = 0) {
+                        if (attempts > 20) {
+                            console.error('Failed to enter reassignment mode - data not loaded');
+                            return;
+                        }
+
+                        // Check if reservation data is loaded
+                        if (reservationPanel.state.data?.reservation) {
+                            reservationPanel.enterReassignmentMode();
+                            showFurnitureSelectBanner();
+                        } else {
+                            // Try again in 200ms
+                            setTimeout(() => waitForDataAndEnterReassignment(attempts + 1), 200);
+                        }
+                    }
+
+                    // Start checking after initial delay
+                    setTimeout(() => waitForDataAndEnterReassignment(), 500);
+                }, 1000);
+
+                // Add a visual banner for furniture select mode
+                function showFurnitureSelectBanner() {
+                    let banner = document.getElementById('furnitureSelectBanner');
+                    if (!banner) {
+                        banner = document.createElement('div');
+                        banner.id = 'furnitureSelectBanner';
+                        banner.style.cssText = `
+                            position: fixed;
+                            top: calc(var(--space-4, 16px) + 54px);
+                            left: 50%;
+                            transform: translateX(-50%);
+                            max-width: calc(100vw - var(--space-8, 32px));
+                            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+                            color: white;
+                            padding: var(--space-3, 12px) var(--space-6, 24px);
+                            border-radius: var(--border-radius-md, 8px);
+                            box-shadow: var(--shadow-lg, 0 10px 15px rgba(0, 0, 0, 0.1));
+                            z-index: var(--z-toast, 500);
+                            font-weight: 600;
+                            display: flex;
+                            align-items: center;
+                            gap: var(--space-3, 12px);
+                        `;
+                        banner.innerHTML = `
+                            <i class="fas fa-hand-pointer"></i>
+                            <span>Haz clic en el mobiliario del mapa para seleccionarlo</span>
+                            <button onclick="this.parentElement.remove()"
+                                    aria-label="Cerrar"
+                                    style="background:none;border:none;color:white;cursor:pointer;margin-left:var(--space-2, 8px);padding:var(--space-1, 4px);">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        `;
+                        document.body.appendChild(banner);
+
+                        // Auto-hide after 5 seconds
+                        setTimeout(() => banner.remove(), 5000);
+                    }
+                }
+            }
+        }
+
+        // Override onSave to handle furniture select mode return
+        const originalOnSave = reservationPanel.options.onSave;
+        reservationPanel.options.onSave = (reservationId, updates) => {
+            // Call original handler
+            if (originalOnSave) {
+                originalOnSave(reservationId, updates);
+            }
+
+            // If in furniture select mode, redirect back to reservations
+            if (window.furnitureSelectReturnUrl) {
+                const returnUrl = window.furnitureSelectReturnUrl;
+                window.furnitureSelectReturnUrl = null;
+
+                // Add success message param
+                const url = new URL(returnUrl, window.location.origin);
+                url.searchParams.set('furniture_updated', '1');
+
+                window.location.href = url.toString();
+            }
+        };
+
+        // Check for furniture select mode on page load
+        // Call directly since we're already inside DOMContentLoaded
+        checkFurnitureSelectMode();
+
+        // ==========================================================================
         // NEW RESERVATION PANEL (Slide-in for creating)
         // ==========================================================================
         const newReservationPanel = new NewReservationPanel({

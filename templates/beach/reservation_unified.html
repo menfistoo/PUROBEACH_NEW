@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% set page_title = "Reserva " ~ (reservation.ticket_number or '#' ~ reservation.id) %}
+
+{% block title %}{{ page_title }} - PuroBeach{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/reservation-panel.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/customer-search.css') }}">
+<style>
+/* Embedded panel mode - full screen layout */
+.unified-page-container {
+    min-height: calc(100vh - 120px);
+}
+
+.unified-header {
+    background: linear-gradient(135deg, var(--color-surface, #FFFFFF) 0%, var(--color-accent, #F5E6D3) 100%);
+    border-radius: var(--border-radius-lg, 12px);
+    padding: var(--space-4, 16px) var(--space-6, 24px);
+    margin-bottom: var(--space-4, 16px);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+}
+
+.unified-header h2 {
+    color: var(--color-secondary, #1A3A5C);
+    margin: 0;
+}
+
+.unified-header .breadcrumb {
+    margin-bottom: var(--space-2, 8px);
+}
+
+/*
+ * Embedded Panel Mode Overrides
+ * Note: !important is required to override the slide-in panel's fixed positioning
+ * and inline styles from reservation-panel.css. This is intentional.
+ */
+
+/* Hide the backdrop in embedded mode */
+.embedded-panel-container .reservation-panel-backdrop {
+    display: none !important;
+}
+
+/* Override fixed positioning to make panel inline */
+.embedded-panel-container .reservation-panel {
+    position: relative !important;
+    transform: none !important;
+    top: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 70vh;
+    box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.07));
+    border-radius: var(--border-radius-lg, 12px);
+    z-index: 1 !important;
+}
+
+.embedded-panel-container .reservation-panel .panel-header {
+    border-radius: var(--border-radius-lg, 12px) var(--border-radius-lg, 12px) 0 0;
+}
+
+/* Hide close button in embedded mode - use breadcrumb instead */
+.embedded-panel-container .panel-close-btn {
+    display: none !important;
+}
+
+/* Panel body should not have fixed height */
+.embedded-panel-container .panel-body {
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    flex: none !important;
+}
+
+/* Panel content area */
+.embedded-panel-container .panel-content {
+    padding: var(--space-5, 20px);
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* All sections should be visible */
+.embedded-panel-container .panel-section {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* Footer stays at bottom */
+.embedded-panel-container .panel-footer {
+    position: relative !important;
+    border-radius: 0 0 var(--border-radius-lg, 12px) var(--border-radius-lg, 12px);
+}
+
+/* Make sure the page can scroll */
+.unified-page-container {
+    overflow: visible !important;
+}
+
+.embedded-panel-container {
+    overflow: visible !important;
+}
+
+/* Remove any height restrictions on the panel itself */
+.embedded-panel-container .reservation-panel,
+.embedded-panel-container .reservation-panel * {
+    overflow-anchor: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="unified-page-container">
+    <!-- Header with breadcrumb -->
+    <div class="unified-header">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{{ url_for('beach.reservations') }}">Reservas</a></li>
+                <li class="breadcrumb-item active">{{ reservation.ticket_number or '#' ~ reservation.id }}</li>
+            </ol>
+        </nav>
+        <h2>
+            <i class="fas fa-calendar-check text-primary"></i>
+            {{ reservation.ticket_number or '#' ~ reservation.id }}
+        </h2>
+    </div>
+
+    <!-- Embedded Reservation Panel -->
+    <div class="embedded-panel-container">
+        {% include 'beach/_reservation_panel.html' %}
+    </div>
+</div>
+
+<!-- Configuration for the panel -->
+<script>
+window.UNIFIED_PAGE_CONFIG = {
+    reservationId: {{ reservation.id }},
+    reservationDate: '{{ reservation.reservation_date or reservation.start_date }}',
+    csrfToken: '{{ csrf_token() }}',
+    mode: 'embedded'  // embedded mode for full-page display
+};
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/customer-search.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map/reservation-panel.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const config = window.UNIFIED_PAGE_CONFIG;
+
+    // Initialize the reservation panel in embedded mode
+    const panel = new ReservationPanel({
+        context: 'standalone',  // standalone context (no map integration)
+        apiBaseUrl: '/beach/api',
+        onClose: function() {
+            // Navigate back to list on close
+            window.location.href = '/beach/reservations';
+        },
+        onSave: function(reservationId, updates) {
+            // Show success message
+            showToast('Cambios guardados exitosamente', 'success');
+        }
+    });
+
+    // Fetch states for the panel
+    panel.fetchStates().then(() => {
+        // Open the panel with the reservation
+        panel.open(config.reservationId, config.reservationDate, 'edit');
+
+        // Make the panel always visible (embedded mode)
+        const panelEl = document.querySelector('.reservation-panel');
+        if (panelEl) {
+            panelEl.classList.add('open');
+        }
+    });
+
+    // Check for success message from furniture selection
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('furniture_updated') === '1') {
+        showToast('Mobiliario actualizado exitosamente', 'success');
+        // Clean URL
+        const url = new URL(window.location);
+        url.searchParams.delete('furniture_updated');
+        window.history.replaceState({}, '', url.toString());
+    }
+
+    // Toast notification helper - uses design system styles
+    function showToast(message, type) {
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            container.style.zIndex = 'var(--z-toast, 500)';
+            document.body.appendChild(container);
+        }
+
+        // Design system toast styles
+        const styles = {
+            success: { bg: '#D1FAE5', border: '#10B981', color: '#065F46' },
+            error: { bg: '#FEE2E2', border: '#EF4444', color: '#991B1B' },
+            warning: { bg: '#FEF3C7', border: '#F59E0B', color: '#92400E' },
+            info: { bg: '#DBEAFE', border: '#3B82F6', color: '#1E40AF' }
+        };
+        const style = styles[type] || styles.info;
+
+        const toast = document.createElement('div');
+        toast.className = 'toast show align-items-center';
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'polite');
+        toast.style.cssText = `
+            background: ${style.bg};
+            border-left: 4px solid ${style.border};
+            color: ${style.color};
+            border-radius: var(--border-radius-md, 8px);
+            box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.07));
+            max-width: 400px;
+        `;
+        toast.innerHTML = `
+            <div class="d-flex align-items-center gap-3 p-3">
+                <div class="toast-body p-0 flex-grow-1">${message}</div>
+                <button type="button"
+                        class="btn-close"
+                        aria-label="Cerrar"
+                        onclick="this.closest('.toast').remove()"></button>
+            </div>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+});
+</script>
+{% endblock %}
