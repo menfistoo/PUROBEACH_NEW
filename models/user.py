@@ -14,7 +14,7 @@ class User:
     Wraps database row dictionary with required Flask-Login properties.
     """
 
-    def __init__(self, user_dict):
+    def __init__(self, user_dict: dict) -> None:
         """
         Initialize User from database row.
 
@@ -32,21 +32,21 @@ class User:
         self.last_login = user_dict.get('last_login')
 
     @property
-    def is_authenticated(self):
+    def is_authenticated(self) -> bool:
         """Required by Flask-Login."""
         return True
 
     @property
-    def is_active(self):
+    def is_active(self) -> bool:
         """Required by Flask-Login."""
         return self.active == 1
 
     @property
-    def is_anonymous(self):
+    def is_anonymous(self) -> bool:
         """Required by Flask-Login."""
         return False
 
-    def get_id(self):
+    def get_id(self) -> str:
         """Required by Flask-Login. Returns user ID as unicode string."""
         return str(self.id)
 

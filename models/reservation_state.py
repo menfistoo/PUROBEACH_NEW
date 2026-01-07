@@ -341,7 +341,7 @@ def _get_state_color(state_name: str) -> str:
     return row['color'] if row else '#CCCCCC'
 
 
-def _create_state_incident(cursor, customer_id: int, reservation_id: int, reported_by: str, state_type: str):
+def _create_state_incident(cursor, customer_id: int, reservation_id: int, reported_by: str, state_type: str) -> None:
     """Create automatic incident for states with creates_incident=1."""
     # Check if beach_customer_incidents table exists
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='beach_customer_incidents'")

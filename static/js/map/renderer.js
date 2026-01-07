@@ -279,6 +279,10 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
             fillColor = '#E0F2FE';
             strokeColor = '#0EA5E9';
         }
+        // Set move cursor for draggable temp furniture (not blocked)
+        if (!blockInfo) {
+            group.style.cursor = 'move';
+        }
     }
 
     // Check if selected (selection overrides blocked visual for highlighting)

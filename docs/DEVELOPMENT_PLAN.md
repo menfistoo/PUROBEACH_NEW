@@ -25,9 +25,9 @@
 - [x] Enhanced Search with Filters (2026-01-07)
 - [x] Block Sunbeds in the Live Map (2026-01-07)
 - [x] Add Temporary Sunbeds in the Live Map (2026-01-07)
+- [x] Move Temporary Sunbeds in the Live Map (2026-01-07)
 
 **Pending Tasks:**
-- [ ] Move Temporary Sunbeds in the Live Map
 - [ ] Waiting List
 
 **Reference:** See `Documentation/puro beach club/Tasks/Planned/` for detailed specs.
@@ -35,6 +35,19 @@
 ---
 
 ## Recently Completed
+
+### 2026-01-07: Move Temporary Sunbeds (Drag & Drop)
+- ✅ Drag-and-drop repositioning for temporary furniture
+- ✅ 5px threshold for click vs drag detection
+- ✅ Zoom-aware coordinate calculations
+- ✅ Grid snapping (10px) for consistent alignment
+- ✅ Gold visual feedback during drag (design system #D4AF37)
+- ✅ Move cursor for temp furniture, not-allowed for blocked
+- ✅ Click suppression after drag to prevent modal opening
+- ✅ Position persistence via existing PUT endpoint
+- ✅ Error handling with automatic position revert
+- ✅ **True optimistic updates:** Cache updated IMMEDIATELY on drop (before async save)
+- ✅ No snap-back issues - cache sync ensures renders use correct position
 
 ### 2026-01-07: Add Temporary Sunbeds in Live Map
 - ✅ Database migration for date range columns (temp_start_date, temp_end_date)

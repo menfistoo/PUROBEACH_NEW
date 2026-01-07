@@ -64,7 +64,15 @@ export class BeachMap {
             maxZoom: this.options.maxZoom
         });
         this.interaction = new InteractionManager({
-            snapToGrid: this.options.snapToGrid
+            snapToGrid: this.options.snapToGrid,
+            // Optimistic update: sync local data cache when position changes
+            onPositionUpdate: (furnitureId, x, y) => {
+                const furniture = this.data?.furniture?.find(f => f.id === furnitureId);
+                if (furniture) {
+                    furniture.position_x = x;
+                    furniture.position_y = y;
+                }
+            }
         });
         this.tooltipManager = new TooltipManager(this.container, this.colors);
 
@@ -126,9 +134,15 @@ export class BeachMap {
             this.interaction.setZoom(this.navigation.getZoom());
         });
 
+        // Click suppression for drag-end
+        this._suppressNextClick = false;
+
         // Bind methods
         this.handleFurnitureClick = this.handleFurnitureClick.bind(this);
         this.handleFurnitureContextMenu = this.handleFurnitureContextMenu.bind(this);
+        this.handleTempFurnitureMouseDown = this.handleTempFurnitureMouseDown.bind(this);
+        this.handleTempFurnitureMouseMove = this.handleTempFurnitureMouseMove.bind(this);
+        this.handleTempFurnitureMouseUp = this.handleTempFurnitureMouseUp.bind(this);
 
         // Initialize
         this.init();
@@ -176,6 +190,11 @@ export class BeachMap {
                 this.contextMenu.showEmptySpaceMenu(e, svgPoint.x, svgPoint.y, zone);
             }
         });
+
+        // Temporary furniture drag handling (always enabled)
+        this.svg.addEventListener('mousedown', this.handleTempFurnitureMouseDown);
+        document.addEventListener('mousemove', this.handleTempFurnitureMouseMove);
+        document.addEventListener('mouseup', this.handleTempFurnitureMouseUp);
     }
 
     /**
@@ -283,6 +302,12 @@ export class BeachMap {
 
     handleFurnitureClick(event, item) {
         event.stopPropagation();
+
+        // Suppress click if it was actually end of a drag
+        if (this._suppressNextClick) {
+            this._suppressNextClick = false;
+            return;
+        }
 
         // Check if furniture is blocked - prevent selection for new reservations
         if (this.data?.blocks && this.data.blocks[item.id]) {
@@ -393,6 +418,8 @@ export class BeachMap {
 
     setZoom(level) {
         this.navigation.setZoom(level);
+        // Keep interaction manager zoom in sync
+        this.interaction.setZoom(this.navigation.getZoom());
     }
 
     getZoom() {
@@ -401,6 +428,8 @@ export class BeachMap {
 
     applyZoom() {
         this.navigation.applyZoom(this.svg, this.data);
+        // Keep interaction manager zoom in sync
+        this.interaction.setZoom(this.navigation.getZoom());
     }
 
     // =========================================================================
@@ -426,6 +455,11 @@ export class BeachMap {
     }
 
     async refreshAvailability() {
+        // Skip refresh if temp furniture drag is in progress
+        if (this.interaction.isDraggingTemp) {
+            return;
+        }
+
         try {
             await this.loadData();
         } catch (error) {
@@ -443,6 +477,53 @@ export class BeachMap {
 
     disableEditMode() {
         this.interaction.disableEditMode();
+    }
+
+    // =========================================================================
+    // TEMPORARY FURNITURE DRAG (always enabled)
+    // =========================================================================
+
+    /**
+     * Handle mousedown on SVG - check for temp furniture drag
+     * @param {MouseEvent} event
+     */
+    handleTempFurnitureMouseDown(event) {
+        // Only left mouse button
+        if (event.button !== 0) return;
+
+        // Check if clicking on temp furniture
+        const tempFurniture = this.interaction.isTemporaryFurniture(event.target);
+        if (!tempFurniture) return;
+
+        // Stop auto-refresh during drag to prevent race conditions
+        this.stopAutoRefresh();
+
+        // Start drag tracking
+        this.interaction.handleTempDragStart(event, tempFurniture);
+    }
+
+    /**
+     * Handle mousemove for temp furniture drag
+     * @param {MouseEvent} event
+     */
+    handleTempFurnitureMouseMove(event) {
+        this.interaction.handleTempDrag(event);
+    }
+
+    /**
+     * Handle mouseup for temp furniture drag
+     * @param {MouseEvent} event
+     */
+    async handleTempFurnitureMouseUp(event) {
+        const wasDrag = await this.interaction.handleTempDragEnd(event);
+
+        // Restart auto-refresh after drag (with delay to let DB commit)
+        setTimeout(() => this.startAutoRefresh(), 500);
+
+        // If was a drag, suppress the click event
+        if (wasDrag) {
+            this._suppressNextClick = true;
+        }
     }
 
     // =========================================================================
@@ -547,6 +628,11 @@ export class BeachMap {
         this.interaction.destroy();
         this.tooltipManager.destroy();
         this.contextMenu.destroy();
+
+        // Remove temp furniture drag listeners
+        this.svg?.removeEventListener('mousedown', this.handleTempFurnitureMouseDown);
+        document.removeEventListener('mousemove', this.handleTempFurnitureMouseMove);
+        document.removeEventListener('mouseup', this.handleTempFurnitureMouseUp);
     }
 }
 

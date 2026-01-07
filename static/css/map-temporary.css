@@ -169,6 +169,55 @@
 }
 
 /* =============================================================================
+   DRAG AND DROP STYLES
+   ============================================================================= */
+
+/* Design tokens for drag states */
+.furniture-item.temporary {
+    --drag-stroke-width: 3px;
+    --drag-opacity: 0.85;
+    --drag-glow-color: rgba(212, 175, 55, 0.6);
+}
+
+/* Move cursor for draggable temp furniture (not blocked) */
+.furniture-item.temporary:not(.blocked) {
+    cursor: move;
+}
+
+/* Blocked temp furniture - cannot drag */
+.furniture-item.temporary.blocked {
+    cursor: not-allowed;
+}
+
+/* Keyboard focus state for accessibility */
+.furniture-item.temporary:focus-visible {
+    outline: 2px solid #D4AF37;
+    outline-offset: 2px;
+}
+
+/* Dragging state - gold highlight from design system */
+.furniture-item.temporary.dragging rect,
+.furniture-item.temporary.dragging ellipse,
+.furniture-item.temporary.dragging circle {
+    stroke: #D4AF37 !important;
+    stroke-width: var(--drag-stroke-width);
+    stroke-dasharray: 0;
+    filter: drop-shadow(0 0 8px var(--drag-glow-color));
+}
+
+/* Reduce opacity slightly while dragging to show movement */
+.furniture-item.temporary.dragging {
+    opacity: var(--drag-opacity);
+}
+
+/* Prevent text selection during drag */
+.furniture-item.temporary.dragging text {
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+}
+
+/* =============================================================================
    FORM STYLES
    ============================================================================= */
 
