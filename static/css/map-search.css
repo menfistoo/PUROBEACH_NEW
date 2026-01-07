@@ -1,0 +1,546 @@
+/**
+ * Map Search Component Styles
+ * Beach Club Management System
+ */
+
+/* =============================================================================
+   SEARCH WRAPPER (Toolbar Integration)
+   ============================================================================= */
+
+.map-search-wrapper {
+    position: relative;
+    min-width: 160px;
+    max-width: 280px;
+    flex: 1;
+}
+
+.map-search-input {
+    width: 100%;
+    padding: 7px 32px 7px 32px;
+    border-radius: 16px;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.map-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.map-search-input:focus {
+    background: rgba(255, 255, 255, 0.25);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.4);
+}
+
+.map-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.map-search-clear {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 11px;
+    line-height: 1;
+    border-radius: 50%;
+    transition: all 0.15s;
+}
+
+.map-search-clear:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* =============================================================================
+   RESULTS DROPDOWN
+   ============================================================================= */
+
+.map-search-results {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    min-width: 280px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    z-index: 200;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.map-search-results.show {
+    display: block;
+}
+
+/* Section Headers */
+.search-section {
+    border-bottom: 1px solid #eee;
+}
+
+.search-section:last-child {
+    border-bottom: none;
+}
+
+.search-section-header {
+    padding: 8px 12px;
+    background: var(--color-accent, #F5E6D3);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.search-section-header i {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+/* Result Items */
+.search-result-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s;
+    gap: 10px;
+}
+
+.search-result-item:hover,
+.search-result-item.active {
+    background: var(--color-accent, #F5E6D3);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-furniture {
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
+    font-size: 13px;
+    min-width: 50px;
+}
+
+.search-result-customer {
+    flex: 1;
+    font-size: 14px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-result-customer.available {
+    color: var(--color-success, #4A7C59);
+    font-style: italic;
+}
+
+.search-result-state {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* No Results */
+.search-no-results {
+    padding: 24px 16px;
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+}
+
+.search-no-results i {
+    display: block;
+    font-size: 24px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
+
+/* Keyboard Hint */
+.search-keyboard-hint {
+    padding: 8px 12px;
+    background: #f8f8f8;
+    font-size: 11px;
+    color: #888;
+    text-align: center;
+    border-top: 1px solid #eee;
+}
+
+.search-keyboard-hint kbd {
+    background: #e8e8e8;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+    margin: 0 2px;
+}
+
+/* =============================================================================
+   SEARCH HIGHLIGHT ANIMATION (on furniture)
+   ============================================================================= */
+
+.furniture-item.search-highlight {
+    animation: searchPulse 0.6s ease-in-out 5;
+}
+
+.furniture-item.search-highlight rect,
+.furniture-item.search-highlight circle,
+.furniture-item.search-highlight ellipse,
+.furniture-item.search-highlight polygon {
+    stroke: var(--color-primary, #D4AF37) !important;
+    stroke-width: 4px !important;
+}
+
+@keyframes searchPulse {
+    0%, 100% {
+        filter: drop-shadow(0 0 8px var(--color-primary, #D4AF37));
+        transform: scale(1);
+    }
+    50% {
+        filter: drop-shadow(0 0 16px var(--color-primary, #D4AF37));
+        transform: scale(1.03);
+    }
+}
+
+/* =============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================= */
+
+/* Mobile: Smaller search */
+@media (max-width: 576px) {
+    .map-search-wrapper {
+        min-width: 120px;
+        max-width: 140px;
+    }
+
+    .map-search-input {
+        font-size: 12px;
+        padding: 6px 28px 6px 28px;
+    }
+
+    .map-search-results {
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        top: 100px;
+        min-width: auto;
+        max-height: 60vh;
+    }
+}
+
+/* Tablet+ */
+@media (min-width: 768px) {
+    .map-search-wrapper {
+        min-width: 200px;
+        max-width: 300px;
+    }
+
+    .map-search-input {
+        font-size: 14px;
+    }
+}
+
+/* =============================================================================
+   SEARCH & FILTER GROUP
+   ============================================================================= */
+
+.search-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* =============================================================================
+   INLINE FILTER DROPDOWNS
+   ============================================================================= */
+
+.map-filter-dropdowns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.map-filter-select {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 70px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+    background-size: 16px;
+    padding-right: 22px;
+}
+
+.map-filter-select:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.map-filter-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.4);
+}
+
+/* Active filter state - gold highlight */
+.map-filter-select.active {
+    background: var(--color-primary, #D4AF37);
+    color: white;
+}
+
+.map-filter-select option {
+    background: white;
+    color: var(--color-text, #1F2937);
+    padding: 8px;
+}
+
+/* Clear filters button */
+.map-filter-clear {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.7);
+    width: 26px;
+    height: 26px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+}
+
+.map-filter-clear:hover {
+    background: rgba(193, 68, 79, 0.8);
+    color: white;
+}
+
+/* =============================================================================
+   GROUPED RESULT ITEMS (by reservation)
+   ============================================================================= */
+
+.search-result-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.result-customer-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--color-secondary, #1A3A5C);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.result-customer-name i {
+    margin-right: 6px;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.result-state {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.result-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--color-text-secondary, #4B5563);
+    padding-left: 20px;
+}
+
+.result-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.result-type::after {
+    content: '·';
+    margin-left: 5px;
+}
+
+.result-type:last-child::after {
+    content: '';
+    margin-left: 0;
+}
+
+.result-room {
+    color: var(--color-secondary, #1A3A5C);
+    font-weight: 500;
+}
+
+.result-room::after {
+    content: '·';
+    margin-left: 5px;
+    margin-right: -3px;
+    font-weight: normal;
+    color: var(--color-text-secondary, #4B5563);
+}
+
+.result-paid {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.result-paid.paid {
+    color: var(--color-success, #4A7C59);
+}
+
+.result-paid.unpaid {
+    color: var(--color-warning, #E5A33D);
+}
+
+.result-furniture {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-secondary, #4B5563);
+    padding-left: 20px;
+    margin-top: 2px;
+}
+
+.result-furniture i {
+    color: var(--color-primary, #D4AF37);
+    font-size: 11px;
+}
+
+.result-furniture-codes {
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
+}
+
+/* =============================================================================
+   RELEASED RESERVATION STYLING (Cancelada, No-Show, Liberada)
+   ============================================================================= */
+
+.search-result-item.released {
+    opacity: 0.7;
+    background: #f8f8f8;
+}
+
+.search-result-item.released:hover {
+    opacity: 1;
+    background: #f0f0f0;
+}
+
+.search-result-item.released .result-customer-name {
+    color: var(--color-text-secondary, #4B5563);
+}
+
+.search-result-item.released .result-furniture-codes {
+    text-decoration: line-through;
+    color: var(--color-text-secondary, #4B5563);
+}
+
+.search-result-item.released .result-furniture::after {
+    content: '(reserva cancelada)';
+    font-size: 11px;
+    font-style: italic;
+    color: #999;
+    margin-left: 4px;
+}
+
+/* External link icon for released reservations */
+.search-result-item.released .result-header::after {
+    content: '\f35d';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 10px;
+    color: var(--color-text-secondary, #4B5563);
+    margin-left: 4px;
+}
+
+/* =============================================================================
+   FILTER ACTIVE STATES IN RESULTS
+   ============================================================================= */
+
+.search-no-results .clear-filters-link {
+    display: block;
+    margin-top: 12px;
+    color: var(--color-primary, #D4AF37);
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+
+.search-no-results .clear-filters-link:hover {
+    color: var(--color-primary-dark, #B8960C);
+    text-decoration: underline;
+}
+
+/* =============================================================================
+   RESPONSIVE ADJUSTMENTS FOR FILTERS
+   ============================================================================= */
+
+@media (max-width: 576px) {
+    .map-search-filter-popover {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-radius: 16px 16px 0 0;
+        max-height: 70vh;
+    }
+
+    .filter-popover-body {
+        padding: 20px;
+    }
+
+    .filter-group select {
+        padding: 12px 16px;
+        font-size: 16px; /* Prevent iOS zoom */
+    }
+}

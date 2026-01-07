@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/new-reservation-panel.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/conflict-resolution-modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/safeguard-modal.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map-search.css') }}">
 <style>
     /* =============================================================================
    MOBILE-FIRST MAP PAGE LAYOUT
@@ -756,6 +757,39 @@
             <!-- Populated dynamically -->
         </select>
 
+        <!-- Search & Filters -->
+        <div class="toolbar-group search-filter-group">
+            <div class="map-search-wrapper">
+                <i class="fas fa-search map-search-icon"></i>
+                <input type="text" id="map-search-input" class="map-search-input"
+                       placeholder="Buscar..." autocomplete="off" aria-label="Buscar en el mapa">
+                <button type="button" class="map-search-clear" id="map-search-clear" style="display:none;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <!-- Search Results -->
+                <div class="map-search-results" id="map-search-results" role="listbox"></div>
+            </div>
+            <!-- Inline Filter Dropdowns -->
+            <div class="map-filter-dropdowns">
+                <select id="search-filter-state" class="map-filter-select" title="Filtrar por estado">
+                    <option value="">Estado</option>
+                </select>
+                <select id="search-filter-type" class="map-filter-select" title="Filtrar por tipo de cliente">
+                    <option value="">Tipo</option>
+                    <option value="interno">Interno</option>
+                    <option value="externo">Externo</option>
+                </select>
+                <select id="search-filter-paid" class="map-filter-select" title="Filtrar por estado de pago">
+                    <option value="">Pago</option>
+                    <option value="1">Pagado</option>
+                    <option value="0">Sin pagar</option>
+                </select>
+                <button type="button" class="map-filter-clear" id="filter-clear-btn" title="Limpiar filtros" style="display:none;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
         <!-- Refresh Button -->
         <button type="button" class="toolbar-btn" id="btn-refresh" title="Actualizar">
             <i class="fas fa-sync-alt"></i>
@@ -828,6 +862,7 @@
                     <div class="shortcuts-title">Seleccion</div>
                     <div class="shortcut-row"><kbd>Click</kbd> <span>Seleccionar/deseleccionar</span></div>
                     <div class="shortcut-row"><kbd>Ctrl</kbd> + <kbd>A</kbd> <span>Seleccionar todo</span></div>
+                    <div class="shortcut-row"><kbd>Ctrl</kbd> + <kbd>F</kbd> <span>Buscar</span></div>
                     <div class="shortcut-row"><kbd>Esc</kbd> <span>Deseleccionar</span></div>
                 </div>
                 <div class="shortcuts-section mb-3">
@@ -1020,6 +1055,8 @@
 <script src="{{ url_for('static', filename='js/map/new-reservation-panel.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='js/map/index.js') }}"></script>
 <script type="module">
+    import { SearchManager } from '{{ url_for("static", filename="js/map/SearchManager.js") }}';
+
     document.addEventListener('DOMContentLoaded', function () {
         // ==========================================================================
         // INITIALIZE MAP
@@ -1028,6 +1065,115 @@
             apiUrl: '/beach/api/map/data',
             initialDate: new Date().toISOString().split('T')[0],
             enableZoom: true
+        });
+
+        // ==========================================================================
+        // SEARCH MANAGER (Enhanced with filters and grouped results)
+        // ==========================================================================
+        const searchManager = new SearchManager();
+
+        // Load search reservations when map renders
+        map.on('onRender', (data) => {
+            const zoneId = document.getElementById('zone-select')?.value || null;
+            searchManager.loadReservations(map.getCurrentDate(), zoneId ? parseInt(zoneId) : null);
+        });
+
+        // Also load initial data after a short delay
+        setTimeout(() => {
+            const zoneId = document.getElementById('zone-select')?.value || null;
+            searchManager.loadReservations(map.getCurrentDate(), zoneId ? parseInt(zoneId) : null);
+        }, 500);
+
+        // Handle search result selection (active reservations)
+        searchManager.on('onSelect', (result) => {
+            // Highlight ALL furniture for this reservation
+            if (result.furnitureIds && result.furnitureIds.length > 0) {
+                // Highlight first furniture and pan to it
+                map.highlightAndPanToFurniture(result.furnitureIds[0]);
+                // Highlight additional furniture items
+                result.furnitureIds.slice(1).forEach(id => {
+                    const el = document.querySelector(`[data-furniture-id="${id}"]`);
+                    if (el) el.classList.add('search-highlight');
+                });
+            }
+
+            // Open reservation panel
+            if (result.reservationId) {
+                openReservationPanel(result.reservationId, 'view');
+            }
+        });
+
+        // Handle navigation for released reservations
+        searchManager.on('onNavigate', (reservationId) => {
+            window.location.href = `/beach/reservations/${reservationId}`;
+        });
+
+        // Filter event listeners
+        const filterStateSelect = document.getElementById('search-filter-state');
+        const filterTypeSelect = document.getElementById('search-filter-type');
+        const filterPaidSelect = document.getElementById('search-filter-paid');
+        const filterClearBtn = document.getElementById('filter-clear-btn');
+
+        // Function to update filter dropdown active states and clear button visibility
+        function updateFilterUI() {
+            const hasFilters = filterStateSelect?.value || filterTypeSelect?.value || filterPaidSelect?.value;
+
+            // Toggle active class on dropdowns
+            filterStateSelect?.classList.toggle('active', !!filterStateSelect.value);
+            filterTypeSelect?.classList.toggle('active', !!filterTypeSelect.value);
+            filterPaidSelect?.classList.toggle('active', !!filterPaidSelect.value);
+
+            // Show/hide clear button
+            if (filterClearBtn) {
+                filterClearBtn.style.display = hasFilters ? 'flex' : 'none';
+            }
+        }
+
+        if (filterStateSelect) {
+            filterStateSelect.addEventListener('change', (e) => {
+                searchManager.setFilter('state', e.target.value || null);
+                updateFilterUI();
+            });
+        }
+        if (filterTypeSelect) {
+            filterTypeSelect.addEventListener('change', (e) => {
+                searchManager.setFilter('customerType', e.target.value || null);
+                updateFilterUI();
+            });
+        }
+        if (filterPaidSelect) {
+            filterPaidSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+                searchManager.setFilter('paid', val === '' ? null : val === '1');
+                updateFilterUI();
+            });
+        }
+        if (filterClearBtn) {
+            filterClearBtn.addEventListener('click', () => {
+                searchManager.clearFilters();
+                // Reset dropdown values
+                if (filterStateSelect) filterStateSelect.value = '';
+                if (filterTypeSelect) filterTypeSelect.value = '';
+                if (filterPaidSelect) filterPaidSelect.value = '';
+                updateFilterUI();
+            });
+        }
+
+        // Reload search data when zone changes
+        document.getElementById('zone-select')?.addEventListener('change', () => {
+            const zoneId = document.getElementById('zone-select')?.value || null;
+            searchManager.loadReservations(map.getCurrentDate(), zoneId ? parseInt(zoneId) : null);
+        });
+
+        // Add global keyboard listener for search shortcut (Ctrl+F or /)
+        document.addEventListener('keydown', (e) => {
+            const isInputField = ['input', 'textarea', 'select'].includes(e.target.tagName.toLowerCase());
+            if (!isInputField) {
+                if ((e.ctrlKey && e.key === 'f') || e.key === '/') {
+                    e.preventDefault();
+                    searchManager.focus();
+                }
+            }
         });
 
         // ==========================================================================
