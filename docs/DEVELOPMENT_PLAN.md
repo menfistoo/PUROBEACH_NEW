@@ -44,10 +44,12 @@
 - ✅ Context menu: Right-click empty space shows "Añadir Mobiliario Temporal"
 - ✅ Context menu: Right-click temp furniture shows "Eliminar Mobiliario Temporal"
 - ✅ Toolbar button for quick access to add modal
-- ✅ Create modal with zone, type, number (auto-generated), capacity, date range
-- ✅ Delete confirmation modal
+- ✅ Create modal with zone, type, number (auto-generated), capacity, date range, orientation
+- ✅ Delete modal with partial/full delete options (matches unblock modal UI)
 - ✅ Visual distinction: Sky blue (#E0F2FE) with dashed stroke (#0EA5E9)
 - ✅ CSS styles following design system
+- ✅ Fixed date filter bug: temp furniture only visible within date range
+- ✅ Design review fixes: radio button styling, focus states, btn-close filter consistency
 
 ### 2026-01-07: Block Sunbeds in Live Map
 - ✅ Created context menu manager for right-click furniture options
@@ -1467,7 +1469,7 @@ def get_revenue_by_zone(start_date, end_date)
 ### Phase 7a: Live Map Enhancements (Current Priority)
 1. ~~**Search Function** - Search reservations/customers from map~~ ✅ Completed
 2. ~~**Block Sunbeds** - Allow blocking furniture from availability~~ ✅ Completed
-3. **Add Temporary Sunbeds** - Dynamic furniture creation on map
+3. ~~**Add Temporary Sunbeds** - Dynamic furniture creation on map~~ ✅ Completed
 4. **Move Temporary Sunbeds** - Drag-and-drop for temporary items
 5. **Waiting List** - Queue management for full occupancy
 
