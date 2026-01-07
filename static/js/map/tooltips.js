@@ -155,6 +155,7 @@ export class TooltipManager {
             pointer-events: none;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             line-height: 1.4;
+            opacity: 0.95;
         `;
         this.container.style.position = 'relative';
         this.container.appendChild(this.tooltip);

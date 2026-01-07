@@ -58,20 +58,22 @@ export class ContextMenuManager {
         this.menuElement = document.createElement('div');
         this.menuElement.id = 'furniture-context-menu';
         this.menuElement.className = 'furniture-context-menu';
+        this.menuElement.setAttribute('role', 'menu');
+        this.menuElement.setAttribute('aria-label', 'Menu de mobiliario');
         this.menuElement.innerHTML = `
             <div class="context-menu-header" id="ctx-header">
                 <span class="ctx-furniture-number"></span>
             </div>
-            <div class="context-menu-item ctx-block" id="ctx-block">
+            <div class="context-menu-item ctx-block" id="ctx-block" tabindex="0" role="menuitem">
                 <i class="fas fa-ban"></i>
                 <span>Bloquear</span>
             </div>
-            <div class="context-menu-item ctx-unblock" id="ctx-unblock">
-                <i class="fas fa-check-circle"></i>
+            <div class="context-menu-item ctx-unblock" id="ctx-unblock" tabindex="0" role="menuitem">
+                <i class="fas fa-lock-open"></i>
                 <span>Desbloquear</span>
             </div>
-            <div class="context-menu-divider"></div>
-            <div class="context-menu-item ctx-view-block" id="ctx-view-block">
+            <div class="context-menu-divider" role="separator"></div>
+            <div class="context-menu-item ctx-view-block" id="ctx-view-block" tabindex="0" role="menuitem">
                 <i class="fas fa-info-circle"></i>
                 <span>Ver detalles del bloqueo</span>
             </div>
@@ -84,9 +86,9 @@ export class ContextMenuManager {
      * Setup event listeners
      */
     setupEventListeners() {
-        // Block option click
+        // Block option click/keyboard
         const blockItem = this.menuElement.querySelector('#ctx-block');
-        blockItem?.addEventListener('click', () => {
+        const handleBlock = () => {
             // Save values before hide() clears them
             const furnitureId = this.currentFurnitureId;
             const furnitureNumber = this.currentFurnitureNumber;
@@ -94,11 +96,18 @@ export class ContextMenuManager {
             if (furnitureId) {
                 this.onBlock(furnitureId, furnitureNumber);
             }
+        };
+        blockItem?.addEventListener('click', handleBlock);
+        blockItem?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleBlock();
+            }
         });
 
-        // Unblock option click
+        // Unblock option click/keyboard
         const unblockItem = this.menuElement.querySelector('#ctx-unblock');
-        unblockItem?.addEventListener('click', () => {
+        const handleUnblock = () => {
             // Save values before hide() clears them
             const furnitureId = this.currentFurnitureId;
             const furnitureNumber = this.currentFurnitureNumber;
@@ -106,16 +115,30 @@ export class ContextMenuManager {
             if (furnitureId) {
                 this.onUnblock(furnitureId, furnitureNumber);
             }
+        };
+        unblockItem?.addEventListener('click', handleUnblock);
+        unblockItem?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleUnblock();
+            }
         });
 
-        // View block details
+        // View block details click/keyboard
         const viewBlockItem = this.menuElement.querySelector('#ctx-view-block');
-        viewBlockItem?.addEventListener('click', () => {
+        const handleViewBlock = () => {
             // Save value before hide() clears it
             const furnitureId = this.currentFurnitureId;
             this.hide();
             if (furnitureId) {
                 this.showBlockDetails(furnitureId);
+            }
+        };
+        viewBlockItem?.addEventListener('click', handleViewBlock);
+        viewBlockItem?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleViewBlock();
             }
         });
 

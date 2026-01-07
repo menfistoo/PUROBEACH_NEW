@@ -3,9 +3,12 @@ Map furniture blocking API routes.
 Endpoints for blocking/unblocking furniture (maintenance, VIP hold, etc.).
 """
 
+import logging
 from flask import request, jsonify
 from flask_login import login_required, current_user
 from datetime import date
+
+logger = logging.getLogger(__name__)
 
 from utils.decorators import permission_required
 from models.furniture import get_furniture_by_id
@@ -177,10 +180,8 @@ def register_routes(bp):
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
         except Exception as e:
-            import traceback
-            print(f"Partial unblock error: {e}")
-            traceback.print_exc()
-            return jsonify({'success': False, 'error': f'Error: {str(e)}'}), 500
+            logger.error(f"Partial unblock error for furniture {furniture_id}: {e}", exc_info=True)
+            return jsonify({'success': False, 'error': 'Error al procesar desbloqueo parcial'}), 500
 
     @bp.route('/map/blocks')
     @login_required

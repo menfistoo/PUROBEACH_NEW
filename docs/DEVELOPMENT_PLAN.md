@@ -23,9 +23,9 @@
 **Completed Tasks:**
 - [x] Search Function in the Live Map (2026-01-06)
 - [x] Enhanced Search with Filters (2026-01-07)
+- [x] Block Sunbeds in the Live Map (2026-01-07)
 
 **Pending Tasks:**
-- [ ] Block Sunbeds in the Live Map
 - [ ] Add Temporary Sunbeds in the Live Map
 - [ ] Move Temporary Sunbeds in the Live Map
 - [ ] Waiting List
@@ -35,6 +35,17 @@
 ---
 
 ## Recently Completed
+
+### 2026-01-07: Block Sunbeds in Live Map
+- ✅ Created context menu manager for right-click furniture options
+- ✅ Block modal with type selection (Mantenimiento, VIP, Evento, Otro)
+- ✅ Unblock modal with full/partial unblock options
+- ✅ Partial unblock: Can unblock specific date ranges within a block
+- ✅ Block splitting: Unblock middle dates splits block into two
+- ✅ Visual indicator on map for blocked furniture
+- ✅ Blocked furniture protection (cannot select for reservations)
+- ✅ Keyboard accessibility (Tab, Enter, Space, Escape)
+- ✅ Design system compliance (Deep Ocean header, gold accents, focus states)
 
 ### 2026-01-07: Enhanced Search with Inline Filters
 - ✅ Added `/api/map/all-reservations` endpoint (includes cancelled/no-show/liberadas)
@@ -1442,7 +1453,7 @@ def get_revenue_by_zone(start_date, end_date)
 
 ### Phase 7a: Live Map Enhancements (Current Priority)
 1. ~~**Search Function** - Search reservations/customers from map~~ ✅ Completed
-2. **Block Sunbeds** - Allow blocking furniture from availability
+2. ~~**Block Sunbeds** - Allow blocking furniture from availability~~ ✅ Completed
 3. **Add Temporary Sunbeds** - Dynamic furniture creation on map
 4. **Move Temporary Sunbeds** - Drag-and-drop for temporary items
 5. **Waiting List** - Queue management for full occupancy
