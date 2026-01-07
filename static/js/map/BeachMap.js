@@ -81,7 +81,18 @@ export class BeachMap {
                 if (this.callbacks.onUnblockRequest) {
                     this.callbacks.onUnblockRequest(furnitureId, furnitureNumber);
                 }
-            }
+            },
+            onAddTemporary: (x, y, zoneId) => {
+                if (this.callbacks.onAddTemporaryRequest) {
+                    this.callbacks.onAddTemporaryRequest(x, y, zoneId);
+                }
+            },
+            onDeleteTemporary: (furnitureId, furnitureNumber) => {
+                if (this.callbacks.onDeleteTemporaryRequest) {
+                    this.callbacks.onDeleteTemporaryRequest(furnitureId, furnitureNumber);
+                }
+            },
+            getZoneAtPosition: (x, y) => this.getZoneAtPosition(x, y)
         });
 
         // Event callbacks
@@ -92,6 +103,8 @@ export class BeachMap {
             onFurnitureClick: null,
             onBlockRequest: null,
             onUnblockRequest: null,
+            onAddTemporaryRequest: null,
+            onDeleteTemporaryRequest: null,
             onError: null,
             onRender: null
         };
@@ -151,6 +164,52 @@ export class BeachMap {
                 this.clearSelection();
             }
         });
+
+        // SVG right-click for empty space context menu
+        this.svg.addEventListener('contextmenu', (e) => {
+            // Only handle if click is on empty space (not furniture)
+            const furnitureGroup = e.target.closest('.furniture-item');
+            if (!furnitureGroup) {
+                // Convert screen coordinates to SVG coordinates
+                const svgPoint = this.screenToSVGCoordinates(e.clientX, e.clientY);
+                const zone = this.getZoneAtPosition(svgPoint.x, svgPoint.y);
+                this.contextMenu.showEmptySpaceMenu(e, svgPoint.x, svgPoint.y, zone);
+            }
+        });
+    }
+
+    /**
+     * Convert screen coordinates to SVG coordinates
+     * @param {number} clientX - Screen X coordinate
+     * @param {number} clientY - Screen Y coordinate
+     * @returns {Object} SVG coordinates {x, y}
+     */
+    screenToSVGCoordinates(clientX, clientY) {
+        const pt = this.svg.createSVGPoint();
+        pt.x = clientX;
+        pt.y = clientY;
+        const svgPoint = pt.matrixTransform(this.svg.getScreenCTM().inverse());
+        return { x: svgPoint.x, y: svgPoint.y };
+    }
+
+    /**
+     * Get zone at SVG coordinates
+     * @param {number} x - SVG X coordinate
+     * @param {number} y - SVG Y coordinate
+     * @returns {Object|null} Zone data or null
+     */
+    getZoneAtPosition(x, y) {
+        if (!this.data?.zone_bounds) return null;
+
+        for (const zone of (this.data.zones || [])) {
+            const bounds = this.data.zone_bounds[zone.id];
+            if (bounds &&
+                x >= bounds.x && x <= bounds.x + bounds.width &&
+                y >= bounds.y && y <= bounds.y + bounds.height) {
+                return zone;
+            }
+        }
+        return null;
     }
 
     async loadData() {

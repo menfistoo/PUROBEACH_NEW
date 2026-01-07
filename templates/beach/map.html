@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/safeguard-modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map-search.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map-blocks.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map-temporary.css') }}">
 <style>
     /* =============================================================================
    MOBILE-FIRST MAP PAGE LAYOUT
@@ -813,6 +814,11 @@
             </div>
         </div>
 
+        <!-- Add Temporary Furniture Button -->
+        <button type="button" class="toolbar-btn" id="btn-add-temp-furniture" title="Añadir mobiliario temporal">
+            <i class="fas fa-plus-circle"></i>
+        </button>
+
         <!-- Refresh Button -->
         <button type="button" class="toolbar-btn" id="btn-refresh" title="Actualizar">
             <i class="fas fa-sync-alt"></i>
@@ -1174,6 +1180,128 @@
         </div>
     </div>
 </div>
+
+<!-- Create Temporary Furniture Modal -->
+<div class="modal fade" id="temp-furniture-modal" tabindex="-1" aria-labelledby="temp-furniture-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="temp-furniture-modal-label">
+                    <i class="fas fa-plus-circle me-2"></i>Añadir Mobiliario Temporal
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="temp-zone" class="form-label">Zona <span class="text-danger">*</span></label>
+                        <select id="temp-zone" class="form-select" required>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label for="temp-furniture-type" class="form-label">Tipo <span class="text-danger">*</span></label>
+                        <select id="temp-furniture-type" class="form-select" required>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-4">
+                        <label for="temp-number" class="form-label">Numero</label>
+                        <input type="text" id="temp-number" class="form-control" placeholder="Auto">
+                        <div class="form-text">Auto-generar</div>
+                    </div>
+                    <div class="col-4">
+                        <label for="temp-capacity" class="form-label">Capacidad</label>
+                        <input type="number" id="temp-capacity" class="form-control" value="2" min="1" max="10">
+                    </div>
+                    <div class="col-4">
+                        <label for="temp-orientation" class="form-label">Orientacion</label>
+                        <select id="temp-orientation" class="form-select">
+                            <option value="0">Horizontal</option>
+                            <option value="90">Vertical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="temp-start-date" class="form-label">Fecha Inicio <span class="text-danger">*</span></label>
+                        <input type="date" id="temp-start-date" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                        <label for="temp-end-date" class="form-label">Fecha Fin</label>
+                        <input type="date" id="temp-end-date" class="form-control">
+                        <div class="form-text">Opcional, si es solo un dia</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirm-temp-create-btn">
+                    <i class="fas fa-plus me-1"></i>Crear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Temporary Furniture Modal -->
+<div class="modal fade" id="delete-temp-modal" tabindex="-1" aria-labelledby="delete-temp-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header delete-temp-modal-header">
+                <h5 class="modal-title" id="delete-temp-modal-label">
+                    <i class="fas fa-trash me-2"></i>Eliminar Mobiliario Temporal
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mobiliario</label>
+                    <div id="delete-temp-number" class="fs-5 fw-bold text-primary">T1</div>
+                </div>
+                <div class="mb-3 p-3 bg-light rounded">
+                    <label class="form-label fw-semibold mb-2">Periodo de Validez</label>
+                    <div class="small">
+                        <div><strong>Desde:</strong> <span id="delete-temp-start"></span></div>
+                        <div><strong>Hasta:</strong> <span id="delete-temp-end"></span></div>
+                    </div>
+                </div>
+                <!-- Delete options (shown for multi-day) -->
+                <div id="delete-temp-options" class="mb-3" style="display: none;">
+                    <label class="form-label fw-semibold">Tipo de Eliminacion</label>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="deleteType" id="delete-day-only" value="day" checked>
+                        <label class="form-check-label" for="delete-day-only">
+                            <strong>Eliminar solo este dia</strong>
+                            <div class="small text-muted">Elimina el mobiliario solo para <span id="delete-temp-current-date"></span></div>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="deleteType" id="delete-all-days" value="all">
+                        <label class="form-check-label" for="delete-all-days">
+                            <strong>Eliminar completamente</strong>
+                            <div class="small text-muted">Elimina el mobiliario para todas las fechas</div>
+                        </label>
+                    </div>
+                </div>
+                <!-- Single day message (shown for single-day) -->
+                <div id="delete-temp-single-day-msg" class="mb-3">
+                    <div class="alert alert-warning mb-0 py-2">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Esta accion no se puede deshacer.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirm-temp-delete-btn">
+                    <i class="fas fa-trash me-1"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -1195,6 +1323,7 @@
 <script type="module">
     import { SearchManager } from '{{ url_for("static", filename="js/map/SearchManager.js") }}';
     import { BlockManager } from '{{ url_for("static", filename="js/map/block-manager.js") }}';
+    import { TempFurnitureManager } from '{{ url_for("static", filename="js/map/temp-furniture-manager.js") }}';
 
     document.addEventListener('DOMContentLoaded', function () {
         // ==========================================================================
@@ -1229,6 +1358,37 @@
             const blockInfo = data?.blocks?.[furnitureId] || null;
             blockManager.showUnblockModal(furnitureId, furnitureNumber, blockInfo);
         });
+
+        // ==========================================================================
+        // TEMP FURNITURE MANAGER (Add/delete temporary furniture)
+        // ==========================================================================
+        const tempFurnitureManager = new TempFurnitureManager({
+            getCurrentDate: () => map.getCurrentDate(),
+            getZones: () => map.getData()?.zones || [],
+            getFurnitureTypes: () => map.getData()?.furniture_types || {},
+            onCreateSuccess: () => map.loadData(),
+            onDeleteSuccess: () => map.loadData()
+        });
+
+        // Wire up temp furniture callbacks
+        map.on('onAddTemporaryRequest', (x, y, zoneId) => {
+            tempFurnitureManager.showCreateModal(x, y, zoneId);
+        });
+
+        map.on('onDeleteTemporaryRequest', (furnitureId, furnitureNumber) => {
+            tempFurnitureManager.showDeleteModal(furnitureId, furnitureNumber);
+        });
+
+        // Toolbar button handler
+        const addTempBtn = document.getElementById('btn-add-temp-furniture');
+        if (addTempBtn) {
+            addTempBtn.addEventListener('click', () => {
+                // Open modal with default position (will be in first zone)
+                const zones = map.getData()?.zones || [];
+                const firstZoneId = zones.length > 0 ? zones[0].id : null;
+                tempFurnitureManager.showCreateModal(100, 100, firstZoneId);
+            });
+        }
 
         // ==========================================================================
         // SEARCH MANAGER (Enhanced with filters and grouped results)

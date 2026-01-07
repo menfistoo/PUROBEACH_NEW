@@ -269,6 +269,18 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
         group.style.cursor = 'not-allowed';
     }
 
+    // Check if temporary furniture
+    if (item.is_temporary) {
+        group.classList.add('temporary');
+        group.setAttribute('data-temp-start', item.temp_start_date || '');
+        group.setAttribute('data-temp-end', item.temp_end_date || '');
+        // Use sky blue fill for available temp furniture (not reserved, not blocked)
+        if (isAvailable && !blockInfo) {
+            fillColor = '#E0F2FE';
+            strokeColor = '#0EA5E9';
+        }
+    }
+
     // Check if selected (selection overrides blocked visual for highlighting)
     if (selectedFurniture.has(item.id)) {
         fillColor = colors.selectedFill;

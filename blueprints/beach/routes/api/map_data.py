@@ -37,7 +37,8 @@ def register_routes(bp):
 
         # Get all static data
         zones = get_all_zones(active_only=True)
-        furniture = get_all_furniture(active_only=True)
+        # Pass date to filter temporary furniture by their date range
+        furniture = get_all_furniture(active_only=True, for_date=date_str)
         furniture_types = get_all_furniture_types(active_only=True)
         states = get_all_states(active_only=True)
 

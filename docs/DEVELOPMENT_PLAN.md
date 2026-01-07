@@ -24,9 +24,9 @@
 - [x] Search Function in the Live Map (2026-01-06)
 - [x] Enhanced Search with Filters (2026-01-07)
 - [x] Block Sunbeds in the Live Map (2026-01-07)
+- [x] Add Temporary Sunbeds in the Live Map (2026-01-07)
 
 **Pending Tasks:**
-- [ ] Add Temporary Sunbeds in the Live Map
 - [ ] Move Temporary Sunbeds in the Live Map
 - [ ] Waiting List
 
@@ -35,6 +35,19 @@
 ---
 
 ## Recently Completed
+
+### 2026-01-07: Add Temporary Sunbeds in Live Map
+- ✅ Database migration for date range columns (temp_start_date, temp_end_date)
+- ✅ Model functions updated for date range support
+- ✅ API endpoints support start_date/end_date parameters
+- ✅ TempFurnitureManager.js for modal interactions
+- ✅ Context menu: Right-click empty space shows "Añadir Mobiliario Temporal"
+- ✅ Context menu: Right-click temp furniture shows "Eliminar Mobiliario Temporal"
+- ✅ Toolbar button for quick access to add modal
+- ✅ Create modal with zone, type, number (auto-generated), capacity, date range
+- ✅ Delete confirmation modal
+- ✅ Visual distinction: Sky blue (#E0F2FE) with dashed stroke (#0EA5E9)
+- ✅ CSS styles following design system
 
 ### 2026-01-07: Block Sunbeds in Live Map
 - ✅ Created context menu manager for right-click furniture options

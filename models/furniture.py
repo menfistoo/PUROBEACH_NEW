@@ -7,13 +7,17 @@ from database import get_db
 from datetime import datetime
 
 
-def get_all_furniture(zone_id: int = None, active_only: bool = True) -> list:
+def get_all_furniture(zone_id: int = None, active_only: bool = True,
+                      for_date: str = None) -> list:
     """
     Get all beach furniture.
 
     Args:
         zone_id: Filter by zone ID (optional)
         active_only: If True, only return active furniture
+        for_date: Date string YYYY-MM-DD for filtering temporary furniture (optional)
+                  If provided, temporary furniture is only included if for_date
+                  falls within temp_start_date and temp_end_date
 
     Returns:
         List of furniture dicts with zone information
@@ -41,6 +45,19 @@ def get_all_furniture(zone_id: int = None, active_only: bool = True) -> list:
 
     if active_only:
         query += ' AND f.active = 1'
+
+    # Filter temporary furniture by date range
+    if for_date:
+        query += '''
+            AND (
+                f.is_temporary = 0
+                OR (f.is_temporary = 1
+                    AND DATE(f.temp_start_date) <= DATE(?)
+                    AND DATE(f.temp_end_date) >= DATE(?))
+            )
+        '''
+        params.append(for_date)
+        params.append(for_date)
 
     query += ' ORDER BY z.display_order, f.number'
 
