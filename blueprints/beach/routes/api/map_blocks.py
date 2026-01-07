@@ -11,7 +11,7 @@ from utils.decorators import permission_required
 from models.furniture import get_furniture_by_id
 from models.furniture_block import (
     create_furniture_block, get_blocks_for_date, get_block_by_id,
-    delete_block, is_furniture_blocked, BLOCK_TYPES
+    delete_block, is_furniture_blocked, partial_unblock, BLOCK_TYPES
 )
 
 
@@ -41,10 +41,10 @@ def register_routes(bp):
             return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
 
         start_date = data.get('start_date')
-        end_date = data.get('end_date', start_date)
+        end_date = data.get('end_date') or start_date  # Handle empty/null end_date
         block_type = data.get('block_type', 'other')
-        reason = data.get('reason', '')
-        notes = data.get('notes', '')
+        reason = data.get('reason') or ''
+        notes = data.get('notes') or ''
 
         if not start_date:
             return jsonify({'success': False, 'error': 'Fecha de inicio requerida'}), 400
@@ -116,6 +116,71 @@ def register_routes(bp):
 
         else:
             return jsonify({'success': False, 'error': 'Se requiere date o block_id'}), 400
+
+    @bp.route('/map/furniture/<int:furniture_id>/unblock-partial', methods=['POST'])
+    @login_required
+    @permission_required('beach.furniture.block')
+    def partial_unblock_furniture(furniture_id):
+        """
+        Partially unblock furniture for a specific date range.
+
+        This endpoint handles splitting blocks when unblocking a range in the middle.
+
+        Request body:
+            block_id: Block ID to modify
+            unblock_start: Start date to unblock YYYY-MM-DD
+            unblock_end: End date to unblock YYYY-MM-DD
+
+        Returns:
+            JSON with success status and action taken
+        """
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+
+        block_id = data.get('block_id')
+        unblock_start = data.get('unblock_start')
+        unblock_end = data.get('unblock_end')
+
+        if not block_id:
+            return jsonify({'success': False, 'error': 'block_id requerido'}), 400
+
+        if not unblock_start or not unblock_end:
+            return jsonify({'success': False, 'error': 'Fechas de desbloqueo requeridas'}), 400
+
+        # Verify block belongs to this furniture
+        block = get_block_by_id(block_id)
+        if not block:
+            return jsonify({'success': False, 'error': 'Bloqueo no encontrado'}), 404
+
+        if block['furniture_id'] != furniture_id:
+            return jsonify({'success': False, 'error': 'Bloqueo no corresponde al mobiliario'}), 400
+
+        try:
+            result = partial_unblock(block_id, unblock_start, unblock_end)
+
+            action_messages = {
+                'deleted': 'Bloqueo eliminado completamente',
+                'shrunk_start': 'Bloqueo ajustado (inicio movido)',
+                'shrunk_end': 'Bloqueo ajustado (fin movido)',
+                'split': 'Bloqueo dividido en dos'
+            }
+
+            return jsonify({
+                'success': True,
+                'action': result['action'],
+                'message': action_messages.get(result['action'], 'Desbloqueo parcial completado'),
+                'block_ids': result.get('block_ids', [])
+            })
+
+        except ValueError as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        except Exception as e:
+            import traceback
+            print(f"Partial unblock error: {e}")
+            traceback.print_exc()
+            return jsonify({'success': False, 'error': f'Error: {str(e)}'}), 500
 
     @bp.route('/map/blocks')
     @login_required

@@ -193,6 +193,14 @@ export class NavigationManager {
                     if (handlers.onZoom) handlers.onZoom();
                 }
             }
+
+            // Search shortcut: Ctrl+F or / (only when not in input fields)
+            if (!isInputField) {
+                if ((event.ctrlKey && event.key === 'f') || event.key === '/') {
+                    event.preventDefault();
+                    if (handlers.onSearchFocus) handlers.onSearchFocus();
+                }
+            }
         };
 
         document.addEventListener('keydown', this.keydownHandler);

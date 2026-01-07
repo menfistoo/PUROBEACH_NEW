@@ -63,6 +63,44 @@ export class TooltipManager {
     }
 
     /**
+     * Show tooltip with block information
+     * @param {Event} event - Mouse event
+     * @param {Object} blockInfo - Block information from API
+     * @param {string} furnitureNumber - Furniture number/code
+     */
+    showBlock(event, blockInfo, furnitureNumber) {
+        if (!this.tooltip) {
+            this.create();
+        }
+
+        const blockTypeNames = {
+            'maintenance': 'Mantenimiento',
+            'vip_hold': 'Reserva VIP',
+            'event': 'Evento',
+            'other': 'Bloqueado'
+        };
+
+        const typeName = blockTypeNames[blockInfo.block_type] || blockInfo.name || 'Bloqueado';
+        let content = `<strong>${typeName}</strong>`;
+        content += `<br><small>Mobiliario: ${furnitureNumber}</small>`;
+
+        if (blockInfo.reason) {
+            content += `<br><small>Motivo: ${blockInfo.reason}</small>`;
+        }
+
+        if (blockInfo.end_date) {
+            content += `<br><small>Hasta: ${blockInfo.end_date}</small>`;
+        }
+
+        // Add visual indicator of block color
+        content = `<span style="display: inline-block; width: 10px; height: 10px; background: ${blockInfo.color}; border-radius: 2px; margin-right: 6px;"></span>${content}`;
+
+        this.tooltip.innerHTML = content;
+        this.tooltip.style.display = 'block';
+        this.move(event);
+    }
+
+    /**
      * Hide the tooltip
      */
     hide() {

@@ -43,6 +43,9 @@ export function createSVG(container, colors) {
             <rect x="0" y="0" width="5" height="5" fill="${colors.poolSecondary}" opacity="0.3"/>
             <rect x="5" y="5" width="5" height="5" fill="${colors.poolSecondary}" opacity="0.3"/>
         </pattern>
+        <pattern id="blocked-stripes" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+            <rect width="4" height="8" fill="rgba(0,0,0,0.15)"/>
+        </pattern>
     `;
     svg.appendChild(defs);
 
@@ -207,8 +210,9 @@ function createDecorativeElement(item, data, colors, svg) {
  * @param {Object} colors - Color configuration
  * @param {Function} onFurnitureClick - Click handler
  * @param {Object} tooltipManager - Tooltip manager instance
+ * @param {Function} onFurnitureContextMenu - Right-click context menu handler
  */
-export function renderFurniture(layer, data, selectedFurniture, colors, onFurnitureClick, tooltipManager) {
+export function renderFurniture(layer, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu) {
     layer.innerHTML = '';
 
     if (!data.furniture) return;
@@ -219,7 +223,7 @@ export function renderFurniture(layer, data, selectedFurniture, colors, onFurnit
     });
 
     reservableFurniture.forEach(item => {
-        const group = createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager);
+        const group = createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu);
         layer.appendChild(group);
     });
 }
@@ -227,7 +231,7 @@ export function renderFurniture(layer, data, selectedFurniture, colors, onFurnit
 /**
  * Create a single furniture element
  */
-function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager) {
+function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu) {
     const group = document.createElementNS(SVG_NS, 'g');
     group.setAttribute('class', 'furniture-item');
     group.setAttribute('data-furniture-id', item.id);
@@ -255,7 +259,17 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
         strokeColor = typeConfig.stroke_color || '#654321';
     }
 
-    // Check if selected
+    // Check if blocked
+    const blockInfo = data.blocks && data.blocks[item.id];
+    if (blockInfo) {
+        fillColor = blockInfo.color || '#9CA3AF';
+        strokeColor = darkenColor(fillColor, 30);
+        group.classList.add('blocked');
+        group.setAttribute('data-block-type', blockInfo.block_type);
+        group.style.cursor = 'not-allowed';
+    }
+
+    // Check if selected (selection overrides blocked visual for highlighting)
     if (selectedFurniture.has(item.id)) {
         fillColor = colors.selectedFill;
         strokeColor = colors.selectedStroke;
@@ -268,8 +282,53 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
     const shape = createShape(typeConfig.map_shape || 'rounded_rect', width, height, fillColor, strokeColor);
     group.appendChild(shape);
 
+    // Add stripes overlay for blocked furniture
+    if (blockInfo && !selectedFurniture.has(item.id)) {
+        const stripesOverlay = document.createElementNS(SVG_NS, 'rect');
+        stripesOverlay.setAttribute('x', '2');
+        stripesOverlay.setAttribute('y', '2');
+        stripesOverlay.setAttribute('width', width - 4);
+        stripesOverlay.setAttribute('height', height - 4);
+        stripesOverlay.setAttribute('fill', 'url(#blocked-stripes)');
+        stripesOverlay.setAttribute('rx', '5');
+        stripesOverlay.setAttribute('ry', '5');
+        stripesOverlay.setAttribute('pointer-events', 'none');
+        group.appendChild(stripesOverlay);
+    }
+
     // Add labels
-    if (!isAvailable && availability) {
+    if (blockInfo) {
+        // Blocked furniture: show icon + furniture number
+        const blockIcons = {
+            'maintenance': '🔧',
+            'vip_hold': '⭐',
+            'event': '📅',
+            'other': '🚫'
+        };
+        const icon = blockIcons[blockInfo.block_type] || '🚫';
+
+        const iconLabel = document.createElementNS(SVG_NS, 'text');
+        iconLabel.setAttribute('x', width / 2);
+        iconLabel.setAttribute('y', height / 2 - 4);
+        iconLabel.setAttribute('text-anchor', 'middle');
+        iconLabel.setAttribute('dominant-baseline', 'middle');
+        iconLabel.setAttribute('font-size', '12');
+        iconLabel.setAttribute('pointer-events', 'none');
+        iconLabel.textContent = icon;
+        group.appendChild(iconLabel);
+
+        const numberLabel = document.createElementNS(SVG_NS, 'text');
+        numberLabel.setAttribute('x', width / 2);
+        numberLabel.setAttribute('y', height / 2 + 10);
+        numberLabel.setAttribute('text-anchor', 'middle');
+        numberLabel.setAttribute('dominant-baseline', 'middle');
+        numberLabel.setAttribute('fill', getContrastColor(fillColor, colors));
+        numberLabel.setAttribute('font-size', '9');
+        numberLabel.setAttribute('font-weight', '600');
+        numberLabel.setAttribute('pointer-events', 'none');
+        numberLabel.textContent = item.number;
+        group.appendChild(numberLabel);
+    } else if (!isAvailable && availability) {
         const customerLabel = tooltipManager.getCustomerLabel(availability);
 
         const primaryLabel = document.createElementNS(SVG_NS, 'text');
@@ -313,8 +372,18 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
     // Event listeners
     group.addEventListener('click', (e) => onFurnitureClick(e, item));
 
+    // Right-click context menu
+    if (onFurnitureContextMenu) {
+        group.addEventListener('contextmenu', (e) => onFurnitureContextMenu(e, item));
+    }
+
     // Hover handlers for tooltip
-    if (!isAvailable && availability && availability.customer_name) {
+    if (blockInfo) {
+        // Show block info on hover
+        group.addEventListener('mouseenter', (e) => tooltipManager.showBlock(e, blockInfo, item.number));
+        group.addEventListener('mouseleave', () => tooltipManager.hide());
+        group.addEventListener('mousemove', (e) => tooltipManager.move(e));
+    } else if (!isAvailable && availability && availability.customer_name) {
         group.addEventListener('mouseenter', (e) => tooltipManager.show(e, availability));
         group.addEventListener('mouseleave', () => tooltipManager.hide());
         group.addEventListener('mousemove', (e) => tooltipManager.move(e));

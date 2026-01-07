@@ -301,3 +301,110 @@ def get_blocked_furniture_ids(target_date: str) -> list:
         ''', (target_date, target_date))
 
         return [row['furniture_id'] for row in cursor.fetchall()]
+
+
+def partial_unblock(block_id: int, unblock_start: str, unblock_end: str) -> dict:
+    """
+    Partially unblock a date range within an existing block.
+
+    This may delete, shrink, or split the block depending on the unblock range:
+    - If unblock covers entire block: delete block
+    - If unblock is at start: shrink block (move start_date forward)
+    - If unblock is at end: shrink block (move end_date back)
+    - If unblock is in middle: split into two blocks
+
+    Args:
+        block_id: Block ID to partially unblock
+        unblock_start: Start date to unblock (YYYY-MM-DD)
+        unblock_end: End date to unblock (YYYY-MM-DD)
+
+    Returns:
+        dict: Result with action taken and any new block IDs
+
+    Raises:
+        ValueError: If validation fails
+    """
+    from datetime import datetime, timedelta
+
+    block = get_block_by_id(block_id)
+    if not block:
+        raise ValueError("Bloqueo no encontrado")
+
+    # Normalize dates to strings for comparison (handles both str and date objects)
+    block_start = str(block['start_date'])
+    block_end = str(block['end_date'])
+
+    # Validate unblock range is within block range
+    if unblock_start < block_start or unblock_end > block_end:
+        raise ValueError("El rango a desbloquear debe estar dentro del bloqueo existente")
+
+    if unblock_start > unblock_end:
+        raise ValueError("Fecha de inicio no puede ser posterior a fecha de fin")
+
+    # Calculate adjacent dates
+    def add_days(date_str: str, days: int) -> str:
+        dt = datetime.strptime(date_str, '%Y-%m-%d')
+        return (dt + timedelta(days=days)).strftime('%Y-%m-%d')
+
+    result = {'action': None, 'block_ids': []}
+
+    with get_db() as conn:
+        # Case 1: Unblock covers entire block - delete it
+        if unblock_start <= block_start and unblock_end >= block_end:
+            conn.execute('DELETE FROM beach_furniture_blocks WHERE id = ?', (block_id,))
+            result['action'] = 'deleted'
+
+        # Case 2: Unblock at start - shrink block forward
+        elif unblock_start <= block_start and unblock_end < block_end:
+            new_start = add_days(unblock_end, 1)
+            conn.execute('''
+                UPDATE beach_furniture_blocks
+                SET start_date = ?
+                WHERE id = ?
+            ''', (new_start, block_id))
+            result['action'] = 'shrunk_start'
+            result['block_ids'] = [block_id]
+
+        # Case 3: Unblock at end - shrink block backward
+        elif unblock_start > block_start and unblock_end >= block_end:
+            new_end = add_days(unblock_start, -1)
+            conn.execute('''
+                UPDATE beach_furniture_blocks
+                SET end_date = ?
+                WHERE id = ?
+            ''', (new_end, block_id))
+            result['action'] = 'shrunk_end'
+            result['block_ids'] = [block_id]
+
+        # Case 4: Unblock in middle - split into two blocks
+        else:
+            # Update original block to end before unblock range
+            new_end_first = add_days(unblock_start, -1)
+            conn.execute('''
+                UPDATE beach_furniture_blocks
+                SET end_date = ?
+                WHERE id = ?
+            ''', (new_end_first, block_id))
+
+            # Create new block starting after unblock range
+            new_start_second = add_days(unblock_end, 1)
+            cursor = conn.execute('''
+                INSERT INTO beach_furniture_blocks
+                (furniture_id, start_date, end_date, block_type, reason, notes, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                block['furniture_id'],
+                new_start_second,
+                block_end,
+                block['block_type'],
+                block['reason'],
+                block['notes'],
+                block['created_by']
+            ))
+
+            result['action'] = 'split'
+            result['block_ids'] = [block_id, cursor.lastrowid]
+
+        conn.commit()
+
+    return result

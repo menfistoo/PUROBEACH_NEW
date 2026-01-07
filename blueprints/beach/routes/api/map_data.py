@@ -14,6 +14,7 @@ from models.furniture_type import get_all_furniture_types
 from models.state import get_all_states
 from models.reservation import get_furniture_availability_map
 from models.config import get_map_config
+from models.furniture_block import get_blocks_for_date, BLOCK_TYPES
 
 
 def register_routes(bp):
@@ -54,6 +55,20 @@ def register_routes(bp):
                 if date_str in dates_data:
                     furniture_availability[int(fid)] = dates_data[date_str]
 
+        # Get blocks for the date
+        blocks_list = get_blocks_for_date(date_str)
+        blocks_map = {}
+        for block in blocks_list:
+            blocks_map[block['furniture_id']] = {
+                'id': block['id'],
+                'block_type': block['block_type'],
+                'reason': block.get('reason', ''),
+                'start_date': block.get('start_date', ''),
+                'end_date': block.get('end_date', ''),
+                'color': BLOCK_TYPES.get(block['block_type'], {}).get('color', '#9CA3AF'),
+                'name': BLOCK_TYPES.get(block['block_type'], {}).get('name', 'Bloqueado')
+            }
+
         # Get map configuration from database
         map_config = get_map_config()
         zone_padding = map_config['zone_padding']
@@ -84,6 +99,8 @@ def register_routes(bp):
             'states': states,
             'state_colors': state_colors,
             'availability': furniture_availability,
+            'blocks': blocks_map,  # Furniture blocks for the date
+            'block_types': BLOCK_TYPES,  # Block type definitions
             'summary': availability.get('summary', {}).get(date_str, {}),
             'map_dimensions': {
                 'width': map_width,

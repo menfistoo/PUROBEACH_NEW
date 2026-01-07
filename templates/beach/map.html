@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/conflict-resolution-modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/safeguard-modal.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map-search.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map-blocks.css') }}">
 <style>
     /* =============================================================================
    MOBILE-FIRST MAP PAGE LAYOUT
@@ -520,6 +521,28 @@
         background: rgba(193, 68, 79, 0.05);
     }
 
+    .btn-block {
+        width: 44px;
+        height: 44px;
+        border-radius: 22px;
+        border: 1.5px solid #EF4444;
+        background: white;
+        color: #EF4444;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+
+    .btn-block:hover {
+        background: #FEE2E2;
+        border-color: #DC2626;
+        color: #DC2626;
+    }
+
     .btn-reserve {
         flex: 0 1 auto;
         min-width: 140px;
@@ -928,6 +951,10 @@
         <button type="button" class="btn-clear" id="btn-clear-selection" title="Limpiar seleccion">
             <i class="fas fa-times"></i>
         </button>
+        <!-- Block selected furniture -->
+        <button type="button" class="btn-block" id="btn-block-selection" title="Bloquear seleccionados">
+            <i class="fas fa-ban"></i>
+        </button>
         <!-- Action button changes based on selection type -->
         <button type="button" class="btn-reserve" id="btn-new-reservation">
             <i class="fas fa-calendar-plus"></i>
@@ -1036,6 +1063,117 @@
 <!-- Reservation Panel (slide-in side panel for editing) -->
 {% include 'beach/_reservation_panel.html' %}
 {% include 'beach/_new_reservation_panel.html' %}
+
+<!-- Block Furniture Modal -->
+<div class="modal fade" id="block-furniture-modal" tabindex="-1" aria-labelledby="block-furniture-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="block-furniture-modal-label">
+                    <i class="fas fa-ban me-2"></i>Bloquear Mobiliario
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mobiliario a bloquear</label>
+                    <div id="block-furniture-list" class="block-furniture-badges"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="block-type" class="form-label">Tipo de Bloqueo</label>
+                    <select id="block-type" class="form-select">
+                        <option value="maintenance">🔧 Mantenimiento</option>
+                        <option value="vip_hold">⭐ Reserva VIP</option>
+                        <option value="event">📅 Evento</option>
+                        <option value="other">🚫 Otro</option>
+                    </select>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="block-start-date" class="form-label">Fecha Inicio</label>
+                        <input type="date" id="block-start-date" class="form-control">
+                    </div>
+                    <div class="col-6">
+                        <label for="block-end-date" class="form-label">Fecha Fin <small class="text-muted">(opcional)</small></label>
+                        <input type="date" id="block-end-date" class="form-control">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="block-reason" class="form-label">Motivo <small class="text-muted">(opcional)</small></label>
+                    <input type="text" id="block-reason" class="form-control" placeholder="Ej: Reparacion de sombrilla">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirm-block-btn">
+                    <i class="fas fa-ban me-1"></i>Bloquear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Unblock Furniture Modal -->
+<div class="modal fade" id="unblock-furniture-modal" tabindex="-1" aria-labelledby="unblock-furniture-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="unblock-furniture-modal-label">
+                    <i class="fas fa-check-circle me-2"></i>Desbloquear Mobiliario
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mobiliario</label>
+                    <div id="unblock-furniture-number" class="fs-5 fw-bold text-primary"></div>
+                </div>
+                <div class="mb-3 p-3 bg-light rounded">
+                    <label class="form-label fw-semibold mb-2">Bloqueo Actual</label>
+                    <div class="small">
+                        <div><strong>Tipo:</strong> <span id="unblock-block-type"></span></div>
+                        <div><strong>Desde:</strong> <span id="unblock-block-start"></span></div>
+                        <div><strong>Hasta:</strong> <span id="unblock-block-end"></span></div>
+                        <div id="unblock-block-reason-row"><strong>Motivo:</strong> <span id="unblock-block-reason"></span></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tipo de Desbloqueo</label>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="unblock-type" id="unblock-type-full" value="full" checked>
+                        <label class="form-check-label" for="unblock-type-full">
+                            <strong>Desbloquear completamente</strong>
+                            <div class="small text-muted">Elimina todo el bloqueo</div>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="unblock-type" id="unblock-type-partial" value="partial">
+                        <label class="form-check-label" for="unblock-type-partial">
+                            <strong>Desbloquear por fecha</strong>
+                            <div class="small text-muted">Desbloquear solo un dia o rango de fechas</div>
+                        </label>
+                    </div>
+                </div>
+                <div id="unblock-date-range" class="row mb-3" style="display: none;">
+                    <div class="col-6">
+                        <label for="unblock-start-date" class="form-label">Fecha Inicio</label>
+                        <input type="date" id="unblock-start-date" class="form-control">
+                    </div>
+                    <div class="col-6">
+                        <label for="unblock-end-date" class="form-label">Fecha Fin</label>
+                        <input type="date" id="unblock-end-date" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="confirm-unblock-btn">
+                    <i class="fas fa-check-circle me-1"></i>Desbloquear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -1056,6 +1194,7 @@
 <script type="module" src="{{ url_for('static', filename='js/map/index.js') }}"></script>
 <script type="module">
     import { SearchManager } from '{{ url_for("static", filename="js/map/SearchManager.js") }}';
+    import { BlockManager } from '{{ url_for("static", filename="js/map/block-manager.js") }}';
 
     document.addEventListener('DOMContentLoaded', function () {
         // ==========================================================================
@@ -1065,6 +1204,30 @@
             apiUrl: '/beach/api/map/data',
             initialDate: new Date().toISOString().split('T')[0],
             enableZoom: true
+        });
+
+        // ==========================================================================
+        // BLOCK MANAGER (Furniture blocking functionality)
+        // ==========================================================================
+        const blockManager = new BlockManager({
+            getCurrentDate: () => map.getCurrentDate(),
+            onBlockSuccess: () => map.loadData(),
+            onUnblockSuccess: () => map.loadData(),
+            getBlockInfo: (furnitureId) => {
+                const data = map.getData();
+                return data?.blocks?.[furnitureId] || null;
+            }
+        });
+
+        // Wire up BeachMap block/unblock callbacks
+        map.on('onBlockRequest', (furnitureIds, furnitureNumbers) => {
+            blockManager.showBlockModal(furnitureIds, furnitureNumbers);
+        });
+
+        map.on('onUnblockRequest', (furnitureId, furnitureNumber) => {
+            const data = map.getData();
+            const blockInfo = data?.blocks?.[furnitureId] || null;
+            blockManager.showUnblockModal(furnitureId, furnitureNumber, blockInfo);
         });
 
         // ==========================================================================
@@ -2871,6 +3034,23 @@
         // ==========================================================================
         const btnNewReservation = document.getElementById('btn-new-reservation');
         btnNewReservation.addEventListener('click', openNewReservationPanel);
+
+        // ==========================================================================
+        // BLOCK SELECTED BUTTON
+        // ==========================================================================
+        const btnBlockSelection = document.getElementById('btn-block-selection');
+        if (btnBlockSelection) {
+            btnBlockSelection.addEventListener('click', () => {
+                const selected = map.getSelectedFurnitureData();
+                if (selected.length === 0) {
+                    window.PuroBeach.showToast('Selecciona mobiliario primero', 'warning');
+                    return;
+                }
+                const ids = selected.map(f => f.id);
+                const numbers = selected.map(f => f.number);
+                blockManager.showBlockModal(ids, numbers);
+            });
+        }
 
         // ==========================================================================
         // CONTEXT MENU

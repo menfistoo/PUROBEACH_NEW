@@ -1,0 +1,202 @@
+/**
+ * Map Blocks CSS
+ * Styles for blocked furniture, context menu, and block modal
+ */
+
+/* =============================================================================
+   CONTEXT MENU
+   ============================================================================= */
+
+.furniture-context-menu {
+    position: fixed;
+    background: #FFFFFF;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+    min-width: 180px;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.95);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+    overflow: hidden;
+}
+
+.furniture-context-menu.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+.context-menu-header {
+    background: linear-gradient(135deg, #1A3A5C 0%, #2A4A6C 100%);
+    color: #FFFFFF;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.context-menu-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #1F2937;
+    font-size: 13px;
+    transition: background 0.15s ease;
+}
+
+.context-menu-item:hover {
+    background: #F5E6D3;
+}
+
+.context-menu-item i {
+    width: 16px;
+    color: #4B5563;
+    font-size: 14px;
+    text-align: center;
+}
+
+.context-menu-item.ctx-block i {
+    color: #EF4444;
+}
+
+.context-menu-item.ctx-unblock i {
+    color: #10B981;
+}
+
+.context-menu-item.ctx-view-block i {
+    color: #3B82F6;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background: #E8E8E8;
+    margin: 4px 0;
+}
+
+/* =============================================================================
+   BLOCK MODAL
+   ============================================================================= */
+
+#block-furniture-modal .modal-header {
+    background: linear-gradient(135deg, #1A3A5C 0%, #2A4A6C 100%);
+    color: #FFFFFF;
+    border-radius: 16px 16px 0 0;
+}
+
+#block-furniture-modal .modal-content {
+    border-radius: 16px;
+    border: none;
+}
+
+#block-furniture-modal .modal-footer {
+    background: #FAFAFA;
+    border-top: 1px solid #E8E8E8;
+}
+
+#block-furniture-modal .btn-close-white {
+    filter: invert(1) brightness(2);
+}
+
+/* Block type select with color indicators */
+.block-type-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.block-type-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+/* Block furniture badges */
+.block-furniture-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.block-furniture-badge {
+    background: #F3F4F6;
+    border: 1px solid #E5E7EB;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #374151;
+}
+
+/* =============================================================================
+   BLOCKED FURNITURE INDICATOR ON MAP
+   ============================================================================= */
+
+.furniture-item.blocked {
+    opacity: 0.85;
+}
+
+.furniture-item.blocked:hover {
+    opacity: 0.95;
+}
+
+/* Block legend items */
+.legend-item.block-legend {
+    border-left: 3px solid;
+    padding-left: 8px;
+    margin-left: 8px;
+}
+
+.legend-item.block-legend.maintenance {
+    border-color: #9CA3AF;
+}
+
+.legend-item.block-legend.vip_hold {
+    border-color: #D4AF37;
+}
+
+.legend-item.block-legend.event {
+    border-color: #3B82F6;
+}
+
+/* =============================================================================
+   SELECTION PANEL BLOCK BUTTON
+   ============================================================================= */
+
+#block-selected-btn {
+    color: #EF4444;
+    border-color: #EF4444;
+}
+
+#block-selected-btn:hover {
+    background: #FEE2E2;
+    color: #DC2626;
+    border-color: #DC2626;
+}
+
+#unblock-selected-btn {
+    color: #10B981;
+    border-color: #10B981;
+}
+
+#unblock-selected-btn:hover {
+    background: #D1FAE5;
+    color: #059669;
+    border-color: #059669;
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+    .furniture-context-menu {
+        min-width: 160px;
+    }
+
+    .context-menu-item {
+        padding: 12px 14px;
+    }
+}

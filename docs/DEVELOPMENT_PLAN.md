@@ -1,16 +1,83 @@
 # Beach Club Management System - Development Plan
 
-**Last Updated:** 2025-12-25
-**Current Phase:** Payment & Pricing System Planning
+**Last Updated:** 2026-01-07
+**Current Phase:** Phase 7a - Live Map Enhancements
 
 ---
 
 ## Table of Contents
-1. [Payment & Pricing System](#payment--pricing-system)
-2. [Insights & Analytics Planning](#insights--analytics-planning)
-3. [Implementation Roadmap](#implementation-roadmap)
-4. [Technical Decisions](#technical-decisions)
-5. [Completed Items](#completed-items)
+1. [Current Phase: Live Map Enhancements](#current-phase-live-map-enhancements)
+2. [Recently Completed](#recently-completed)
+3. [Payment & Pricing System](#payment--pricing-system)
+4. [Insights & Analytics Planning](#insights--analytics-planning)
+5. [Implementation Roadmap](#implementation-roadmap)
+6. [Technical Decisions](#technical-decisions)
+7. [Completed Items](#completed-items)
+
+---
+
+## Current Phase: Live Map Enhancements
+
+### Phase 7a - Planned Features
+
+**Completed Tasks:**
+- [x] Search Function in the Live Map (2026-01-06)
+- [x] Enhanced Search with Filters (2026-01-07)
+
+**Pending Tasks:**
+- [ ] Block Sunbeds in the Live Map
+- [ ] Add Temporary Sunbeds in the Live Map
+- [ ] Move Temporary Sunbeds in the Live Map
+- [ ] Waiting List
+
+**Reference:** See `Documentation/puro beach club/Tasks/Planned/` for detailed specs.
+
+---
+
+## Recently Completed
+
+### 2026-01-07: Enhanced Search with Inline Filters
+- ✅ Added `/api/map/all-reservations` endpoint (includes cancelled/no-show/liberadas)
+- ✅ Inline filter dropdowns in toolbar (Estado, Tipo, Pago)
+- ✅ Filter browsing: select filter to see ALL matching reservations without typing
+- ✅ Grouped search results by reservation (customer name + furniture codes)
+- ✅ Combined text search with filters
+- ✅ Visual distinction for released reservations (grayed out)
+- ✅ Clear filters button with gold highlight on active filters
+
+### 2026-01-06: Search Function in Live Map
+- ✅ Created SearchManager.js module with client-side search
+- ✅ Search by furniture number (H-01, B-03), customer name, reservation state
+- ✅ Search results grouped by type (Mobiliario, Clientes, Por Estado)
+- ✅ Keyboard shortcuts (Ctrl+F, /) to focus search
+- ✅ Click result → highlight furniture on map + open reservation panel
+- ✅ Gold pulse animation for search highlight
+- ✅ Keyboard navigation in results (arrow keys, Enter, Escape)
+
+### 2026-01-06: Bug Fixes
+- ✅ Fixed zoom +/- keys interfering with inputs in Live Map
+- ✅ Fixed "Ver todos los detalles" link in edit modal
+- ✅ Fixed furniture numbers not showing in reservations list
+
+### 2025-12-28: Payment Tracking
+- ✅ Added `payment_method` field (Efectivo, Tarjeta, Cargo a habitación)
+- ✅ Added `payment_ticket_number` support
+- ✅ Auto-toggle paid status workflow
+- ✅ Updated all reservation UIs (map panel, creation panel, edit modals)
+
+### 2025-12-27: Unified Reservation UI
+- ✅ Created `/beach/api/states` endpoint
+- ✅ Created standalone reservation panel mode
+- ✅ Created full-screen unified reservation page (`reservation_unified.html`)
+- ✅ Inline editing for num_people, observations, paid status
+- ✅ State toggle buttons with immediate save
+- ✅ "Cambiar Mobiliario" navigation to map
+- ✅ Clickable rows in reservations list
+
+### 2025-12-25: Critical Fixes
+- ✅ Fixed pricing/hotel guests bug
+- ✅ Fixed reservation sync between map modal and records
+- ✅ Fixed various reservation workflow issues
 
 ---
 
@@ -1290,8 +1357,24 @@ def get_revenue_by_zone(start_date, end_date)
 
 ## Completed Items
 
+### Phase 6: Payment Tracking (Completed 2025-12-28)
+- ✅ Database migration: `payment_method` column
+- ✅ Models updated (reservation_crud.py, reservation_multiday.py)
+- ✅ All APIs updated for payment tracking
+- ✅ UI: Map panel, creation panel, edit modal, reservations list
+- ✅ Payment options: Efectivo, Tarjeta, Cargo a habitación
+
+### Phase 5: Unified Reservation UI (Completed 2025-12-27)
+- ✅ States API endpoint (`/beach/api/states`)
+- ✅ Standalone reservation panel mode
+- ✅ Full-screen unified reservation page
+- ✅ Inline editing capabilities
+- ✅ State toggle buttons
+- ✅ Furniture reassignment flow
+- ✅ Reservations list with clickable rows
+
 ### Core System (Completed)
-- ✅ Database schema with 22 tables
+- ✅ Database schema with 22+ tables
 - ✅ User authentication and role-based permissions
 - ✅ Reservation management (single and multi-day)
 - ✅ Customer management (interno/externo)
@@ -1301,10 +1384,41 @@ def get_revenue_by_zone(start_date, end_date)
 - ✅ Pricing catalog
 - ✅ Hotel guest import (Excel)
 - ✅ Audit logging
+- ✅ Design system compliance (tokens, z-index, accessibility)
 
 ---
 
 ## Notes & Discoveries
+
+**Date:** 2026-01-07
+**Topic:** Enhanced Search with Filters
+**Notes:**
+- Added filter browsing feature: select filter to see ALL matching reservations
+- Redesigned from popover to inline dropdowns per user feedback
+- Filters work standalone or combined with text search
+- Released reservations (cancelled, no-show, liberada) now visible in search
+
+**Date:** 2026-01-06
+**Topic:** Phase 7a - Live Map Enhancements
+**Notes:**
+- User is ready to work on Live Map enhancement features
+- Pending tasks defined in Tasks/Planned folder
+- Previous phases (5, 6) completed successfully
+- System is stable with payment tracking and unified UI
+
+**Date:** 2025-12-28
+**Topic:** Payment Tracking Completed
+**Notes:**
+- Implemented simpler payment tracking (ticket number + payment method)
+- Full Payment & Pricing System (packages, minimum consumption) deferred
+- Current implementation covers basic audit/tracking needs
+
+**Date:** 2025-12-27
+**Topic:** Unified Reservation UI Completed
+**Notes:**
+- Created both standalone panel mode and full-screen page
+- Inline editing provides better UX for desktop users
+- States API enables dynamic color rendering
 
 **Date:** 2025-12-25
 **Topic:** Payment & Pricing System Planning
@@ -1312,11 +1426,7 @@ def get_revenue_by_zone(start_date, end_date)
 - Created comprehensive 5-phase implementation plan (5 weeks)
 - Designed 3 reservation types: Incluido, Paquete, Consumo Mínimo
 - Schema includes new `beach_packages` table + updates to existing tables
-- Pricing logic: per-package vs per-person, with capacity validation
-- Minimum consumption with priority-based policy matching
-- Real-time price calculation via AJAX during reservation creation
-- Backward compatible with existing reservations (all default to 'incluido')
-- Questions to resolve: manual price override, package deactivation handling, multi-day package logic
+- **Status:** On hold - basic payment tracking implemented first
 
 **Date:** 2025-12-25
 **Topic:** Initial insights planning
@@ -1330,12 +1440,19 @@ def get_revenue_by_zone(start_date, end_date)
 
 ## Next Steps
 
-### Payment & Pricing System (Priority 1)
-1. **Review and answer business questions** in "Questions to Resolve" section
-2. **Confirm technical approach** for all 4 decisions documented
-3. **Begin Phase 1:** Database migrations and model creation
-4. **Set up test data** with 3-5 sample packages and 2-3 policies
-5. **Validate migration strategy** on test database copy
+### Phase 7a: Live Map Enhancements (Current Priority)
+1. ~~**Search Function** - Search reservations/customers from map~~ ✅ Completed
+2. **Block Sunbeds** - Allow blocking furniture from availability
+3. **Add Temporary Sunbeds** - Dynamic furniture creation on map
+4. **Move Temporary Sunbeds** - Drag-and-drop for temporary items
+5. **Waiting List** - Queue management for full occupancy
+
+**Reference:** See `Documentation/puro beach club/Tasks/Planned/` for specs
+
+### Payment & Pricing System (Deferred)
+- Basic payment tracking implemented (Phase 6)
+- Full package/minimum consumption system available if needed
+- Review "Questions to Resolve" before implementing
 
 ### Insights & Analytics (On Hold)
 1. **Review this plan** and prioritize insight categories

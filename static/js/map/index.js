@@ -9,6 +9,7 @@ export { TooltipManager } from './tooltips.js';
 export { SelectionManager } from './selection.js';
 export { NavigationManager } from './navigation.js';
 export { InteractionManager } from './interaction.js';
+export { SearchManager } from './SearchManager.js';
 export { createSVG, renderZones, renderDecorativeItems, renderFurniture, createShape, updateLegend } from './renderer.js';
 export { BeachMap } from './BeachMap.js';
 

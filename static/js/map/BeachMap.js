@@ -3,11 +3,12 @@
  * Main class that coordinates all map modules
  */
 
-import { loadCSSVariables, formatDateDisplay } from './utils.js';
+import { loadCSSVariables, formatDateDisplay, showToast } from './utils.js';
 import { TooltipManager } from './tooltips.js';
 import { SelectionManager } from './selection.js';
 import { NavigationManager } from './navigation.js';
 import { InteractionManager } from './interaction.js';
+import { ContextMenuManager } from './context-menu.js';
 import {
     createSVG,
     renderZones,
@@ -67,12 +68,30 @@ export class BeachMap {
         });
         this.tooltipManager = new TooltipManager(this.container, this.colors);
 
+        // Context menu manager (initialized after container is ready)
+        this.contextMenu = new ContextMenuManager({
+            container: this.container,
+            getData: () => this.data,
+            onBlock: (furnitureId, furnitureNumber) => {
+                if (this.callbacks.onBlockRequest) {
+                    this.callbacks.onBlockRequest([furnitureId], [furnitureNumber]);
+                }
+            },
+            onUnblock: (furnitureId, furnitureNumber) => {
+                if (this.callbacks.onUnblockRequest) {
+                    this.callbacks.onUnblockRequest(furnitureId, furnitureNumber);
+                }
+            }
+        });
+
         // Event callbacks
         this.callbacks = {
             onSelect: null,
             onDeselect: null,
             onDateChange: null,
             onFurnitureClick: null,
+            onBlockRequest: null,
+            onUnblockRequest: null,
             onError: null,
             onRender: null
         };
@@ -96,6 +115,7 @@ export class BeachMap {
 
         // Bind methods
         this.handleFurnitureClick = this.handleFurnitureClick.bind(this);
+        this.handleFurnitureContextMenu = this.handleFurnitureContextMenu.bind(this);
 
         // Initialize
         this.init();
@@ -184,7 +204,8 @@ export class BeachMap {
             this.selection.getSelectedSet(),
             this.colors,
             this.handleFurnitureClick,
-            this.tooltipManager
+            this.tooltipManager,
+            this.handleFurnitureContextMenu
         );
         updateLegend(this.data, this.colors);
 
@@ -204,6 +225,20 @@ export class BeachMap {
     handleFurnitureClick(event, item) {
         event.stopPropagation();
 
+        // Check if furniture is blocked - prevent selection for new reservations
+        if (this.data?.blocks && this.data.blocks[item.id]) {
+            const blockInfo = this.data.blocks[item.id];
+            const blockTypeNames = {
+                'maintenance': 'mantenimiento',
+                'vip_hold': 'reserva VIP',
+                'event': 'evento',
+                'other': 'bloqueo'
+            };
+            const typeName = blockTypeNames[blockInfo.block_type] || 'bloqueo';
+            showToast(`Este mobiliario está bloqueado por ${typeName}`, 'warning');
+            return; // Do not allow selection
+        }
+
         // Always multi-select on tap (mobile-first)
         this.selection.select(item.id, true);
         this.render();
@@ -212,6 +247,10 @@ export class BeachMap {
         if (this.callbacks.onFurnitureClick) {
             this.callbacks.onFurnitureClick(item, this.getSelectedFurniture());
         }
+    }
+
+    handleFurnitureContextMenu(event, item) {
+        this.contextMenu.show(event, item);
     }
 
     selectFurniture(id, addToSelection = false) {
@@ -348,6 +387,72 @@ export class BeachMap {
     }
 
     // =========================================================================
+    // SEARCH HIGHLIGHT & PAN
+    // =========================================================================
+
+    /**
+     * Highlight furniture and pan/scroll to center it in view
+     * @param {number} furnitureId - ID of furniture to highlight
+     */
+    highlightAndPanToFurniture(furnitureId) {
+        // Find the furniture element
+        const furnitureEl = this.furnitureLayer.querySelector(`[data-furniture-id="${furnitureId}"]`);
+        if (!furnitureEl) {
+            console.warn(`Furniture #${furnitureId} not found on map`);
+            return;
+        }
+
+        // Clear previous highlights
+        this._clearSearchHighlights();
+
+        // Add highlight class (pulsing animation)
+        furnitureEl.classList.add('search-highlight');
+
+        // Get furniture position from data
+        const furniture = this.data?.furniture?.find(f => f.id === furnitureId);
+        if (furniture) {
+            this._panToPosition(furniture.position_x, furniture.position_y);
+        }
+
+        // Auto-remove highlight after 3 seconds
+        setTimeout(() => {
+            furnitureEl.classList.remove('search-highlight');
+        }, 3000);
+    }
+
+    /**
+     * Clear all search highlights
+     */
+    _clearSearchHighlights() {
+        this.furnitureLayer.querySelectorAll('.search-highlight').forEach(el => {
+            el.classList.remove('search-highlight');
+        });
+    }
+
+    /**
+     * Pan/scroll the map to center on a position
+     * @param {number} x - X coordinate in SVG units
+     * @param {number} y - Y coordinate in SVG units
+     */
+    _panToPosition(x, y) {
+        const wrapper = this.container.closest('.map-canvas-wrapper');
+        if (!wrapper) return;
+
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const zoom = this.navigation.getZoom();
+
+        // Calculate scroll position to center the target
+        const targetX = (x * zoom) - (wrapperRect.width / 2);
+        const targetY = (y * zoom) - (wrapperRect.height / 2);
+
+        wrapper.scrollTo({
+            left: Math.max(0, targetX),
+            top: Math.max(0, targetY),
+            behavior: 'smooth'
+        });
+    }
+
+    // =========================================================================
     // UTILITIES
     // =========================================================================
 
@@ -382,6 +487,7 @@ export class BeachMap {
         this.navigation.removeKeyboard();
         this.interaction.destroy();
         this.tooltipManager.destroy();
+        this.contextMenu.destroy();
     }
 }
 
