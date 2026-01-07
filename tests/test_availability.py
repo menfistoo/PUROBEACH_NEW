@@ -5,7 +5,8 @@ Tests for reservation availability functions.
 import pytest
 from datetime import date, timedelta
 from app import create_app
-from database import get_db, init_db, migrate_reservations_v2, migrate_status_history_v2
+from database import get_db, init_db
+from database.migrations import run_all_migrations
 
 
 @pytest.fixture
@@ -17,9 +18,8 @@ def app():
 
     with app.app_context():
         init_db()
-        # Run required migrations
-        migrate_reservations_v2()
-        migrate_status_history_v2()
+        # Run all migrations to ensure schema is complete
+        run_all_migrations()
         yield app
 
 
