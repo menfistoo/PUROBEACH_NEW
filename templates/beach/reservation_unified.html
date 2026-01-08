@@ -144,7 +144,7 @@ window.UNIFIED_PAGE_CONFIG = {
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/customer-search.js') }}"></script>
-<script src="{{ url_for('static', filename='js/map/reservation-panel.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/map/reservation-panel-v2/index.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const config = window.UNIFIED_PAGE_CONFIG;
