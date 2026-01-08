@@ -64,6 +64,9 @@ def create_app(config_name=None):
     # Configure logging
     configure_logging(app)
 
+    # Expire old waitlist entries on startup
+    expire_waitlist_entries(app)
+
     return app
 
 
@@ -328,6 +331,22 @@ def configure_logging(app):
     else:
         # Development logging
         app.logger.setLevel(logging.DEBUG)
+
+
+def expire_waitlist_entries(app):
+    """
+    Expire old waitlist entries on startup.
+    Called during app initialization to clean up past entries.
+    """
+    try:
+        with app.app_context():
+            from models.waitlist import expire_old_entries
+            count = expire_old_entries()
+            if count > 0:
+                app.logger.info(f'Expired {count} old waitlist entries')
+    except Exception as e:
+        # Don't crash the app if waitlist cleanup fails
+        app.logger.warning(f'Could not expire waitlist entries: {e}')
 
 
 # Create application instance for development server
