@@ -1405,14 +1405,26 @@
         // ==========================================================================
         // WAITLIST MANAGER (Waitlist panel functionality)
         // ==========================================================================
+        // Track pending waitlist conversion entry
+        let pendingWaitlistEntry = null;
+
         const waitlistManager = new WaitlistManager({
             currentDate: map.getCurrentDate(),
             onConvert: (entry) => {
-                // Open new reservation panel with pre-filled data from waitlist entry
-                // This will be fully implemented in Task 9
-                console.log('Convert waitlist entry:', entry);
+                // Store the waitlist entry for pre-filling after furniture selection
+                pendingWaitlistEntry = entry;
 
-                // For now, dispatch event for future handling
+                // Show toast to guide user
+                if (window.PuroBeach && window.PuroBeach.showToast) {
+                    window.PuroBeach.showToast('Selecciona mobiliario en el mapa para crear la reserva', 'info', 5000);
+                }
+
+                // Set the date to the requested date if available
+                if (entry.requested_date) {
+                    map.setDate(entry.requested_date);
+                }
+
+                // Dispatch event to notify other components
                 document.dispatchEvent(new CustomEvent('waitlist:convertToReservation', {
                     detail: { entry }
                 }));
@@ -1729,6 +1741,8 @@
             },
             onCancel: () => {
                 // Keep selection on cancel so user can try again
+                // Clear any pending waitlist entry if panel cancelled
+                pendingWaitlistEntry = null;
             }
         });
 
@@ -1743,6 +1757,12 @@
             }
             const currentDate = map.getCurrentDate();
             newReservationPanel.open(selected, currentDate);
+
+            // If there's a pending waitlist entry, pre-fill the form
+            if (pendingWaitlistEntry) {
+                newReservationPanel.prefillFromWaitlist(pendingWaitlistEntry);
+                pendingWaitlistEntry = null; // Clear after use
+            }
         }
 
         // ==========================================================================

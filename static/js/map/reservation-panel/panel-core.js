@@ -34,7 +34,8 @@ class NewReservationPanel {
             preferences: [],
             conflictResolutionMode: false,
             furnitureByDate: {},   // {date: [furniture_ids]} - per-day selections
-            savedCustomerForRetry: null  // Saved customer data during conflict resolution
+            savedCustomerForRetry: null,  // Saved customer data during conflict resolution
+            waitlistEntryId: null  // Track waitlist entry ID for conversion
         };
 
         // Cache DOM elements
@@ -233,6 +234,7 @@ class NewReservationPanel {
         this.state.isOpen = false;
         this.state.conflictResolutionMode = false;
         this.state.savedCustomerForRetry = null;
+        this.state.waitlistEntryId = null;  // Clear waitlist entry on close
         this.panel.classList.remove('open');
         this.panel.classList.remove('minimized');
         this.backdrop.classList.remove('show');
@@ -241,6 +243,82 @@ class NewReservationPanel {
         if (this.options.onCancel) {
             this.options.onCancel();
         }
+    }
+
+    /**
+     * Open the panel pre-filled from a waitlist entry
+     * Called when user clicks "Convertir" on a waitlist entry
+     * @param {Object} entry - Waitlist entry with customer and preference data
+     */
+    async openFromWaitlist(entry) {
+        if (!entry) {
+            console.warn('NewReservationPanel.openFromWaitlist: No entry provided');
+            return;
+        }
+
+        // Store waitlist entry ID for conversion after reservation is created
+        this.state.waitlistEntryId = entry.id;
+
+        // We need furniture selected to open the panel
+        // If preferred zone/type specified, we could suggest furniture
+        // For now, just notify user they need to select furniture
+        this.showToast('Selecciona mobiliario en el mapa para crear la reserva', 'info');
+
+        // Store waitlist data for pre-filling when panel opens
+        this._pendingWaitlistEntry = entry;
+
+        // Dispatch event to notify map that we're in waitlist convert mode
+        document.dispatchEvent(new CustomEvent('waitlist:selectFurnitureForConvert', {
+            detail: { entry }
+        }));
+    }
+
+    /**
+     * Pre-fill the panel with waitlist entry data
+     * Called after furniture is selected
+     * @param {Object} entry - Waitlist entry data
+     */
+    async prefillFromWaitlist(entry) {
+        if (!entry) return;
+
+        // Store waitlist entry ID
+        this.state.waitlistEntryId = entry.id;
+
+        // Pre-fill customer if available
+        if (entry.customer_id) {
+            try {
+                // Fetch full customer data
+                const response = await fetch(`${this.options.apiBaseUrl}/customers/${entry.customer_id}`);
+                const data = await response.json();
+
+                if (data.success && data.customer) {
+                    document.getElementById('newPanelCustomerId').value = data.customer.id;
+                    document.getElementById('newPanelCustomerSource').value = 'customer';
+                    this.customerHandler.autoFillCustomerData(data.customer);
+                }
+            } catch (error) {
+                console.error('Error fetching customer for waitlist conversion:', error);
+            }
+        }
+
+        // Pre-fill number of people
+        if (entry.num_people && this.numPeopleInput) {
+            this.numPeopleInput.value = entry.num_people;
+            this.numPeopleManuallyEdited = true; // Mark as set so it's not overwritten
+        }
+
+        // Pre-fill notes with waitlist context
+        if (entry.notes && this.notesInput) {
+            this.notesInput.value = 'Desde lista de espera: ' + entry.notes;
+        }
+
+        // Pre-fill date if available (initialize DatePicker with the requested date)
+        if (entry.requested_date && this.datePicker) {
+            this.datePicker.setSelectedDates([entry.requested_date]);
+        }
+
+        // Calculate pricing after pre-filling
+        this.pricingCalculator.calculateAndDisplayPricing();
     }
 
     /**
@@ -482,6 +560,12 @@ class NewReservationPanel {
 
             if (result.success) {
                 this.showToast(result.message || 'Reserva creada exitosamente', 'success');
+
+                // Mark waitlist entry as converted if this reservation came from waitlist
+                if (this.state.waitlistEntryId) {
+                    await this.markWaitlistAsConverted(this.state.waitlistEntryId, result.reservation?.id);
+                }
+
                 this.close();
 
                 // Notify callback
@@ -539,6 +623,35 @@ class NewReservationPanel {
 
     addFurniture(furniture) {
         this.dateAvailabilityHandler.addFurniture(furniture);
+    }
+
+    /**
+     * Mark a waitlist entry as converted after reservation creation
+     * @param {number} entryId - Waitlist entry ID
+     * @param {number} reservationId - Created reservation ID
+     */
+    async markWaitlistAsConverted(entryId, reservationId) {
+        try {
+            const response = await fetch(`${this.options.apiBaseUrl}/waitlist/${entryId}/convert`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
+                },
+                body: JSON.stringify({ reservation_id: reservationId })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Dispatch event to update waitlist badge count
+                window.dispatchEvent(new CustomEvent('waitlist:countUpdate'));
+            } else {
+                console.error('Error marking waitlist as converted:', data.error);
+            }
+        } catch (error) {
+            console.error('Error marking waitlist as converted:', error);
+        }
     }
 }
 
