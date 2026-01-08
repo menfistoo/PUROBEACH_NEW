@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Issues/PENDING  USER REVIEW/26-12-25.md",
+                "file": "Plans/SAFEGUARDS_PLAN.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "26-12-25"
+              "title": "SAFEGUARDS_PLAN"
             }
           }
         ]
@@ -182,6 +182,9 @@
   },
   "active": "a37e095d9117ea4c",
   "lastOpenFiles": [
+    "Tasks/Planned/Move Temporary Sunbeds in the Live Map.md",
+    "Plans/SAFEGUARDS_PLAN.md",
+    "Issues/_WORKFLOW.md",
     "Pricing Integration Implementation.md",
     "Issues/DONE/25-12-25.md",
     "Issues/PENDING  USER REVIEW/26-12-25.md",
@@ -195,11 +198,9 @@
     "Tasks/Planned/Ticket Number from PMS.md",
     "Tasks/Planned/Search Function in the LiveMap.md",
     "Tasks/Planned/Price and Package Integration.md",
-    "Tasks/Planned/Move Temporary Sunbeds in the Live Map.md",
     "Tasks/Planned/Block Sunbeds in the Live Map.md",
     "Tasks/Planned/Add temporary Sunbeds in the Live Map.md",
     "Database/DATABASE_SCHEMA.md",
-    "Plans/SAFEGUARDS_PLAN.md",
     "Tasks/Completed/LIVE_MAP_UX_IMPROVEMENTS.md",
     "Issues/PENDING/25-12-25.md",
     "2025-12-24.md",
@@ -213,7 +214,6 @@
     "Issues/Untitled.md",
     "Issues/DONE",
     "Issues/Live Map - Edit Reservation.md",
-    "00_Home.md",
     "Issues",
     "Plans",
     "Specifications",

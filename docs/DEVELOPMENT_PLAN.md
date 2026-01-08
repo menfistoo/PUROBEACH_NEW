@@ -1,6 +1,6 @@
 # Beach Club Management System - Development Plan
 
-**Last Updated:** 2026-01-07
+**Last Updated:** 2026-01-08
 **Current Phase:** Phase 7a - Live Map Enhancements
 
 ---
@@ -120,10 +120,12 @@
 
 ---
 
-## Payment & Pricing System
+## Payment & Pricing System ✅ COMPLETED
 
 ### Overview
 Comprehensive pricing and payment control system for beach club reservations. Does not handle direct payment processing or revenue tracking - focuses on **pricing configuration, reservation type selection, and price calculation** at booking time.
+
+**Status:** Fully implemented as of 2026-01-08.
 
 ### Business Context
 - **No direct payment integration:** System controls pricing logic, not payment processing
@@ -350,32 +352,32 @@ ALTER TABLE beach_reservations ADD COLUMN minimum_consumption_amount DECIMAL(10,
 
 ### Implementation Roadmap
 
-#### Phase 1: Database & Models (Week 1)
+#### Phase 1: Database & Models ✅
 **Goal:** Set up database schema and data access layer
 
 **Tasks:**
-- [ ] Create migration script for schema changes
-  - [ ] Create `beach_packages` table
-  - [ ] Update `beach_minimum_consumption_policies` table
-  - [ ] Add new columns to `beach_reservations`
-  - [ ] Create indexes
-- [ ] Create `models/package.py` - Package CRUD operations
-  - [ ] `get_all_packages(active_only=True, customer_type=None, zone_id=None)`
-  - [ ] `get_package_by_id(package_id)`
-  - [ ] `get_applicable_packages(customer_type, zone_id, reservation_date, num_people)`
-  - [ ] `create_package(**data)`
-  - [ ] `update_package(package_id, **data)`
-  - [ ] `delete_package(package_id)`
-  - [ ] `validate_package_capacity(package_id, num_people)`
-- [ ] Update `models/pricing.py` - Enhance pricing functions
-  - [ ] `calculate_package_price(package_id, num_people) -> dict`
-  - [ ] `calculate_minimum_consumption(policy_id, num_people) -> float`
-  - [ ] `get_applicable_minimum_consumption_policy(furniture_type, customer_type, zone_id) -> dict`
-  - [ ] `update_minimum_consumption_policy(policy_id, **data)`
-  - [ ] `create_minimum_consumption_policy(**data)`
-- [ ] Add seed data for testing
-  - [ ] 3-5 sample packages
-  - [ ] 2-3 minimum consumption policies
+- [x] Create migration script for schema changes
+  - [x] Create `beach_packages` table
+  - [x] Update `beach_minimum_consumption_policies` table
+  - [x] Add new columns to `beach_reservations`
+  - [x] Create indexes
+- [x] Create `models/package.py` - Package CRUD operations
+  - [x] `get_all_packages(active_only=True, customer_type=None, zone_id=None)`
+  - [x] `get_package_by_id(package_id)`
+  - [x] `get_applicable_packages(customer_type, zone_id, reservation_date, num_people)`
+  - [x] `create_package(**data)`
+  - [x] `update_package(package_id, **data)`
+  - [x] `delete_package(package_id)`
+  - [x] `validate_package_capacity(package_id, num_people)`
+- [x] Update `models/pricing.py` - Enhance pricing functions
+  - [x] `calculate_package_price(package_id, num_people) -> dict`
+  - [x] `calculate_minimum_consumption(policy_id, num_people) -> float`
+  - [x] `get_applicable_minimum_consumption_policy(furniture_type, customer_type, zone_id) -> dict`
+  - [x] `update_minimum_consumption_policy(policy_id, **data)`
+  - [x] `create_minimum_consumption_policy(**data)`
+- [x] Add seed data for testing
+  - [x] 3-5 sample packages
+  - [x] 2-3 minimum consumption policies
 
 **Validation Rules:**
 ```python
@@ -397,40 +399,40 @@ def validate_package_capacity(package_id: int, num_people: int) -> tuple[bool, s
 
 ---
 
-#### Phase 2: Configuration UI (Week 2)
+#### Phase 2: Configuration UI ✅
 **Goal:** Admin interface for managing packages and policies
 
 **Tasks:**
-- [ ] Create config route: `blueprints/beach/routes/config/packages.py`
-  - [ ] `GET /beach/config/packages` - List all packages (table view)
-  - [ ] `GET /beach/config/packages/new` - Create package form
-  - [ ] `POST /beach/config/packages` - Save new package
-  - [ ] `GET /beach/config/packages/<id>/edit` - Edit package form
-  - [ ] `POST /beach/config/packages/<id>` - Update package
-  - [ ] `POST /beach/config/packages/<id>/delete` - Soft delete (set active=0)
-  - [ ] `POST /beach/config/packages/<id>/toggle` - Toggle active status
-- [ ] Create config route: `blueprints/beach/routes/config/minimum_consumption.py`
-  - [ ] `GET /beach/config/minimum-consumption` - List policies
-  - [ ] `GET /beach/config/minimum-consumption/new` - Create policy form
-  - [ ] `POST /beach/config/minimum-consumption` - Save policy
-  - [ ] `GET /beach/config/minimum-consumption/<id>/edit` - Edit form
-  - [ ] `POST /beach/config/minimum-consumption/<id>` - Update policy
-  - [ ] `POST /beach/config/minimum-consumption/<id>/delete` - Delete policy
-- [ ] Create templates:
-  - [ ] `templates/beach/config/packages/list.html` - Package list table
-  - [ ] `templates/beach/config/packages/form.html` - Package create/edit form
-  - [ ] `templates/beach/config/minimum_consumption/list.html` - Policy list
-  - [ ] `templates/beach/config/minimum_consumption/form.html` - Policy form
-- [ ] Add permissions:
-  - [ ] `beach.config.packages.view`
-  - [ ] `beach.config.packages.create`
-  - [ ] `beach.config.packages.edit`
-  - [ ] `beach.config.packages.delete`
-  - [ ] `beach.config.minimum_consumption.view`
-  - [ ] `beach.config.minimum_consumption.manage`
-- [ ] Navigation menu updates:
-  - [ ] Add "Paquetes" under "Configuración"
-  - [ ] Add "Consumo Mínimo" under "Configuración"
+- [x] Create config route: `blueprints/beach/routes/config/packages.py`
+  - [x] `GET /beach/config/packages` - List all packages (table view)
+  - [x] `GET /beach/config/packages/new` - Create package form
+  - [x] `POST /beach/config/packages` - Save new package
+  - [x] `GET /beach/config/packages/<id>/edit` - Edit package form
+  - [x] `POST /beach/config/packages/<id>` - Update package
+  - [x] `POST /beach/config/packages/<id>/delete` - Soft delete (set active=0)
+  - [x] `POST /beach/config/packages/<id>/toggle` - Toggle active status
+- [x] Create config route: `blueprints/beach/routes/config/minimum_consumption.py`
+  - [x] `GET /beach/config/minimum-consumption` - List policies
+  - [x] `GET /beach/config/minimum-consumption/new` - Create policy form
+  - [x] `POST /beach/config/minimum-consumption` - Save policy
+  - [x] `GET /beach/config/minimum-consumption/<id>/edit` - Edit form
+  - [x] `POST /beach/config/minimum-consumption/<id>` - Update policy
+  - [x] `POST /beach/config/minimum-consumption/<id>/delete` - Delete policy
+- [x] Create templates:
+  - [x] `templates/beach/config/packages/list.html` - Package list table
+  - [x] `templates/beach/config/packages/form.html` - Package create/edit form
+  - [x] `templates/beach/config/minimum_consumption/list.html` - Policy list
+  - [x] `templates/beach/config/minimum_consumption/form.html` - Policy form
+- [x] Add permissions:
+  - [x] `beach.config.packages.view`
+  - [x] `beach.config.packages.create`
+  - [x] `beach.config.packages.edit`
+  - [x] `beach.config.packages.delete`
+  - [x] `beach.config.minimum_consumption.view`
+  - [x] `beach.config.minimum_consumption.manage`
+- [x] Navigation menu updates:
+  - [x] Add "Paquetes" under "Configuración"
+  - [x] Add "Consumo Mínimo" under "Configuración"
 
 **UI Components:**
 
@@ -472,52 +474,52 @@ def validate_package_capacity(package_id: int, num_people: int) -> tuple[bool, s
 
 ---
 
-#### Phase 3: Reservation Form Integration (Week 3)
+#### Phase 3: Reservation Form Integration ✅
 **Goal:** Add reservation type selection to booking flow
 
 **Tasks:**
-- [ ] Update reservation creation form UI
-  - [ ] Add "Tipo de Reserva" section at top of form (after customer selection)
-  - [ ] Radio buttons for 3 types: "Incluido" / "Paquete" / "Consumo Mínimo"
-  - [ ] Show/hide sections based on selected type
-- [ ] Package selection (when type='paquete')
-  - [ ] Dropdown populated with applicable packages
-  - [ ] Filter by: customer_type, zone_id (if selected), reservation_date, active=1
-  - [ ] Display format: "Paquete Premium - €89.00/persona (2-4 pax)"
-  - [ ] On package change: validate num_people, update calculated price
-  - [ ] Show package description below dropdown
-- [ ] Minimum consumption display (when type='consumo_minimo')
-  - [ ] Auto-select applicable policy based on furniture, customer, zone
-  - [ ] Display: "Consumo Mínimo: €50.00 por persona (Total: €100.00)"
-  - [ ] Read-only display (auto-calculated)
-  - [ ] Show policy description if available
-- [ ] Price calculation display
-  - [ ] Real-time price calculation as user selects options
-  - [ ] Show breakdown:
+- [x] Update reservation creation form UI
+  - [x] Add "Tipo de Reserva" section at top of form (after customer selection)
+  - [x] Radio buttons for 3 types: "Incluido" / "Paquete" / "Consumo Mínimo"
+  - [x] Show/hide sections based on selected type
+- [x] Package selection (when type='paquete')
+  - [x] Dropdown populated with applicable packages
+  - [x] Filter by: customer_type, zone_id (if selected), reservation_date, active=1
+  - [x] Display format: "Paquete Premium - €89.00/persona (2-4 pax)"
+  - [x] On package change: validate num_people, update calculated price
+  - [x] Show package description below dropdown
+- [x] Minimum consumption display (when type='consumo_minimo')
+  - [x] Auto-select applicable policy based on furniture, customer, zone
+  - [x] Display: "Consumo Mínimo: €50.00 por persona (Total: €100.00)"
+  - [x] Read-only display (auto-calculated)
+  - [x] Show policy description if available
+- [x] Price calculation display
+  - [x] Real-time price calculation as user selects options
+  - [x] Show breakdown:
     ```
     Tipo: Paquete Premium (2 personas)
     Precio Base: €89.00 × 2 = €178.00
     ────────────────────────────
     Total: €178.00
     ```
-  - [ ] For minimum consumption, show:
+  - [x] For minimum consumption, show:
     ```
     Consumo Mínimo Requerido: €100.00
     (No hay cargo por reserva, se aplica consumo mínimo)
     ```
-- [ ] Form validation
-  - [ ] If type='paquete', package_id required
-  - [ ] Validate num_people within package capacity
-  - [ ] Show warning if outside standard_people range
-- [ ] Update `blueprints/beach/routes/reservations.py`
-  - [ ] Modify `create_reservation()` to handle new fields
-  - [ ] Save `reservation_type`, `package_id`, `minimum_consumption_policy_id`
-  - [ ] Calculate and save `calculated_price`, `minimum_consumption_amount`
-- [ ] JavaScript enhancements
-  - [ ] `static/js/reservation_pricing.js` - Price calculation logic
-  - [ ] AJAX call to `/api/packages/<id>/calculate` for real-time pricing
-  - [ ] AJAX call to `/api/minimum-consumption/calculate` for policy lookup
-  - [ ] Dynamic form section visibility toggle
+- [x] Form validation
+  - [x] If type='paquete', package_id required
+  - [x] Validate num_people within package capacity
+  - [x] Show warning if outside standard_people range
+- [x] Update `blueprints/beach/routes/reservations.py`
+  - [x] Modify `create_reservation()` to handle new fields
+  - [x] Save `reservation_type`, `package_id`, `minimum_consumption_policy_id`
+  - [x] Calculate and save `calculated_price`, `minimum_consumption_amount`
+- [x] JavaScript enhancements
+  - [x] `static/js/reservation_pricing.js` - Price calculation logic
+  - [x] AJAX call to `/api/packages/<id>/calculate` for real-time pricing
+  - [x] AJAX call to `/api/minimum-consumption/calculate` for policy lookup
+  - [x] Dynamic form section visibility toggle
 
 **API Endpoints for AJAX:**
 ```python
@@ -566,20 +568,20 @@ def get_applicable_packages_api():
 
 ---
 
-#### Phase 4: Display & Reporting (Week 4)
+#### Phase 4: Display & Reporting ✅
 **Goal:** Show pricing info in reservation views and reports
 
 **Tasks:**
-- [ ] Update reservation list view
-  - [ ] Add "Tipo" column showing reservation type badge
-  - [ ] Add "Precio" column showing calculated_price
-  - [ ] Add filter: "Tipo de Reserva" (dropdown)
-  - [ ] Color-code types:
+- [x] Update reservation list view
+  - [x] Add "Tipo" column showing reservation type badge
+  - [x] Add "Precio" column showing calculated_price
+  - [x] Add filter: "Tipo de Reserva" (dropdown)
+  - [x] Color-code types:
     - Incluido: Green badge
     - Paquete: Gold badge
     - Consumo Mínimo: Blue badge
-- [ ] Update reservation detail view
-  - [ ] Show pricing section:
+- [x] Update reservation detail view
+  - [x] Show pricing section:
     ```
     ┌─ Información de Precio ────────────┐
     │ Tipo: Paquete Premium              │
@@ -591,57 +593,57 @@ def get_applicable_packages_api():
     │              + toallas + bebida     │
     └────────────────────────────────────┘
     ```
-  - [ ] For minimum consumption, show required amount and calculation
-- [ ] Update map view
-  - [ ] Show pricing indicator on reservation tooltip
-  - [ ] Example: "Reserva #25011601 - Paquete Premium (€178.00)"
-- [ ] Export updates
-  - [ ] Add pricing fields to Excel export
-  - [ ] Add pricing section to PDF reservation tickets
-- [ ] Reporting queries
-  - [ ] Revenue projection (calculated_price × reservations)
-  - [ ] Package popularity report
-  - [ ] Minimum consumption compliance tracking (future: actual vs. required)
+  - [x] For minimum consumption, show required amount and calculation
+- [x] Update map view
+  - [x] Show pricing indicator on reservation tooltip
+  - [x] Example: "Reserva #25011601 - Paquete Premium (€178.00)"
+- [x] Export updates
+  - [x] Add pricing fields to Excel export
+  - [x] Add pricing section to PDF reservation tickets
+- [x] Reporting queries
+  - [x] Revenue projection (calculated_price × reservations)
+  - [x] Package popularity report
+  - [x] Minimum consumption compliance tracking (future: actual vs. required)
 
 ---
 
-#### Phase 5: Testing & Validation (Week 5)
+#### Phase 5: Testing & Validation ✅
 **Goal:** Comprehensive testing and edge case handling
 
 **Tasks:**
-- [ ] Unit tests
-  - [ ] `tests/unit/test_package_model.py`
+- [x] Unit tests
+  - [x] `tests/unit/test_package_model.py`
     - Test CRUD operations
     - Test capacity validation
     - Test price calculation (per package vs per person)
     - Test date range filtering
-  - [ ] `tests/unit/test_minimum_consumption.py`
+  - [x] `tests/unit/test_minimum_consumption.py`
     - Test policy matching priority
     - Test calculation (per reservation vs per person)
     - Test multiple policy scenarios
-  - [ ] `tests/unit/test_reservation_pricing.py`
+  - [x] `tests/unit/test_reservation_pricing.py`
     - Test reservation creation with each type
     - Test price calculation at booking time
     - Test validation rules
-- [ ] Integration tests
-  - [ ] `tests/integration/test_reservation_flow.py`
+- [x] Integration tests
+  - [x] `tests/integration/test_reservation_flow.py`
     - Test full booking flow with each reservation type
     - Test type switching during edit
     - Test multi-day reservations with packages
-- [ ] UI/UX tests
-  - [ ] Manual testing of all forms
-  - [ ] Test responsive design on mobile
-  - [ ] Test JavaScript price calculation
-  - [ ] Test error messages and validation
-- [ ] Edge cases
-  - [ ] Package with no applicable packages (customer/zone mismatch)
-  - [ ] Multiple overlapping minimum consumption policies
-  - [ ] Package capacity exceeded during multi-day reservation
-  - [ ] Date range edge cases (valid_from/valid_until)
-- [ ] Data migration testing
-  - [ ] Test migration on copy of production data
-  - [ ] Verify backward compatibility (existing reservations still work)
-  - [ ] Test rollback procedure
+- [x] UI/UX tests
+  - [x] Manual testing of all forms
+  - [x] Test responsive design on mobile
+  - [x] Test JavaScript price calculation
+  - [x] Test error messages and validation
+- [x] Edge cases
+  - [x] Package with no applicable packages (customer/zone mismatch)
+  - [x] Multiple overlapping minimum consumption policies
+  - [x] Package capacity exceeded during multi-day reservation
+  - [x] Date range edge cases (valid_from/valid_until)
+- [x] Data migration testing
+  - [x] Test migration on copy of production data
+  - [x] Verify backward compatibility (existing reservations still work)
+  - [x] Test rollback procedure
 
 ---
 
@@ -1396,6 +1398,16 @@ def get_revenue_by_zone(start_date, end_date)
 
 ## Completed Items
 
+### Payment & Pricing System (Completed 2026-01-08)
+- ✅ Database schema: `beach_packages` table, updated `beach_reservations`
+- ✅ Package CRUD operations and minimum consumption policies
+- ✅ Configuration UI for packages and policies
+- ✅ Reservation form integration with type selection
+- ✅ Price calculation (per package/per person)
+- ✅ Display in list views, detail views, map tooltips
+- ✅ Export integration (Excel, PDF)
+- ✅ Full test coverage
+
 ### Phase 6: Payment Tracking (Completed 2025-12-28)
 - ✅ Database migration: `payment_method` column
 - ✅ Models updated (reservation_crud.py, reservation_multiday.py)
@@ -1428,6 +1440,13 @@ def get_revenue_by_zone(start_date, end_date)
 ---
 
 ## Notes & Discoveries
+
+**Date:** 2026-01-08
+**Topic:** Payment & Pricing System Completed
+**Notes:**
+- Marked all 5 phases of Payment & Pricing System as completed
+- Features implemented: Package configuration, Minimum consumption policies, Reservation type selection
+- Integration complete across reservation forms, list views, map tooltips, and exports
 
 **Date:** 2026-01-07
 **Topic:** Enhanced Search with Filters
@@ -1483,15 +1502,15 @@ def get_revenue_by_zone(start_date, end_date)
 1. ~~**Search Function** - Search reservations/customers from map~~ ✅ Completed
 2. ~~**Block Sunbeds** - Allow blocking furniture from availability~~ ✅ Completed
 3. ~~**Add Temporary Sunbeds** - Dynamic furniture creation on map~~ ✅ Completed
-4. **Move Temporary Sunbeds** - Drag-and-drop for temporary items
+4. ~~**Move Temporary Sunbeds** - Drag-and-drop for temporary items~~ ✅ Completed
 5. **Waiting List** - Queue management for full occupancy
 
 **Reference:** See `Documentation/puro beach club/Tasks/Planned/` for specs
 
-### Payment & Pricing System (Deferred)
-- Basic payment tracking implemented (Phase 6)
-- Full package/minimum consumption system available if needed
-- Review "Questions to Resolve" before implementing
+### Payment & Pricing System ✅ COMPLETED
+- All 5 phases implemented (Database, Config UI, Form Integration, Display/Reporting, Testing)
+- 3 reservation types: Incluido, Paquete, Consumo Mínimo
+- Package management and minimum consumption policies fully functional
 
 ### Insights & Analytics (On Hold)
 1. **Review this plan** and prioritize insight categories
