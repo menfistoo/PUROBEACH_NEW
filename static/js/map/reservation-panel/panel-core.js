@@ -300,31 +300,46 @@ class NewReservationPanel {
                 console.error('Error fetching customer for waitlist conversion:', error);
             }
         } else if (entry.customer_name || entry.external_name) {
-            // No customer_id but have name info - display as pending customer
-            // This allows the user to see who the waitlist entry is for
+            // No customer_id but have name info
             const isInterno = entry.customer_type === 'interno';
             const displayName = entry.customer_name || entry.external_name || '';
             const phone = entry.phone || entry.external_phone || '';
 
-            // Create a minimal customer-like object for display
-            const tempCustomer = {
-                display_name: displayName,
-                first_name: displayName.split(' ')[0] || '',
-                last_name: displayName.split(' ').slice(1).join(' ') || '',
-                customer_type: isInterno ? 'interno' : 'externo',
-                room_number: entry.room_number || null,
-                phone: phone,
-                source: isInterno ? 'hotel_guest' : 'external'
-            };
+            if (!isInterno) {
+                // External customer: Show create customer form pre-filled
+                // so user can complete the customer profile
+                const nameParts = displayName.split(' ');
+                const firstName = nameParts[0] || '';
+                const lastName = nameParts.slice(1).join(' ') || '';
 
-            // Show in display (but don't set customer_id since it doesn't exist yet)
-            this.customerHandler.showCustomerDisplay(tempCustomer);
+                this.customerHandler.showCreateCustomerForm({
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone: phone,
+                    email: entry.email || ''
+                });
 
-            // Update charge_to_room visibility
-            this.customerHandler.updateChargeToRoomVisibility(
-                tempCustomer.customer_type,
-                isInterno
-            );
+                // Update charge_to_room visibility for external
+                this.customerHandler.updateChargeToRoomVisibility('externo', false);
+            } else {
+                // Internal customer (hotel guest) without customer_id
+                // Display as pending customer info
+                const tempCustomer = {
+                    display_name: displayName,
+                    first_name: displayName.split(' ')[0] || '',
+                    last_name: displayName.split(' ').slice(1).join(' ') || '',
+                    customer_type: 'interno',
+                    room_number: entry.room_number || null,
+                    phone: phone,
+                    source: 'hotel_guest'
+                };
+
+                // Show in display (but don't set customer_id since it doesn't exist yet)
+                this.customerHandler.showCustomerDisplay(tempCustomer);
+
+                // Update charge_to_room visibility
+                this.customerHandler.updateChargeToRoomVisibility('interno', true);
+            }
         }
 
         // Pre-fill number of people

@@ -28,24 +28,42 @@ class CustomerHandler {
 
     /**
      * Show the inline create customer form
+     * @param {Object} prefillData - Data to pre-fill the form with
+     * @param {string} prefillData.first_name - First name
+     * @param {string} prefillData.last_name - Last name
+     * @param {string} prefillData.phone - Phone number
+     * @param {string} prefillData.email - Email address
+     * @param {string} prefillData.language - Language code
      */
     showCreateCustomerForm(prefillData = {}) {
         const createForm = document.getElementById('newPanelCreateCustomerForm');
         const searchWrapper = document.getElementById('newPanelCustomerWrapper');
         const firstNameInput = document.getElementById('newCustFirstName');
         const lastNameInput = document.getElementById('newCustLastName');
+        const phoneInput = document.getElementById('newCustPhone');
+        const emailInput = document.getElementById('newCustEmail');
+        const languageSelect = document.getElementById('newCustLanguage');
 
         if (!createForm) return;
 
         // Hide search wrapper
         searchWrapper.style.display = 'none';
 
-        // Pre-fill name if provided
+        // Pre-fill fields if provided
         if (prefillData.first_name) {
             firstNameInput.value = prefillData.first_name;
         }
         if (prefillData.last_name) {
             lastNameInput.value = prefillData.last_name;
+        }
+        if (prefillData.phone && phoneInput) {
+            phoneInput.value = prefillData.phone;
+        }
+        if (prefillData.email && emailInput) {
+            emailInput.value = prefillData.email;
+        }
+        if (prefillData.language && languageSelect) {
+            languageSelect.value = prefillData.language;
         }
 
         // Show create form
