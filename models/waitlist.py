@@ -23,8 +23,12 @@ WAITLIST_STATUSES = {
 
 TIME_PREFERENCES = {
     'morning': 'Mañana',
+    'manana': 'Mañana',
     'afternoon': 'Tarde',
+    'tarde': 'Tarde',
+    'mediodia': 'Mediodía',
     'all_day': 'Todo el día',
+    'todo_el_dia': 'Todo el día',
 }
 
 
@@ -63,7 +67,9 @@ def create_waitlist_entry(data: dict, created_by: int) -> int:
 
     Args:
         data: Entry data with keys:
-            - customer_id (required)
+            - customer_id (required for interno, optional for externo)
+            - external_name (required for externo without customer_id)
+            - external_phone (required for externo without customer_id)
             - requested_date (required)
             - num_people (required)
             - preferred_zone_id (optional)
@@ -80,9 +86,13 @@ def create_waitlist_entry(data: dict, created_by: int) -> int:
     Raises:
         ValueError: If validation fails
     """
-    # Validate required fields
-    if not data.get('customer_id'):
-        raise ValueError("Debe seleccionar un cliente")
+    # Validate customer - either customer_id OR external_name+phone
+    customer_id = data.get('customer_id')
+    external_name = data.get('external_name', '').strip() if data.get('external_name') else None
+    external_phone = data.get('external_phone', '').strip() if data.get('external_phone') else None
+
+    if not customer_id and not (external_name and external_phone):
+        raise ValueError("Debe seleccionar un cliente o ingresar nombre y telefono")
 
     if not data.get('requested_date'):
         raise ValueError("La fecha es requerida")
@@ -113,13 +123,16 @@ def create_waitlist_entry(data: dict, created_by: int) -> int:
     with get_db() as conn:
         cursor = conn.execute('''
             INSERT INTO beach_waitlist (
-                customer_id, requested_date, num_people,
+                customer_id, external_name, external_phone,
+                requested_date, num_people,
                 preferred_zone_id, preferred_furniture_type_id,
                 time_preference, reservation_type, package_id,
                 notes, status, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'waiting', ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'waiting', ?)
         ''', (
-            data['customer_id'],
+            customer_id if customer_id else None,
+            external_name,
+            external_phone,
             data['requested_date'],
             num_people,
             data.get('preferred_zone_id'),
@@ -157,6 +170,8 @@ def get_waitlist_by_date(requested_date: str, include_all: bool = False) -> List
             SELECT
                 w.id,
                 w.customer_id,
+                w.external_name,
+                w.external_phone,
                 w.requested_date,
                 w.num_people,
                 w.preferred_zone_id,
@@ -169,15 +184,15 @@ def get_waitlist_by_date(requested_date: str, include_all: bool = False) -> List
                 w.converted_reservation_id,
                 w.created_at,
                 w.updated_at,
-                c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
-                c.customer_type,
-                c.phone,
+                COALESCE(c.first_name || ' ' || COALESCE(c.last_name, ''), w.external_name) as customer_name,
+                COALESCE(c.customer_type, 'externo') as customer_type,
+                COALESCE(c.phone, w.external_phone) as phone,
                 c.room_number,
                 z.name as zone_name,
                 ft.display_name as furniture_type_name,
                 p.package_name
             FROM beach_waitlist w
-            JOIN beach_customers c ON w.customer_id = c.id
+            LEFT JOIN beach_customers c ON w.customer_id = c.id
             LEFT JOIN beach_zones z ON w.preferred_zone_id = z.id
             LEFT JOIN beach_furniture_types ft ON w.preferred_furniture_type_id = ft.id
             LEFT JOIN beach_packages p ON w.package_id = p.id
@@ -204,16 +219,16 @@ def get_waitlist_entry(entry_id: int) -> Optional[dict]:
         cursor.execute('''
             SELECT
                 w.*,
-                c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
-                c.customer_type,
-                c.phone,
+                COALESCE(c.first_name || ' ' || COALESCE(c.last_name, ''), w.external_name) as customer_name,
+                COALESCE(c.customer_type, 'externo') as customer_type,
+                COALESCE(c.phone, w.external_phone) as phone,
                 c.email,
                 c.room_number,
                 z.name as zone_name,
                 ft.display_name as furniture_type_name,
                 p.package_name
             FROM beach_waitlist w
-            JOIN beach_customers c ON w.customer_id = c.id
+            LEFT JOIN beach_customers c ON w.customer_id = c.id
             LEFT JOIN beach_zones z ON w.preferred_zone_id = z.id
             LEFT JOIN beach_furniture_types ft ON w.preferred_furniture_type_id = ft.id
             LEFT JOIN beach_packages p ON w.package_id = p.id

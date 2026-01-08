@@ -128,29 +128,30 @@
                     </div>
                 </div>
 
-                <!-- Customer Search (Externo) -->
+                <!-- External Guest Entry (Externo) - Simple name and phone -->
                 <div class="form-group customer-search-group" id="waitlistCustomerSearchGroup" style="display: none;">
-                    <label class="form-label" for="waitlistCustomerSearch">Cliente</label>
-                    <div class="customer-search-wrapper">
-                        <input type="text"
-                               id="waitlistCustomerSearch"
-                               class="form-control"
-                               placeholder="Buscar por nombre o telefono..."
-                               autocomplete="off">
-                        <div class="customer-search-results cs-results" id="waitlistCustomerResults"></div>
-                    </div>
-                    <div class="selected-customer" id="waitlistSelectedCustomer" style="display: none;">
-                        <div class="customer-info">
-                            <span class="customer-name" id="waitlistCustomerName">-</span>
-                            <span class="customer-phone" id="waitlistCustomerPhone">-</span>
+                    <label class="form-label">Datos del Cliente</label>
+                    <div class="externo-entry-fields">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <input type="text"
+                                       id="waitlistExternoName"
+                                       class="form-control"
+                                       placeholder="Nombre del cliente *"
+                                       required>
+                            </div>
                         </div>
-                        <button type="button" class="btn-clear-customer" id="waitlistClearCustomer">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <input type="tel"
+                                       id="waitlistExternoPhone"
+                                       class="form-control"
+                                       placeholder="Telefono de contacto *"
+                                       required>
+                            </div>
+                        </div>
+                        <small class="text-muted">El cliente se creara automaticamente al convertir en reserva</small>
                     </div>
-                    <button type="button" class="btn-create-customer" id="waitlistCreateCustomerBtn">
-                        <i class="fas fa-user-plus me-1"></i> Crear cliente nuevo
-                    </button>
                 </div>
 
                 <!-- Date and Time Row -->

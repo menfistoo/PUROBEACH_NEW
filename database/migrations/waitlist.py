@@ -31,12 +31,14 @@ def migrate_waitlist_table() -> bool:
     cursor.execute('''
         CREATE TABLE beach_waitlist (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            customer_id INTEGER NOT NULL REFERENCES beach_customers(id) ON DELETE CASCADE,
+            customer_id INTEGER REFERENCES beach_customers(id) ON DELETE CASCADE,
+            external_name TEXT,
+            external_phone TEXT,
             requested_date DATE NOT NULL,
             num_people INTEGER NOT NULL DEFAULT 1,
             preferred_zone_id INTEGER REFERENCES beach_zones(id),
             preferred_furniture_type_id INTEGER REFERENCES beach_furniture_types(id),
-            time_preference TEXT CHECK(time_preference IN ('morning', 'afternoon', 'all_day')),
+            time_preference TEXT CHECK(time_preference IN ('morning', 'afternoon', 'all_day', 'manana', 'tarde', 'mediodia', 'todo_el_dia')),
             reservation_type TEXT DEFAULT 'incluido' CHECK(reservation_type IN ('incluido', 'paquete', 'consumo_minimo')),
             package_id INTEGER REFERENCES beach_packages(id),
             notes TEXT,
@@ -114,8 +116,39 @@ def migrate_waitlist_permissions() -> bool:
     return False
 
 
+def migrate_waitlist_external_fields() -> bool:
+    """
+    Add external_name and external_phone columns for external guests
+    who don't have a customer record yet.
+
+    Returns:
+        bool: True if migration was applied, False if skipped
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if columns already exist
+    cursor.execute("PRAGMA table_info(beach_waitlist)")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    if 'external_name' in columns:
+        print("  External fields already exist, skipping")
+        return False
+
+    print("Adding external_name and external_phone columns...")
+
+    # Add columns
+    cursor.execute('ALTER TABLE beach_waitlist ADD COLUMN external_name TEXT')
+    cursor.execute('ALTER TABLE beach_waitlist ADD COLUMN external_phone TEXT')
+
+    db.commit()
+    print("  External fields added successfully")
+    return True
+
+
 # Export migrations
 __all__ = [
     'migrate_waitlist_table',
     'migrate_waitlist_permissions',
+    'migrate_waitlist_external_fields',
 ]

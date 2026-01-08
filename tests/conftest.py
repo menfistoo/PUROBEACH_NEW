@@ -35,6 +35,7 @@ def app():
     """Create test application with isolated database."""
     from app import create_app
     from database import init_db
+    from database.migrations import run_all_migrations
 
     # Ensure test database path
     os.environ['DATABASE_PATH'] = TEST_DB_PATH
@@ -46,6 +47,8 @@ def app():
 
     with app.app_context():
         init_db()
+        # Run migrations to create waitlist and other feature tables
+        run_all_migrations()
         yield app
 
 

@@ -225,3 +225,58 @@ def register_routes(bp):
             'success': True,
             'statuses': WAITLIST_STATUSES
         })
+
+    @bp.route('/zones', methods=['GET'])
+    @login_required
+    def get_zones():
+        """Get active zones for dropdown."""
+        from models.zone import get_all_zones
+        try:
+            zones = get_all_zones(active_only=True)
+            return jsonify({
+                'success': True,
+                'zones': zones
+            })
+        except Exception as e:
+            logger.error(f"Error getting zones: {e}")
+            return jsonify({'success': False, 'error': 'Error al obtener zonas'}), 500
+
+    @bp.route('/furniture-types', methods=['GET'])
+    @login_required
+    def get_furniture_types():
+        """Get active furniture types for dropdown."""
+        from models.furniture_type import get_all_furniture_types
+        try:
+            types = get_all_furniture_types(active_only=True)
+            return jsonify({
+                'success': True,
+                'furniture_types': types
+            })
+        except Exception as e:
+            logger.error(f"Error getting furniture types: {e}")
+            return jsonify({'success': False, 'error': 'Error al obtener tipos'}), 500
+
+    @bp.route('/packages', methods=['GET'])
+    @login_required
+    def get_packages():
+        """Get active packages for dropdown."""
+        from database import get_db
+        try:
+            with get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT id, package_name, package_description, base_price,
+                           per_person_price, min_people, max_people, is_active
+                    FROM beach_packages
+                    WHERE is_active = 1
+                    ORDER BY package_name
+                ''')
+                rows = cursor.fetchall()
+                packages = [dict(row) for row in rows]
+            return jsonify({
+                'success': True,
+                'packages': packages
+            })
+        except Exception as e:
+            logger.error(f"Error getting packages: {e}")
+            return jsonify({'success': False, 'error': 'Error al obtener paquetes'}), 500

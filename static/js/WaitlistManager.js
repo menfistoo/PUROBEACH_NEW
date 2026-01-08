@@ -462,33 +462,16 @@ class WaitlistManager {
             prefsHtml += `<span class="waitlist-pref-chip"><i class="fas fa-clock"></i> ${timeLabel}</span>`;
         }
 
-        // Build actions (only for pending entries)
+        // Build actions (only for pending entries) - simplified: only Convertir and Cancel
         let actionsHtml = '';
-        if (!isHistory && entry.status === 'waiting') {
+        if (!isHistory && (entry.status === 'waiting' || entry.status === 'contacted' || entry.status === 'no_answer')) {
             actionsHtml = `
                 <div class="waitlist-entry-actions">
-                    <button type="button" class="btn-action" data-action="contacted" data-id="${entry.id}">
-                        <i class="fas fa-phone"></i> Contactado
-                    </button>
                     <button type="button" class="btn-action btn-convert" data-action="convert" data-id="${entry.id}">
                         <i class="fas fa-check"></i> Convertir
                     </button>
                     <button type="button" class="btn-action btn-danger" data-action="declined" data-id="${entry.id}">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
-        } else if (!isHistory && entry.status === 'contacted') {
-            actionsHtml = `
-                <div class="waitlist-entry-actions">
-                    <button type="button" class="btn-action" data-action="no_answer" data-id="${entry.id}">
-                        <i class="fas fa-phone-slash"></i> Sin respuesta
-                    </button>
-                    <button type="button" class="btn-action btn-convert" data-action="convert" data-id="${entry.id}">
-                        <i class="fas fa-check"></i> Convertir
-                    </button>
-                    <button type="button" class="btn-action btn-danger" data-action="declined" data-id="${entry.id}">
-                        <i class="fas fa-times"></i>
+                        <i class="fas fa-times"></i> Cancelar
                     </button>
                 </div>
             `;
@@ -676,10 +659,16 @@ class WaitlistManager {
         if (this.notesInput) this.notesInput.value = '';
         if (this.packageSelect) this.packageSelect.value = '';
 
-        // Reset reservation type
-        const defaultRadio = document.querySelector('input[name="reservationType"][value="consumo_minimo"]');
+        // Reset reservation type - 'incluido' for interno by default
+        const defaultRadio = document.querySelector('input[name="reservationType"][value="incluido"]');
         if (defaultRadio) defaultRadio.checked = true;
         if (this.packageGroup) this.packageGroup.style.display = 'none';
+
+        // Reset external guest name/phone fields
+        const externoNameInput = document.getElementById('waitlistExternoName');
+        const externoPhoneInput = document.getElementById('waitlistExternoPhone');
+        if (externoNameInput) externoNameInput.value = '';
+        if (externoPhoneInput) externoPhoneInput.value = '';
 
         // Hide search results
         if (this.roomResults) this.roomResults.classList.remove('show');
@@ -699,11 +688,17 @@ class WaitlistManager {
             this.typeExterno?.classList.remove('active');
             if (this.roomSearchGroup) this.roomSearchGroup.style.display = 'block';
             if (this.customerSearchGroup) this.customerSearchGroup.style.display = 'none';
+            // Set default reservation type to 'incluido' for internal guests
+            const incluidoRadio = document.querySelector('input[name="reservationType"][value="incluido"]');
+            if (incluidoRadio) incluidoRadio.checked = true;
         } else {
             this.typeInterno?.classList.remove('active');
             this.typeExterno?.classList.add('active');
             if (this.roomSearchGroup) this.roomSearchGroup.style.display = 'none';
             if (this.customerSearchGroup) this.customerSearchGroup.style.display = 'block';
+            // Set default reservation type to 'consumo_minimo' for external guests
+            const consumoRadio = document.querySelector('input[name="reservationType"][value="consumo_minimo"]');
+            if (consumoRadio) consumoRadio.checked = true;
         }
 
         // Clear selections when switching
@@ -788,14 +783,21 @@ class WaitlistManager {
             return;
         }
 
-        const html = guests.map(guest => `
-            <div class="cs-item" data-guest-id="${guest.id}" data-guest-name="${this._escapeHtml(guest.guest_name || guest.first_name + ' ' + (guest.last_name || ''))}" data-room="${guest.room_number}">
-                <div class="cs-info">
-                    <div class="cs-name">${this._escapeHtml(guest.guest_name || guest.first_name + ' ' + (guest.last_name || ''))}</div>
-                    <div class="cs-details"><i class="fas fa-door-open"></i> Hab. ${guest.room_number}</div>
+        const html = guests.map(guest => {
+            const guestName = guest.guest_name || `${guest.first_name || ''} ${guest.last_name || ''}`.trim();
+            const phone = guest.phone || '';
+            return `
+                <div class="cs-item" data-guest-id="${guest.id}" data-guest-name="${this._escapeHtml(guestName)}" data-room="${guest.room_number}" data-phone="${this._escapeHtml(phone)}">
+                    <div class="cs-info">
+                        <div class="cs-name">${this._escapeHtml(guestName)}</div>
+                        <div class="cs-details">
+                            <i class="fas fa-door-open"></i> Hab. ${guest.room_number}
+                            ${phone ? `<span class="ms-2"><i class="fas fa-phone"></i> ${this._escapeHtml(phone)}</span>` : ''}
+                        </div>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         this.roomResults.innerHTML = html;
         this.roomResults.classList.add('show');
@@ -810,18 +812,22 @@ class WaitlistManager {
         const guestId = item.dataset.guestId;
         const guestName = item.dataset.guestName;
         const roomNumber = item.dataset.room;
+        const phone = item.dataset.phone || '';
 
         // Update state
         this.state.selectedHotelGuestId = guestId;
+        this.state.selectedGuestPhone = phone;
 
         // Update hidden fields
         if (this.hotelGuestIdInput) this.hotelGuestIdInput.value = guestId;
 
-        // Show selected guest
+        // Show selected guest with phone
         if (this.selectedGuestEl) {
             this.selectedGuestEl.style.display = 'flex';
             if (this.guestNameEl) this.guestNameEl.textContent = guestName;
-            if (this.guestRoomEl) this.guestRoomEl.textContent = `Hab. ${roomNumber}`;
+            if (this.guestRoomEl) {
+                this.guestRoomEl.innerHTML = `Hab. ${roomNumber}${phone ? ` <span class="guest-phone"><i class="fas fa-phone"></i> ${this._escapeHtml(phone)}</span>` : ''}`;
+            }
         }
 
         // Hide search
@@ -951,13 +957,22 @@ class WaitlistManager {
         const customerId = this.customerIdInput?.value;
         const hotelGuestId = this.hotelGuestIdInput?.value;
 
+        // For external guests, get name and phone from the simple entry fields
+        const externoName = document.getElementById('waitlistExternoName')?.value?.trim();
+        const externoPhone = document.getElementById('waitlistExternoPhone')?.value?.trim();
+
         if (this.state.customerType === 'interno' && !hotelGuestId) {
             this._showToast('Selecciona un huesped', 'warning');
             return;
         }
 
-        if (this.state.customerType === 'externo' && !customerId) {
-            this._showToast('Selecciona un cliente', 'warning');
+        if (this.state.customerType === 'externo' && !externoName) {
+            this._showToast('Ingresa el nombre del cliente', 'warning');
+            return;
+        }
+
+        if (this.state.customerType === 'externo' && !externoPhone) {
+            this._showToast('Ingresa el telefono del cliente', 'warning');
             return;
         }
 
@@ -1008,7 +1023,6 @@ class WaitlistManager {
 
             // Build payload
             const payload = {
-                customer_id: parseInt(finalCustomerId),
                 requested_date: requestedDate,
                 num_people: parseInt(this.numPeopleInput?.value) || 2,
                 preferred_zone_id: this.zonePreferenceSelect?.value ? parseInt(this.zonePreferenceSelect.value) : null,
@@ -1018,6 +1032,15 @@ class WaitlistManager {
                 package_id: reservationType === 'paquete' ? parseInt(this.packageSelect?.value) : null,
                 notes: this.notesInput?.value?.trim() || null
             };
+
+            // Add customer info based on type
+            if (this.state.customerType === 'interno' && finalCustomerId) {
+                payload.customer_id = parseInt(finalCustomerId);
+            } else if (this.state.customerType === 'externo') {
+                // External guests use name+phone, customer created on convert
+                payload.external_name = externoName;
+                payload.external_phone = externoPhone;
+            }
 
             const response = await fetch(`${this.options.apiBaseUrl}/waitlist`, {
                 method: 'POST',

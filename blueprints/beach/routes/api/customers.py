@@ -461,17 +461,20 @@ def register_routes(bp):
     def hotel_guest_search():
         """Search hotel guests for autocomplete."""
         query = request.args.get('q', '')
-        if len(query) < 2:
-            return jsonify({'guests': []})
+        if len(query) < 1:
+            return jsonify({'success': True, 'guests': []})
 
         guests = search_guests(query, limit=10)
 
         return jsonify({
+            'success': True,
             'guests': [{
                 'id': g['id'],
                 'guest_name': g['guest_name'],
                 'room_number': g['room_number'],
                 'arrival_date': g['arrival_date'],
-                'departure_date': g['departure_date']
+                'departure_date': g['departure_date'],
+                'phone': g.get('phone'),
+                'email': g.get('email')
             } for g in guests]
         })

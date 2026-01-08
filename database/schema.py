@@ -426,12 +426,14 @@ def create_tables(db):
     db.execute('''
         CREATE TABLE beach_waitlist (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            customer_id INTEGER NOT NULL REFERENCES beach_customers(id) ON DELETE CASCADE,
+            customer_id INTEGER REFERENCES beach_customers(id) ON DELETE CASCADE,
+            external_name TEXT,
+            external_phone TEXT,
             requested_date DATE NOT NULL,
             num_people INTEGER NOT NULL DEFAULT 1,
             preferred_zone_id INTEGER REFERENCES beach_zones(id),
             preferred_furniture_type_id INTEGER REFERENCES beach_furniture_types(id),
-            time_preference TEXT CHECK(time_preference IN ('morning', 'afternoon', 'all_day')),
+            time_preference TEXT CHECK(time_preference IN ('morning', 'afternoon', 'all_day', 'manana', 'tarde', 'mediodia', 'todo_el_dia')),
             reservation_type TEXT DEFAULT 'incluido' CHECK(reservation_type IN ('incluido', 'paquete', 'consumo_minimo')),
             package_id INTEGER REFERENCES beach_packages(id),
             notes TEXT,
