@@ -132,3 +132,133 @@ def create_waitlist_entry(data: dict, created_by: int) -> int:
         ))
         conn.commit()
         return cursor.lastrowid
+
+
+# =============================================================================
+# READ OPERATIONS
+# =============================================================================
+
+def get_waitlist_by_date(requested_date: str, include_all: bool = False) -> List[dict]:
+    """
+    Get waitlist entries for a specific date.
+
+    Args:
+        requested_date: Date string (YYYY-MM-DD)
+        include_all: If True, include all statuses. If False, only 'waiting'.
+
+    Returns:
+        list: List of entry dicts with customer details
+    """
+    status_filter = "" if include_all else "AND w.status = 'waiting'"
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(f'''
+            SELECT
+                w.id,
+                w.customer_id,
+                w.requested_date,
+                w.num_people,
+                w.preferred_zone_id,
+                w.preferred_furniture_type_id,
+                w.time_preference,
+                w.reservation_type,
+                w.package_id,
+                w.notes,
+                w.status,
+                w.converted_reservation_id,
+                w.created_at,
+                w.updated_at,
+                c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
+                c.customer_type,
+                c.phone,
+                c.room_number,
+                z.name as zone_name,
+                ft.display_name as furniture_type_name,
+                p.package_name
+            FROM beach_waitlist w
+            JOIN beach_customers c ON w.customer_id = c.id
+            LEFT JOIN beach_zones z ON w.preferred_zone_id = z.id
+            LEFT JOIN beach_furniture_types ft ON w.preferred_furniture_type_id = ft.id
+            LEFT JOIN beach_packages p ON w.package_id = p.id
+            WHERE w.requested_date = ?
+            {status_filter}
+            ORDER BY w.created_at ASC
+        ''', (requested_date,))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_waitlist_entry(entry_id: int) -> Optional[dict]:
+    """
+    Get a single waitlist entry by ID.
+
+    Args:
+        entry_id: Entry ID
+
+    Returns:
+        dict or None: Entry with customer details
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT
+                w.*,
+                c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
+                c.customer_type,
+                c.phone,
+                c.email,
+                c.room_number,
+                z.name as zone_name,
+                ft.display_name as furniture_type_name,
+                p.package_name
+            FROM beach_waitlist w
+            JOIN beach_customers c ON w.customer_id = c.id
+            LEFT JOIN beach_zones z ON w.preferred_zone_id = z.id
+            LEFT JOIN beach_furniture_types ft ON w.preferred_furniture_type_id = ft.id
+            LEFT JOIN beach_packages p ON w.package_id = p.id
+            WHERE w.id = ?
+        ''', (entry_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+# =============================================================================
+# UPDATE
+# =============================================================================
+
+def update_waitlist_status(entry_id: int, status: str) -> bool:
+    """
+    Update the status of a waitlist entry.
+
+    Args:
+        entry_id: Entry ID
+        status: New status
+
+    Returns:
+        bool: True if updated
+
+    Raises:
+        ValueError: If invalid status or transition
+    """
+    if status not in WAITLIST_STATUSES:
+        raise ValueError(f"Estado no válido: {status}")
+
+    # Get current entry
+    entry = get_waitlist_entry(entry_id)
+    if not entry:
+        raise ValueError("Entrada no encontrada")
+
+    # Check valid transitions
+    current = entry['status']
+    if current in ('converted', 'expired'):
+        raise ValueError("No se puede modificar una entrada ya procesada")
+
+    with get_db() as conn:
+        conn.execute('''
+            UPDATE beach_waitlist
+            SET status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (status, entry_id))
+        conn.commit()
+    return True
