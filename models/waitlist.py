@@ -22,9 +22,9 @@ WAITLIST_STATUSES = {
 }
 
 TIME_PREFERENCES = {
-    'morning': 'Manana',
+    'morning': 'Mañana',
     'afternoon': 'Tarde',
-    'all_day': 'Todo el dia',
+    'all_day': 'Todo el día',
 }
 
 
