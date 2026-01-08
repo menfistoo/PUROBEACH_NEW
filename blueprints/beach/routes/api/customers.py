@@ -261,6 +261,38 @@ def register_routes(bp):
         except Exception:
             return jsonify({'success': False, 'error': 'Error al crear cliente'}), 500
 
+    @bp.route('/customers/<int:customer_id>')
+    @login_required
+    @permission_required('beach.customers.view')
+    def get_customer(customer_id):
+        """Get customer by ID for JSON API."""
+        customer = get_customer_by_id(customer_id)
+        if not customer:
+            return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
+
+        preferences = get_customer_preferences(customer_id)
+        pref_codes = [p['code'] for p in preferences]
+
+        return jsonify({
+            'success': True,
+            'customer': {
+                'id': customer['id'],
+                'source': 'customer',
+                'first_name': customer['first_name'],
+                'last_name': customer.get('last_name', ''),
+                'display_name': f"{customer['first_name']} {customer.get('last_name', '')}".strip(),
+                'customer_type': customer['customer_type'],
+                'room_number': customer.get('room_number'),
+                'phone': customer.get('phone'),
+                'email': customer.get('email'),
+                'vip_status': customer.get('vip_status', 0),
+                'language': customer.get('language'),
+                'country_code': customer.get('country_code'),
+                'notes': customer.get('notes'),
+                'preferences': pref_codes
+            }
+        })
+
     @bp.route('/customers/<int:customer_id>/history')
     @login_required
     @permission_required('beach.customers.view')
@@ -459,22 +491,43 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.customers.view')
     def hotel_guest_search():
-        """Search hotel guests for autocomplete."""
+        """Search hotel guests for autocomplete - grouped by room."""
         query = request.args.get('q', '')
         if len(query) < 1:
             return jsonify({'success': True, 'guests': []})
 
-        guests = search_guests(query, limit=10)
+        guests = search_guests(query, limit=20)
+
+        # Group by room number, keeping main guest info
+        rooms = {}
+        for g in guests:
+            room = g['room_number']
+            if room not in rooms:
+                rooms[room] = {
+                    'id': g['id'],
+                    'guest_name': g['guest_name'],
+                    'room_number': room,
+                    'arrival_date': g['arrival_date'],
+                    'departure_date': g['departure_date'],
+                    'phone': g.get('phone'),
+                    'email': g.get('email'),
+                    'is_main_guest': g.get('is_main_guest', 0),
+                    'guest_count': 1
+                }
+            else:
+                rooms[room]['guest_count'] += 1
+                # If this guest is main guest, use their info
+                if g.get('is_main_guest', 0) == 1:
+                    rooms[room]['id'] = g['id']
+                    rooms[room]['guest_name'] = g['guest_name']
+                    rooms[room]['phone'] = g.get('phone')
+                    rooms[room]['email'] = g.get('email')
+                    rooms[room]['is_main_guest'] = 1
+
+        # Sort by room number
+        result = sorted(rooms.values(), key=lambda x: x['room_number'])
 
         return jsonify({
             'success': True,
-            'guests': [{
-                'id': g['id'],
-                'guest_name': g['guest_name'],
-                'room_number': g['room_number'],
-                'arrival_date': g['arrival_date'],
-                'departure_date': g['departure_date'],
-                'phone': g.get('phone'),
-                'email': g.get('email')
-            } for g in guests]
+            'guests': result
         })

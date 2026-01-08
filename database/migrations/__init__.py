@@ -41,7 +41,11 @@ from .pricing import (
 )
 from .pricing_integration import migrate_add_pricing_fields
 from .add_payment_method import migrate_add_payment_method
-from .waitlist import migrate_waitlist_table, migrate_waitlist_permissions
+from .waitlist import (
+    migrate_waitlist_table,
+    migrate_waitlist_permissions,
+    migrate_waitlist_fix_constraints
+)
 
 
 # Ordered list of all migrations
@@ -97,6 +101,7 @@ MIGRATIONS = [
     # Phase 11: Waitlist
     ('waitlist_table', migrate_waitlist_table),
     ('waitlist_permissions', migrate_waitlist_permissions),
+    ('waitlist_fix_constraints', migrate_waitlist_fix_constraints),
 ]
 
 
@@ -184,4 +189,5 @@ __all__ = [
     'migrate_add_payment_method',
     'migrate_waitlist_table',
     'migrate_waitlist_permissions',
+    'migrate_waitlist_fix_constraints',
 ]

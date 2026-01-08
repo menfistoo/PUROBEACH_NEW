@@ -266,9 +266,10 @@ def register_routes(bp):
                 cursor = conn.cursor()
                 cursor.execute('''
                     SELECT id, package_name, package_description, base_price,
-                           per_person_price, min_people, max_people, is_active
+                           price_type, min_people, standard_people, max_people,
+                           customer_type, active
                     FROM beach_packages
-                    WHERE is_active = 1
+                    WHERE active = 1
                     ORDER BY package_name
                 ''')
                 rows = cursor.fetchall()

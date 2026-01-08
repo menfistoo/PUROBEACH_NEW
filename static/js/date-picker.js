@@ -344,8 +344,32 @@ class DatePicker {
 
     _formatDate(dateStr) {
         if (!dateStr) return '';
-        const parts = dateStr.split('-');
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+        // If already in DD/MM/YYYY format, return as is
+        if (typeof dateStr === 'string' && dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+            return dateStr;
+        }
+
+        // If ISO format (YYYY-MM-DD), convert to DD/MM/YYYY
+        if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const parts = dateStr.split('-');
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        // Handle Date object or other date formats
+        try {
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+        } catch (e) {
+            // Fall through to return original
+        }
+
+        return String(dateStr);
     }
 
     _formatDateISO(date) {
@@ -356,13 +380,39 @@ class DatePicker {
         return `${year}-${month}-${day}`;
     }
 
+    _normalizeToISO(dateStr) {
+        // Normalize any date format to ISO (YYYY-MM-DD)
+        if (!dateStr) return null;
+
+        // Already ISO format
+        if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return dateStr;
+        }
+
+        // Try to parse and convert
+        try {
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+                return this._formatDateISO(date);
+            }
+        } catch (e) {
+            // Fall through
+        }
+
+        return null;
+    }
+
     // Public methods
     getSelectedDates() {
         return Array.from(this.selectedDates).sort();
     }
 
     setSelectedDates(dates) {
-        this.selectedDates = new Set(dates);
+        // Normalize all dates to ISO format
+        const normalizedDates = dates
+            .map(d => this._normalizeToISO(d))
+            .filter(d => d !== null);
+        this.selectedDates = new Set(normalizedDates);
         this._updatePreviewText();
         if (this.calendarOpen) {
             this._renderCalendar();

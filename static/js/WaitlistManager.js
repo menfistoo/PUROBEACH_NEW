@@ -786,13 +786,14 @@ class WaitlistManager {
         const html = guests.map(guest => {
             const guestName = guest.guest_name || `${guest.first_name || ''} ${guest.last_name || ''}`.trim();
             const phone = guest.phone || '';
+            const guestCount = guest.guest_count || 1;
+            const countDisplay = guestCount > 1 ? ` - x${guestCount}` : '';
             return `
-                <div class="cs-item" data-guest-id="${guest.id}" data-guest-name="${this._escapeHtml(guestName)}" data-room="${guest.room_number}" data-phone="${this._escapeHtml(phone)}">
+                <div class="cs-item" data-guest-id="${guest.id}" data-guest-name="${this._escapeHtml(guestName)}" data-room="${guest.room_number}" data-phone="${this._escapeHtml(phone)}" data-guest-count="${guestCount}">
                     <div class="cs-info">
-                        <div class="cs-name">${this._escapeHtml(guestName)}</div>
+                        <div class="cs-name">Hab. ${guest.room_number} - ${this._escapeHtml(guestName)}${countDisplay}</div>
                         <div class="cs-details">
-                            <i class="fas fa-door-open"></i> Hab. ${guest.room_number}
-                            ${phone ? `<span class="ms-2"><i class="fas fa-phone"></i> ${this._escapeHtml(phone)}</span>` : ''}
+                            ${phone ? `<i class="fas fa-phone"></i> ${this._escapeHtml(phone)}` : ''}
                         </div>
                     </div>
                 </div>

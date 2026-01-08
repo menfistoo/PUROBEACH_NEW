@@ -299,6 +299,32 @@ class NewReservationPanel {
             } catch (error) {
                 console.error('Error fetching customer for waitlist conversion:', error);
             }
+        } else if (entry.customer_name || entry.external_name) {
+            // No customer_id but have name info - display as pending customer
+            // This allows the user to see who the waitlist entry is for
+            const isInterno = entry.customer_type === 'interno';
+            const displayName = entry.customer_name || entry.external_name || '';
+            const phone = entry.phone || entry.external_phone || '';
+
+            // Create a minimal customer-like object for display
+            const tempCustomer = {
+                display_name: displayName,
+                first_name: displayName.split(' ')[0] || '',
+                last_name: displayName.split(' ').slice(1).join(' ') || '',
+                customer_type: isInterno ? 'interno' : 'externo',
+                room_number: entry.room_number || null,
+                phone: phone,
+                source: isInterno ? 'hotel_guest' : 'external'
+            };
+
+            // Show in display (but don't set customer_id since it doesn't exist yet)
+            this.customerHandler.showCustomerDisplay(tempCustomer);
+
+            // Update charge_to_room visibility
+            this.customerHandler.updateChargeToRoomVisibility(
+                tempCustomer.customer_type,
+                isInterno
+            );
         }
 
         // Pre-fill number of people
@@ -563,14 +589,14 @@ class NewReservationPanel {
 
                 // Mark waitlist entry as converted if this reservation came from waitlist
                 if (this.state.waitlistEntryId) {
-                    await this.markWaitlistAsConverted(this.state.waitlistEntryId, result.reservation?.id);
+                    await this.markWaitlistAsConverted(this.state.waitlistEntryId, result.parent_id);
                 }
 
                 this.close();
 
                 // Notify callback
                 if (this.options.onSave) {
-                    this.options.onSave(result.reservation);
+                    this.options.onSave({ id: result.parent_id, ticket_number: result.parent_ticket });
                 }
             } else {
                 // Check if this is a conflict error (multi-day with unavailable furniture)
