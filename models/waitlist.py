@@ -262,3 +262,108 @@ def update_waitlist_status(entry_id: int, status: str) -> bool:
         ''', (status, entry_id))
         conn.commit()
     return True
+
+
+# =============================================================================
+# CONVERSION & EXPIRATION
+# =============================================================================
+
+def convert_to_reservation(entry_id: int, reservation_id: int) -> bool:
+    """
+    Mark entry as converted and link to reservation.
+
+    Args:
+        entry_id: Waitlist entry ID
+        reservation_id: Created reservation ID
+
+    Returns:
+        bool: True if updated
+
+    Raises:
+        ValueError: If entry not found or already processed
+    """
+    entry = get_waitlist_entry(entry_id)
+    if not entry:
+        raise ValueError("Entrada no encontrada")
+
+    if entry['status'] in ('converted', 'expired'):
+        raise ValueError("No se puede convertir una entrada ya procesada")
+
+    with get_db() as conn:
+        conn.execute('''
+            UPDATE beach_waitlist
+            SET status = 'converted',
+                converted_reservation_id = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (reservation_id, entry_id))
+        conn.commit()
+    return True
+
+
+def expire_old_entries() -> int:
+    """
+    Expire all entries with past requested_date.
+    Called on app startup and periodically.
+
+    Returns:
+        int: Number of entries expired
+    """
+    with get_db() as conn:
+        cursor = conn.execute('''
+            UPDATE beach_waitlist
+            SET status = 'expired', updated_at = CURRENT_TIMESTAMP
+            WHERE status IN ('waiting', 'contacted', 'no_answer')
+              AND requested_date < date('now')
+        ''')
+        conn.commit()
+        return cursor.rowcount
+
+
+# =============================================================================
+# HISTORY & REPORTING
+# =============================================================================
+
+def get_waitlist_history(
+    requested_date: str = None,
+    customer_id: int = None
+) -> List[dict]:
+    """
+    Get non-waiting entries for reporting/history.
+
+    Args:
+        requested_date: Filter by date (optional)
+        customer_id: Filter by customer (optional)
+
+    Returns:
+        list: List of entry dicts
+    """
+    filters = ["w.status != 'waiting'"]
+    params = []
+
+    if requested_date:
+        filters.append("w.requested_date = ?")
+        params.append(requested_date)
+
+    if customer_id:
+        filters.append("w.customer_id = ?")
+        params.append(customer_id)
+
+    where_clause = " AND ".join(filters)
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(f'''
+            SELECT
+                w.*,
+                c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
+                c.customer_type,
+                c.phone,
+                c.room_number
+            FROM beach_waitlist w
+            JOIN beach_customers c ON w.customer_id = c.id
+            WHERE {where_clause}
+            ORDER BY w.updated_at DESC
+        ''', params)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
