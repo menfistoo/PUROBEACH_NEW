@@ -1408,10 +1408,29 @@
         // Track pending waitlist conversion entry
         let pendingWaitlistEntry = null;
 
+        // Helper to normalize date to ISO format (YYYY-MM-DD)
+        function normalizeToISO(dateStr) {
+            if (!dateStr) return null;
+            // Already ISO format
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+            // Try to parse and convert
+            try {
+                const d = new Date(dateStr);
+                if (!isNaN(d.getTime())) {
+                    return d.toISOString().split('T')[0];
+                }
+            } catch (e) {}
+            return null;
+        }
+
         const waitlistManager = new WaitlistManager({
             currentDate: map.getCurrentDate(),
             onConvert: (entry) => {
                 // Store the waitlist entry for pre-filling after furniture selection
+                // Normalize dates to ISO format for consistency
+                if (entry.requested_date) {
+                    entry.requested_date = normalizeToISO(entry.requested_date);
+                }
                 pendingWaitlistEntry = entry;
 
                 // Show toast to guide user

@@ -279,15 +279,10 @@ class NewReservationPanel {
      * @param {Object} entry - Waitlist entry data
      */
     async prefillFromWaitlist(entry) {
-        console.log('[DEBUG] prefillFromWaitlist called with entry:', entry);
-        if (!entry) {
-            console.log('[DEBUG] No entry provided, returning');
-            return;
-        }
+        if (!entry) return;
 
         // Store waitlist entry ID
         this.state.waitlistEntryId = entry.id;
-        console.log('[DEBUG] Set waitlistEntryId to:', this.state.waitlistEntryId);
 
         // Pre-fill customer if available
         if (entry.customer_id) {
@@ -595,15 +590,8 @@ class NewReservationPanel {
                 // Mark waitlist entry as converted if this reservation came from waitlist
                 // Note: API returns 'reservation_id', not 'parent_id'
                 const reservationId = result.reservation_id || result.parent_id;
-                console.log('[DEBUG] Checking waitlist conversion:', {
-                    waitlistEntryId: this.state.waitlistEntryId,
-                    reservationId: reservationId
-                });
                 if (this.state.waitlistEntryId && reservationId) {
-                    console.log('[DEBUG] Calling markWaitlistAsConverted');
                     await this.markWaitlistAsConverted(this.state.waitlistEntryId, reservationId);
-                } else {
-                    console.log('[DEBUG] Skipping conversion - waitlistEntryId:', this.state.waitlistEntryId, 'reservationId:', reservationId);
                 }
 
                 this.close();
@@ -671,12 +659,8 @@ class NewReservationPanel {
      * @param {number} reservationId - Created reservation ID
      */
     async markWaitlistAsConverted(entryId, reservationId) {
-        console.log('[DEBUG] markWaitlistAsConverted called:', { entryId, reservationId });
         try {
-            const url = `${this.options.apiBaseUrl}/waitlist/${entryId}/convert`;
-            console.log('[DEBUG] Calling API:', url);
-
-            const response = await fetch(url, {
+            const response = await fetch(`${this.options.apiBaseUrl}/waitlist/${entryId}/convert`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -685,12 +669,9 @@ class NewReservationPanel {
                 body: JSON.stringify({ reservation_id: reservationId })
             });
 
-            console.log('[DEBUG] API response status:', response.status);
             const data = await response.json();
-            console.log('[DEBUG] API response data:', data);
 
             if (data.success) {
-                console.log('[DEBUG] Waitlist entry marked as converted successfully');
                 // Dispatch event to update waitlist badge count
                 window.dispatchEvent(new CustomEvent('waitlist:countUpdate'));
             } else {
