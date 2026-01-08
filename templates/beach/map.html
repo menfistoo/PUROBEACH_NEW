@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map-search.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map-blocks.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map-temporary.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/waitlist.css') }}">
 <style>
     /* =============================================================================
    MOBILE-FIRST MAP PAGE LAYOUT
@@ -823,6 +824,13 @@
         <button type="button" class="toolbar-btn" id="btn-refresh" title="Actualizar">
             <i class="fas fa-sync-alt"></i>
         </button>
+
+        <!-- Waitlist Button -->
+        <button type="button" class="toolbar-btn waitlist-toolbar-btn" id="waitlistToolbarBtn"
+                title="Lista de Espera" aria-label="Abrir lista de espera">
+            <i class="fas fa-clock"></i>
+            <span class="waitlist-badge" id="waitlistToolbarBadge" data-count="0"></span>
+        </button>
     </div>
 
     <!-- Hidden Date Picker -->
@@ -1302,6 +1310,9 @@
         </div>
     </div>
 </div>
+
+<!-- Waitlist Panel -->
+{% include 'beach/_waitlist_panel.html' %}
 {% endblock %}
 
 {% block extra_js %}
@@ -1319,6 +1330,7 @@
 <script src="{{ url_for('static', filename='js/map/reservation-panel/safeguard-checks.js') }}"></script>
 <script src="{{ url_for('static', filename='js/map/reservation-panel/panel-core.js') }}"></script>
 <script src="{{ url_for('static', filename='js/map/new-reservation-panel.js') }}"></script>
+<script src="{{ url_for('static', filename='js/WaitlistManager.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='js/map/index.js') }}"></script>
 <script type="module">
     import { SearchManager } from '{{ url_for("static", filename="js/map/SearchManager.js") }}';
@@ -1389,6 +1401,56 @@
                 tempFurnitureManager.showCreateModal(100, 100, firstZoneId);
             });
         }
+
+        // ==========================================================================
+        // WAITLIST MANAGER (Waitlist panel functionality)
+        // ==========================================================================
+        const waitlistManager = new WaitlistManager({
+            currentDate: map.getCurrentDate(),
+            onConvert: (entry) => {
+                // Open new reservation panel with pre-filled data from waitlist entry
+                // This will be fully implemented in Task 9
+                console.log('Convert waitlist entry:', entry);
+
+                // For now, dispatch event for future handling
+                document.dispatchEvent(new CustomEvent('waitlist:convertToReservation', {
+                    detail: { entry }
+                }));
+            }
+        });
+
+        // Toolbar button click handler
+        document.getElementById('waitlistToolbarBtn')?.addEventListener('click', () => {
+            waitlistManager.open();
+        });
+
+        // Function to update waitlist badge
+        function updateWaitlistBadge() {
+            waitlistManager.setDate(map.getCurrentDate());
+            const badge = document.getElementById('waitlistToolbarBadge');
+            if (badge) {
+                // Fetch current count from API
+                fetch(`/beach/api/waitlist/count?date=${map.getCurrentDate()}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const count = data.count || 0;
+                        badge.textContent = count > 0 ? count : '';
+                        badge.dataset.count = count;
+                    })
+                    .catch(err => console.error('Error fetching waitlist count:', err));
+            }
+        }
+
+        // Listen for waitlist count updates
+        window.addEventListener('waitlist:countUpdate', updateWaitlistBadge);
+
+        // Update badge when date changes
+        map.on('onDateChange', () => {
+            updateWaitlistBadge();
+        });
+
+        // Initial badge update after short delay for map to load
+        setTimeout(updateWaitlistBadge, 500);
 
         // ==========================================================================
         // SEARCH MANAGER (Enhanced with filters and grouped results)
