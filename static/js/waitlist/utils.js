@@ -107,13 +107,13 @@ export function getStatusLabel(status) {
  */
 export function getTimePreferenceLabel(pref) {
     const labels = {
-        'morning': 'Manana',
-        'manana': 'Manana',
+        'morning': 'Mañana',
+        'manana': 'Mañana',
         'afternoon': 'Tarde',
         'tarde': 'Tarde',
-        'mediodia': 'Mediodia',
-        'all_day': 'Todo el dia',
-        'todo_el_dia': 'Todo el dia'
+        'mediodia': 'Mediodía',
+        'all_day': 'Todo el día',
+        'todo_el_dia': 'Todo el día'
     };
     return labels[pref] || pref;
 }
