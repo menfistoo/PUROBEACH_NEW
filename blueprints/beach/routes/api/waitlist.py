@@ -14,6 +14,7 @@ from models.waitlist import (
     get_waitlist_count,
     get_waitlist_entry,
     create_waitlist_entry,
+    update_waitlist_entry,
     update_waitlist_status,
     convert_to_reservation,
     get_waitlist_history,
@@ -132,24 +133,39 @@ def register_routes(bp):
     @permission_required('beach.waitlist.manage')
     def update_entry(entry_id):
         """
-        Update waitlist entry status.
+        Update waitlist entry.
+
+        If only 'status' is provided, updates status only.
+        Otherwise, performs full entry update.
 
         Request body:
-            status: New status
+            status: New status (if only changing status)
+            OR full entry fields for complete update
 
         Returns:
             JSON with success
         """
         data = request.get_json()
 
-        if not data or 'status' not in data:
-            return jsonify({'success': False, 'error': 'Estado requerido'}), 400
+        if not data:
+            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
 
         try:
-            update_waitlist_status(entry_id, data['status'])
+            # If only status field, do status-only update
+            if list(data.keys()) == ['status']:
+                update_waitlist_status(entry_id, data['status'])
+                return jsonify({
+                    'success': True,
+                    'message': 'Estado actualizado'
+                })
+
+            # Otherwise, do full update
+            update_waitlist_entry(entry_id, data)
+            entry = get_waitlist_entry(entry_id)
             return jsonify({
                 'success': True,
-                'message': 'Estado actualizado'
+                'message': 'Entrada actualizada',
+                'entry': entry
             })
         except ValueError as e:
             return jsonify({'success': False, 'error': str(e)}), 400

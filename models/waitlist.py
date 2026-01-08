@@ -242,6 +242,114 @@ def get_waitlist_entry(entry_id: int) -> Optional[dict]:
 # UPDATE
 # =============================================================================
 
+def update_waitlist_entry(entry_id: int, data: dict) -> bool:
+    """
+    Update a waitlist entry with new data.
+
+    Args:
+        entry_id: Entry ID
+        data: Fields to update:
+            - customer_id (optional)
+            - external_name (optional)
+            - external_phone (optional)
+            - requested_date (optional)
+            - num_people (optional)
+            - preferred_zone_id (optional)
+            - preferred_furniture_type_id (optional)
+            - time_preference (optional)
+            - reservation_type (optional)
+            - package_id (optional)
+            - notes (optional)
+
+    Returns:
+        bool: True if updated
+
+    Raises:
+        ValueError: If validation fails
+    """
+    # Get current entry
+    entry = get_waitlist_entry(entry_id)
+    if not entry:
+        raise ValueError("Entrada no encontrada")
+
+    # Cannot edit converted or expired entries
+    if entry['status'] in ('converted', 'expired'):
+        raise ValueError("No se puede modificar una entrada ya procesada")
+
+    # Validate customer if changing
+    customer_id = data.get('customer_id', entry.get('customer_id'))
+    external_name = data.get('external_name', entry.get('external_name'))
+    external_phone = data.get('external_phone', entry.get('external_phone'))
+
+    if external_name:
+        external_name = external_name.strip()
+    if external_phone:
+        external_phone = external_phone.strip()
+
+    if not customer_id and not (external_name and external_phone):
+        raise ValueError("Debe seleccionar un cliente o ingresar nombre y teléfono")
+
+    # Validate date if changing
+    requested_date = data.get('requested_date', entry['requested_date'])
+    if requested_date:
+        req_date = date.fromisoformat(requested_date)
+        if req_date < date.today():
+            raise ValueError("La fecha debe ser hoy o futura")
+
+    # Validate num_people
+    num_people = data.get('num_people', entry['num_people'])
+    if not isinstance(num_people, int) or num_people < 1 or num_people > 20:
+        raise ValueError("Número de personas debe ser entre 1 y 20")
+
+    # Validate time_preference
+    time_pref = data.get('time_preference', entry['time_preference'])
+    if time_pref and time_pref not in TIME_PREFERENCES:
+        raise ValueError("Preferencia de horario no válida")
+
+    # Validate reservation_type
+    res_type = data.get('reservation_type', entry['reservation_type'])
+    if res_type not in ('incluido', 'paquete', 'consumo_minimo'):
+        raise ValueError("Tipo de reserva no válido")
+
+    # Validate package_id
+    package_id = data.get('package_id', entry['package_id'])
+    if res_type == 'paquete' and not package_id:
+        raise ValueError("Debe seleccionar un paquete")
+
+    with get_db() as conn:
+        conn.execute('''
+            UPDATE beach_waitlist
+            SET customer_id = ?,
+                external_name = ?,
+                external_phone = ?,
+                requested_date = ?,
+                num_people = ?,
+                preferred_zone_id = ?,
+                preferred_furniture_type_id = ?,
+                time_preference = ?,
+                reservation_type = ?,
+                package_id = ?,
+                notes = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (
+            customer_id if customer_id else None,
+            external_name if not customer_id else None,
+            external_phone if not customer_id else None,
+            requested_date,
+            num_people,
+            data.get('preferred_zone_id', entry['preferred_zone_id']),
+            data.get('preferred_furniture_type_id', entry['preferred_furniture_type_id']),
+            time_pref,
+            res_type,
+            package_id if res_type == 'paquete' else None,
+            data.get('notes', entry['notes']),
+            entry_id
+        ))
+        conn.commit()
+    return True
+
+
 def update_waitlist_status(entry_id: int, status: str) -> bool:
     """
     Update the status of a waitlist entry.

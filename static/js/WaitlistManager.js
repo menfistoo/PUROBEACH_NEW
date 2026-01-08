@@ -31,7 +31,8 @@ class WaitlistManager {
             customerType: 'interno',
             zones: [],
             furnitureTypes: [],
-            packages: []
+            packages: [],
+            editingEntryId: null  // Track entry being edited
         };
 
         // Callbacks
@@ -462,11 +463,14 @@ class WaitlistManager {
             prefsHtml += `<span class="waitlist-pref-chip"><i class="fas fa-clock"></i> ${timeLabel}</span>`;
         }
 
-        // Build actions (only for pending entries) - simplified: only Convertir and Cancel
+        // Build actions (only for pending entries)
         let actionsHtml = '';
         if (!isHistory && (entry.status === 'waiting' || entry.status === 'contacted' || entry.status === 'no_answer')) {
             actionsHtml = `
                 <div class="waitlist-entry-actions">
+                    <button type="button" class="btn-action btn-edit" data-action="edit" data-id="${entry.id}">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
                     <button type="button" class="btn-action btn-convert" data-action="convert" data-id="${entry.id}">
                         <i class="fas fa-check"></i> Convertir
                     </button>
@@ -533,6 +537,11 @@ class WaitlistManager {
             return;
         }
 
+        if (action === 'edit') {
+            this._handleEdit(entryId);
+            return;
+        }
+
         // Status change actions
         const statusMap = {
             'contacted': 'contacted',
@@ -588,6 +597,125 @@ class WaitlistManager {
     }
 
     /**
+     * Handle edit action - open modal in edit mode
+     */
+    _handleEdit(entryId) {
+        const entry = this.state.entries.find(e => e.id === entryId);
+        if (!entry) return;
+
+        // Reset form first (clears editingEntryId and resets title/button)
+        this._resetForm();
+
+        // Then store entry being edited (after reset)
+        this.state.editingEntryId = entryId;
+
+        // Set customer type (this also updates the UI)
+        this._setCustomerType(entry.customer_type || 'interno');
+
+        // Pre-fill customer info
+        if (entry.customer_id) {
+            // Customer already exists (converted hotel guest or existing external)
+            this.state.selectedCustomerId = entry.customer_id;
+            if (this.customerIdInput) this.customerIdInput.value = entry.customer_id;
+
+            // Display customer name in appropriate section
+            if (entry.customer_type === 'interno') {
+                // For internal, show in selected guest display
+                const guestDisplay = document.getElementById('waitlistSelectedGuest');
+                const guestName = document.getElementById('waitlistGuestName');
+                const guestRoom = document.getElementById('waitlistGuestRoom');
+                const searchWrapper = document.querySelector('#waitlistRoomSearchGroup .room-search-wrapper');
+
+                if (guestDisplay && guestName) {
+                    guestName.textContent = entry.customer_name || 'Huésped';
+                    if (guestRoom && entry.room_number) {
+                        guestRoom.textContent = `Hab. ${entry.room_number}`;
+                    }
+                    guestDisplay.style.display = 'flex';
+                    if (searchWrapper) searchWrapper.style.display = 'none';
+                }
+            } else {
+                // For external with customer_id, show name in externo fields
+                const externoNameInput = document.getElementById('waitlistExternoName');
+                const externoPhoneInput = document.getElementById('waitlistExternoPhone');
+                if (externoNameInput) externoNameInput.value = entry.customer_name || '';
+                if (externoPhoneInput) externoPhoneInput.value = entry.phone || '';
+            }
+        } else if (entry.external_name) {
+            // External customer (not yet converted to customer record)
+            const externoNameInput = document.getElementById('waitlistExternoName');
+            const externoPhoneInput = document.getElementById('waitlistExternoPhone');
+            if (externoNameInput) externoNameInput.value = entry.external_name;
+            if (externoPhoneInput) externoPhoneInput.value = entry.external_phone || '';
+        }
+
+        // Pre-fill date
+        if (this.dateInput && entry.requested_date) {
+            // Normalize to ISO format
+            let isoDate = entry.requested_date;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+                try {
+                    const d = new Date(isoDate);
+                    if (!isNaN(d.getTime())) {
+                        isoDate = d.toISOString().split('T')[0];
+                    }
+                } catch (e) {}
+            }
+            this.dateInput.value = isoDate;
+        }
+
+        // Pre-fill num_people
+        if (this.numPeopleInput && entry.num_people) {
+            this.numPeopleInput.value = entry.num_people;
+        }
+
+        // Pre-fill preferences
+        if (this.zonePreferenceSelect && entry.preferred_zone_id) {
+            this.zonePreferenceSelect.value = entry.preferred_zone_id;
+        }
+        if (this.furnitureTypeSelect && entry.preferred_furniture_type_id) {
+            this.furnitureTypeSelect.value = entry.preferred_furniture_type_id;
+        }
+        if (this.timePreferenceSelect && entry.time_preference) {
+            this.timePreferenceSelect.value = entry.time_preference;
+        }
+
+        // Pre-fill reservation type
+        if (entry.reservation_type) {
+            const typeRadio = document.querySelector(`input[name="reservationType"][value="${entry.reservation_type}"]`);
+            if (typeRadio) {
+                typeRadio.checked = true;
+                this._onReservationTypeChange(); // Show/hide package group based on selection
+            }
+        }
+
+        // Pre-fill package
+        if (this.packageSelect && entry.package_id) {
+            this.packageSelect.value = entry.package_id;
+        }
+
+        // Pre-fill notes
+        if (this.notesInput && entry.notes) {
+            this.notesInput.value = entry.notes;
+        }
+
+        // Update modal title for edit mode
+        const modalTitle = document.getElementById('waitlistModalTitle');
+        if (modalTitle) {
+            modalTitle.innerHTML = '<i class="fas fa-edit me-2"></i> Editar en Lista de Espera';
+        }
+
+        // Update submit button text (keep save-text/save-loading structure)
+        const saveText = this.modalSaveBtn?.querySelector('.save-text');
+        if (saveText) {
+            saveText.innerHTML = '<i class="fas fa-save me-1"></i> Guardar Cambios';
+        }
+
+        // Open modal
+        this._openAddModal();
+    }
+
+    /**
      * Mark an entry as converted after reservation created
      * @param {number} entryId - Waitlist entry ID
      * @param {number} reservationId - Created reservation ID
@@ -623,13 +751,20 @@ class WaitlistManager {
     _openAddModal() {
         if (!this.modal) return;
 
-        // Reset form
-        this._resetForm();
+        // Only reset form if not in edit mode (edit mode pre-fills before calling this)
+        if (!this.state.editingEntryId) {
+            this._resetForm();
 
-        // Set default date to current date
-        if (this.dateInput) {
-            this.dateInput.value = this.state.currentDate;
-            this.dateInput.min = this._getTodayDate();
+            // Set default date to current date
+            if (this.dateInput) {
+                this.dateInput.value = this.state.currentDate;
+                this.dateInput.min = this._getTodayDate();
+            }
+        } else {
+            // In edit mode, just set min date
+            if (this.dateInput) {
+                this.dateInput.min = this._getTodayDate();
+            }
         }
 
         // Show modal
@@ -642,6 +777,9 @@ class WaitlistManager {
     }
 
     _resetForm() {
+        // Clear editing state
+        this.state.editingEntryId = null;
+
         // Reset customer type to interno
         this._setCustomerType('interno');
 
@@ -673,6 +811,16 @@ class WaitlistManager {
         // Hide search results
         if (this.roomResults) this.roomResults.classList.remove('show');
         if (this.customerResults) this.customerResults.classList.remove('show');
+
+        // Reset modal title and button text to defaults
+        const modalTitle = document.getElementById('waitlistModalTitle');
+        if (modalTitle) {
+            modalTitle.innerHTML = '<i class="fas fa-user-plus me-2"></i> Anadir a Lista de Espera';
+        }
+        const saveText = this.modalSaveBtn?.querySelector('.save-text');
+        if (saveText) {
+            saveText.innerHTML = '<i class="fas fa-check me-1"></i> Anadir';
+        }
     }
 
     _setCustomerType(type) {
@@ -839,7 +987,12 @@ class WaitlistManager {
     _clearSelectedGuest() {
         this.state.selectedHotelGuestId = null;
         if (this.hotelGuestIdInput) this.hotelGuestIdInput.value = '';
+        if (this.customerIdInput) this.customerIdInput.value = '';
         if (this.selectedGuestEl) this.selectedGuestEl.style.display = 'none';
+
+        // Show the search wrapper and input
+        const searchWrapper = document.querySelector('#waitlistRoomSearchGroup .room-search-wrapper');
+        if (searchWrapper) searchWrapper.style.display = 'block';
         if (this.roomSearchInput) {
             this.roomSearchInput.style.display = 'block';
             this.roomSearchInput.value = '';
@@ -962,7 +1115,7 @@ class WaitlistManager {
         const externoName = document.getElementById('waitlistExternoName')?.value?.trim();
         const externoPhone = document.getElementById('waitlistExternoPhone')?.value?.trim();
 
-        if (this.state.customerType === 'interno' && !hotelGuestId) {
+        if (this.state.customerType === 'interno' && !hotelGuestId && !customerId) {
             this._showToast('Selecciona un huesped', 'warning');
             return;
         }
@@ -1043,8 +1196,15 @@ class WaitlistManager {
                 payload.external_phone = externoPhone;
             }
 
-            const response = await fetch(`${this.options.apiBaseUrl}/waitlist`, {
-                method: 'POST',
+            // Determine if this is an edit or create
+            const isEdit = !!this.state.editingEntryId;
+            const url = isEdit
+                ? `${this.options.apiBaseUrl}/waitlist/${this.state.editingEntryId}`
+                : `${this.options.apiBaseUrl}/waitlist`;
+            const method = isEdit ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.csrfToken
@@ -1055,12 +1215,18 @@ class WaitlistManager {
             const data = await response.json();
 
             if (data.success) {
-                this._showToast(data.message || 'Agregado a lista de espera', 'success');
+                const message = isEdit
+                    ? 'Entrada actualizada'
+                    : (data.message || 'Agregado a lista de espera');
+                this._showToast(message, 'success');
                 this._closeAddModal();
                 await this.refresh();
                 this._dispatchCountUpdate();
             } else {
-                this._showToast(data.error || 'Error al crear entrada', 'error');
+                const errorMsg = isEdit
+                    ? (data.error || 'Error al actualizar entrada')
+                    : (data.error || 'Error al crear entrada');
+                this._showToast(errorMsg, 'error');
             }
         } catch (error) {
             console.error('WaitlistManager: Error submitting entry', error);
