@@ -41,6 +41,7 @@ from .pricing import (
 )
 from .pricing_integration import migrate_add_pricing_fields
 from .add_payment_method import migrate_add_payment_method
+from .waitlist import migrate_waitlist_table, migrate_waitlist_permissions
 
 
 # Ordered list of all migrations
@@ -92,6 +93,10 @@ MIGRATIONS = [
     # Phase 10: Pricing integration (reservation columns)
     ('add_pricing_fields', migrate_add_pricing_fields),
     ('add_payment_method', migrate_add_payment_method),
+
+    # Phase 11: Waitlist
+    ('waitlist_table', migrate_waitlist_table),
+    ('waitlist_permissions', migrate_waitlist_permissions),
 ]
 
 
@@ -177,4 +182,6 @@ __all__ = [
     'migrate_minimum_consumption_calculation_type',
     'migrate_add_pricing_fields',
     'migrate_add_payment_method',
+    'migrate_waitlist_table',
+    'migrate_waitlist_permissions',
 ]
