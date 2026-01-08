@@ -1442,6 +1442,16 @@ def get_revenue_by_zone(start_date, end_date)
 ## Notes & Discoveries
 
 **Date:** 2026-01-08
+**Topic:** Hotel Guest Room Change Detection
+**Notes:**
+- Implemented room change detection during Excel import
+- Guests matched by booking_reference (reservation number) first, fallback to room+date+name
+- When room changes detected: updates hotel_guest, beach_customer, and future reservations
+- Past reservations preserved for historical accuracy
+- Import results show room change summary with status
+- Design doc: `docs/plans/2026-01-08-room-change-handling-design.md`
+
+**Date:** 2026-01-08
 **Topic:** Phase 7a Complete - Waiting List Finished
 **Notes:**
 - Waiting List feature completed, marking Phase 7a as fully done
