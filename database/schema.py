@@ -16,6 +16,7 @@ def drop_tables(db):
         'beach_packages',
         'beach_minimum_consumption_policies',
         'beach_price_catalog',
+        'beach_waitlist',
         'beach_reservation_tags',
         'beach_reservation_daily_states',
         'beach_reservation_furniture',
@@ -421,6 +422,27 @@ def create_tables(db):
         )
     ''')
 
+    # 6b. Waitlist Table
+    db.execute('''
+        CREATE TABLE beach_waitlist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id INTEGER NOT NULL REFERENCES beach_customers(id) ON DELETE CASCADE,
+            requested_date DATE NOT NULL,
+            num_people INTEGER NOT NULL DEFAULT 1,
+            preferred_zone_id INTEGER REFERENCES beach_zones(id),
+            preferred_furniture_type_id INTEGER REFERENCES beach_furniture_types(id),
+            time_preference TEXT CHECK(time_preference IN ('morning', 'afternoon', 'all_day')),
+            reservation_type TEXT DEFAULT 'incluido' CHECK(reservation_type IN ('incluido', 'paquete', 'consumo_minimo')),
+            package_id INTEGER REFERENCES beach_packages(id),
+            notes TEXT,
+            status TEXT DEFAULT 'waiting' CHECK(status IN ('waiting', 'contacted', 'converted', 'declined', 'no_answer', 'expired')),
+            converted_reservation_id INTEGER REFERENCES beach_reservations(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_by INTEGER REFERENCES users(id)
+        )
+    ''')
+
     # 7. Configuration and Audit Tables
     db.execute('''
         CREATE TABLE beach_config (
@@ -497,3 +519,7 @@ def create_indexes(db):
     db.execute('CREATE INDEX idx_hotel_guests_dates ON hotel_guests(arrival_date, departure_date)')
     db.execute('CREATE INDEX idx_hotel_guests_active ON hotel_guests(departure_date)')
     db.execute('CREATE INDEX idx_hotel_guests_main ON hotel_guests(room_number, is_main_guest)')
+
+    # Waitlist indexes
+    db.execute('CREATE INDEX idx_waitlist_date_status ON beach_waitlist(requested_date, status)')
+    db.execute('CREATE INDEX idx_waitlist_customer ON beach_waitlist(customer_id)')
