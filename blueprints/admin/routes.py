@@ -314,6 +314,27 @@ def hotel_guests_import():
             else:
                 flash('No se importaron registros', 'warning')
 
+            # Show room changes if any
+            if result.get('room_changes'):
+                room_change_count = len(result['room_changes'])
+                flash(f"Cambios de habitación detectados: {room_change_count}", 'info')
+
+                for change in result['room_changes'][:5]:  # Show max 5 details
+                    status_parts = []
+                    if change['customer_updated']:
+                        status_parts.append('cliente actualizado')
+                    else:
+                        status_parts.append('cliente no encontrado')
+
+                    if change['reservations_updated'] > 0:
+                        status_parts.append(f"{change['reservations_updated']} reserva(s) actualizada(s)")
+
+                    status_text = ', '.join(status_parts)
+                    flash(f"  • {change['guest_name']}: {change['old_room']} → {change['new_room']} ({status_text})", 'info')
+
+                if room_change_count > 5:
+                    flash(f"  ... y {room_change_count - 5} cambio(s) más", 'info')
+
             # Show errors if any
             if result['errors']:
                 error_count = len(result['errors'])

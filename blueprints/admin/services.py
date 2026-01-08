@@ -203,13 +203,14 @@ def import_hotel_guests_from_excel(
     Returns:
         Dict with 'created', 'updated', 'errors', 'total' counts
     """
-    from models.hotel_guest import upsert_hotel_guest
+    from models.hotel_guest import upsert_hotel_guest, propagate_room_change
 
     result = {
         'created': 0,
         'updated': 0,
         'errors': [],
-        'total': 0
+        'total': 0,
+        'room_changes': []
     }
 
     try:
@@ -304,17 +305,33 @@ def import_hotel_guests_from_excel(
                     guest_name=guest_name,
                     arrival_date=arrival_date,
                     departure_date=departure_date,
+                    booking_reference=booking_reference,
                     guest_type=guest_type,
                     nationality=nationality,
                     vip_code=vip_code,
-                    source_file=source_name,
-                    booking_reference=booking_reference
+                    source_file=source_name
                 )
 
                 if upsert_result['action'] == 'created':
                     result['created'] += 1
                 else:
                     result['updated'] += 1
+
+                # Handle room change if detected
+                if upsert_result.get('room_changed'):
+                    propagate_result = propagate_room_change(
+                        guest_name=guest_name,
+                        old_room=upsert_result['old_room'],
+                        new_room=upsert_result['new_room']
+                    )
+
+                    result['room_changes'].append({
+                        'guest_name': guest_name,
+                        'old_room': upsert_result['old_room'],
+                        'new_room': upsert_result['new_room'],
+                        'customer_updated': propagate_result['customer_updated'],
+                        'reservations_updated': propagate_result['reservations_updated']
+                    })
 
             except Exception as e:
                 result['errors'].append(f"Fila {row_num}: {str(e)}")

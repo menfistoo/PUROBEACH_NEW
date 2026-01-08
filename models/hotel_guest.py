@@ -234,23 +234,29 @@ def upsert_hotel_guest(
     guest_name: str,
     arrival_date: date,
     departure_date: date,
+    booking_reference: str = None,
     **kwargs
 ) -> Dict[str, Any]:
     """
-    Insert or update hotel guest based on room_number + arrival_date + guest_name.
+    Insert or update hotel guest.
 
-    Supports multiple guests per room - uniqueness is by (room, date, name).
-    First guest in a room is marked as main guest.
+    Matching priority:
+    1. If booking_reference provided: match by (booking_reference + guest_name)
+    2. Fallback: match by (room_number + arrival_date + guest_name)
+
+    Supports multiple guests per room. First guest in a room is marked as main guest.
+    Detects room changes when booking_reference matches but room_number differs.
 
     Args:
         room_number: Room number
         guest_name: Guest full name
         arrival_date: Check-in date
         departure_date: Check-out date
+        booking_reference: Hotel PMS reservation number (preferred for matching)
         **kwargs: Additional fields to update (including is_main_guest)
 
     Returns:
-        Dict with 'id', 'action' ('created' or 'updated'), 'is_main_guest'
+        Dict with 'id', 'action', 'is_main_guest', 'room_changed', 'old_room', 'new_room'
     """
     db = get_db()
     cursor = db.cursor()
@@ -258,13 +264,29 @@ def upsert_hotel_guest(
     arrival_str = arrival_date.isoformat() if isinstance(arrival_date, date) else arrival_date
     departure_str = departure_date.isoformat() if isinstance(departure_date, date) else departure_date
 
-    # Check if this exact guest exists (room + date + name)
-    cursor.execute('''
-        SELECT id, is_main_guest FROM hotel_guests
-        WHERE room_number = ? AND arrival_date = ? AND guest_name = ?
-    ''', (room_number, arrival_str, guest_name))
+    existing = None
+    room_changed = False
+    old_room = None
 
-    existing = cursor.fetchone()
+    # Priority 1: Match by booking_reference + guest_name (if booking_reference provided)
+    if booking_reference:
+        cursor.execute('''
+            SELECT id, room_number, is_main_guest FROM hotel_guests
+            WHERE booking_reference = ? AND guest_name = ?
+        ''', (booking_reference, guest_name))
+        existing = cursor.fetchone()
+
+        if existing and existing['room_number'] != room_number:
+            room_changed = True
+            old_room = existing['room_number']
+
+    # Priority 2: Fallback to room + date + name matching
+    if not existing:
+        cursor.execute('''
+            SELECT id, room_number, is_main_guest FROM hotel_guests
+            WHERE room_number = ? AND arrival_date = ? AND guest_name = ?
+        ''', (room_number, arrival_str, guest_name))
+        existing = cursor.fetchone()
 
     if existing:
         # Update existing record
@@ -272,6 +294,16 @@ def upsert_hotel_guest(
         is_main = existing['is_main_guest']
         update_fields = ['departure_date = ?', 'updated_at = CURRENT_TIMESTAMP']
         update_values = [departure_str]
+
+        # Update room_number if changed
+        if room_changed:
+            update_fields.append('room_number = ?')
+            update_values.append(room_number)
+
+        # Update booking_reference if provided and not already set
+        if booking_reference:
+            update_fields.append('booking_reference = ?')
+            update_values.append(booking_reference)
 
         for field, value in kwargs.items():
             if value is not None and field != 'is_main_guest':
@@ -287,7 +319,14 @@ def upsert_hotel_guest(
         ''', update_values)
 
         db.commit()
-        return {'id': guest_id, 'action': 'updated', 'is_main_guest': is_main}
+        return {
+            'id': guest_id,
+            'action': 'updated',
+            'is_main_guest': is_main,
+            'room_changed': room_changed,
+            'old_room': old_room,
+            'new_room': room_number if room_changed else None
+        }
     else:
         # Check if this is the first guest for this room+date
         cursor.execute('''
@@ -306,9 +345,106 @@ def upsert_hotel_guest(
             arrival_date=arrival_date,
             departure_date=departure_date,
             is_main_guest=is_main_guest,
+            booking_reference=booking_reference,
             **{k: v for k, v in kwargs.items() if k != 'is_main_guest'}
         )
-        return {'id': guest_id, 'action': 'created', 'is_main_guest': is_main_guest}
+        return {
+            'id': guest_id,
+            'action': 'created',
+            'is_main_guest': is_main_guest,
+            'room_changed': False,
+            'old_room': None,
+            'new_room': None
+        }
+
+
+def propagate_room_change(
+    guest_name: str,
+    old_room: str,
+    new_room: str
+) -> Dict[str, Any]:
+    """
+    Propagate room change to beach_customers and future reservations.
+
+    When a hotel guest changes rooms, this function updates:
+    1. The beach_customer record (interno with matching name and old room)
+    2. Current and future reservations (start_date >= today)
+
+    Past reservations are left unchanged for historical accuracy.
+
+    Args:
+        guest_name: Guest full name to match
+        old_room: Previous room number
+        new_room: New room number
+
+    Returns:
+        Dict with 'customer_updated', 'customer_id', 'reservations_updated'
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    result = {
+        'customer_updated': False,
+        'customer_id': None,
+        'reservations_updated': 0
+    }
+
+    # Find the beach_customer (interno with old room + name match)
+    # Use flexible name matching (guest_name could be "First Last" or "Last, First")
+    cursor.execute('''
+        SELECT id, first_name, last_name FROM beach_customers
+        WHERE customer_type = 'interno'
+          AND room_number = ?
+    ''', (old_room,))
+
+    customers = cursor.fetchall()
+
+    # Find best match by name
+    matched_customer = None
+    guest_name_normalized = guest_name.lower().strip()
+
+    for customer in customers:
+        first = (customer['first_name'] or '').lower().strip()
+        last = (customer['last_name'] or '').lower().strip()
+        full_name = f"{first} {last}".strip()
+        full_name_reversed = f"{last} {first}".strip()
+
+        # Check if guest_name matches any combination
+        if (guest_name_normalized == full_name or
+            guest_name_normalized == full_name_reversed or
+            guest_name_normalized in full_name or
+            full_name in guest_name_normalized):
+            matched_customer = customer
+            break
+
+    if not matched_customer:
+        return result
+
+    customer_id = matched_customer['id']
+    result['customer_id'] = customer_id
+
+    # Update customer's room_number
+    cursor.execute('''
+        UPDATE beach_customers
+        SET room_number = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (new_room, customer_id))
+
+    result['customer_updated'] = cursor.rowcount > 0
+
+    # Update current and future reservations (start_date >= today)
+    today = date.today().isoformat()
+    cursor.execute('''
+        UPDATE beach_reservations
+        SET updated_at = CURRENT_TIMESTAMP
+        WHERE customer_id = ?
+          AND start_date >= ?
+    ''', (customer_id, today))
+
+    result['reservations_updated'] = cursor.rowcount
+
+    db.commit()
+    return result
 
 
 def delete_hotel_guest(guest_id: int) -> bool:
