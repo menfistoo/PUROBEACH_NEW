@@ -235,6 +235,7 @@ def register_routes(bp):
 
     @bp.route('/waitlist/statuses', methods=['GET'])
     @login_required
+    @permission_required('beach.waitlist.view')
     def get_statuses():
         """Get available waitlist statuses."""
         return jsonify({
@@ -244,6 +245,7 @@ def register_routes(bp):
 
     @bp.route('/zones', methods=['GET'])
     @login_required
+    @permission_required('beach.waitlist.view')
     def get_zones():
         """Get active zones for dropdown."""
         from models.zone import get_all_zones
@@ -259,6 +261,7 @@ def register_routes(bp):
 
     @bp.route('/furniture-types', methods=['GET'])
     @login_required
+    @permission_required('beach.waitlist.view')
     def get_furniture_types():
         """Get active furniture types for dropdown."""
         from models.furniture_type import get_all_furniture_types
@@ -274,6 +277,7 @@ def register_routes(bp):
 
     @bp.route('/packages', methods=['GET'])
     @login_required
+    @permission_required('beach.waitlist.view')
     def get_packages():
         """Get active packages for dropdown."""
         from database import get_db
