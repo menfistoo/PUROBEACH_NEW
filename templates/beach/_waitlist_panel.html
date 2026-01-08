@@ -1,0 +1,269 @@
+{#
+    Waitlist Panel Partial
+    A slide-in panel for viewing and managing the waitlist from the map
+    Consistent with ReservationPanel and NewReservationPanel design patterns
+#}
+
+<!-- Panel Backdrop -->
+<div class="waitlist-panel-backdrop" id="waitlistPanelBackdrop"></div>
+
+<!-- Waitlist Panel -->
+<div class="waitlist-panel" id="waitlistPanel" role="dialog" aria-labelledby="waitlistPanelTitle" aria-modal="true">
+    <!-- Header -->
+    <div class="panel-header">
+        <button type="button" class="panel-close-btn" id="waitlistPanelCloseBtn"
+                aria-label="Cerrar panel" title="Cerrar">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+        <div class="panel-title">
+            <span class="panel-ticket" id="waitlistPanelTitle">Lista de Espera</span>
+            <span class="panel-date" id="waitlistPanelDate"></span>
+        </div>
+        <button type="button" class="panel-add-btn" id="waitlistAddBtn"
+                aria-label="Anadir entrada" title="Anadir">
+            <i class="fas fa-plus"></i>
+        </button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="waitlist-tabs">
+        <button type="button" class="waitlist-tab active" data-tab="pending" id="waitlistTabPending">
+            <span class="tab-text">Pendientes</span>
+            <span class="tab-badge" id="waitlistPendingCount">0</span>
+        </button>
+        <button type="button" class="waitlist-tab" data-tab="history" id="waitlistTabHistory">
+            <span class="tab-text">Historial</span>
+        </button>
+    </div>
+
+    <!-- Body (scrollable) -->
+    <div class="panel-body">
+        <!-- Loading State -->
+        <div class="panel-loading" id="waitlistPanelLoading" style="display: none;">
+            <span class="spinner-border spinner-border-sm" role="status"></span>
+            <span>Cargando lista de espera...</span>
+        </div>
+
+        <!-- Pending Tab Content -->
+        <div class="waitlist-tab-content active" id="waitlistContentPending">
+            <div class="waitlist-entries" id="waitlistEntriesPending">
+                <!-- Entries populated dynamically -->
+            </div>
+            <div class="waitlist-empty" id="waitlistEmptyPending" style="display: none;">
+                <i class="fas fa-clipboard-list"></i>
+                <p>No hay entradas pendientes</p>
+                <span class="empty-hint">Haz clic en "+" para anadir una entrada</span>
+            </div>
+        </div>
+
+        <!-- History Tab Content -->
+        <div class="waitlist-tab-content" id="waitlistContentHistory" style="display: none;">
+            <div class="waitlist-entries" id="waitlistEntriesHistory">
+                <!-- History entries populated dynamically -->
+            </div>
+            <div class="waitlist-empty" id="waitlistEmptyHistory" style="display: none;">
+                <i class="fas fa-history"></i>
+                <p>Sin historial</p>
+                <span class="empty-hint">Las entradas completadas apareceran aqui</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="panel-footer">
+        <button type="button" class="btn-add-entry" id="waitlistFooterAddBtn">
+            <i class="fas fa-plus me-2"></i>
+            Anadir a Lista de Espera
+        </button>
+    </div>
+</div>
+
+<!-- Add Entry Modal -->
+<div class="waitlist-modal" id="waitlistAddModal" role="dialog" aria-labelledby="waitlistModalTitle" aria-modal="true" style="display: none;">
+    <div class="waitlist-modal-backdrop" id="waitlistModalBackdrop"></div>
+    <div class="waitlist-modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="waitlistModalTitle">
+                <i class="fas fa-user-plus me-2"></i>
+                Anadir a Lista de Espera
+            </h5>
+            <button type="button" class="modal-close-btn" id="waitlistModalCloseBtn" aria-label="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="waitlistAddForm">
+                <!-- Customer Type Toggle -->
+                <div class="form-group customer-type-toggle">
+                    <label class="form-label">Tipo de Cliente</label>
+                    <div class="btn-group-toggle">
+                        <button type="button" class="toggle-btn active" data-type="interno" id="waitlistTypeInterno">
+                            <i class="fas fa-hotel me-1"></i> Interno
+                        </button>
+                        <button type="button" class="toggle-btn" data-type="externo" id="waitlistTypeExterno">
+                            <i class="fas fa-user me-1"></i> Externo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Room Search (Interno) -->
+                <div class="form-group room-search-group" id="waitlistRoomSearchGroup">
+                    <label class="form-label" for="waitlistRoomSearch">Habitacion</label>
+                    <div class="room-search-wrapper">
+                        <input type="text"
+                               id="waitlistRoomSearch"
+                               class="form-control"
+                               placeholder="Buscar por numero de habitacion..."
+                               autocomplete="off">
+                        <div class="room-search-results" id="waitlistRoomResults"></div>
+                    </div>
+                    <div class="selected-guest" id="waitlistSelectedGuest" style="display: none;">
+                        <div class="guest-info">
+                            <span class="guest-name" id="waitlistGuestName">-</span>
+                            <span class="guest-room" id="waitlistGuestRoom">-</span>
+                        </div>
+                        <button type="button" class="btn-clear-guest" id="waitlistClearGuest">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Customer Search (Externo) -->
+                <div class="form-group customer-search-group" id="waitlistCustomerSearchGroup" style="display: none;">
+                    <label class="form-label" for="waitlistCustomerSearch">Cliente</label>
+                    <div class="customer-search-wrapper">
+                        <input type="text"
+                               id="waitlistCustomerSearch"
+                               class="form-control"
+                               placeholder="Buscar por nombre o telefono..."
+                               autocomplete="off">
+                        <div class="customer-search-results cs-results" id="waitlistCustomerResults"></div>
+                    </div>
+                    <div class="selected-customer" id="waitlistSelectedCustomer" style="display: none;">
+                        <div class="customer-info">
+                            <span class="customer-name" id="waitlistCustomerName">-</span>
+                            <span class="customer-phone" id="waitlistCustomerPhone">-</span>
+                        </div>
+                        <button type="button" class="btn-clear-customer" id="waitlistClearCustomer">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <button type="button" class="btn-create-customer" id="waitlistCreateCustomerBtn">
+                        <i class="fas fa-user-plus me-1"></i> Crear cliente nuevo
+                    </button>
+                </div>
+
+                <!-- Date and Time Row -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="waitlistDate">Fecha</label>
+                        <input type="date" id="waitlistDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="waitlistNumPeople">Personas</label>
+                        <input type="number" id="waitlistNumPeople" class="form-control" min="1" max="20" value="2" required>
+                    </div>
+                </div>
+
+                <!-- Time Preference -->
+                <div class="form-group">
+                    <label class="form-label" for="waitlistTimePreference">Preferencia de Horario</label>
+                    <select id="waitlistTimePreference" class="form-select">
+                        <option value="">Sin preferencia</option>
+                        <option value="manana">Manana (10:00 - 14:00)</option>
+                        <option value="mediodia">Mediodia (12:00 - 16:00)</option>
+                        <option value="tarde">Tarde (14:00 - 18:00)</option>
+                        <option value="todo_el_dia">Todo el dia</option>
+                    </select>
+                </div>
+
+                <!-- Zone Preference -->
+                <div class="form-group">
+                    <label class="form-label" for="waitlistZonePreference">Zona Preferida</label>
+                    <select id="waitlistZonePreference" class="form-select">
+                        <option value="">Sin preferencia</option>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Furniture Type Preference -->
+                <div class="form-group">
+                    <label class="form-label" for="waitlistFurnitureType">Tipo de Mobiliario</label>
+                    <select id="waitlistFurnitureType" class="form-select">
+                        <option value="">Sin preferencia</option>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Reservation Type -->
+                <div class="form-group reservation-type-group">
+                    <label class="form-label">Tipo de Reserva</label>
+                    <div class="reservation-type-options">
+                        <label class="radio-option">
+                            <input type="radio" name="reservationType" value="consumo_minimo" checked>
+                            <span class="radio-label">
+                                <i class="fas fa-receipt"></i>
+                                Consumo Minimo
+                            </span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="reservationType" value="incluido">
+                            <span class="radio-label">
+                                <i class="fas fa-hotel"></i>
+                                Incluido
+                            </span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="reservationType" value="paquete">
+                            <span class="radio-label">
+                                <i class="fas fa-gift"></i>
+                                Paquete
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Package Selector (shown when paquete selected) -->
+                <div class="form-group package-selector-group" id="waitlistPackageGroup" style="display: none;">
+                    <label class="form-label" for="waitlistPackageSelect">Seleccionar Paquete</label>
+                    <select id="waitlistPackageSelect" class="form-select">
+                        <option value="">Seleccionar paquete...</option>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Notes -->
+                <div class="form-group">
+                    <label class="form-label" for="waitlistNotes">Notas</label>
+                    <textarea id="waitlistNotes"
+                              class="form-control notes-textarea"
+                              placeholder="Notas adicionales sobre la solicitud..."
+                              rows="3"></textarea>
+                </div>
+
+                <!-- Hidden Fields -->
+                <input type="hidden" id="waitlistCustomerId" value="">
+                <input type="hidden" id="waitlistCustomerType" value="interno">
+                <input type="hidden" id="waitlistHotelGuestId" value="">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" id="waitlistModalCancelBtn">
+                Cancelar
+            </button>
+            <button type="button" class="btn-save" id="waitlistModalSaveBtn">
+                <span class="save-text">
+                    <i class="fas fa-check me-1"></i>
+                    Anadir
+                </span>
+                <span class="save-loading" style="display: none;">
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                    Guardando...
+                </span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for CSRF token -->
+<input type="hidden" id="waitlistCsrfToken" value="{{ csrf_token() }}">

@@ -1,0 +1,1043 @@
+/**
+ * Waitlist Panel Styles
+ * Slide-out panel for managing the beach club waitlist
+ * Follows design system conventions (main.css)
+ *
+ * Uses CSS variables from main.css - NO hardcoded colors!
+ */
+
+/* =============================================================================
+   BACKDROP
+   ============================================================================= */
+.waitlist-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 58, 92, 0.6);
+    z-index: var(--z-modal-backdrop);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-slow), visibility var(--transition-slow);
+}
+
+.waitlist-panel-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* =============================================================================
+   PANEL CONTAINER
+   ============================================================================= */
+.waitlist-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
+    background: var(--color-white);
+    z-index: var(--z-modal);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.waitlist-panel.open {
+    transform: translateX(0);
+}
+
+/* Swipe indicator for mobile */
+.waitlist-panel::before {
+    content: '';
+    position: absolute;
+    top: var(--space-2);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: var(--color-medium-gray);
+    border-radius: var(--border-radius-full);
+    opacity: 0.5;
+    z-index: 1;
+}
+
+/* Tablet: Side panel */
+@media (min-width: 768px) {
+    .waitlist-panel {
+        width: 400px;
+        border-radius: var(--border-radius-xl) 0 0 var(--border-radius-xl);
+    }
+
+    .waitlist-panel::before {
+        display: none;
+    }
+}
+
+/* Desktop: Larger panel */
+@media (min-width: 1200px) {
+    .waitlist-panel {
+        width: 420px;
+    }
+}
+
+/* =============================================================================
+   HEADER
+   ============================================================================= */
+.waitlist-panel .panel-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    padding-top: calc(var(--space-3) + 8px);
+    background: linear-gradient(135deg, var(--color-secondary) 0%, #2a4a6c 100%);
+    color: var(--color-white);
+    flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+    .waitlist-panel .panel-header {
+        padding-top: var(--space-3);
+    }
+}
+
+.waitlist-panel .panel-close-btn,
+.waitlist-panel .panel-add-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: var(--border-radius-full);
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--color-white);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition-fast);
+}
+
+.waitlist-panel .panel-close-btn:hover,
+.waitlist-panel .panel-add-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.waitlist-panel .panel-add-btn {
+    background: var(--color-primary);
+}
+
+.waitlist-panel .panel-add-btn:hover {
+    background: var(--color-primary-light);
+}
+
+.waitlist-panel .panel-title {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    text-align: center;
+}
+
+.waitlist-panel .panel-ticket {
+    font-size: 18px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.waitlist-panel .panel-date {
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+/* =============================================================================
+   TABS
+   ============================================================================= */
+.waitlist-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-white);
+    flex-shrink: 0;
+}
+
+.waitlist-tab {
+    flex: 1;
+    padding: var(--space-3) var(--space-4);
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    transition: all var(--transition-fast);
+}
+
+.waitlist-tab:hover {
+    color: var(--color-secondary);
+    background: var(--color-accent);
+}
+
+.waitlist-tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.waitlist-tab .tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: var(--color-medium-gray);
+    color: var(--color-white);
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: var(--border-radius-full);
+    transition: background var(--transition-fast);
+}
+
+.waitlist-tab.active .tab-badge {
+    background: var(--color-primary);
+}
+
+/* =============================================================================
+   BODY (Scrollable Content)
+   ============================================================================= */
+.waitlist-panel .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--space-4);
+    background: var(--color-background);
+    overscroll-behavior: contain;
+}
+
+/* Loading State */
+.waitlist-panel .panel-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-12) 0;
+    color: var(--color-text-muted);
+    gap: var(--space-3);
+}
+
+.waitlist-panel .panel-loading .spinner-border {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+    color: var(--color-primary);
+}
+
+/* Tab Content */
+.waitlist-tab-content {
+    display: none;
+}
+
+.waitlist-tab-content.active {
+    display: block;
+}
+
+/* =============================================================================
+   WAITLIST ENTRIES
+   ============================================================================= */
+.waitlist-entries {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+/* Entry Card */
+.waitlist-entry {
+    background: var(--color-white);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    transition: all var(--transition-fast);
+}
+
+.waitlist-entry:hover {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+}
+
+/* Entry Header */
+.waitlist-entry-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-accent);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.waitlist-entry-priority {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: var(--border-radius-full);
+    flex-shrink: 0;
+}
+
+.waitlist-entry-customer {
+    flex: 1;
+    min-width: 0;
+}
+
+.waitlist-entry-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.waitlist-entry-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-top: 2px;
+}
+
+.waitlist-entry-meta i {
+    font-size: 10px;
+    color: var(--color-primary);
+}
+
+/* Entry Status Badge */
+.waitlist-entry-status {
+    padding: 4px 10px;
+    border-radius: var(--border-radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+}
+
+.waitlist-entry-status.status-waiting {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.waitlist-entry-status.status-contacted {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+.waitlist-entry-status.status-confirmed {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.waitlist-entry-status.status-converted {
+    background: var(--color-primary);
+    color: var(--color-white);
+}
+
+.waitlist-entry-status.status-expired {
+    background: #F3F4F6;
+    color: #4B5563;
+}
+
+.waitlist-entry-status.status-cancelled {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.waitlist-entry-status.status-no_show {
+    background: #FCE7F3;
+    color: #9D174D;
+}
+
+/* Entry Body */
+.waitlist-entry-body {
+    padding: var(--space-3);
+}
+
+.waitlist-entry-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-3);
+}
+
+.waitlist-entry-detail {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}
+
+.waitlist-entry-detail i {
+    color: var(--color-primary);
+    font-size: 12px;
+    width: 16px;
+    text-align: center;
+}
+
+/* Entry Preferences */
+.waitlist-entry-preferences {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-bottom: var(--space-3);
+}
+
+.waitlist-pref-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-full);
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+.waitlist-pref-chip i {
+    font-size: 10px;
+    color: var(--color-primary);
+}
+
+/* Entry Notes */
+.waitlist-entry-notes {
+    padding: var(--space-2);
+    background: var(--color-background);
+    border-radius: var(--border-radius-md);
+    font-size: 12px;
+    color: var(--color-text-muted);
+    font-style: italic;
+    margin-bottom: var(--space-3);
+}
+
+/* Entry Actions */
+.waitlist-entry-actions {
+    display: flex;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border);
+}
+
+.waitlist-entry-actions .btn-action {
+    flex: 1;
+    padding: var(--space-2);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    transition: all var(--transition-fast);
+}
+
+.waitlist-entry-actions .btn-action:hover {
+    background: var(--color-accent);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.waitlist-entry-actions .btn-action.btn-convert {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+}
+
+.waitlist-entry-actions .btn-action.btn-convert:hover {
+    background: var(--color-primary-dark);
+}
+
+.waitlist-entry-actions .btn-action.btn-danger {
+    color: var(--color-error);
+    border-color: var(--color-error);
+}
+
+.waitlist-entry-actions .btn-action.btn-danger:hover {
+    background: var(--color-error);
+    color: var(--color-white);
+}
+
+/* =============================================================================
+   EMPTY STATE
+   ============================================================================= */
+.waitlist-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-12) var(--space-4);
+    text-align: center;
+}
+
+.waitlist-empty i {
+    font-size: 48px;
+    color: var(--color-medium-gray);
+    margin-bottom: var(--space-4);
+}
+
+.waitlist-empty p {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-2) 0;
+}
+
+.waitlist-empty .empty-hint {
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+/* =============================================================================
+   FOOTER
+   ============================================================================= */
+.waitlist-panel .panel-footer {
+    padding: var(--space-3) var(--space-4);
+    padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    border-top: 1px solid var(--color-border);
+    background: var(--color-white);
+    flex-shrink: 0;
+}
+
+.waitlist-panel .btn-add-entry {
+    width: 100%;
+    padding: var(--space-3);
+    min-height: 48px;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    border: none;
+    border-radius: var(--border-radius-lg);
+    color: var(--color-white);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.waitlist-panel .btn-add-entry:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+
+/* =============================================================================
+   ADD ENTRY MODAL
+   ============================================================================= */
+.waitlist-modal {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-modal) + 10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+}
+
+.waitlist-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 58, 92, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.waitlist-modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    background: var(--color-white);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Modal Header */
+.waitlist-modal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4);
+    background: linear-gradient(135deg, var(--color-secondary) 0%, #2a4a6c 100%);
+    color: var(--color-white);
+    flex-shrink: 0;
+}
+
+.waitlist-modal .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.waitlist-modal .modal-close-btn {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: var(--border-radius-full);
+    color: var(--color-white);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition-fast);
+}
+
+.waitlist-modal .modal-close-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Modal Body */
+.waitlist-modal .modal-body {
+    flex: 1;
+    padding: var(--space-4);
+    overflow-y: auto;
+}
+
+/* Form Groups */
+.waitlist-modal .form-group {
+    margin-bottom: var(--space-4);
+}
+
+.waitlist-modal .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-2);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.waitlist-modal .form-control,
+.waitlist-modal .form-select {
+    width: 100%;
+    padding: var(--space-3);
+    border: 2px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    font-size: 14px;
+    color: var(--color-text);
+    background: var(--color-white);
+    transition: all var(--transition-fast);
+}
+
+.waitlist-modal .form-control:focus,
+.waitlist-modal .form-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+.waitlist-modal .form-control::placeholder {
+    color: var(--color-text-muted);
+}
+
+/* Form Row (side by side) */
+.waitlist-modal .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+@media (max-width: 480px) {
+    .waitlist-modal .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Customer Type Toggle */
+.waitlist-modal .btn-group-toggle {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.waitlist-modal .toggle-btn {
+    flex: 1;
+    padding: var(--space-3);
+    background: var(--color-white);
+    border: 2px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.waitlist-modal .toggle-btn:hover {
+    border-color: var(--color-primary);
+    background: var(--color-accent);
+}
+
+.waitlist-modal .toggle-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+}
+
+/* Room/Customer Search */
+.waitlist-modal .room-search-wrapper,
+.waitlist-modal .customer-search-wrapper {
+    position: relative;
+}
+
+.waitlist-modal .room-search-results,
+.waitlist-modal .customer-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+    margin-top: var(--space-1);
+    display: none;
+}
+
+.waitlist-modal .room-search-results.show,
+.waitlist-modal .customer-search-results.show {
+    display: block;
+}
+
+/* Selected Guest/Customer Display */
+.waitlist-modal .selected-guest,
+.waitlist-modal .selected-customer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3);
+    background: var(--color-accent);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--border-radius-md);
+    margin-top: var(--space-2);
+}
+
+.waitlist-modal .guest-info,
+.waitlist-modal .customer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.waitlist-modal .guest-name,
+.waitlist-modal .customer-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-secondary);
+}
+
+.waitlist-modal .guest-room,
+.waitlist-modal .customer-phone {
+    font-size: 12px;
+    color: var(--color-text-muted);
+}
+
+.waitlist-modal .btn-clear-guest,
+.waitlist-modal .btn-clear-customer {
+    width: 28px;
+    height: 28px;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-full);
+    color: var(--color-text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.waitlist-modal .btn-clear-guest:hover,
+.waitlist-modal .btn-clear-customer:hover {
+    background: var(--color-error);
+    border-color: var(--color-error);
+    color: var(--color-white);
+}
+
+/* Create Customer Button */
+.waitlist-modal .btn-create-customer {
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: transparent;
+    border: 1px dashed var(--color-primary);
+    border-radius: var(--border-radius-md);
+    color: var(--color-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    transition: all var(--transition-fast);
+}
+
+.waitlist-modal .btn-create-customer:hover {
+    background: var(--color-accent);
+    border-style: solid;
+}
+
+/* Reservation Type Options */
+.waitlist-modal .reservation-type-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.waitlist-modal .radio-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--color-white);
+    border: 2px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.waitlist-modal .radio-option:hover {
+    border-color: var(--color-primary);
+    background: var(--color-accent);
+}
+
+.waitlist-modal .radio-option input[type="radio"] {
+    accent-color: var(--color-primary);
+    width: 18px;
+    height: 18px;
+}
+
+.waitlist-modal .radio-option input[type="radio"]:checked + .radio-label {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.waitlist-modal .radio-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 14px;
+    color: var(--color-text-secondary);
+}
+
+.waitlist-modal .radio-label i {
+    color: var(--color-primary);
+    width: 18px;
+    text-align: center;
+}
+
+/* Notes Textarea */
+.waitlist-modal .notes-textarea {
+    min-height: 80px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* Modal Footer */
+.waitlist-modal .modal-footer {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-background);
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.waitlist-modal .btn-cancel {
+    flex: 1;
+    padding: var(--space-3);
+    min-height: 48px;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    color: var(--color-text-muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.waitlist-modal .btn-cancel:hover {
+    background: var(--color-light-gray);
+}
+
+.waitlist-modal .btn-save {
+    flex: 2;
+    padding: var(--space-3);
+    min-height: 48px;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    border: none;
+    border-radius: var(--border-radius-lg);
+    color: var(--color-white);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.waitlist-modal .btn-save:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+
+.waitlist-modal .btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.waitlist-modal .save-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+}
+
+.waitlist-modal .save-loading .spinner-border {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+/* =============================================================================
+   RESPONSIVE - MOBILE FULL WIDTH MODAL
+   ============================================================================= */
+@media (max-width: 576px) {
+    .waitlist-modal {
+        padding: 0;
+    }
+
+    .waitlist-modal-content {
+        max-width: 100%;
+        max-height: 100%;
+        height: 100%;
+        border-radius: 0;
+    }
+
+    .waitlist-modal .modal-body {
+        padding: var(--space-3);
+    }
+
+    .waitlist-modal .modal-footer {
+        padding: var(--space-3);
+        padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    }
+}
+
+/* =============================================================================
+   ANIMATIONS
+   ============================================================================= */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.waitlist-modal-content {
+    animation: fadeIn var(--transition-slow) ease;
+}
+
+/* Entry appear animation */
+.waitlist-entry {
+    animation: fadeIn var(--transition-normal) ease;
+}
+
+/* =============================================================================
+   TOUCH GESTURES
+   ============================================================================= */
+.waitlist-panel.dragging {
+    transition: none;
+}
+
+/* =============================================================================
+   HISTORY ENTRY STYLING
+   ============================================================================= */
+.waitlist-entry.history-entry {
+    opacity: 0.9;
+}
+
+.waitlist-entry.history-entry .waitlist-entry-header {
+    background: var(--color-light-gray);
+}
+
+.waitlist-entry.history-entry .waitlist-entry-priority {
+    background: var(--color-medium-gray);
+}
+
+/* Converted entries - show success styling */
+.waitlist-entry.history-entry.converted {
+    border-color: var(--color-success);
+}
+
+.waitlist-entry.history-entry.converted .waitlist-entry-header {
+    background: #D1FAE5;
+}
+
+.waitlist-entry.history-entry.converted .waitlist-entry-priority {
+    background: var(--color-success);
+}
+
+/* =============================================================================
+   UTILITY CLASSES
+   ============================================================================= */
+.waitlist-panel .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
