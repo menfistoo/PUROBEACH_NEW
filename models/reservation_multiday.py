@@ -157,6 +157,15 @@ def create_linked_multiday_reservations(
     default_state = get_default_state()
     initial_state = default_state.get('name', 'Confirmada')
 
+    # Get customer's current room for original_room tracking
+    cursor.execute('''
+        SELECT room_number, customer_type FROM beach_customers WHERE id = ?
+    ''', (customer_id,))
+    customer_row = cursor.fetchone()
+    original_room = None
+    if customer_row and customer_row['customer_type'] == 'interno':
+        original_room = customer_row['room_number']
+
     try:
         cursor.execute('BEGIN IMMEDIATE')
 
@@ -180,7 +189,8 @@ def create_linked_multiday_reservations(
                         minimum_consumption_amount, minimum_consumption_policy_id,
                         package_id, payment_ticket_number, payment_method,
                         check_in_date, check_out_date,
-                        parent_reservation_id, reservation_type, created_by, created_at
+                        parent_reservation_id, reservation_type, created_by, created_at,
+                        original_room
                     ) VALUES (
                         ?, ?, ?, ?, ?,
                         ?, ?, ?, ?,
@@ -189,7 +199,8 @@ def create_linked_multiday_reservations(
                         ?, ?,
                         ?, ?, ?,
                         ?, ?,
-                        NULL, 'normal', ?, CURRENT_TIMESTAMP
+                        NULL, 'normal', ?, CURRENT_TIMESTAMP,
+                        ?
                     )
                 ''', (
                     customer_id, ticket_number, date, dates[0], dates[-1],
@@ -199,7 +210,8 @@ def create_linked_multiday_reservations(
                     minimum_consumption_amount, minimum_consumption_policy_id,
                     package_id, payment_ticket_number, payment_method,
                     check_in_date, check_out_date,
-                    created_by
+                    created_by,
+                    original_room
                 ))
 
                 parent_id = cursor.lastrowid
@@ -227,7 +239,8 @@ def create_linked_multiday_reservations(
                         minimum_consumption_amount, minimum_consumption_policy_id,
                         package_id, payment_ticket_number, payment_method,
                         check_in_date, check_out_date,
-                        parent_reservation_id, reservation_type, created_by, created_at
+                        parent_reservation_id, reservation_type, created_by, created_at,
+                        original_room
                     ) VALUES (
                         ?, ?, ?, ?, ?,
                         ?, ?, ?, ?,
@@ -236,7 +249,8 @@ def create_linked_multiday_reservations(
                         ?, ?,
                         ?, ?, ?,
                         ?, ?,
-                        ?, 'normal', ?, CURRENT_TIMESTAMP
+                        ?, 'normal', ?, CURRENT_TIMESTAMP,
+                        ?
                     )
                 ''', (
                     customer_id, child_ticket, date, dates[0], dates[-1],
@@ -246,7 +260,8 @@ def create_linked_multiday_reservations(
                     minimum_consumption_amount, minimum_consumption_policy_id,
                     package_id, payment_ticket_number, payment_method,
                     check_in_date, check_out_date,
-                    parent_id, created_by
+                    parent_id, created_by,
+                    original_room
                 ))
 
                 child_id = cursor.lastrowid

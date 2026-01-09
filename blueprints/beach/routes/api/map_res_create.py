@@ -41,168 +41,168 @@ def register_routes(bp):
         Returns:
             JSON with reservation_id(s) and ticket_number
         """
-        data = request.get_json()
-
-        if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
-
-        customer_id = data.get('customer_id')
-        furniture_ids = data.get('furniture_ids', [])
-        furniture_by_date = data.get('furniture_by_date')  # Per-day furniture selections
-        dates = data.get('dates', [])
-        date_str = data.get('date')
-        num_people = data.get('num_people')
-        time_slot = data.get('time_slot', 'all_day')
-        preferences = data.get('preferences', [])
-        notes = data.get('notes', '')
-        # SG-06: Charge to room option (only for hotel guests)
-        charge_to_room = 1 if data.get('charge_to_room') else 0
-
-        # Pricing fields from frontend
-        package_id = data.get('package_id')
-        if package_id:
-            try:
-                package_id = int(package_id)
-            except (ValueError, TypeError):
-                package_id = None
-
-        price_override = data.get('price_override')
-        if price_override:
-            try:
-                price_override = float(price_override)
-            except (ValueError, TypeError):
-                price_override = None
-
-        # Payment tracking fields
-        payment_ticket_number = data.get('payment_ticket_number')
-        if payment_ticket_number:
-            payment_ticket_number = str(payment_ticket_number).strip() or None
-
-        payment_method = data.get('payment_method')
-        if payment_method and payment_method not in ('efectivo', 'tarjeta', 'cargo_habitacion'):
-            payment_method = None
-
-        # Paid status (auto-toggled when payment details provided)
-        paid = 1 if data.get('paid') else 0
-
-        # Handle single date or array of dates
-        if not dates and date_str:
-            dates = [date_str]
-
-        # Validation
-        if not customer_id:
-            return jsonify({'success': False, 'error': 'Cliente requerido'}), 400
-
-        # Need either furniture_ids or furniture_by_date
-        if not furniture_ids and not furniture_by_date:
-            return jsonify({'success': False, 'error': 'Mobiliario requerido'}), 400
-
-        if not dates:
-            return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
-
-        # Validate time_slot
-        if time_slot not in ('all_day', 'morning', 'afternoon'):
-            time_slot = 'all_day'
-
-        # Check customer exists
-        customer = get_customer_by_id(customer_id)
-        if not customer:
-            return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
-
-        # Check furniture availability
-        if furniture_by_date:
-            # Per-date availability check when using furniture_by_date
-            # Each date has specific furniture, check only those for that date
-            all_unavailable = []
-            all_available = True
-
-            for check_date, date_furniture_ids in furniture_by_date.items():
-                availability = check_furniture_availability_bulk(
-                    furniture_ids=date_furniture_ids,
-                    dates=[check_date]
-                )
-                if not availability.get('all_available'):
-                    all_available = False
-                    all_unavailable.extend(availability.get('unavailable', []))
-
-            if not all_available:
-                return jsonify({
-                    'success': False,
-                    'error': 'Mobiliario no disponible para algunas fechas',
-                    'unavailable': all_unavailable,
-                    'availability_matrix': {}
-                }), 409
-
-            # Collect all furniture IDs for capacity calculation
-            all_furniture_ids = set()
-            for date_furniture in furniture_by_date.values():
-                all_furniture_ids.update(date_furniture)
-            all_furniture_ids = list(all_furniture_ids)
-        else:
-            all_furniture_ids = furniture_ids
-
-            # Check furniture availability for all dates
-            availability = check_furniture_availability_bulk(
-                furniture_ids=all_furniture_ids,
-                dates=dates
-            )
-
-            if not availability.get('all_available'):
-                # Return detailed conflict information for the frontend
-                return jsonify({
-                    'success': False,
-                    'error': 'Mobiliario no disponible para algunas fechas',
-                    'unavailable': availability.get('unavailable', []),
-                    'availability_matrix': availability.get('availability_matrix', {})
-                }), 409
-
-        # Calculate num_people from furniture capacity if not provided
-        if not num_people:
-            furniture_list = get_all_furniture(active_only=True)
-            furniture_map = {f['id']: f for f in furniture_list}
-            num_people = sum(
-                furniture_map.get(fid, {}).get('capacity', 2)
-                for fid in all_furniture_ids
-            )
-
-        # Convert preferences list to comma-separated string
-        preferences_str = ','.join(preferences) if preferences else None
-
-        # Calculate pricing
-        calculated_price = 0.0
-        calculated_min_consumption = 0.0
-        min_consumption_policy_id = None
-
-        if price_override is not None:
-            # Manual price override - use it directly
-            calculated_price = price_override
-        else:
-            # Calculate pricing based on package or minimum consumption
-            from datetime import datetime
-            try:
-                first_date = datetime.strptime(dates[0], '%Y-%m-%d').date()
-                pricing = calculate_reservation_pricing(
-                    customer_id=customer_id,
-                    furniture_ids=all_furniture_ids,
-                    reservation_date=first_date,
-                    num_people=num_people,
-                    package_id=package_id
-                )
-
-                if pricing.get('has_package'):
-                    calculated_price = pricing.get('package_price', 0.0)
-                elif pricing.get('has_minimum_consumption'):
-                    calculated_min_consumption = pricing.get('minimum_consumption_amount', 0.0)
-                    min_consumption_policy_id = pricing.get('minimum_consumption', {}).get('policy_id')
-                    calculated_price = calculated_min_consumption
-
-            except Exception as pricing_error:
-                # Log error but continue with zero price
-                import traceback
-                print(f"Warning: Pricing calculation failed: {pricing_error}")
-                traceback.print_exc()
-
         try:
+            data = request.get_json()
+
+            if not data:
+                return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+
+            customer_id = data.get('customer_id')
+            furniture_ids = data.get('furniture_ids', [])
+            furniture_by_date = data.get('furniture_by_date')  # Per-day furniture selections
+            dates = data.get('dates', [])
+            date_str = data.get('date')
+            num_people = data.get('num_people')
+            time_slot = data.get('time_slot', 'all_day')
+            preferences = data.get('preferences', [])
+            notes = data.get('notes', '')
+            # SG-06: Charge to room option (only for hotel guests)
+            charge_to_room = 1 if data.get('charge_to_room') else 0
+
+            # Pricing fields from frontend
+            package_id = data.get('package_id')
+            if package_id:
+                try:
+                    package_id = int(package_id)
+                except (ValueError, TypeError):
+                    package_id = None
+
+            price_override = data.get('price_override')
+            if price_override:
+                try:
+                    price_override = float(price_override)
+                except (ValueError, TypeError):
+                    price_override = None
+
+            # Payment tracking fields
+            payment_ticket_number = data.get('payment_ticket_number')
+            if payment_ticket_number:
+                payment_ticket_number = str(payment_ticket_number).strip() or None
+
+            payment_method = data.get('payment_method')
+            if payment_method and payment_method not in ('efectivo', 'tarjeta', 'cargo_habitacion'):
+                payment_method = None
+
+            # Paid status (auto-toggled when payment details provided)
+            paid = 1 if data.get('paid') else 0
+
+            # Handle single date or array of dates
+            if not dates and date_str:
+                dates = [date_str]
+
+            # Validation
+            if not customer_id:
+                return jsonify({'success': False, 'error': 'Cliente requerido'}), 400
+
+            # Need either furniture_ids or furniture_by_date
+            if not furniture_ids and not furniture_by_date:
+                return jsonify({'success': False, 'error': 'Mobiliario requerido'}), 400
+
+            if not dates:
+                return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
+
+            # Validate time_slot
+            if time_slot not in ('all_day', 'morning', 'afternoon'):
+                time_slot = 'all_day'
+
+            # Check customer exists
+            customer = get_customer_by_id(customer_id)
+            if not customer:
+                return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
+
+            # Check furniture availability
+            if furniture_by_date:
+                # Per-date availability check when using furniture_by_date
+                # Each date has specific furniture, check only those for that date
+                all_unavailable = []
+                all_available = True
+
+                for check_date, date_furniture_ids in furniture_by_date.items():
+                    availability = check_furniture_availability_bulk(
+                        furniture_ids=date_furniture_ids,
+                        dates=[check_date]
+                    )
+                    if not availability.get('all_available'):
+                        all_available = False
+                        all_unavailable.extend(availability.get('unavailable', []))
+
+                if not all_available:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Mobiliario no disponible para algunas fechas',
+                        'unavailable': all_unavailable,
+                        'availability_matrix': {}
+                    }), 409
+
+                # Collect all furniture IDs for capacity calculation
+                all_furniture_ids = set()
+                for date_furniture in furniture_by_date.values():
+                    all_furniture_ids.update(date_furniture)
+                all_furniture_ids = list(all_furniture_ids)
+            else:
+                all_furniture_ids = furniture_ids
+
+                # Check furniture availability for all dates
+                availability = check_furniture_availability_bulk(
+                    furniture_ids=all_furniture_ids,
+                    dates=dates
+                )
+
+                if not availability.get('all_available'):
+                    # Return detailed conflict information for the frontend
+                    return jsonify({
+                        'success': False,
+                        'error': 'Mobiliario no disponible para algunas fechas',
+                        'unavailable': availability.get('unavailable', []),
+                        'availability_matrix': availability.get('availability_matrix', {})
+                    }), 409
+
+            # Calculate num_people from furniture capacity if not provided
+            if not num_people:
+                furniture_list = get_all_furniture(active_only=True)
+                furniture_map = {f['id']: f for f in furniture_list}
+                num_people = sum(
+                    furniture_map.get(fid, {}).get('capacity', 2)
+                    for fid in all_furniture_ids
+                )
+
+            # Convert preferences list to comma-separated string
+            preferences_str = ','.join(preferences) if preferences else None
+
+            # Calculate pricing
+            calculated_price = 0.0
+            calculated_min_consumption = 0.0
+            min_consumption_policy_id = None
+
+            if price_override is not None:
+                # Manual price override - use it directly
+                calculated_price = price_override
+            else:
+                # Calculate pricing based on package or minimum consumption
+                from datetime import datetime
+                try:
+                    first_date = datetime.strptime(dates[0], '%Y-%m-%d').date()
+                    pricing = calculate_reservation_pricing(
+                        customer_id=customer_id,
+                        furniture_ids=all_furniture_ids,
+                        reservation_date=first_date,
+                        num_people=num_people,
+                        package_id=package_id
+                    )
+
+                    if pricing.get('has_package'):
+                        calculated_price = pricing.get('package_price', 0.0)
+                    elif pricing.get('has_minimum_consumption'):
+                        calculated_min_consumption = pricing.get('minimum_consumption_amount', 0.0)
+                        min_consumption_policy_id = pricing.get('minimum_consumption', {}).get('policy_id')
+                        calculated_price = calculated_min_consumption
+
+                except Exception as pricing_error:
+                    # Log error but continue with zero price
+                    import traceback
+                    print(f"Warning: Pricing calculation failed: {pricing_error}")
+                    traceback.print_exc()
+
             # Multi-day reservation
             if len(dates) > 1:
                 result = create_linked_multiday_reservations(
