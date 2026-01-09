@@ -181,6 +181,15 @@ def create_beach_reservation(
         default_state = get_default_state()
         initial_state = default_state.get('name', 'Confirmada')
 
+        # Get customer's current room for original_room tracking
+        cursor.execute('''
+            SELECT room_number, customer_type FROM beach_customers WHERE id = ?
+        ''', (customer_id,))
+        customer_row = cursor.fetchone()
+        original_room = None
+        if customer_row and customer_row['customer_type'] == 'interno':
+            original_room = customer_row['room_number']
+
         # Insert reservation
         cursor.execute('''
             INSERT INTO beach_reservations (
@@ -191,7 +200,8 @@ def create_beach_reservation(
                 minimum_consumption_amount, minimum_consumption_policy_id,
                 package_id, payment_ticket_number, payment_method,
                 check_in_date, check_out_date, preferences, notes,
-                parent_reservation_id, reservation_type, created_by, created_at
+                parent_reservation_id, reservation_type, created_by, created_at,
+                original_room
             ) VALUES (
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?,
@@ -200,7 +210,8 @@ def create_beach_reservation(
                 ?, ?,
                 ?, ?, ?,
                 ?, ?, ?, ?,
-                ?, ?, ?, CURRENT_TIMESTAMP
+                ?, ?, ?, CURRENT_TIMESTAMP,
+                ?
             )
         ''', (
             customer_id, ticket_number, reservation_date, reservation_date, reservation_date,
@@ -210,7 +221,8 @@ def create_beach_reservation(
             minimum_consumption_amount, minimum_consumption_policy_id,
             package_id, payment_ticket_number, payment_method,
             check_in_date, check_out_date, preferences, observations,
-            parent_reservation_id, reservation_type, created_by
+            parent_reservation_id, reservation_type, created_by,
+            original_room
         ))
 
         reservation_id = cursor.lastrowid
@@ -283,7 +295,10 @@ def get_beach_reservation_by_id(reservation_id: int) -> dict:
                c.phone as customer_phone,
                pkg.package_name,
                pkg.package_description,
-               mcp.policy_name as minimum_consumption_policy_name
+               mcp.policy_name as minimum_consumption_policy_name,
+               CASE WHEN r.original_room IS NOT NULL
+                    AND r.original_room != c.room_number
+                    THEN 1 ELSE 0 END as room_changed
         FROM beach_reservations r
         JOIN beach_customers c ON r.customer_id = c.id
         LEFT JOIN beach_packages pkg ON r.package_id = pkg.id

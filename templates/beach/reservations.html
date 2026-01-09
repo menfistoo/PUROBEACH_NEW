@@ -631,6 +631,11 @@
                             <span class="customer-type">
                                 {% if res.customer_type == 'interno' %}
                                 <i class="fas fa-hotel"></i>Hab. {{ res.room_number or '-' }}
+                                {% if res.room_changed %}
+                                <i class="fas fa-right-left text-warning ms-1"
+                                   data-bs-toggle="tooltip"
+                                   title="Cambio de hab. {{ res.original_room }}"></i>
+                                {% endif %}
                                 {% else %}
                                 <i class="fas fa-user"></i>Externo
                                 {% endif %}

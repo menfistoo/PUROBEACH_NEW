@@ -108,8 +108,38 @@ export const CustomerMixin = (Base) => class extends Base {
         if (customer.room_number) {
             this.customerRoom.textContent = customer.room_number;
             this.customerRoomBadge.style.display = 'inline-flex';
+
+            // Show room change indicator if room changed
+            if (this.roomChangeIndicator) {
+                const reservation = this.state.data?.reservation;
+                if (reservation?.room_changed && reservation?.original_room) {
+                    this.roomChangeIndicator.style.display = 'inline';
+                    this.roomChangeIndicator.title = `Cambio de hab. ${reservation.original_room}`;
+                    // Reinitialize tooltip (dispose existing first to prevent memory leaks)
+                    if (typeof bootstrap !== 'undefined') {
+                        const existingTooltip = bootstrap.Tooltip.getInstance(this.roomChangeIndicator);
+                        if (existingTooltip) existingTooltip.dispose();
+                        new bootstrap.Tooltip(this.roomChangeIndicator);
+                    }
+                } else {
+                    this.roomChangeIndicator.style.display = 'none';
+                    // Dispose tooltip when hiding
+                    if (typeof bootstrap !== 'undefined') {
+                        const existingTooltip = bootstrap.Tooltip.getInstance(this.roomChangeIndicator);
+                        if (existingTooltip) existingTooltip.dispose();
+                    }
+                }
+            }
         } else {
             this.customerRoomBadge.style.display = 'none';
+            if (this.roomChangeIndicator) {
+                this.roomChangeIndicator.style.display = 'none';
+                // Dispose tooltip when hiding
+                if (typeof bootstrap !== 'undefined') {
+                    const existingTooltip = bootstrap.Tooltip.getInstance(this.roomChangeIndicator);
+                    if (existingTooltip) existingTooltip.dispose();
+                }
+            }
         }
     }
 

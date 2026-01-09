@@ -146,6 +146,7 @@ export class ReservationPanelBase {
         this.customerName = document.getElementById('customerName');
         this.customerRoomBadge = document.getElementById('customerRoomBadge');
         this.customerRoom = document.getElementById('customerRoom');
+        this.roomChangeIndicator = document.getElementById('roomChangeIndicator');
         this.customerVipBadge = document.getElementById('customerVipBadge');
         this.customerHotelInfo = document.getElementById('customerHotelInfo');
         this.customerCheckin = document.getElementById('customerCheckin');

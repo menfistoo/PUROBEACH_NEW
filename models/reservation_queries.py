@@ -45,7 +45,10 @@ def get_all_beach_reservations(
         SELECT r.*,
                c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
                c.customer_type,
-               c.room_number
+               c.room_number,
+               CASE WHEN r.original_room IS NOT NULL
+                    AND r.original_room != c.room_number
+                    THEN 1 ELSE 0 END as room_changed
         FROM beach_reservations r
         JOIN beach_customers c ON r.customer_id = c.id
         WHERE 1=1
@@ -135,7 +138,10 @@ def get_reservations_filtered(
                (SELECT GROUP_CONCAT(f.number, ', ')
                 FROM beach_reservation_furniture rf
                 JOIN beach_furniture f ON rf.furniture_id = f.id
-                WHERE rf.reservation_id = r.id) as furniture_names
+                WHERE rf.reservation_id = r.id) as furniture_names,
+               CASE WHEN r.original_room IS NOT NULL
+                    AND r.original_room != c.room_number
+                    THEN 1 ELSE 0 END as room_changed
         FROM beach_reservations r
         JOIN beach_customers c ON r.customer_id = c.id
         WHERE 1=1
