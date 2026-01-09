@@ -18,6 +18,10 @@ export class ConnectivityManager {
             offline: []
         };
         this.healthCheckTimer = null;
+
+        // Bound handlers for proper event listener removal
+        this._boundHandleOnline = () => this._handleOnline();
+        this._boundHandleOffline = () => this._handleOffline();
     }
 
     /**
@@ -25,8 +29,8 @@ export class ConnectivityManager {
      */
     start() {
         // Browser events
-        window.addEventListener('online', () => this._handleOnline());
-        window.addEventListener('offline', () => this._handleOffline());
+        window.addEventListener('online', this._boundHandleOnline);
+        window.addEventListener('offline', this._boundHandleOffline);
 
         // Periodic health check (confirms actual connectivity)
         this._startHealthCheck();
@@ -39,8 +43,8 @@ export class ConnectivityManager {
      * Stop monitoring
      */
     stop() {
-        window.removeEventListener('online', this._handleOnline);
-        window.removeEventListener('offline', this._handleOffline);
+        window.removeEventListener('online', this._boundHandleOnline);
+        window.removeEventListener('offline', this._boundHandleOffline);
 
         if (this.healthCheckTimer) {
             clearInterval(this.healthCheckTimer);
