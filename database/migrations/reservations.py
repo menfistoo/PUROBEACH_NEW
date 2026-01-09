@@ -163,3 +163,51 @@ def migrate_status_history_v2() -> bool:
         db.rollback()
         print(f"Migration failed: {e}")
         raise
+
+
+def migrate_reservations_original_room() -> bool:
+    """
+    Migration: Add original_room column to beach_reservations.
+
+    Tracks the room number at the time of reservation creation to detect
+    room changes when hotel guests are moved to different rooms.
+
+    Returns:
+        bool: True if migration applied, False if already applied
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("PRAGMA table_info(beach_reservations)")
+    existing_columns = [row['name'] for row in cursor.fetchall()]
+
+    if 'original_room' in existing_columns:
+        print("Migration already applied - original_room column exists.")
+        return False
+
+    print("Applying reservations_original_room migration...")
+
+    try:
+        db.execute('ALTER TABLE beach_reservations ADD COLUMN original_room TEXT')
+        print("  Added column: original_room")
+
+        # Backfill existing reservations with current customer room
+        db.execute('''
+            UPDATE beach_reservations
+            SET original_room = (
+                SELECT c.room_number
+                FROM beach_customers c
+                WHERE c.id = beach_reservations.customer_id
+            )
+            WHERE original_room IS NULL
+        ''')
+        print("  Backfilled original_room from current customer rooms")
+
+        db.commit()
+        print("Migration reservations_original_room applied successfully!")
+        return True
+
+    except Exception as e:
+        db.rollback()
+        print(f"Migration failed: {e}")
+        raise

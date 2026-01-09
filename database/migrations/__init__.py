@@ -7,7 +7,11 @@ The run_all_migrations() function executes all migrations in order.
 """
 
 from .furniture_types import migrate_furniture_types_v2
-from .reservations import migrate_reservations_v2, migrate_status_history_v2
+from .reservations import (
+    migrate_reservations_v2,
+    migrate_status_history_v2,
+    migrate_reservations_original_room
+)
 from .hotel_guests import (
     migrate_hotel_guests_multi_guest,
     migrate_hotel_guests_booking_reference
@@ -102,6 +106,9 @@ MIGRATIONS = [
     ('waitlist_table', migrate_waitlist_table),
     ('waitlist_permissions', migrate_waitlist_permissions),
     ('waitlist_fix_constraints', migrate_waitlist_fix_constraints),
+
+    # Phase 12: Room change tracking
+    ('reservations_original_room', migrate_reservations_original_room),
 ]
 
 
@@ -190,4 +197,5 @@ __all__ = [
     'migrate_waitlist_table',
     'migrate_waitlist_permissions',
     'migrate_waitlist_fix_constraints',
+    'migrate_reservations_original_room',
 ]
