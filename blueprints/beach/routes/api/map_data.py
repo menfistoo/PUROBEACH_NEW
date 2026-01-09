@@ -143,3 +143,11 @@ def register_routes(bp):
             })
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
+
+    @bp.route('/health')
+    def health_check():
+        """
+        Health check endpoint for connectivity detection.
+        Returns simple OK response.
+        """
+        return jsonify({'status': 'ok'})
