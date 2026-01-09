@@ -1,6 +1,6 @@
 # Beach Club Management System - Development Plan
 
-**Last Updated:** 2026-01-08
+**Last Updated:** 2026-01-09
 **Current Phase:** Phase 7a Complete - Planning Next Phase
 
 ---
@@ -35,6 +35,14 @@
 ---
 
 ## Recently Completed
+
+### 2026-01-09: Room Change Indicator
+- ✅ Store original_room when creating reservations for interno customers
+- ✅ Add room_changed computed flag in reservation queries
+- ✅ Visual indicator in reservation list (yellow arrow icon with tooltip)
+- ✅ Visual indicator in reservation detail panel
+- ✅ Tooltip shows original room number
+- ✅ Memory leak fix: dispose Bootstrap tooltips before reinitializing
 
 ### 2026-01-07: Move Temporary Sunbeds (Drag & Drop)
 - ✅ Drag-and-drop repositioning for temporary furniture
@@ -1440,6 +1448,16 @@ def get_revenue_by_zone(start_date, end_date)
 ---
 
 ## Notes & Discoveries
+
+**Date:** 2026-01-09
+**Topic:** Room Change Indicator on Reservations
+**Notes:**
+- Added visual indicator showing when guest's current room differs from original room at booking
+- Stores original_room on reservation creation for interno customers
+- Indicator appears in both reservation list and detail panel
+- Yellow arrow icon (fa-right-left) with tooltip showing original room
+- Tooltip memory leak fix: dispose existing tooltip before reinitializing
+- Design doc: `docs/plans/2026-01-09-room-change-indicator-design.md`
 
 **Date:** 2026-01-08
 **Topic:** Hotel Guest Room Change Detection
