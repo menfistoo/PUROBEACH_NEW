@@ -9,7 +9,10 @@
  * - Error display
  */
 
-import { formatDate } from './utils.js';
+import { formatDate, dismissToast } from './utils.js';
+
+// Toast ID for reassignment mode (must match save-mixin.js and furniture-mixin.js)
+const REASSIGNMENT_TOAST_ID = 'reassignment-mode-toast';
 
 // =============================================================================
 // PANEL LIFECYCLE MIXIN
@@ -101,6 +104,9 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
                 return;
             }
         }
+
+        // Dismiss any persistent reassignment toast
+        dismissToast(REASSIGNMENT_TOAST_ID);
 
         // Reset state
         this.state.isOpen = false;
@@ -240,11 +246,6 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
         // Header - ticket number and date
         this.ticketEl.textContent = `Reserva #${res.ticket_number || res.id}`;
         this.dateEl.textContent = formatDate(res.reservation_date || res.start_date);
-
-        // View more link
-        if (this.viewMoreLink) {
-            this.viewMoreLink.href = `/beach/reservations/${res.id}`;
-        }
 
         // Render sections
         this.renderCustomerSection(customer);

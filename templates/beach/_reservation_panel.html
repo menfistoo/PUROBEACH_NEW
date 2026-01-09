@@ -47,9 +47,6 @@
                 <div class="panel-section-title">
                     <i class="fas fa-user"></i>
                     Cliente
-                    <button type="button" class="customer-change-btn" id="customerChangeBtn">
-                        <i class="fas fa-exchange-alt"></i>
-                    </button>
                 </div>
                 <!-- Compact customer display -->
                 <div class="customer-display-compact" id="customerDisplay">
@@ -80,12 +77,21 @@
                     </div>
                 </div>
 
-                <!-- Customer Search (Edit Mode) -->
+                <!-- Room Guest Selector (Edit Mode - Interno only) -->
+                <div class="room-guest-selector" id="roomGuestSelector" style="display: none;">
+                    <label class="form-label small text-muted mb-1">Huésped principal</label>
+                    <select id="roomGuestSelect" class="form-select form-select-sm">
+                        <!-- Options populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Customer Search (Edit Mode - Externo only) -->
                 <div class="customer-search-wrapper" id="customerSearchWrapper" style="display: none;">
+                    <label class="form-label small text-muted mb-1">Cambiar cliente</label>
                     <input type="text"
                            id="panelCustomerSearch"
                            class="form-control"
-                           placeholder="Buscar cliente por nombre, habitacion o telefono..."
+                           placeholder="Buscar cliente por nombre o telefono..."
                            autocomplete="off">
                     <div class="customer-search-results" id="panelCustomerResults" style="display: none;"></div>
                 </div>
@@ -217,6 +223,12 @@
                 <!-- Edit Mode -->
                 <div class="details-grid" id="detailsEditMode" style="display: none;">
                     <div class="detail-item">
+                        <label class="detail-label" for="editReservationDate">Fecha</label>
+                        <input type="date"
+                               class="detail-input"
+                               id="editReservationDate">
+                    </div>
+                    <div class="detail-item">
                         <label class="detail-label" for="editNumPeople">Personas</label>
                         <input type="number"
                                class="detail-input"
@@ -345,12 +357,6 @@
                     </div>
                 </div>
             </section>
-
-            <!-- View Full Details Link -->
-            <a href="#" class="view-more-link" id="viewMoreLink" target="_blank">
-                <i class="fas fa-external-link-alt me-1"></i>
-                Ver todos los detalles
-            </a>
 
         </div>
     </div>

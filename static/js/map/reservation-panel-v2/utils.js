@@ -135,11 +135,23 @@ export function getFurnitureIcon(typeName) {
  * Falls back to console.log if toast system is not available
  * @param {string} message - Message to display
  * @param {string} type - Toast type: 'info', 'success', 'warning', 'error'
+ * @param {number|boolean} duration - Duration in ms, 0 or false for persistent (default: 5000)
+ * @param {string} toastId - Optional ID for programmatic dismissal
  */
-export function showToast(message, type = 'info') {
+export function showToast(message, type = 'info', duration = 5000, toastId = null) {
     if (window.PuroBeach?.showToast) {
-        window.PuroBeach.showToast(message, type);
+        window.PuroBeach.showToast(message, type, duration, toastId);
     } else {
         console.log(`[${type}] ${message}`);
+    }
+}
+
+/**
+ * Dismiss a toast by its ID
+ * @param {string} toastId - The toast ID to dismiss
+ */
+export function dismissToast(toastId) {
+    if (window.PuroBeach?.dismissToast) {
+        window.PuroBeach.dismissToast(toastId);
     }
 }

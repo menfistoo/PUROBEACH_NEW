@@ -9,7 +9,10 @@
  * - Highlighting furniture on the map
  */
 
-import { getFurnitureIcon, parseDateToYMD, showToast } from './utils.js';
+import { getFurnitureIcon, parseDateToYMD, showToast, dismissToast } from './utils.js';
+
+// Toast ID for reassignment mode (must match save-mixin.js)
+const REASSIGNMENT_TOAST_ID = 'reassignment-mode-toast';
 
 // =============================================================================
 // FURNITURE MIXIN
@@ -130,11 +133,97 @@ export const FurnitureMixin = (Base) => class extends Base {
     }
 
     /**
+     * Enter reassignment mode for a specific date (used when changing reservation date)
+     * First navigates the map to the target date, then enters reassignment mode
+     * @param {string} targetDate - The target date in YYYY-MM-DD format
+     */
+    enterReassignmentModeForDate(targetDate) {
+        const reservation = this.state.data?.reservation;
+        if (!reservation) return;
+
+        // In standalone mode, navigate to map for furniture selection with target date
+        if (this.isStandalone()) {
+            const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            const mapUrl = `/beach/map?mode=furniture_select&reservation_id=${reservation.id}&date=${targetDate}&return_url=${returnUrl}`;
+            window.location.href = mapUrl;
+            return;
+        }
+
+        // Store the target date for when reassignment completes
+        this.state.pendingDateChange = targetDate;
+
+        // Navigate map to target date first, then enter reassignment mode
+        if (this.options.onNavigateToDate) {
+            // Callback to navigate map to target date
+            this.options.onNavigateToDate(targetDate, () => {
+                // After map navigation completes, update panel state and enter reassignment
+                this.state.currentDate = targetDate;
+                this._enterReassignmentModeForTargetDate(targetDate);
+            });
+        } else {
+            // Fallback: just update current date and enter reassignment mode
+            this.state.currentDate = targetDate;
+            this._enterReassignmentModeForTargetDate(targetDate);
+        }
+    }
+
+    /**
+     * Internal method to enter reassignment mode for a target date
+     * @private
+     * @param {string} targetDate - The target date
+     */
+    _enterReassignmentModeForTargetDate(targetDate) {
+        const reservation = this.state.data?.reservation;
+        if (!reservation) return;
+
+        // For date change, we start with no furniture selected
+        // (the original furniture is on a different date)
+        this.reassignmentState.originalFurniture = [];
+        this.reassignmentState.selectedFurniture = [];
+        this.reassignmentState.maxAllowed = reservation.num_people || 2;
+
+        // Switch mode
+        this.state.mode = 'reassignment';
+        this.panel.classList.add('reassignment-mode');
+        this.backdrop.classList.add('reassignment-mode');
+
+        // Hide view mode, show reassignment mode
+        if (this.furnitureViewMode) this.furnitureViewMode.style.display = 'none';
+        if (this.furnitureReassignmentMode) this.furnitureReassignmentMode.style.display = 'flex';
+
+        // Clear original furniture chips (none for date change)
+        if (this.originalFurnitureChips) {
+            this.originalFurnitureChips.innerHTML = '<span class="text-muted">Selecciona nuevo mobiliario para el ' +
+                new Date(targetDate + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) + '</span>';
+        }
+
+        // Update counter and clear new chips
+        this.updateReassignmentUI();
+
+        // Show hint toast
+        showToast(`Selecciona mobiliario disponible en el mapa para el ${new Date(targetDate + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`, 'info', 5000);
+
+        // Notify map to enter reassignment mode
+        if (this.options.onFurnitureReassign) {
+            this.options.onFurnitureReassign(
+                reservation.id,
+                [], // No original furniture (date change)
+                reservation.num_people,
+                'enter_for_date', // Signal entering for date change
+                targetDate
+            );
+        }
+    }
+
+    /**
      * Exit reassignment mode
      * @param {boolean} cancel - Whether to cancel without saving
      */
     exitReassignmentMode(cancel = false) {
         if (this.state.mode !== 'reassignment') return;
+
+        // Dismiss the persistent reassignment toast
+        dismissToast(REASSIGNMENT_TOAST_ID);
 
         // Switch back to view mode
         this.state.mode = 'view';
@@ -335,6 +424,59 @@ export const FurnitureMixin = (Base) => class extends Base {
                 f => f.id || f.furniture_id || f
             );
 
+            // Check if this is a date change with furniture reassignment
+            const pendingDate = this.state.pendingDateChange;
+            if (pendingDate) {
+                // First, change the reservation date
+                const dateResponse = await fetch(
+                    `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.csrfToken
+                        },
+                        body: JSON.stringify({
+                            new_date: pendingDate,
+                            furniture_ids: furnitureIds  // Include new furniture in date change
+                        })
+                    }
+                );
+
+                const dateResult = await dateResponse.json();
+
+                if (!dateResult.success) {
+                    throw new Error(dateResult.error || 'Error al cambiar fecha');
+                }
+
+                // Clear the pending date change
+                this.state.pendingDateChange = null;
+
+                // Update local state
+                if (this.state.data?.reservation) {
+                    this.state.data.reservation.reservation_date = pendingDate;
+                    this.state.data.reservation.start_date = pendingDate;
+                }
+                this.state.originalData.reservation_date = pendingDate;
+
+                // Exit reassignment mode
+                this.exitReassignmentMode(false);
+
+                // Reload reservation data with new date
+                await this.loadReservation(this.state.reservationId, pendingDate);
+
+                // Show success message
+                showToast('Reserva movida exitosamente', 'success');
+
+                // Notify map to refresh
+                if (this.options.onSave) {
+                    this.options.onSave(this.state.reservationId, { date_changed: true, furniture_changed: true });
+                }
+
+                return; // Exit early, date change handles everything
+            }
+
+            // Regular furniture reassignment (no date change)
             const response = await fetch(
                 `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/reassign-furniture`,
                 {

@@ -1612,13 +1612,24 @@
                 map.refreshAvailability();
                 updateStats(currentZoneId);
             },
-            onFurnitureReassign: (reservationId, furniture, numPeople, action) => {
+            onFurnitureReassign: (reservationId, furniture, numPeople, action, targetDate) => {
                 // Handle panel's reassignment mode signals
                 if (action === 'enter') {
+                    enterPanelReassignmentMode(reservationId, furniture, numPeople);
+                } else if (action === 'enter_for_date') {
+                    // Enter reassignment mode for a specific date (after date change)
                     enterPanelReassignmentMode(reservationId, furniture, numPeople);
                 } else if (action === 'exit') {
                     exitPanelReassignmentMode();
                 }
+            },
+            onNavigateToDate: async (targetDate, callback) => {
+                // Navigate map to target date, then call completion callback
+                await map.goToDate(targetDate);
+                // Small delay to ensure map is fully updated
+                setTimeout(() => {
+                    if (callback) callback();
+                }, 100);
             },
             onCustomerChange: (reservationId, customer) => {
                 // Refresh map after customer change

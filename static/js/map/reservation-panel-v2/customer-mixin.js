@@ -220,12 +220,140 @@ export const CustomerMixin = (Base) => class extends Base {
     }
 
     // =========================================================================
-    // CUSTOMER SEARCH UI
+    // CUSTOMER EDIT MODE UI
     // =========================================================================
 
     /**
+     * Enter customer edit mode based on customer type
+     * - Interno: Show room guest dropdown
+     * - Externo: Show customer search
+     */
+    enterCustomerEditMode() {
+        const customer = this.state.data?.customer;
+        if (!customer) return;
+
+        // Hide the change button in edit mode
+        if (this.customerChangeBtn) {
+            this.customerChangeBtn.style.display = 'none';
+        }
+
+        if (customer.customer_type === 'interno' && customer.room_number) {
+            // Show room guest dropdown for interno
+            this.showRoomGuestSelector(customer.room_number);
+        } else if (customer.customer_type === 'externo') {
+            // Show search for externo
+            this.showCustomerSearch();
+        }
+    }
+
+    /**
+     * Exit customer edit mode - hide all edit UIs
+     */
+    exitCustomerEditMode() {
+        this.hideCustomerSearch();
+        this.hideRoomGuestSelector();
+
+        // Show the change button again (but only if needed)
+        if (this.customerChangeBtn) {
+            this.customerChangeBtn.style.display = 'none'; // Keep hidden, we don't use it anymore
+        }
+    }
+
+    /**
+     * Show room guest selector for interno customers
+     * Fetches and populates guests from the same room
+     *
+     * @param {string} roomNumber - The room number to fetch guests for
+     */
+    async showRoomGuestSelector(roomNumber) {
+        if (!this.roomGuestSelector || !this.roomGuestSelect) return;
+
+        try {
+            // Fetch room guests
+            const response = await fetch(
+                `${this.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(roomNumber)}`
+            );
+            const data = await response.json();
+
+            const guests = data.guests || [];
+
+            // Only show if there are multiple guests
+            if (guests.length <= 1) {
+                this.roomGuestSelector.style.display = 'none';
+                return;
+            }
+
+            // Populate dropdown - match by name since hotel guests don't have customer_id
+            const currentCustomerName = this.state.data?.customer?.full_name?.toUpperCase() || '';
+            let options = '';
+
+            guests.forEach(guest => {
+                // API returns guest_name as a single field
+                const fullName = guest.guest_name || `${guest.first_name || ''} ${guest.last_name || ''}`.trim();
+                // Match by uppercase name comparison
+                const isSelected = fullName.toUpperCase() === currentCustomerName;
+                options += `<option value="${guest.id}" ${isSelected ? 'selected' : ''}>${fullName}</option>`;
+            });
+
+            this.roomGuestSelect.innerHTML = options;
+            this.roomGuestSelector.style.display = 'block';
+
+        } catch (error) {
+            console.error('Error fetching room guests:', error);
+            this.roomGuestSelector.style.display = 'none';
+        }
+    }
+
+    /**
+     * Hide room guest selector
+     */
+    hideRoomGuestSelector() {
+        if (this.roomGuestSelector) {
+            this.roomGuestSelector.style.display = 'none';
+        }
+    }
+
+    /**
+     * Handle room guest selection from dropdown
+     * @param {Event} event - Change event from select element
+     */
+    async handleRoomGuestChange(event) {
+        const hotelGuestId = event.target.value;
+        if (!hotelGuestId) return;
+
+        try {
+            const response = await fetch(
+                `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-customer`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    },
+                    body: JSON.stringify({
+                        customer_id: null,
+                        hotel_guest_id: parseInt(hotelGuestId)
+                    })
+                }
+            );
+
+            const result = await response.json();
+
+            if (result.success) {
+                this._handleCustomerChangeSuccess(result);
+            } else {
+                throw new Error(result.error || 'Error al cambiar huésped');
+            }
+
+        } catch (error) {
+            console.error('Guest change error:', error);
+            this.showToast(error.message, 'error');
+        }
+    }
+
+    /**
      * Show customer search input and focus it
-     * Called when user wants to change the customer on a reservation
+     * Called for externo customers in edit mode
      */
     showCustomerSearch() {
         if (this.customerSearchWrapper) {

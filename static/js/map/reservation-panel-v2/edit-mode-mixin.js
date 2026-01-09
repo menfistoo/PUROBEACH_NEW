@@ -71,6 +71,15 @@ export const EditModeMixin = (Base) => class extends Base {
         // Pre-fill edit fields with current values (only if not manually edited)
         if (this.state.data) {
             const data = this.state.data;
+            // Pre-fill date
+            if (this.editReservationDate) {
+                this.editReservationDate.value = data.reservation?.reservation_date ||
+                    data.reservation?.start_date ||
+                    this.state.currentDate || '';
+                // Set minimum date to today to prevent past dates
+                const today = new Date().toISOString().split('T')[0];
+                this.editReservationDate.min = today;
+            }
             if (this.editNumPeople && !this.state.numPeopleManuallyEdited) {
                 this.editNumPeople.value = data.reservation?.num_people || 1;
             }
@@ -88,12 +97,16 @@ export const EditModeMixin = (Base) => class extends Base {
 
         // Store original data for dirty checking
         this.state.originalData = {
+            reservation_date: this.editReservationDate?.value,
             num_people: this.editNumPeople?.value,
             notes: this.editNotes?.value,
             price: this.panelFinalPriceInput?.value,
             payment_ticket_number: this.editPaymentTicket?.value,
             payment_method: this.editPaymentMethod?.value
         };
+
+        // Enter customer edit mode (shows guest dropdown for interno, search for externo)
+        this.enterCustomerEditMode();
 
         // Also enter preferences edit mode
         await this.enterPreferencesEditMode();
@@ -155,7 +168,7 @@ export const EditModeMixin = (Base) => class extends Base {
         // Exit pricing edit mode
         this.exitPricingEditMode(discard);
 
-        // Hide customer search
-        this.hideCustomerSearch();
+        // Exit customer edit mode
+        this.exitCustomerEditMode();
     }
 };

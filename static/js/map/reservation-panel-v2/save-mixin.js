@@ -7,7 +7,10 @@
  * Extracted from reservation-panel.js as part of the modular refactoring.
  */
 
-import { showToast } from './utils.js';
+import { showToast, dismissToast } from './utils.js';
+
+// Toast ID for reassignment mode (persistent toast)
+const REASSIGNMENT_TOAST_ID = 'reassignment-mode-toast';
 
 // =============================================================================
 // SAVE MIXIN
@@ -19,6 +22,142 @@ import { showToast } from './utils.js';
  * @returns {Class} Extended class with save methods
  */
 export const SaveMixin = (Base) => class extends Base {
+
+    /**
+     * Handle reservation date change
+     * Checks availability and either changes the date directly or triggers furniture reassignment
+     *
+     * @param {Event} event - Change event from date input
+     * @returns {Promise<void>}
+     */
+    async handleDateChange(event) {
+        const newDate = event.target.value;
+        const originalDate = this.state.originalData?.reservation_date;
+
+        // Skip if same date
+        if (newDate === originalDate) return;
+
+        // Validate not a past date
+        const today = new Date().toISOString().split('T')[0];
+        if (newDate < today) {
+            showToast('No se puede cambiar a una fecha pasada', 'error');
+            this.editReservationDate.value = originalDate;
+            return;
+        }
+
+        try {
+            // Check availability on new date
+            const response = await fetch(
+                `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/check-date-availability`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    },
+                    body: JSON.stringify({ new_date: newDate })
+                }
+            );
+
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || 'Error al verificar disponibilidad');
+            }
+
+            if (result.all_available) {
+                // All furniture available - change date directly
+                await this._changeDateDirectly(newDate);
+            } else if (result.some_available) {
+                // Some furniture unavailable - trigger reassignment mode
+                // Show persistent toast (duration=0) with ID for later dismissal
+                showToast('El mobiliario no está disponible. Seleccione nuevo mobiliario.', 'warning', 0, REASSIGNMENT_TOAST_ID);
+                // Store new date in state for reassignment
+                this.state.pendingDateChange = newDate;
+                // Enter reassignment mode with new date
+                this.enterReassignmentModeForDate(newDate);
+            } else {
+                // No furniture available at all
+                showToast('No hay disponibilidad para esta fecha', 'error');
+                this.editReservationDate.value = originalDate;
+            }
+
+        } catch (error) {
+            console.error('Date change error:', error);
+            showToast(error.message, 'error');
+            this.editReservationDate.value = originalDate;
+        }
+    }
+
+    /**
+     * Change reservation date directly (when all furniture is available)
+     * @private
+     * @param {string} newDate - The new date in YYYY-MM-DD format
+     */
+    async _changeDateDirectly(newDate) {
+        try {
+            const response = await fetch(
+                `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    },
+                    body: JSON.stringify({ new_date: newDate })
+                }
+            );
+
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || 'Error al cambiar fecha');
+            }
+
+            // Update local state
+            if (this.state.data?.reservation) {
+                this.state.data.reservation.reservation_date = newDate;
+                this.state.data.reservation.start_date = newDate;
+            }
+            this.state.currentDate = newDate;
+            this.state.originalData.reservation_date = newDate;
+
+            // Update header date display
+            if (this.dateEl) {
+                this.dateEl.textContent = this._formatDate(newDate);
+            }
+
+            // Notify parent to refresh map for old and new dates
+            if (this.options.onDateChange) {
+                this.options.onDateChange(this.state.reservationId, newDate);
+            }
+
+            showToast('Fecha actualizada', 'success');
+            this.markDirty();
+
+        } catch (error) {
+            console.error('Date change error:', error);
+            showToast(error.message, 'error');
+            // Revert date input
+            this.editReservationDate.value = this.state.originalData?.reservation_date;
+        }
+    }
+
+    /**
+     * Format date for display
+     * @private
+     * @param {string} dateStr - Date string in YYYY-MM-DD format
+     * @returns {string} Formatted date string
+     */
+    _formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const date = new Date(dateStr + 'T12:00:00');
+        return date.toLocaleDateString('es-ES', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short'
+        });
+    }
 
     /**
      * Save changes made in edit mode

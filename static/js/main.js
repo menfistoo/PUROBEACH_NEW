@@ -68,8 +68,11 @@ function initializeFormValidation() {
  * Show toast notification
  * @param {string} message - Message to display
  * @param {string} type - Type: success, error, warning, info
+ * @param {number|boolean} duration - Duration in ms, 0 or false for persistent (default: 5000)
+ * @param {string} toastId - Optional ID for programmatic dismissal
+ * @returns {HTMLElement} The toast container element
  */
-function showToast(message, type = 'info') {
+function showToast(message, type = 'info', duration = 5000, toastId = null) {
     const alertClass = type === 'error' ? 'danger' : type;
     const iconClass = {
         'success': 'fa-check-circle',
@@ -78,25 +81,54 @@ function showToast(message, type = 'info') {
         'info': 'fa-info-circle'
     }[type] || 'fa-info-circle';
 
+    // If toastId provided, remove any existing toast with same ID
+    if (toastId) {
+        dismissToast(toastId);
+    }
+
     const toastHTML = `
-        <div class="alert alert-${alertClass} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3" role="alert" style="z-index: 9999;">
+        <div class="alert alert-${alertClass} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3" role="alert" style="z-index: 9999;"${toastId ? ` data-toast-id="${toastId}"` : ''}>
             <i class="fas ${iconClass}"></i> ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
 
     const container = document.createElement('div');
+    if (toastId) {
+        container.setAttribute('data-toast-container', toastId);
+    }
     container.innerHTML = toastHTML;
     document.body.appendChild(container);
 
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
+    // Auto-dismiss after duration (unless 0 or false for persistent)
+    if (duration && duration > 0) {
+        setTimeout(() => {
+            const alert = container.querySelector('.alert');
+            if (alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        }, duration);
+    }
+
+    return container;
+}
+
+/**
+ * Dismiss a toast by its ID
+ * @param {string} toastId - The toast ID to dismiss
+ */
+function dismissToast(toastId) {
+    const container = document.querySelector(`[data-toast-container="${toastId}"]`);
+    if (container) {
         const alert = container.querySelector('.alert');
         if (alert) {
             const bsAlert = new bootstrap.Alert(alert);
             bsAlert.close();
         }
-    }, 5000);
+        // Remove container after animation
+        setTimeout(() => container.remove(), 300);
+    }
 }
 
 /**
@@ -383,6 +415,7 @@ function toggleSidebar() {
 // Export functions for global use
 window.PuroBeach = {
     showToast,
+    dismissToast,
     confirmDelete,
     formatDate,
     formatDateTime,

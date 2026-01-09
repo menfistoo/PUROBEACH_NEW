@@ -159,6 +159,8 @@ export class ReservationPanelBase {
         this.customerSearchWrapper = document.getElementById('customerSearchWrapper');
         this.customerSearchInput = document.getElementById('panelCustomerSearch');
         this.customerSearchResults = document.getElementById('panelCustomerResults');
+        this.roomGuestSelector = document.getElementById('roomGuestSelector');
+        this.roomGuestSelect = document.getElementById('roomGuestSelect');
 
         // Preferences section
         this.preferencesSection = document.getElementById('preferencesSection');
@@ -197,6 +199,7 @@ export class ReservationPanelBase {
 
         // Details section - Edit mode
         this.detailsEditMode = document.getElementById('detailsEditMode');
+        this.editReservationDate = document.getElementById('editReservationDate');
         this.editNumPeople = document.getElementById('editNumPeople');
         this.editNotes = document.getElementById('editNotes');
 
@@ -226,9 +229,6 @@ export class ReservationPanelBase {
         this.detailPaymentMethod = document.getElementById('detailPaymentMethod');
         this.editPaymentTicket = document.getElementById('editPaymentTicket');
         this.editPaymentMethod = document.getElementById('editPaymentMethod');
-
-        // View more link
-        this.viewMoreLink = document.getElementById('viewMoreLink');
 
         // Footer
         this.footer = document.getElementById('panelFooter');
@@ -269,8 +269,8 @@ export class ReservationPanelBase {
         // Save button
         this.saveBtn?.addEventListener('click', () => this.saveChanges());
 
-        // Customer change button
-        this.customerChangeBtn?.addEventListener('click', () => this.showCustomerSearch());
+        // Room guest selector (for interno customers in edit mode)
+        this.roomGuestSelect?.addEventListener('change', (e) => this.handleRoomGuestChange(e));
 
         // State history toggle
         this.stateHistoryToggle?.addEventListener('click', () => this.toggleStateHistory());
@@ -302,6 +302,7 @@ export class ReservationPanelBase {
         this.setupSwipeGestures();
 
         // Track dirty state on edit inputs
+        this.editReservationDate?.addEventListener('change', (e) => this.handleDateChange(e));
         this.editNumPeople?.addEventListener('input', () => {
             this.state.numPeopleManuallyEdited = true;
             this.markDirty();
@@ -569,11 +570,57 @@ export class ReservationPanelBase {
     }
 
     /**
+     * Handle room guest selection change
+     * @param {Event} event - Change event
+     * @abstract Should be implemented by customer mixin
+     */
+    handleRoomGuestChange(event) {
+        console.warn('ReservationPanelBase: handleRoomGuestChange() not implemented');
+    }
+
+    /**
+     * Enter customer edit mode
+     * @abstract Should be implemented by customer mixin
+     */
+    enterCustomerEditMode() {
+        console.warn('ReservationPanelBase: enterCustomerEditMode() not implemented');
+    }
+
+    /**
+     * Exit customer edit mode
+     * @abstract Should be implemented by customer mixin
+     */
+    exitCustomerEditMode() {
+        console.warn('ReservationPanelBase: exitCustomerEditMode() not implemented');
+    }
+
+    /**
+     * Handle reservation date change
+     * @param {Event} event - Change event from date input
+     * @abstract Should be implemented by save mixin or details mixin
+     */
+    handleDateChange(event) {
+        console.warn('ReservationPanelBase: handleDateChange() not implemented');
+    }
+
+    /**
      * Enter reassignment mode
      * @abstract Should be implemented by furniture mixin
      */
     enterReassignmentMode() {
         console.warn('ReservationPanelBase: enterReassignmentMode() not implemented');
+    }
+
+    /**
+     * Enter reassignment mode for a specific date (used when changing reservation date)
+     * @param {string} targetDate - The date to reassign furniture for
+     * @abstract Should be implemented by furniture mixin
+     */
+    enterReassignmentModeForDate(targetDate) {
+        // For now, fall back to regular reassignment mode
+        // The furniture mixin can override this to handle date-specific behavior
+        console.warn('ReservationPanelBase: enterReassignmentModeForDate() using fallback');
+        this.enterReassignmentMode();
     }
 
     /**

@@ -5,9 +5,40 @@ Reservation panel details and furniture move operations.
 
 from flask import request, jsonify
 from flask_login import login_required
-from datetime import date
+from datetime import date, datetime
 
 from utils.decorators import permission_required
+
+
+def _format_date_iso(value):
+    """
+    Format a date value to ISO format (YYYY-MM-DD) string.
+    Handles datetime objects, date objects, and string values.
+    Returns None if value is None or empty.
+    """
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value.strftime('%Y-%m-%d')
+    if isinstance(value, date):
+        return value.strftime('%Y-%m-%d')
+    # If it's already a string, try to parse and reformat it
+    if isinstance(value, str):
+        # Check if it's already in YYYY-MM-DD format
+        if len(value) == 10 and value[4] == '-' and value[7] == '-':
+            return value
+        # Try to parse various date formats
+        for fmt in ['%Y-%m-%d', '%a, %d %b %Y %H:%M:%S %Z', '%Y-%m-%d %H:%M:%S']:
+            try:
+                parsed = datetime.strptime(value.strip(), fmt)
+                return parsed.strftime('%Y-%m-%d')
+            except ValueError:
+                continue
+        # Return as-is if we can't parse
+        return value[:10] if len(value) >= 10 else value
+    return str(value)
+
+
 from models.furniture import get_all_furniture
 from models.reservation import (
     check_furniture_availability_bulk,
@@ -91,9 +122,9 @@ def register_routes(bp):
                 'num_people': reservation.get('num_people'),
                 'time_slot': reservation.get('time_slot'),
                 'notes': reservation.get('notes') or reservation.get('observations'),
-                'reservation_date': reservation.get('reservation_date'),
-                'start_date': reservation.get('start_date'),
-                'end_date': reservation.get('end_date'),
+                'reservation_date': _format_date_iso(reservation.get('reservation_date')),
+                'start_date': _format_date_iso(reservation.get('start_date')),
+                'end_date': _format_date_iso(reservation.get('end_date')),
                 'created_at': reservation.get('created_at'),
                 'furniture': reservation.get('furniture', []),
                 'tags': reservation.get('tags', []),
@@ -129,8 +160,8 @@ def register_routes(bp):
                     'icon': p.get('icon')
                 } for p in customer_preferences],
                 # Hotel guest info for interno customers
-                'arrival_date': hotel_guest_info.get('arrival_date'),
-                'departure_date': hotel_guest_info.get('departure_date'),
+                'arrival_date': _format_date_iso(hotel_guest_info.get('arrival_date')),
+                'departure_date': _format_date_iso(hotel_guest_info.get('departure_date')),
                 'booking_reference': hotel_guest_info.get('booking_reference'),
                 'nationality': hotel_guest_info.get('nationality'),
                 'vip_code': hotel_guest_info.get('vip_code')
