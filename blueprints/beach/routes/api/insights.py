@@ -6,6 +6,7 @@ Provides analytics data for dashboard and advanced views.
 from datetime import date, timedelta
 from flask import jsonify, request
 from flask_login import login_required
+from utils.decorators import permission_required
 from models.insights import (
     get_occupancy_today,
     get_occupancy_by_zone,
@@ -33,6 +34,7 @@ def register_routes(bp):
 
     @bp.route('/insights/today', methods=['GET'])
     @login_required
+    @permission_required('beach.insights.view')
     def get_insights_today():
         """
         Get today's operational metrics for dashboard.
@@ -78,6 +80,7 @@ def register_routes(bp):
 
     @bp.route('/insights/occupancy', methods=['GET'])
     @login_required
+    @permission_required('beach.insights.view')
     def get_insights_occupancy():
         """
         Get occupancy analytics for a date range.
@@ -125,6 +128,7 @@ def register_routes(bp):
 
     @bp.route('/insights/revenue', methods=['GET'])
     @login_required
+    @permission_required('beach.insights.view')
     def get_insights_revenue():
         """
         Get revenue analytics for a date range.
@@ -175,6 +179,7 @@ def register_routes(bp):
 
     @bp.route('/insights/customers', methods=['GET'])
     @login_required
+    @permission_required('beach.insights.view')
     def get_insights_customers():
         """
         Get customer analytics for a date range.
@@ -231,6 +236,7 @@ def register_routes(bp):
 
     @bp.route('/insights/patterns', methods=['GET'])
     @login_required
+    @permission_required('beach.insights.view')
     def get_insights_patterns():
         """
         Get booking patterns analytics for a date range.

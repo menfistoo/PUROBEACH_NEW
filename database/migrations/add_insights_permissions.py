@@ -5,7 +5,7 @@ Migration: Add insights permissions.
 from database import get_db
 
 
-def migrate():
+def migrate_add_insights_permissions():
     """Add insights module permissions."""
     with get_db() as conn:
         # Check if permissions already exist
@@ -45,4 +45,4 @@ def migrate():
 
 
 if __name__ == '__main__':
-    migrate()
+    migrate_add_insights_permissions()

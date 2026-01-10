@@ -50,6 +50,7 @@ from .waitlist import (
     migrate_waitlist_permissions,
     migrate_waitlist_fix_constraints
 )
+from .add_insights_permissions import migrate_add_insights_permissions
 
 
 # Ordered list of all migrations
@@ -109,6 +110,9 @@ MIGRATIONS = [
 
     # Phase 12: Room change tracking
     ('reservations_original_room', migrate_reservations_original_room),
+
+    # Phase 13: Insights permissions
+    ('add_insights_permissions', migrate_add_insights_permissions),
 ]
 
 
@@ -198,4 +202,5 @@ __all__ = [
     'migrate_waitlist_permissions',
     'migrate_waitlist_fix_constraints',
     'migrate_reservations_original_room',
+    'migrate_add_insights_permissions',
 ]
