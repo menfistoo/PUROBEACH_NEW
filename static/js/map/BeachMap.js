@@ -16,6 +16,7 @@ import {
     renderFurniture,
     updateLegend
 } from './renderer.js';
+import { OfflineManager } from '../offline/index.js';
 
 /**
  * Main BeachMap class
@@ -75,6 +76,10 @@ export class BeachMap {
             }
         });
         this.tooltipManager = new TooltipManager(this.container, this.colors);
+
+        // Offline manager
+        this.offlineManager = null;
+        this.isOfflineMode = false;
 
         // Context menu manager (initialized after container is ready)
         this.contextMenu = new ContextMenuManager({
@@ -152,6 +157,97 @@ export class BeachMap {
         this.createSVG();
         this.setupEventListeners();
         await this.loadData();
+        this.render();
+
+        // Initialize offline functionality
+        await this.initOffline();
+    }
+
+    /**
+     * Initialize offline functionality
+     */
+    async initOffline() {
+        // Get UI elements
+        const banner = document.getElementById('offline-banner');
+        const syncButton = document.getElementById('sync-button');
+        const syncButtonText = document.getElementById('sync-button-text');
+        const offlineSyncTime = document.getElementById('offline-sync-time');
+
+        if (!banner || !syncButton) {
+            console.warn('Offline UI elements not found');
+            return;
+        }
+
+        this.offlineManager = new OfflineManager({
+            apiUrl: this.options.apiUrl,
+
+            onOffline: () => {
+                this.isOfflineMode = true;
+                document.body.classList.add('offline-mode');
+                banner.classList.add('visible');
+                offlineSyncTime.textContent = this.offlineManager.getLastSyncTimeFormatted();
+
+                syncButton.className = 'sync-button offline';
+                syncButton.querySelector('i').className = 'fas fa-times';
+                syncButtonText.textContent = 'Sin conexion';
+
+                showToast('Modo offline activado', 'warning');
+            },
+
+            onOnline: () => {
+                this.isOfflineMode = false;
+                document.body.classList.remove('offline-mode');
+                banner.classList.remove('visible');
+
+                showToast('Conexion restaurada', 'success');
+            },
+
+            onSyncStart: () => {
+                syncButton.className = 'sync-button syncing';
+                syncButton.querySelector('i').className = 'fas fa-sync-alt';
+                syncButtonText.textContent = 'Sincronizando...';
+            },
+
+            onSyncComplete: (data) => {
+                syncButton.className = 'sync-button synced';
+                syncButton.querySelector('i').className = 'fas fa-check';
+                syncButtonText.textContent = `Sincronizado ${this.offlineManager.getLastSyncTimeFormatted()}`;
+
+                // Update map with fresh data if online
+                if (!this.isOfflineMode && data) {
+                    this.data = data;
+                    this.render();
+                }
+            },
+
+            onSyncError: (error) => {
+                syncButton.className = 'sync-button stale';
+                syncButton.querySelector('i').className = 'fas fa-download';
+                syncButtonText.textContent = 'Descargar Dia';
+            }
+        });
+
+        // Manual sync button click
+        syncButton.addEventListener('click', async () => {
+            if (this.offlineManager.isOnline() && !syncButton.classList.contains('syncing')) {
+                await this.offlineManager.sync();
+            } else if (!this.offlineManager.isOnline()) {
+                showToast('Funcion no disponible en modo offline', 'warning');
+            }
+        });
+
+        // Initialize with current date
+        await this.offlineManager.init(this.currentDate);
+
+        // Update sync button initial state
+        if (this.offlineManager.getLastSyncTime()) {
+            syncButton.className = 'sync-button synced';
+            syncButtonText.textContent = `Sincronizado ${this.offlineManager.getLastSyncTimeFormatted()}`;
+        } else {
+            syncButton.className = 'sync-button stale';
+            syncButton.querySelector('i').className = 'fas fa-download';
+            syncButtonText.textContent = 'Descargar Dia';
+        }
     }
 
     createSVG() {
@@ -237,34 +333,45 @@ export class BeachMap {
             if (!response.ok) throw new Error('Error loading map data');
 
             const result = await response.json();
-            if (!result.success) throw new Error(result.error || 'Error loading data');
 
-            this.data = result;
+            if (result.success) {
+                this.data = result;
 
-            // Override options with server config if available
-            if (result.map_config) {
-                this.options.autoRefreshInterval = result.map_config.auto_refresh_ms || this.options.autoRefreshInterval;
-                this.options.minZoom = result.map_config.min_zoom || this.options.minZoom;
-                this.options.maxZoom = result.map_config.max_zoom || this.options.maxZoom;
-                this.options.snapToGrid = result.map_config.snap_grid || this.options.snapToGrid;
+                // Apply map config
+                if (result.map_config) {
+                    this.options.autoRefreshInterval = result.map_config.auto_refresh_ms || this.options.autoRefreshInterval;
+                    this.options.minZoom = result.map_config.min_zoom || this.options.minZoom;
+                    this.options.maxZoom = result.map_config.max_zoom || this.options.maxZoom;
+                    this.options.snapToGrid = result.map_config.snap_grid || this.options.snapToGrid;
 
-                // Update managers with new config
-                this.navigation.updateOptions({
-                    minZoom: this.options.minZoom,
-                    maxZoom: this.options.maxZoom
-                });
-                this.interaction.updateOptions({
-                    snapToGrid: this.options.snapToGrid
-                });
+                    // Update managers with new config
+                    this.navigation.updateOptions({
+                        minZoom: this.options.minZoom,
+                        maxZoom: this.options.maxZoom
+                    });
+                    this.interaction.updateOptions({
+                        snapToGrid: this.options.snapToGrid
+                    });
+                }
             }
 
-            this.render();
+            return true;
         } catch (error) {
-            console.error('Map load error:', error);
-            if (this.callbacks.onError) {
-                this.callbacks.onError(error);
+            console.warn('Failed to load from server, trying cache:', error);
+
+            // Try to load from cache when offline
+            if (this.offlineManager) {
+                const cachedData = await this.offlineManager.loadCachedData();
+                if (cachedData) {
+                    this.data = cachedData;
+                    showToast('Mostrando datos en cache', 'info');
+                    return true;
+                }
             }
-            this.showError('Error cargando datos del mapa');
+
+            console.error('No cached data available');
+            showToast('Error al cargar datos del mapa', 'error');
+            return false;
         }
     }
 
@@ -377,7 +484,15 @@ export class BeachMap {
 
     async goToDate(dateStr) {
         this.currentDate = dateStr;
+
+        // Update offline manager date
+        if (this.offlineManager) {
+            await this.offlineManager.setDate(dateStr);
+        }
+
         await this.loadData();
+        this.render();
+
         if (this.callbacks.onDateChange) {
             this.callbacks.onDateChange(dateStr);
         }

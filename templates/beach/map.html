@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map-blocks.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map-temporary.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/waitlist.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/offline.css') }}">
 <style>
     /* =============================================================================
    MOBILE-FIRST MAP PAGE LAYOUT
@@ -761,6 +762,12 @@
 {% endblock %}
 
 {% block content %}
+<!-- Offline Banner -->
+<div class="offline-banner" id="offline-banner">
+    <i class="fas fa-wifi-slash"></i>
+    <span>Modo Offline - Datos de las <span id="offline-sync-time">--:--</span></span>
+</div>
+
 <div class="map-page">
     <!-- Compact Toolbar -->
     <div class="map-toolbar">
@@ -823,6 +830,12 @@
         <!-- Refresh Button -->
         <button type="button" class="toolbar-btn" id="btn-refresh" title="Actualizar">
             <i class="fas fa-sync-alt"></i>
+        </button>
+
+        <!-- Sync Status Button -->
+        <button type="button" class="sync-button synced" id="sync-button" title="Estado de sincronizacion">
+            <i class="fas fa-check"></i>
+            <span id="sync-button-text">Sincronizado</span>
         </button>
 
         <!-- Waitlist Button -->
