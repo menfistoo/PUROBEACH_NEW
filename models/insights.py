@@ -86,3 +86,58 @@ def get_occupancy_today() -> dict:
             'rate': rate,
             'by_type': by_type
         }
+
+
+def get_occupancy_by_zone(target_date: Optional[str] = None) -> list:
+    """
+    Get occupancy breakdown by zone.
+
+    Args:
+        target_date: Date string (YYYY-MM-DD), defaults to today
+
+    Returns:
+        list of dicts with keys:
+            - zone_id: int
+            - zone_name: str
+            - occupied: int
+            - total: int
+            - rate: float (0-100)
+    """
+    if target_date is None:
+        target_date = date.today().isoformat()
+
+    with get_db() as conn:
+        cursor = conn.execute('''
+            SELECT
+                z.id as zone_id,
+                z.name as zone_name,
+                COUNT(DISTINCT f.id) as total,
+                COUNT(DISTINCT CASE
+                    WHEN rf.id IS NOT NULL AND (s.is_availability_releasing = 0 OR s.is_availability_releasing IS NULL)
+                    THEN f.id
+                END) as occupied
+            FROM beach_zones z
+            LEFT JOIN beach_furniture f ON f.zone_id = z.id AND f.active = 1
+            LEFT JOIN beach_reservation_furniture rf ON rf.furniture_id = f.id
+                AND rf.assignment_date = ?
+            LEFT JOIN beach_reservations r ON rf.reservation_id = r.id
+            LEFT JOIN beach_reservation_states s ON r.current_state = s.name
+            WHERE z.active = 1
+            GROUP BY z.id, z.name
+            ORDER BY z.display_order
+        ''', (target_date,))
+
+        results = []
+        for row in cursor:
+            total = row[2] or 0
+            occupied = row[3] or 0
+            rate = round((occupied / total) * 100, 1) if total > 0 else 0.0
+            results.append({
+                'zone_id': row[0],
+                'zone_name': row[1],
+                'total': total,
+                'occupied': occupied,
+                'rate': rate
+            })
+
+        return results

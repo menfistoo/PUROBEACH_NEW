@@ -73,5 +73,66 @@ class TestGetOccupancyToday:
             assert result['total'] == db_count
 
 
+class TestGetOccupancyByZone:
+    """Tests for get_occupancy_by_zone function."""
+
+    def test_returns_all_active_zones(self, app):
+        """Returns occupancy data for all active zones."""
+        from models.insights import get_occupancy_by_zone
+        from models.zone import get_all_zones
+
+        with app.app_context():
+            zones = get_all_zones(active_only=True)
+            result = get_occupancy_by_zone()
+
+            assert isinstance(result, list)
+            # Should have same number of zones
+            assert len(result) == len(zones)
+
+    def test_zone_has_required_fields(self, app):
+        """Each zone entry has required fields."""
+        from models.insights import get_occupancy_by_zone
+
+        with app.app_context():
+            result = get_occupancy_by_zone()
+
+            if result:  # Only test if zones exist
+                zone = result[0]
+                assert 'zone_id' in zone
+                assert 'zone_name' in zone
+                assert 'occupied' in zone
+                assert 'total' in zone
+                assert 'rate' in zone
+
+    def test_rate_calculation_is_correct(self, app):
+        """Rate should be calculated correctly as percentage."""
+        from models.insights import get_occupancy_by_zone
+
+        with app.app_context():
+            result = get_occupancy_by_zone()
+
+            for zone in result:
+                if zone['total'] > 0:
+                    expected_rate = round((zone['occupied'] / zone['total']) * 100, 1)
+                    assert zone['rate'] == expected_rate
+                else:
+                    assert zone['rate'] == 0.0
+
+    def test_accepts_target_date_parameter(self, app):
+        """Accepts optional target_date parameter."""
+        from models.insights import get_occupancy_by_zone
+        from datetime import date, timedelta
+
+        with app.app_context():
+            # Should work with today
+            result_today = get_occupancy_by_zone()
+            assert isinstance(result_today, list)
+
+            # Should work with specific date
+            tomorrow = (date.today() + timedelta(days=1)).isoformat()
+            result_tomorrow = get_occupancy_by_zone(target_date=tomorrow)
+            assert isinstance(result_tomorrow, list)
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
