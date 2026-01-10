@@ -3,13 +3,16 @@ Insights API endpoints.
 Provides analytics data for dashboard and advanced views.
 """
 
-from flask import jsonify
+from datetime import date, timedelta
+from flask import jsonify, request
 from flask_login import login_required
 from models.insights import (
     get_occupancy_today,
     get_occupancy_by_zone,
     get_pending_checkins_count,
-    get_occupancy_comparison
+    get_occupancy_comparison,
+    get_occupancy_range,
+    get_occupancy_stats
 )
 
 
@@ -53,6 +56,53 @@ def register_routes(bp):
                 'comparison': comparison,
                 'pending_checkins': pending,
                 'zones': zones
+            })
+
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    @bp.route('/insights/occupancy', methods=['GET'])
+    @login_required
+    def get_insights_occupancy():
+        """
+        Get occupancy analytics for a date range.
+
+        Query params:
+            - start_date: Start date (YYYY-MM-DD)
+            - end_date: End date (YYYY-MM-DD)
+
+        Response JSON:
+        {
+            "success": true,
+            "stats": {
+                "avg_occupancy": 75.0,
+                "total_reservations": 120,
+                "noshow_rate": 5.0
+            },
+            "daily": [...],
+            "by_zone": [...]
+        }
+        """
+        try:
+            # Get date range from params, default to last 30 days
+            end_date = request.args.get('end_date', date.today().isoformat())
+            start_date = request.args.get(
+                'start_date',
+                (date.today() - timedelta(days=29)).isoformat()
+            )
+
+            stats = get_occupancy_stats(start_date, end_date)
+            daily = get_occupancy_range(start_date, end_date)
+            by_zone = get_occupancy_by_zone(end_date)
+
+            return jsonify({
+                'success': True,
+                'stats': stats,
+                'daily': daily,
+                'by_zone': by_zone
             })
 
         except Exception as e:

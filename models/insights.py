@@ -302,3 +302,64 @@ def get_occupancy_range(start_date: str, end_date: str) -> list:
             current += timedelta(days=1)
 
         return results
+
+
+def get_occupancy_stats(start_date: str, end_date: str) -> dict:
+    """
+    Get summary occupancy statistics for a date range.
+
+    Args:
+        start_date: Start date (YYYY-MM-DD)
+        end_date: End date (YYYY-MM-DD)
+
+    Returns:
+        dict with:
+            - avg_occupancy: float (average daily occupancy %)
+            - total_reservations: int (non-cancelled reservations)
+            - noshow_rate: float (no-show percentage)
+    """
+    # Get daily occupancy data
+    daily_data = get_occupancy_range(start_date, end_date)
+    avg_occupancy = 0.0
+    if daily_data:
+        avg_occupancy = round(
+            sum(d['rate'] for d in daily_data) / len(daily_data), 1
+        )
+
+    with get_db() as conn:
+        # Total reservations (non-releasing states)
+        res_cursor = conn.execute('''
+            SELECT COUNT(DISTINCT r.id)
+            FROM beach_reservations r
+            LEFT JOIN beach_reservation_states s ON r.current_state = s.name
+            WHERE r.start_date BETWEEN ? AND ?
+              AND (s.is_availability_releasing = 0 OR s.is_availability_releasing IS NULL)
+        ''', (start_date, end_date))
+        total_reservations = res_cursor.fetchone()[0]
+
+        # No-show count
+        noshow_cursor = conn.execute('''
+            SELECT COUNT(DISTINCT r.id)
+            FROM beach_reservations r
+            JOIN beach_reservation_states s ON r.current_state = s.name
+            WHERE r.start_date BETWEEN ? AND ?
+              AND s.code = 'no_show'
+        ''', (start_date, end_date))
+        noshow_count = noshow_cursor.fetchone()[0]
+
+        # Total for rate calculation (including no-shows)
+        total_for_rate = conn.execute('''
+            SELECT COUNT(DISTINCT r.id)
+            FROM beach_reservations r
+            WHERE r.start_date BETWEEN ? AND ?
+        ''', (start_date, end_date)).fetchone()[0]
+
+        noshow_rate = 0.0
+        if total_for_rate > 0:
+            noshow_rate = round((noshow_count / total_for_rate) * 100, 1)
+
+    return {
+        'avg_occupancy': avg_occupancy,
+        'total_reservations': total_reservations,
+        'noshow_rate': noshow_rate
+    }

@@ -199,6 +199,29 @@ class TestGetOccupancyRange:
             assert 'rate' in day
 
 
+class TestGetOccupancyStats:
+    """Tests for get_occupancy_stats function."""
+
+    def test_returns_summary_stats(self, app):
+        """Returns average occupancy, total reservations, no-show rate."""
+        from models.insights import get_occupancy_stats
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_occupancy_stats(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert 'avg_occupancy' in result
+            assert 'total_reservations' in result
+            assert 'noshow_rate' in result
+            assert isinstance(result['avg_occupancy'], float)
+            assert isinstance(result['total_reservations'], int)
+
+
 class TestInsightsAPI:
     """Tests for insights API endpoints."""
 
@@ -220,6 +243,23 @@ class TestInsightsAPI:
             response = client.get('/beach/api/insights/today')
             # Should redirect to login or return 401
             assert response.status_code in (302, 401)
+
+    def test_occupancy_endpoint_returns_range_data(self, authenticated_client, app):
+        """GET /beach/api/insights/occupancy returns occupancy data for range."""
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=6)
+
+            response = authenticated_client.get(
+                f'/beach/api/insights/occupancy?start_date={start_date}&end_date={end_date}'
+            )
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data['success'] is True
+            assert 'stats' in data
+            assert 'daily' in data
+            assert 'by_zone' in data
 
 
 if __name__ == '__main__':
