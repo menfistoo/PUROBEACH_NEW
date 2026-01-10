@@ -181,3 +181,40 @@ def reservations_cancel(reservation_id):
 def reservations_export():
     """Export reservations to Excel."""
     return reservations_export_view()
+
+
+# =============================================================================
+# INSIGHTS ROUTES
+# =============================================================================
+
+@beach_bp.route('/insights')
+@login_required
+@permission_required('beach.insights.view')
+def insights_dashboard():
+    """Display operational insights dashboard."""
+    return render_template('beach/insights/dashboard.html')
+
+
+@beach_bp.route('/insights/analytics')
+@login_required
+@permission_required('beach.insights.analytics')
+def insights_analytics():
+    """Display advanced analytics."""
+    return render_template('beach/insights/analytics.html')
+
+
+# =============================================================================
+# TEMPLATE CONTEXT PROCESSORS
+# =============================================================================
+
+@beach_bp.app_context_processor
+def inject_permission_helper():
+    """Inject permission helper into templates."""
+    from utils.permissions import has_permission
+
+    def current_user_can(permission_code):
+        if not current_user.is_authenticated:
+            return False
+        return has_permission(current_user, permission_code)
+
+    return {'current_user_can': current_user_can}
