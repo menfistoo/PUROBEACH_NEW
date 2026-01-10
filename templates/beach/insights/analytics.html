@@ -96,6 +96,12 @@
     .chart-wrapper {
         position: relative;
         height: 280px;
+        min-height: 200px;
+    }
+    @media (max-width: 768px) {
+        .chart-wrapper {
+            height: 220px;
+        }
     }
 
     /* Data Tables */
@@ -246,7 +252,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header">
                 <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#ocupacion-section">
-                    <i class="fas fa-bed section-icon"></i> Ocupacion
+                    <i class="fas fa-bed section-icon"></i> Ocupación
                 </button>
             </h2>
             <div id="ocupacion-section" class="accordion-collapse collapse show" data-bs-parent="#analytics-accordion">
@@ -256,7 +262,7 @@
                         <div class="col-md-4">
                             <div class="kpi-card text-center py-4 px-3">
                                 <div class="kpi-value" id="kpi-avg-occupancy">--</div>
-                                <div class="kpi-label">Ocupacion Promedio</div>
+                                <div class="kpi-label">Ocupación Promedio</div>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -277,17 +283,17 @@
                     <div class="row">
                         <div class="col-md-8">
                             <div class="chart-container">
-                                <h6><i class="fas fa-chart-line me-2" style="color: #D4AF37;"></i>Ocupacion Diaria</h6>
+                                <h6><i class="fas fa-chart-line me-2" style="color: #D4AF37;"></i>Ocupación Diaria</h6>
                                 <div class="chart-wrapper">
-                                    <canvas id="daily-occupancy-chart"></canvas>
+                                    <canvas id="daily-occupancy-chart" aria-label="Gráfico de ocupación diaria" role="img"></canvas>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="chart-container">
-                                <h6><i class="fas fa-map-marker-alt me-2" style="color: #D4AF37;"></i>Ocupacion por Zona</h6>
+                                <h6><i class="fas fa-map-marker-alt me-2" style="color: #D4AF37;"></i>Ocupación por Zona</h6>
                                 <div class="chart-wrapper">
-                                    <canvas id="zone-occupancy-chart"></canvas>
+                                    <canvas id="zone-occupancy-chart" aria-label="Gráfico de ocupación por zona" role="img"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -333,7 +339,7 @@
                             <div class="chart-container">
                                 <h6><i class="fas fa-tags me-2" style="color: #D4AF37;"></i>Ingresos por Tipo de Reserva</h6>
                                 <div class="chart-wrapper">
-                                    <canvas id="revenue-by-res-type-chart"></canvas>
+                                    <canvas id="revenue-by-res-type-chart" aria-label="Gráfico de ingresos por tipo de reserva" role="img"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -341,7 +347,7 @@
                             <div class="chart-container">
                                 <h6><i class="fas fa-users me-2" style="color: #D4AF37;"></i>Ingresos por Tipo de Cliente</h6>
                                 <div class="chart-wrapper">
-                                    <canvas id="revenue-by-cust-type-chart"></canvas>
+                                    <canvas id="revenue-by-cust-type-chart" aria-label="Gráfico de ingresos por tipo de cliente" role="img"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -394,7 +400,7 @@
                         <div class="col-md-4">
                             <div class="kpi-card text-center py-4 px-3">
                                 <div class="kpi-value" id="kpi-avg-group-size">--</div>
-                                <div class="kpi-label">Tamano Promedio de Grupo</div>
+                                <div class="kpi-label">Tamaño Promedio de Grupo</div>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -411,7 +417,7 @@
                             <div class="chart-container">
                                 <h6><i class="fas fa-user-check me-2" style="color: #D4AF37;"></i>Nuevos vs Recurrentes</h6>
                                 <div class="chart-wrapper">
-                                    <canvas id="customer-status-chart"></canvas>
+                                    <canvas id="customer-status-chart" aria-label="Gráfico de clientes nuevos versus recurrentes" role="img"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -419,7 +425,7 @@
                             <div class="chart-container">
                                 <h6><i class="fas fa-hotel me-2" style="color: #D4AF37;"></i>Internos vs Externos</h6>
                                 <div class="chart-wrapper">
-                                    <canvas id="customer-type-chart"></canvas>
+                                    <canvas id="customer-type-chart" aria-label="Gráfico de clientes internos versus externos" role="img"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -467,14 +473,14 @@
                         <div class="col-md-4">
                             <div class="kpi-card text-center py-4 px-3">
                                 <div class="kpi-value" id="kpi-avg-lead-time">--</div>
-                                <div class="kpi-label">Anticipacion Promedio</div>
+                                <div class="kpi-label">Anticipación Promedio</div>
                                 <div class="kpi-subtitle">dias antes de la reserva</div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="kpi-card text-center py-4 px-3">
                                 <div class="kpi-value" id="kpi-cancellation-rate">--</div>
-                                <div class="kpi-label">Tasa de Cancelacion</div>
+                                <div class="kpi-label">Tasa de Cancelación</div>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -489,17 +495,17 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="chart-container">
-                                <h6><i class="fas fa-calendar-week me-2" style="color: #D4AF37;"></i>Reservas por Dia de la Semana</h6>
+                                <h6><i class="fas fa-calendar-week me-2" style="color: #D4AF37;"></i>Reservas por Día de la Semana</h6>
                                 <div class="chart-wrapper">
-                                    <canvas id="day-of-week-chart"></canvas>
+                                    <canvas id="day-of-week-chart" aria-label="Gráfico de reservas por día de la semana" role="img"></canvas>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="chart-container">
-                                <h6><i class="fas fa-clock me-2" style="color: #D4AF37;"></i>Distribucion por Anticipacion</h6>
+                                <h6><i class="fas fa-clock me-2" style="color: #D4AF37;"></i>Distribución por Anticipación</h6>
                                 <div class="chart-wrapper">
-                                    <canvas id="lead-time-chart"></canvas>
+                                    <canvas id="lead-time-chart" aria-label="Gráfico de distribución por anticipación de reserva" role="img"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -507,13 +513,13 @@
 
                     <!-- Cancellation Breakdown Table -->
                     <div class="chart-container">
-                        <h6><i class="fas fa-times-circle me-2" style="color: #D4AF37;"></i>Tasas de Cancelacion por Tipo de Cliente</h6>
+                        <h6><i class="fas fa-times-circle me-2" style="color: #D4AF37;"></i>Tasas de Cancelación por Tipo de Cliente</h6>
                         <div class="table-responsive">
                             <table class="table analytics-table mb-0" id="cancellation-table">
                                 <thead>
                                     <tr>
                                         <th>Tipo de Cliente</th>
-                                        <th class="text-end">Tasa de Cancelacion</th>
+                                        <th class="text-end">Tasa de Cancelación</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -663,7 +669,7 @@ function renderDailyOccupancyChart(dailyData) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Ocupacion %',
+                label: 'Ocupación %',
                 data: values,
                 borderColor: chartColors.primary,
                 backgroundColor: chartColors.primary + '20',
@@ -715,7 +721,7 @@ function renderZoneOccupancyChart(zoneData) {
         data: {
             labels: zoneData.map(z => z.zone_name),
             datasets: [{
-                label: 'Ocupacion %',
+                label: 'Ocupación %',
                 data: zoneData.map(z => z.rate),
                 backgroundColor: chartColors.primary,
                 borderRadius: 4
