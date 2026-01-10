@@ -164,6 +164,41 @@ class TestGetOccupancyComparison:
             assert result['trend'] in ('up', 'down', 'same')
 
 
+class TestGetOccupancyRange:
+    """Tests for get_occupancy_range function."""
+
+    def test_returns_list_for_date_range(self, app):
+        """Returns occupancy data for each day in range."""
+        from models.insights import get_occupancy_range
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=6)
+
+            result = get_occupancy_range(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert isinstance(result, list)
+            assert len(result) == 7  # 7 days
+
+    def test_each_day_has_required_fields(self, app):
+        """Each day entry has date, occupied, total, rate."""
+        from models.insights import get_occupancy_range
+
+        with app.app_context():
+            today = date.today().isoformat()
+            result = get_occupancy_range(today, today)
+
+            assert len(result) == 1
+            day = result[0]
+            assert 'date' in day
+            assert 'occupied' in day
+            assert 'total' in day
+            assert 'rate' in day
+
+
 class TestInsightsAPI:
     """Tests for insights API endpoints."""
 

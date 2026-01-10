@@ -240,3 +240,65 @@ def _get_occupancy_for_date(target_date: str) -> dict:
         rate = round((occupied / total) * 100, 1) if total > 0 else 0.0
 
         return {'occupied': occupied, 'total': total, 'rate': rate}
+
+
+# =============================================================================
+# ADVANCED ANALYTICS - OCCUPANCY
+# =============================================================================
+
+def get_occupancy_range(start_date: str, end_date: str) -> list:
+    """
+    Get daily occupancy for a date range.
+
+    Args:
+        start_date: Start date (YYYY-MM-DD)
+        end_date: End date (YYYY-MM-DD)
+
+    Returns:
+        list of dicts with date, occupied, total, rate for each day
+    """
+    from datetime import datetime
+
+    with get_db() as conn:
+        # Get total active furniture (constant for all days)
+        total_cursor = conn.execute('''
+            SELECT COUNT(*) FROM beach_furniture WHERE active = 1
+        ''')
+        total = total_cursor.fetchone()[0]
+
+        # Generate all dates in range
+        start = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+        # Get occupied counts for the range
+        occupied_cursor = conn.execute('''
+            SELECT
+                rf.assignment_date,
+                COUNT(DISTINCT rf.furniture_id) as occupied
+            FROM beach_reservation_furniture rf
+            JOIN beach_reservations r ON rf.reservation_id = r.id
+            LEFT JOIN beach_reservation_states s ON r.current_state = s.name
+            WHERE rf.assignment_date BETWEEN ? AND ?
+              AND (s.is_availability_releasing = 0 OR s.is_availability_releasing IS NULL)
+            GROUP BY rf.assignment_date
+        ''', (start_date, end_date))
+
+        occupied_by_date = {row[0]: row[1] for row in occupied_cursor}
+
+        # Build result for each day
+        results = []
+        current = start
+        while current <= end:
+            date_str = current.isoformat()
+            occupied = occupied_by_date.get(date_str, 0)
+            rate = round((occupied / total) * 100, 1) if total > 0 else 0.0
+
+            results.append({
+                'date': date_str,
+                'occupied': occupied,
+                'total': total,
+                'rate': rate
+            })
+            current += timedelta(days=1)
+
+        return results
