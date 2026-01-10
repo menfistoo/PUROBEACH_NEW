@@ -134,5 +134,18 @@ class TestGetOccupancyByZone:
             assert isinstance(result_tomorrow, list)
 
 
+class TestGetPendingCheckins:
+    """Tests for get_pending_checkins_count function."""
+
+    def test_returns_integer(self, app):
+        """Returns an integer count."""
+        from models.insights import get_pending_checkins_count
+
+        with app.app_context():
+            result = get_pending_checkins_count()
+            assert isinstance(result, int)
+            assert result >= 0
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

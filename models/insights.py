@@ -141,3 +141,28 @@ def get_occupancy_by_zone(target_date: Optional[str] = None) -> list:
             })
 
         return results
+
+
+def get_pending_checkins_count(target_date: Optional[str] = None) -> int:
+    """
+    Get count of reservations pending check-in for a date.
+
+    Args:
+        target_date: Date string (YYYY-MM-DD), defaults to today
+
+    Returns:
+        int: Number of reservations in 'confirmada' or 'pendiente' state
+    """
+    if target_date is None:
+        target_date = date.today().isoformat()
+
+    with get_db() as conn:
+        cursor = conn.execute('''
+            SELECT COUNT(DISTINCT r.id)
+            FROM beach_reservations r
+            JOIN beach_reservation_states s ON r.current_state = s.name
+            WHERE r.start_date <= ?
+              AND r.end_date >= ?
+              AND s.code IN ('pendiente', 'confirmada')
+        ''', (target_date, target_date))
+        return cursor.fetchone()[0]
