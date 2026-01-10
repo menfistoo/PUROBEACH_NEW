@@ -4,7 +4,7 @@ Analytics queries for dashboard and advanced analytics.
 """
 
 from database import get_db
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 
@@ -166,3 +166,76 @@ def get_pending_checkins_count(target_date: Optional[str] = None) -> int:
               AND s.code IN ('pendiente', 'confirmada')
         ''', (target_date, target_date))
         return cursor.fetchone()[0]
+
+
+def get_occupancy_comparison() -> dict:
+    """
+    Get today's occupancy compared to yesterday.
+
+    Returns:
+        dict with keys:
+            - today_rate: float
+            - yesterday_rate: float
+            - difference: float (positive = improvement)
+            - trend: str ('up', 'down', 'same')
+    """
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    today_data = _get_occupancy_for_date(today.isoformat())
+    yesterday_data = _get_occupancy_for_date(yesterday.isoformat())
+
+    today_rate = today_data['rate']
+    yesterday_rate = yesterday_data['rate']
+    difference = round(today_rate - yesterday_rate, 1)
+
+    if difference > 0:
+        trend = 'up'
+    elif difference < 0:
+        trend = 'down'
+    else:
+        trend = 'same'
+
+    return {
+        'today_rate': today_rate,
+        'yesterday_rate': yesterday_rate,
+        'difference': difference,
+        'trend': trend
+    }
+
+
+def _get_occupancy_for_date(target_date: str) -> dict:
+    """
+    Internal helper to get occupancy for a specific date.
+
+    Args:
+        target_date: Date string (YYYY-MM-DD)
+
+    Returns:
+        dict with keys:
+            - occupied: int
+            - total: int
+            - rate: float (0-100)
+    """
+    with get_db() as conn:
+        total_cursor = conn.execute('''
+            SELECT COUNT(*) FROM beach_furniture WHERE active = 1
+        ''')
+        total = total_cursor.fetchone()[0]
+
+        if total == 0:
+            return {'occupied': 0, 'total': 0, 'rate': 0.0}
+
+        occupied_cursor = conn.execute('''
+            SELECT COUNT(DISTINCT rf.furniture_id)
+            FROM beach_reservation_furniture rf
+            JOIN beach_reservations r ON rf.reservation_id = r.id
+            JOIN beach_reservation_states s ON r.current_state = s.name
+            WHERE rf.assignment_date = ?
+              AND (s.is_availability_releasing = 0 OR s.is_availability_releasing IS NULL)
+        ''', (target_date,))
+        occupied = occupied_cursor.fetchone()[0]
+
+        rate = round((occupied / total) * 100, 1) if total > 0 else 0.0
+
+        return {'occupied': occupied, 'total': total, 'rate': rate}

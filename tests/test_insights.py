@@ -147,5 +147,22 @@ class TestGetPendingCheckins:
             assert result >= 0
 
 
+class TestGetOccupancyComparison:
+    """Tests for get_occupancy_comparison function."""
+
+    def test_returns_comparison_data(self, app):
+        """Returns today vs yesterday comparison."""
+        from models.insights import get_occupancy_comparison
+
+        with app.app_context():
+            result = get_occupancy_comparison()
+
+            assert 'today_rate' in result
+            assert 'yesterday_rate' in result
+            assert 'difference' in result
+            assert 'trend' in result
+            assert result['trend'] in ('up', 'down', 'same')
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
