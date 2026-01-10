@@ -1,0 +1,1215 @@
+{% extends "base.html" %}
+
+{% block title %}Analiticas Avanzadas - Beach Club{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* KPI Cards */
+    .kpi-card {
+        border-radius: 12px;
+        border: 1px solid #E8E8E8;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background: white;
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .kpi-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #1A3A5C;
+    }
+    .kpi-label {
+        font-size: 14px;
+        color: #4B5563;
+        margin-top: 4px;
+    }
+    .kpi-subtitle {
+        font-size: 12px;
+        color: #9CA3AF;
+    }
+
+    /* Date Picker Section */
+    .date-picker-section {
+        background: white;
+        border-radius: 12px;
+        padding: 16px 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        margin-bottom: 24px;
+    }
+    .date-picker-section .form-control {
+        border-color: #D4AF37;
+    }
+    .date-picker-section .form-control:focus {
+        border-color: #D4AF37;
+        box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.25);
+    }
+
+    /* Accordion Styling */
+    .accordion-item {
+        border: 1px solid #E8E8E8;
+        border-radius: 12px !important;
+        margin-bottom: 16px;
+        overflow: hidden;
+    }
+    .accordion-button {
+        background: #F5E6D3;
+        color: #1A3A5C;
+        font-weight: 600;
+        font-size: 16px;
+        padding: 16px 20px;
+    }
+    .accordion-button:not(.collapsed) {
+        background: #F5E6D3;
+        color: #1A3A5C;
+        box-shadow: none;
+        border-bottom: 2px solid #D4AF37;
+    }
+    .accordion-button:focus {
+        box-shadow: none;
+        border-color: transparent;
+    }
+    .accordion-button::after {
+        filter: brightness(0) saturate(100%) invert(23%) sepia(13%) saturate(2134%) hue-rotate(179deg) brightness(96%) contrast(89%);
+    }
+    .accordion-body {
+        padding: 24px;
+        background: white;
+    }
+
+    /* Chart Containers */
+    .chart-container {
+        position: relative;
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #E8E8E8;
+        margin-bottom: 20px;
+    }
+    .chart-container h6 {
+        color: #1A3A5C;
+        font-weight: 600;
+        margin-bottom: 16px;
+    }
+    .chart-wrapper {
+        position: relative;
+        height: 280px;
+    }
+
+    /* Data Tables */
+    .analytics-table {
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #E8E8E8;
+    }
+    .analytics-table thead th {
+        background: #F5E6D3;
+        color: #1A3A5C;
+        font-weight: 600;
+        border-bottom: 2px solid #D4AF37;
+        padding: 12px 16px;
+    }
+    .analytics-table tbody td {
+        padding: 12px 16px;
+        vertical-align: middle;
+    }
+    .analytics-table tbody tr:hover {
+        background: rgba(245, 230, 211, 0.3);
+    }
+
+    /* Customer Type Badge */
+    .badge-interno {
+        background: #1A3A5C;
+        color: white;
+    }
+    .badge-externo {
+        background: #D4AF37;
+        color: white;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        border-radius: 12px;
+    }
+    .loading-overlay.hidden {
+        display: none;
+    }
+
+    /* Apply Button */
+    .btn-apply {
+        background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+        color: white;
+        border: none;
+        font-weight: 600;
+    }
+    .btn-apply:hover {
+        background: linear-gradient(135deg, #B8960C 0%, #9A7E0A 100%);
+        color: white;
+    }
+
+    /* Back Link */
+    .back-link {
+        color: #1A3A5C;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .back-link:hover {
+        color: #D4AF37;
+    }
+
+    /* Section Icon */
+    .section-icon {
+        color: #D4AF37;
+        margin-right: 10px;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #9CA3AF;
+    }
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: 16px;
+        color: #E8E8E8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{{ url_for('beach.insights_dashboard') }}" class="back-link mb-2 d-inline-block">
+                <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+            </a>
+            <h1 class="h3 mb-0" style="color: #1A3A5C;">
+                <i class="fas fa-chart-bar me-2" style="color: #D4AF37;"></i>
+                Analiticas Avanzadas
+            </h1>
+        </div>
+    </div>
+
+    <!-- Date Range Picker -->
+    <div class="date-picker-section">
+        <div class="row align-items-center">
+            <div class="col-md-3">
+                <label for="start-date" class="form-label mb-1 text-muted small">Fecha Inicio</label>
+                <input type="date" class="form-control" id="start-date">
+            </div>
+            <div class="col-md-3">
+                <label for="end-date" class="form-label mb-1 text-muted small">Fecha Fin</label>
+                <input type="date" class="form-control" id="end-date">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-apply w-100" id="apply-btn" style="margin-top: 24px;">
+                    <i class="fas fa-sync-alt me-1"></i> Aplicar
+                </button>
+            </div>
+            <div class="col-md-4 d-flex align-items-end justify-content-end">
+                <div class="btn-group" style="margin-top: 24px;">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-range="7">7 dias</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm active" data-range="30">30 dias</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-range="90">90 dias</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Loading Overlay -->
+    <div class="loading-overlay hidden" id="main-loading">
+        <div class="text-center">
+            <div class="spinner-border text-warning" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-3 text-muted">Cargando analiticas...</p>
+        </div>
+    </div>
+
+    <!-- Accordion Sections -->
+    <div class="accordion" id="analytics-accordion">
+        <!-- OCUPACION Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#ocupacion-section">
+                    <i class="fas fa-bed section-icon"></i> Ocupacion
+                </button>
+            </h2>
+            <div id="ocupacion-section" class="accordion-collapse collapse show" data-bs-parent="#analytics-accordion">
+                <div class="accordion-body">
+                    <!-- KPI Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-avg-occupancy">--</div>
+                                <div class="kpi-label">Ocupacion Promedio</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-total-reservations">--</div>
+                                <div class="kpi-label">Reservas Totales</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-noshow-rate">--</div>
+                                <div class="kpi-label">Tasa de No-Show</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="chart-container">
+                                <h6><i class="fas fa-chart-line me-2" style="color: #D4AF37;"></i>Ocupacion Diaria</h6>
+                                <div class="chart-wrapper">
+                                    <canvas id="daily-occupancy-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="chart-container">
+                                <h6><i class="fas fa-map-marker-alt me-2" style="color: #D4AF37;"></i>Ocupacion por Zona</h6>
+                                <div class="chart-wrapper">
+                                    <canvas id="zone-occupancy-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- INGRESOS Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ingresos-section">
+                    <i class="fas fa-euro-sign section-icon"></i> Ingresos
+                </button>
+            </h2>
+            <div id="ingresos-section" class="accordion-collapse collapse" data-bs-parent="#analytics-accordion">
+                <div class="accordion-body">
+                    <!-- KPI Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-total-revenue">--</div>
+                                <div class="kpi-label">Ingresos Totales</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-paid-reservations">--</div>
+                                <div class="kpi-label">Reservas de Pago</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-avg-revenue">--</div>
+                                <div class="kpi-label">Promedio por Reserva</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h6><i class="fas fa-tags me-2" style="color: #D4AF37;"></i>Ingresos por Tipo de Reserva</h6>
+                                <div class="chart-wrapper">
+                                    <canvas id="revenue-by-res-type-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h6><i class="fas fa-users me-2" style="color: #D4AF37;"></i>Ingresos por Tipo de Cliente</h6>
+                                <div class="chart-wrapper">
+                                    <canvas id="revenue-by-cust-type-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Packages Table -->
+                    <div class="chart-container">
+                        <h6><i class="fas fa-star me-2" style="color: #D4AF37;"></i>Paquetes Mas Vendidos</h6>
+                        <div class="table-responsive">
+                            <table class="table analytics-table mb-0" id="top-packages-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Paquete</th>
+                                        <th class="text-center">Cantidad</th>
+                                        <th class="text-end">Ingresos</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="empty-state d-none" id="top-packages-empty">
+                            <i class="fas fa-box-open"></i>
+                            <p>No hay datos de paquetes para el periodo seleccionado</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLIENTES Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#clientes-section">
+                    <i class="fas fa-user-friends section-icon"></i> Clientes
+                </button>
+            </h2>
+            <div id="clientes-section" class="accordion-collapse collapse" data-bs-parent="#analytics-accordion">
+                <div class="accordion-body">
+                    <!-- KPI Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-unique-customers">--</div>
+                                <div class="kpi-label">Clientes Unicos</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-avg-group-size">--</div>
+                                <div class="kpi-label">Tamano Promedio de Grupo</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-returning-rate">--</div>
+                                <div class="kpi-label">Tasa de Retorno</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h6><i class="fas fa-user-check me-2" style="color: #D4AF37;"></i>Nuevos vs Recurrentes</h6>
+                                <div class="chart-wrapper">
+                                    <canvas id="customer-status-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h6><i class="fas fa-hotel me-2" style="color: #D4AF37;"></i>Internos vs Externos</h6>
+                                <div class="chart-wrapper">
+                                    <canvas id="customer-type-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Customers Table -->
+                    <div class="chart-container">
+                        <h6><i class="fas fa-trophy me-2" style="color: #D4AF37;"></i>Top Clientes por Gasto</h6>
+                        <div class="table-responsive">
+                            <table class="table analytics-table mb-0" id="top-customers-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Cliente</th>
+                                        <th class="text-center">Tipo</th>
+                                        <th class="text-center">Reservas</th>
+                                        <th class="text-end">Total Gastado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="empty-state d-none" id="top-customers-empty">
+                            <i class="fas fa-users"></i>
+                            <p>No hay datos de clientes para el periodo seleccionado</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PATRONES Section -->
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#patrones-section">
+                    <i class="fas fa-chart-pie section-icon"></i> Patrones de Reserva
+                </button>
+            </h2>
+            <div id="patrones-section" class="accordion-collapse collapse" data-bs-parent="#analytics-accordion">
+                <div class="accordion-body">
+                    <!-- KPI Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-avg-lead-time">--</div>
+                                <div class="kpi-label">Anticipacion Promedio</div>
+                                <div class="kpi-subtitle">dias antes de la reserva</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-cancellation-rate">--</div>
+                                <div class="kpi-label">Tasa de Cancelacion</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="kpi-card text-center py-4 px-3">
+                                <div class="kpi-value" id="kpi-pattern-noshow-rate">--</div>
+                                <div class="kpi-label">Tasa de No-Show</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h6><i class="fas fa-calendar-week me-2" style="color: #D4AF37;"></i>Reservas por Dia de la Semana</h6>
+                                <div class="chart-wrapper">
+                                    <canvas id="day-of-week-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h6><i class="fas fa-clock me-2" style="color: #D4AF37;"></i>Distribucion por Anticipacion</h6>
+                                <div class="chart-wrapper">
+                                    <canvas id="lead-time-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cancellation Breakdown Table -->
+                    <div class="chart-container">
+                        <h6><i class="fas fa-times-circle me-2" style="color: #D4AF37;"></i>Tasas de Cancelacion por Tipo de Cliente</h6>
+                        <div class="table-responsive">
+                            <table class="table analytics-table mb-0" id="cancellation-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo de Cliente</th>
+                                        <th class="text-end">Tasa de Cancelacion</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="empty-state d-none" id="cancellation-empty">
+                            <i class="fas fa-ban"></i>
+                            <p>No hay datos de cancelaciones para el periodo seleccionado</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// =============================================================================
+// CHART.JS CONFIGURATION
+// =============================================================================
+
+const chartColors = {
+    primary: '#D4AF37',
+    secondary: '#1A3A5C',
+    accent: '#F5E6D3',
+    success: '#4A7C59',
+    warning: '#E5A33D',
+    info: '#4A90A4',
+    danger: '#C1444F'
+};
+
+const chartColorPalette = [
+    chartColors.primary,
+    chartColors.secondary,
+    chartColors.success,
+    chartColors.info,
+    chartColors.warning,
+    chartColors.danger
+];
+
+// Chart instances (for cleanup)
+let charts = {};
+
+// =============================================================================
+// DATE MANAGEMENT
+// =============================================================================
+
+function setDefaultDates() {
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 29);
+
+    document.getElementById('end-date').value = today.toISOString().split('T')[0];
+    document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+}
+
+function setDateRange(days) {
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - (days - 1));
+
+    document.getElementById('end-date').value = today.toISOString().split('T')[0];
+    document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+
+    // Update active button
+    document.querySelectorAll('[data-range]').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.range) === days);
+    });
+
+    loadAnalyticsData();
+}
+
+// =============================================================================
+// DATA LOADING
+// =============================================================================
+
+async function loadAnalyticsData() {
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+
+    if (!startDate || !endDate) {
+        return;
+    }
+
+    // Show loading
+    document.getElementById('main-loading').classList.remove('hidden');
+
+    try {
+        // Load all endpoints in parallel
+        const [occupancy, revenue, customers, patterns] = await Promise.all([
+            fetch(`/beach/api/insights/occupancy?start_date=${startDate}&end_date=${endDate}`).then(r => r.json()),
+            fetch(`/beach/api/insights/revenue?start_date=${startDate}&end_date=${endDate}`).then(r => r.json()),
+            fetch(`/beach/api/insights/customers?start_date=${startDate}&end_date=${endDate}`).then(r => r.json()),
+            fetch(`/beach/api/insights/patterns?start_date=${startDate}&end_date=${endDate}`).then(r => r.json())
+        ]);
+
+        if (occupancy.success) renderOccupancySection(occupancy);
+        if (revenue.success) renderRevenueSection(revenue);
+        if (customers.success) renderCustomersSection(customers);
+        if (patterns.success) renderPatternsSection(patterns);
+
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+    } finally {
+        document.getElementById('main-loading').classList.add('hidden');
+    }
+}
+
+// =============================================================================
+// OCUPACION SECTION
+// =============================================================================
+
+function renderOccupancySection(data) {
+    // KPIs
+    document.getElementById('kpi-avg-occupancy').textContent = data.stats.avg_occupancy + '%';
+    document.getElementById('kpi-total-reservations').textContent = data.stats.total_reservations.toLocaleString('es-ES');
+    document.getElementById('kpi-noshow-rate').textContent = data.stats.noshow_rate + '%';
+
+    // Daily Occupancy Line Chart
+    renderDailyOccupancyChart(data.daily);
+
+    // Zone Occupancy Bar Chart
+    renderZoneOccupancyChart(data.by_zone);
+}
+
+function renderDailyOccupancyChart(dailyData) {
+    const ctx = document.getElementById('daily-occupancy-chart').getContext('2d');
+
+    // Destroy existing chart
+    if (charts.dailyOccupancy) {
+        charts.dailyOccupancy.destroy();
+    }
+
+    const labels = dailyData.map(d => {
+        const date = new Date(d.date);
+        return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+    });
+    const values = dailyData.map(d => d.rate);
+
+    charts.dailyOccupancy = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Ocupacion %',
+                data: values,
+                borderColor: chartColors.primary,
+                backgroundColor: chartColors.primary + '20',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 2,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: value => value + '%'
+                    }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderZoneOccupancyChart(zoneData) {
+    const ctx = document.getElementById('zone-occupancy-chart').getContext('2d');
+
+    // Destroy existing chart
+    if (charts.zoneOccupancy) {
+        charts.zoneOccupancy.destroy();
+    }
+
+    if (!zoneData || zoneData.length === 0) {
+        return;
+    }
+
+    charts.zoneOccupancy = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: zoneData.map(z => z.zone_name),
+            datasets: [{
+                label: 'Ocupacion %',
+                data: zoneData.map(z => z.rate),
+                backgroundColor: chartColors.primary,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: value => value + '%'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// =============================================================================
+// INGRESOS SECTION
+// =============================================================================
+
+function renderRevenueSection(data) {
+    // KPIs
+    document.getElementById('kpi-total-revenue').textContent = formatCurrency(data.stats.total_revenue);
+    document.getElementById('kpi-paid-reservations').textContent = data.stats.paid_reservations.toLocaleString('es-ES');
+    document.getElementById('kpi-avg-revenue').textContent = formatCurrency(data.stats.avg_per_reservation);
+
+    // Revenue by Reservation Type Chart
+    renderRevenueByResTypeChart(data.breakdown.by_reservation_type);
+
+    // Revenue by Customer Type Chart
+    renderRevenueByCustTypeChart(data.breakdown.by_customer_type);
+
+    // Top Packages Table
+    renderTopPackagesTable(data.top_packages);
+}
+
+function renderRevenueByResTypeChart(data) {
+    const ctx = document.getElementById('revenue-by-res-type-chart').getContext('2d');
+
+    if (charts.revenueByResType) {
+        charts.revenueByResType.destroy();
+    }
+
+    if (!data || data.length === 0) {
+        return;
+    }
+
+    const typeLabels = {
+        'incluido': 'Incluido',
+        'paquete': 'Paquete',
+        'consumo_minimo': 'Consumo Minimo'
+    };
+
+    charts.revenueByResType = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => typeLabels[d.type] || d.type),
+            datasets: [{
+                data: data.map(d => d.count),
+                backgroundColor: chartColorPalette.slice(0, data.length),
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const item = data[context.dataIndex];
+                            return `${context.label}: ${item.count} (${item.percentage}%) - ${formatCurrency(item.revenue)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderRevenueByCustTypeChart(data) {
+    const ctx = document.getElementById('revenue-by-cust-type-chart').getContext('2d');
+
+    if (charts.revenueByCustType) {
+        charts.revenueByCustType.destroy();
+    }
+
+    if (!data || data.length === 0) {
+        return;
+    }
+
+    const typeLabels = {
+        'interno': 'Interno (Hotel)',
+        'externo': 'Externo'
+    };
+
+    charts.revenueByCustType = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => typeLabels[d.type] || d.type),
+            datasets: [{
+                data: data.map(d => d.count),
+                backgroundColor: [chartColors.secondary, chartColors.primary],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const item = data[context.dataIndex];
+                            return `${context.label}: ${item.count} (${item.percentage}%) - ${formatCurrency(item.revenue)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderTopPackagesTable(packages) {
+    const tbody = document.querySelector('#top-packages-table tbody');
+    const emptyState = document.getElementById('top-packages-empty');
+
+    if (!packages || packages.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('d-none');
+        document.getElementById('top-packages-table').classList.add('d-none');
+        return;
+    }
+
+    emptyState.classList.add('d-none');
+    document.getElementById('top-packages-table').classList.remove('d-none');
+
+    tbody.innerHTML = packages.map((pkg, index) => `
+        <tr>
+            <td>${index + 1}</td>
+            <td>${escapeHtml(pkg.package_name)}</td>
+            <td class="text-center">${pkg.count}</td>
+            <td class="text-end">${formatCurrency(pkg.revenue)}</td>
+        </tr>
+    `).join('');
+}
+
+// =============================================================================
+// CLIENTES SECTION
+// =============================================================================
+
+function renderCustomersSection(data) {
+    // KPIs
+    document.getElementById('kpi-unique-customers').textContent = data.stats.unique_customers.toLocaleString('es-ES');
+    document.getElementById('kpi-avg-group-size').textContent = data.stats.avg_group_size.toFixed(1);
+    document.getElementById('kpi-returning-rate').textContent = data.stats.returning_rate + '%';
+
+    // Customer Status Chart (new vs returning)
+    renderCustomerStatusChart(data.segmentation.by_status);
+
+    // Customer Type Chart (interno vs externo)
+    renderCustomerTypeChart(data.segmentation.by_type);
+
+    // Top Customers Table
+    renderTopCustomersTable(data.top_customers);
+}
+
+function renderCustomerStatusChart(data) {
+    const ctx = document.getElementById('customer-status-chart').getContext('2d');
+
+    if (charts.customerStatus) {
+        charts.customerStatus.destroy();
+    }
+
+    if (!data || data.length === 0) {
+        return;
+    }
+
+    const statusLabels = {
+        'new': 'Nuevos',
+        'returning': 'Recurrentes'
+    };
+
+    charts.customerStatus = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => statusLabels[d.status] || d.status),
+            datasets: [{
+                data: data.map(d => d.count),
+                backgroundColor: [chartColors.info, chartColors.success],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const item = data[context.dataIndex];
+                            return `${context.label}: ${item.count} (${item.percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderCustomerTypeChart(data) {
+    const ctx = document.getElementById('customer-type-chart').getContext('2d');
+
+    if (charts.customerType) {
+        charts.customerType.destroy();
+    }
+
+    if (!data || data.length === 0) {
+        return;
+    }
+
+    const typeLabels = {
+        'interno': 'Interno (Hotel)',
+        'externo': 'Externo'
+    };
+
+    charts.customerType = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.map(d => typeLabels[d.type] || d.type),
+            datasets: [{
+                data: data.map(d => d.count),
+                backgroundColor: [chartColors.secondary, chartColors.primary],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const item = data[context.dataIndex];
+                            return `${context.label}: ${item.count} (${item.percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderTopCustomersTable(customers) {
+    const tbody = document.querySelector('#top-customers-table tbody');
+    const emptyState = document.getElementById('top-customers-empty');
+
+    if (!customers || customers.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('d-none');
+        document.getElementById('top-customers-table').classList.add('d-none');
+        return;
+    }
+
+    emptyState.classList.add('d-none');
+    document.getElementById('top-customers-table').classList.remove('d-none');
+
+    tbody.innerHTML = customers.map((customer, index) => {
+        const typeLabel = customer.customer_type === 'interno' ? 'Interno' : 'Externo';
+        const badgeClass = customer.customer_type === 'interno' ? 'badge-interno' : 'badge-externo';
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${escapeHtml(customer.customer_name)}</td>
+                <td class="text-center"><span class="badge ${badgeClass}">${typeLabel}</span></td>
+                <td class="text-center">${customer.reservation_count}</td>
+                <td class="text-end">${formatCurrency(customer.total_spend)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// =============================================================================
+// PATRONES SECTION
+// =============================================================================
+
+function renderPatternsSection(data) {
+    // KPIs
+    document.getElementById('kpi-avg-lead-time').textContent = data.stats.avg_lead_time.toFixed(1);
+    document.getElementById('kpi-cancellation-rate').textContent = data.stats.cancellation_rate + '%';
+    document.getElementById('kpi-pattern-noshow-rate').textContent = data.stats.noshow_rate + '%';
+
+    // Day of Week Chart
+    renderDayOfWeekChart(data.by_day_of_week);
+
+    // Lead Time Distribution Chart
+    renderLeadTimeChart(data.lead_time);
+
+    // Cancellation Breakdown Table
+    renderCancellationTable(data.cancellation.by_customer_type);
+}
+
+function renderDayOfWeekChart(data) {
+    const ctx = document.getElementById('day-of-week-chart').getContext('2d');
+
+    if (charts.dayOfWeek) {
+        charts.dayOfWeek.destroy();
+    }
+
+    if (!data || data.length === 0) {
+        return;
+    }
+
+    // Reorder to start from Monday (1,2,3,4,5,6,0 -> Mon-Sun)
+    const reorderedData = [...data.slice(1), data[0]];
+
+    charts.dayOfWeek = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: reorderedData.map(d => d.name),
+            datasets: [{
+                label: 'Reservas',
+                data: reorderedData.map(d => d.count),
+                backgroundColor: chartColors.primary,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderLeadTimeChart(data) {
+    const ctx = document.getElementById('lead-time-chart').getContext('2d');
+
+    if (charts.leadTime) {
+        charts.leadTime.destroy();
+    }
+
+    if (!data || data.length === 0) {
+        return;
+    }
+
+    charts.leadTime = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.name),
+            datasets: [{
+                label: 'Reservas',
+                data: data.map(d => d.count),
+                backgroundColor: chartColors.secondary,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const item = data[context.dataIndex];
+                            return `${item.count} reservas (${item.percentage}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderCancellationTable(data) {
+    const tbody = document.querySelector('#cancellation-table tbody');
+    const emptyState = document.getElementById('cancellation-empty');
+
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('d-none');
+        document.getElementById('cancellation-table').classList.add('d-none');
+        return;
+    }
+
+    emptyState.classList.add('d-none');
+    document.getElementById('cancellation-table').classList.remove('d-none');
+
+    const typeLabels = {
+        'interno': 'Interno (Hotel)',
+        'externo': 'Externo'
+    };
+
+    tbody.innerHTML = data.map(item => {
+        const rateColor = item.rate > 20 ? chartColors.danger :
+                         item.rate > 10 ? chartColors.warning : chartColors.success;
+        return `
+            <tr>
+                <td>${typeLabels[item.type] || item.type}</td>
+                <td class="text-end">
+                    <span style="color: ${rateColor}; font-weight: 600;">${item.rate}%</span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+function formatCurrency(value) {
+    return new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(value);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// =============================================================================
+// INITIALIZATION
+// =============================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default dates (last 30 days)
+    setDefaultDates();
+
+    // Load initial data
+    loadAnalyticsData();
+
+    // Apply button handler
+    document.getElementById('apply-btn').addEventListener('click', loadAnalyticsData);
+
+    // Date range quick select buttons
+    document.querySelectorAll('[data-range]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            setDateRange(parseInt(this.dataset.range));
+        });
+    });
+
+    // Update button states on manual date change
+    document.getElementById('start-date').addEventListener('change', function() {
+        document.querySelectorAll('[data-range]').forEach(btn => btn.classList.remove('active'));
+    });
+    document.getElementById('end-date').addEventListener('change', function() {
+        document.querySelectorAll('[data-range]').forEach(btn => btn.classList.remove('active'));
+    });
+});
+</script>
+{% endblock %}
