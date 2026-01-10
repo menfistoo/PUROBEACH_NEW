@@ -20,7 +20,11 @@ from models.insights import (
     get_customer_segmentation,
     get_top_customers,
     get_popular_preferences,
-    get_popular_tags
+    get_popular_tags,
+    get_pattern_stats,
+    get_reservations_by_day_of_week,
+    get_lead_time_distribution,
+    get_cancellation_breakdown
 )
 
 
@@ -217,6 +221,59 @@ def register_routes(bp):
                 'top_customers': top_customers,
                 'preferences': preferences,
                 'tags': tags
+            })
+
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    @bp.route('/insights/patterns', methods=['GET'])
+    @login_required
+    def get_insights_patterns():
+        """
+        Get booking patterns analytics for a date range.
+
+        Query params:
+            - start_date: Start date (YYYY-MM-DD)
+            - end_date: End date (YYYY-MM-DD)
+
+        Response JSON:
+        {
+            "success": true,
+            "stats": {
+                "avg_lead_time": 5.0,
+                "cancellation_rate": 10.0,
+                "noshow_rate": 5.0
+            },
+            "by_day_of_week": [...],
+            "lead_time": [...],
+            "cancellation": {
+                "by_customer_type": [...],
+                "by_lead_time": [...]
+            }
+        }
+        """
+        try:
+            # Get date range from params, default to last 30 days
+            end_date = request.args.get('end_date', date.today().isoformat())
+            start_date = request.args.get(
+                'start_date',
+                (date.today() - timedelta(days=29)).isoformat()
+            )
+
+            stats = get_pattern_stats(start_date, end_date)
+            by_day_of_week = get_reservations_by_day_of_week(start_date, end_date)
+            lead_time = get_lead_time_distribution(start_date, end_date)
+            cancellation = get_cancellation_breakdown(start_date, end_date)
+
+            return jsonify({
+                'success': True,
+                'stats': stats,
+                'by_day_of_week': by_day_of_week,
+                'lead_time': lead_time,
+                'cancellation': cancellation
             })
 
         except Exception as e:

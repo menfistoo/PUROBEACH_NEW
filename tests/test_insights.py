@@ -620,5 +620,302 @@ class TestInsightsAPI:
             assert 'by_type' in segmentation
 
 
+# =============================================================================
+# PHASE 5: BOOKING PATTERNS TESTS
+# =============================================================================
+
+class TestGetPatternStats:
+    """Tests for get_pattern_stats function."""
+
+    def test_returns_required_fields(self, app):
+        """Returns avg_lead_time, cancellation_rate, noshow_rate."""
+        from models.insights import get_pattern_stats
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_pattern_stats(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert 'avg_lead_time' in result
+            assert 'cancellation_rate' in result
+            assert 'noshow_rate' in result
+            assert isinstance(result['avg_lead_time'], (int, float))
+            assert isinstance(result['cancellation_rate'], (int, float))
+            assert isinstance(result['noshow_rate'], (int, float))
+
+    def test_returns_zero_when_no_reservations(self, app):
+        """Returns 0 values when no reservations exist in range."""
+        from models.insights import get_pattern_stats
+
+        with app.app_context():
+            # Use a date range in the past with no reservations
+            result = get_pattern_stats('2020-01-01', '2020-01-02')
+
+            assert result['avg_lead_time'] == 0.0
+            assert result['cancellation_rate'] == 0.0
+            assert result['noshow_rate'] == 0.0
+
+    def test_rates_are_percentages(self, app):
+        """Rates should be between 0 and 100."""
+        from models.insights import get_pattern_stats
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_pattern_stats(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert 0 <= result['cancellation_rate'] <= 100
+            assert 0 <= result['noshow_rate'] <= 100
+
+
+class TestGetReservationsByDayOfWeek:
+    """Tests for get_reservations_by_day_of_week function."""
+
+    def test_returns_list_with_seven_days(self, app):
+        """Returns list with 7 days of week."""
+        from models.insights import get_reservations_by_day_of_week
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_reservations_by_day_of_week(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert isinstance(result, list)
+            assert len(result) == 7
+
+    def test_each_day_has_required_fields(self, app):
+        """Each day entry has day_of_week, name, count."""
+        from models.insights import get_reservations_by_day_of_week
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_reservations_by_day_of_week(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            for day in result:
+                assert 'day_of_week' in day
+                assert 'name' in day
+                assert 'count' in day
+                assert day['day_of_week'] in range(7)
+
+    def test_day_names_in_spanish(self, app):
+        """Day names should be in Spanish."""
+        from models.insights import get_reservations_by_day_of_week
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_reservations_by_day_of_week(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            expected_names = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+            names = [day['name'] for day in result]
+            assert set(names) == set(expected_names)
+
+
+class TestGetLeadTimeDistribution:
+    """Tests for get_lead_time_distribution function."""
+
+    def test_returns_five_buckets(self, app):
+        """Returns 5 lead time buckets."""
+        from models.insights import get_lead_time_distribution
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_lead_time_distribution(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert isinstance(result, list)
+            assert len(result) == 5
+
+    def test_each_bucket_has_required_fields(self, app):
+        """Each bucket entry has bucket, name, count, percentage."""
+        from models.insights import get_lead_time_distribution
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_lead_time_distribution(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            expected_buckets = ['same_day', '1_2_days', '3_7_days', '8_14_days', '15_plus_days']
+            for bucket in result:
+                assert 'bucket' in bucket
+                assert 'name' in bucket
+                assert 'count' in bucket
+                assert 'percentage' in bucket
+                assert bucket['bucket'] in expected_buckets
+
+    def test_percentages_sum_to_100_or_zero(self, app):
+        """Percentages should sum to 100 (or 0 if no data)."""
+        from models.insights import get_lead_time_distribution
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_lead_time_distribution(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            total_percentage = sum(b['percentage'] for b in result)
+            # Should be 0 (no data) or close to 100 (with data)
+            assert total_percentage == 0 or abs(total_percentage - 100) < 1
+
+
+class TestGetCancellationBreakdown:
+    """Tests for get_cancellation_breakdown function."""
+
+    def test_returns_by_customer_type_and_by_lead_time(self, app):
+        """Returns breakdown by customer type and by lead time."""
+        from models.insights import get_cancellation_breakdown
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_cancellation_breakdown(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert 'by_customer_type' in result
+            assert 'by_lead_time' in result
+            assert isinstance(result['by_customer_type'], list)
+            assert isinstance(result['by_lead_time'], list)
+
+    def test_by_customer_type_has_required_fields(self, app):
+        """Each customer type entry has type, rate."""
+        from models.insights import get_cancellation_breakdown
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_cancellation_breakdown(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            for item in result['by_customer_type']:
+                assert 'type' in item
+                assert 'rate' in item
+
+    def test_by_lead_time_has_required_fields(self, app):
+        """Each lead time entry has bucket, name, rate."""
+        from models.insights import get_cancellation_breakdown
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_cancellation_breakdown(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            for item in result['by_lead_time']:
+                assert 'bucket' in item
+                assert 'name' in item
+                assert 'rate' in item
+
+
+class TestInsightsPatternsAPI:
+    """Tests for /insights/patterns API endpoint."""
+
+    def test_patterns_endpoint_returns_data(self, authenticated_client, app):
+        """GET /beach/api/insights/patterns returns booking patterns data."""
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=6)
+
+            response = authenticated_client.get(
+                f'/beach/api/insights/patterns?start_date={start_date}&end_date={end_date}'
+            )
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data['success'] is True
+            assert 'stats' in data
+            assert 'by_day_of_week' in data
+            assert 'lead_time' in data
+            assert 'cancellation' in data
+
+    def test_patterns_endpoint_requires_auth(self, client, app):
+        """GET /beach/api/insights/patterns requires authentication."""
+        with app.app_context():
+            response = client.get('/beach/api/insights/patterns')
+            # Should redirect to login or return 401
+            assert response.status_code in (302, 401)
+
+    def test_patterns_stats_structure(self, authenticated_client, app):
+        """GET /beach/api/insights/patterns returns correct stats structure."""
+        with app.app_context():
+            response = authenticated_client.get('/beach/api/insights/patterns')
+
+            assert response.status_code == 200
+            data = response.get_json()
+            stats = data['stats']
+            assert 'avg_lead_time' in stats
+            assert 'cancellation_rate' in stats
+            assert 'noshow_rate' in stats
+
+    def test_patterns_by_day_of_week_structure(self, authenticated_client, app):
+        """GET /beach/api/insights/patterns returns 7 days of week."""
+        with app.app_context():
+            response = authenticated_client.get('/beach/api/insights/patterns')
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert len(data['by_day_of_week']) == 7
+
+    def test_patterns_lead_time_structure(self, authenticated_client, app):
+        """GET /beach/api/insights/patterns returns 5 lead time buckets."""
+        with app.app_context():
+            response = authenticated_client.get('/beach/api/insights/patterns')
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert len(data['lead_time']) == 5
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
