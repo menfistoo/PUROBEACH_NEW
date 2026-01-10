@@ -164,5 +164,28 @@ class TestGetOccupancyComparison:
             assert result['trend'] in ('up', 'down', 'same')
 
 
+class TestInsightsAPI:
+    """Tests for insights API endpoints."""
+
+    def test_today_endpoint_returns_data(self, authenticated_client, app):
+        """GET /beach/api/insights/today returns today's metrics."""
+        with app.app_context():
+            response = authenticated_client.get('/beach/api/insights/today')
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data['success'] is True
+            assert 'occupancy' in data
+            assert 'pending_checkins' in data
+            assert 'zones' in data
+
+    def test_today_endpoint_requires_auth(self, client, app):
+        """GET /beach/api/insights/today requires authentication."""
+        with app.app_context():
+            response = client.get('/beach/api/insights/today')
+            # Should redirect to login or return 401
+            assert response.status_code in (302, 401)
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
