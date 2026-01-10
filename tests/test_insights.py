@@ -285,6 +285,242 @@ class TestGetTopPackages:
             assert isinstance(result, list)
 
 
+class TestGetCustomerStats:
+    """Tests for get_customer_stats function."""
+
+    def test_returns_required_fields(self, app):
+        """Returns unique_customers, avg_group_size, returning_rate."""
+        from models.insights import get_customer_stats
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_customer_stats(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert 'unique_customers' in result
+            assert 'avg_group_size' in result
+            assert 'returning_rate' in result
+            assert isinstance(result['unique_customers'], int)
+            assert isinstance(result['avg_group_size'], float)
+            assert isinstance(result['returning_rate'], float)
+
+    def test_returns_zero_when_no_reservations(self, app):
+        """Returns 0 values when no reservations exist in range."""
+        from models.insights import get_customer_stats
+
+        with app.app_context():
+            # Use a date range in the past with no reservations
+            result = get_customer_stats('2020-01-01', '2020-01-02')
+
+            assert result['unique_customers'] == 0
+            assert result['avg_group_size'] == 0.0
+
+
+class TestGetCustomerSegmentation:
+    """Tests for get_customer_segmentation function."""
+
+    def test_returns_by_status_and_by_type(self, app):
+        """Returns segmentation by status and by type."""
+        from models.insights import get_customer_segmentation
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_customer_segmentation(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert 'by_status' in result
+            assert 'by_type' in result
+            assert isinstance(result['by_status'], list)
+            assert isinstance(result['by_type'], list)
+
+    def test_status_items_have_required_fields(self, app):
+        """Each status item has status, count, percentage."""
+        from models.insights import get_customer_segmentation
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_customer_segmentation(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            for item in result['by_status']:
+                assert 'status' in item
+                assert 'count' in item
+                assert 'percentage' in item
+                assert item['status'] in ('new', 'returning')
+
+    def test_type_items_have_required_fields(self, app):
+        """Each type item has type, count, percentage."""
+        from models.insights import get_customer_segmentation
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_customer_segmentation(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            for item in result['by_type']:
+                assert 'type' in item
+                assert 'count' in item
+                assert 'percentage' in item
+
+
+class TestGetTopCustomers:
+    """Tests for get_top_customers function."""
+
+    def test_returns_list(self, app):
+        """Returns a list of top customers."""
+        from models.insights import get_top_customers
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_top_customers(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert isinstance(result, list)
+
+    def test_each_customer_has_required_fields(self, app):
+        """Each customer entry has required fields."""
+        from models.insights import get_top_customers
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_top_customers(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            for customer in result:
+                assert 'customer_id' in customer
+                assert 'customer_name' in customer
+                assert 'customer_type' in customer
+                assert 'reservation_count' in customer
+                assert 'total_spend' in customer
+
+    def test_respects_limit_parameter(self, app):
+        """Respects the limit parameter."""
+        from models.insights import get_top_customers
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_top_customers(
+                start_date.isoformat(),
+                end_date.isoformat(),
+                limit=5
+            )
+
+            assert len(result) <= 5
+
+
+class TestGetPopularPreferences:
+    """Tests for get_popular_preferences function."""
+
+    def test_returns_list(self, app):
+        """Returns a list of popular preferences."""
+        from models.insights import get_popular_preferences
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_popular_preferences(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert isinstance(result, list)
+
+    def test_each_preference_has_required_fields(self, app):
+        """Each preference entry has required fields."""
+        from models.insights import get_popular_preferences
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_popular_preferences(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            for pref in result:
+                assert 'preference_id' in pref
+                assert 'preference_name' in pref
+                assert 'preference_code' in pref
+                assert 'count' in pref
+
+
+class TestGetPopularTags:
+    """Tests for get_popular_tags function."""
+
+    def test_returns_list(self, app):
+        """Returns a list of popular tags."""
+        from models.insights import get_popular_tags
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_popular_tags(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert isinstance(result, list)
+
+    def test_each_tag_has_required_fields(self, app):
+        """Each tag entry has required fields."""
+        from models.insights import get_popular_tags
+        from datetime import date, timedelta
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_popular_tags(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            for tag in result:
+                assert 'tag_id' in tag
+                assert 'tag_name' in tag
+                assert 'tag_color' in tag
+                assert 'count' in tag
+
+
 class TestInsightsAPI:
     """Tests for insights API endpoints."""
 
@@ -340,6 +576,48 @@ class TestInsightsAPI:
             assert 'stats' in data
             assert 'breakdown' in data
             assert 'top_packages' in data
+
+    def test_customers_endpoint_returns_data(self, authenticated_client, app):
+        """GET /beach/api/insights/customers returns customer analytics."""
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=6)
+
+            response = authenticated_client.get(
+                f'/beach/api/insights/customers?start_date={start_date}&end_date={end_date}'
+            )
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data['success'] is True
+            assert 'stats' in data
+            assert 'segmentation' in data
+            assert 'top_customers' in data
+            assert 'preferences' in data
+            assert 'tags' in data
+
+    def test_customers_endpoint_stats_structure(self, authenticated_client, app):
+        """GET /beach/api/insights/customers returns correct stats structure."""
+        with app.app_context():
+            response = authenticated_client.get('/beach/api/insights/customers')
+
+            assert response.status_code == 200
+            data = response.get_json()
+            stats = data['stats']
+            assert 'unique_customers' in stats
+            assert 'avg_group_size' in stats
+            assert 'returning_rate' in stats
+
+    def test_customers_endpoint_segmentation_structure(self, authenticated_client, app):
+        """GET /beach/api/insights/customers returns correct segmentation structure."""
+        with app.app_context():
+            response = authenticated_client.get('/beach/api/insights/customers')
+
+            assert response.status_code == 200
+            data = response.get_json()
+            segmentation = data['segmentation']
+            assert 'by_status' in segmentation
+            assert 'by_type' in segmentation
 
 
 if __name__ == '__main__':
