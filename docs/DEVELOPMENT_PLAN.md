@@ -1,7 +1,7 @@
 # Beach Club Management System - Development Plan
 
-**Last Updated:** 2026-01-09
-**Current Phase:** Phase 7a Complete - Planning Next Phase
+**Last Updated:** 2026-01-10
+**Current Phase:** Insights & Analytics Complete
 
 ---
 
@@ -35,6 +35,18 @@
 ---
 
 ## Recently Completed
+
+### 2026-01-10: Insights & Analytics Module
+- ✅ Dashboard Operativo with today's metrics (occupancy, zones, pending check-ins)
+- ✅ Advanced Analytics page with date range picker
+- ✅ Occupancy analytics: daily trends, by zone, comparison to yesterday
+- ✅ Revenue analytics: total, by reservation/customer type, top packages
+- ✅ Customer analytics: stats, segmentation, top customers, preferences/tags
+- ✅ Booking patterns: lead time, day-of-week, cancellation breakdown
+- ✅ Chart.js visualizations (line, bar, donut charts)
+- ✅ API endpoints: /today, /occupancy, /revenue, /customers, /patterns
+- ✅ Permissions: beach.insights.view, beach.insights.analytics
+- ✅ 52 tests covering all model functions and API endpoints
 
 ### 2026-01-09: Room Change Indicator
 - ✅ Store original_room when creating reservations for interno customers
@@ -1406,6 +1418,16 @@ def get_revenue_by_zone(start_date, end_date)
 
 ## Completed Items
 
+### Insights & Analytics Module (Completed 2026-01-10)
+- ✅ Dashboard Operativo with today's metrics
+- ✅ Advanced Analytics with date range picker and Chart.js visualizations
+- ✅ Occupancy analytics (today, range, by zone, comparison)
+- ✅ Revenue analytics (stats, by type, top packages)
+- ✅ Customer analytics (stats, segmentation, top customers, preferences, tags)
+- ✅ Booking patterns (lead time, day of week, cancellation breakdown)
+- ✅ 5 API endpoints: /today, /occupancy, /revenue, /customers, /patterns
+- ✅ 52 tests passing
+
 ### Payment & Pricing System (Completed 2026-01-08)
 - ✅ Database schema: `beach_packages` table, updated `beach_reservations`
 - ✅ Package CRUD operations and minimum consumption policies
@@ -1547,11 +1569,12 @@ All features implemented:
 - 3 reservation types: Incluido, Paquete, Consumo Mínimo
 - Package management and minimum consumption policies fully functional
 
-### Insights & Analytics (On Hold)
-1. **Review this plan** and prioritize insight categories
-2. **Answer business questions** in "Questions to Consider" section
-3. **Begin Phase 1** implementation (if approved)
-4. **Create wireframes/mockups** for dashboard layout
+### Insights & Analytics ✅ COMPLETED
+- Dashboard Operativo: Today's occupancy, zones, pending check-ins
+- Advanced Analytics: Date range analysis for occupancy, revenue, customers, booking patterns
+- API endpoints for all analytics data
+- Chart.js visualizations
+- 52 tests passing
 
 ---
 
