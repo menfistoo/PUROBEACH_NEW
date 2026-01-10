@@ -222,6 +222,69 @@ class TestGetOccupancyStats:
             assert isinstance(result['total_reservations'], int)
 
 
+class TestGetRevenueStats:
+    """Tests for get_revenue_stats function."""
+
+    def test_returns_revenue_summary(self, app):
+        """Returns total revenue, paid reservations, average."""
+        from models.insights import get_revenue_stats
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_revenue_stats(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert 'total_revenue' in result
+            assert 'paid_reservations' in result
+            assert 'avg_per_reservation' in result
+            assert isinstance(result['total_revenue'], (int, float))
+
+
+class TestGetRevenueByType:
+    """Tests for get_revenue_by_type function."""
+
+    def test_returns_breakdown_by_reservation_type(self, app):
+        """Returns revenue breakdown by reservation type."""
+        from models.insights import get_revenue_by_type
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_revenue_by_type(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert 'by_reservation_type' in result
+            assert 'by_customer_type' in result
+            assert isinstance(result['by_reservation_type'], list)
+            assert isinstance(result['by_customer_type'], list)
+
+
+class TestGetTopPackages:
+    """Tests for get_top_packages function."""
+
+    def test_returns_package_list(self, app):
+        """Returns list of top packages by usage."""
+        from models.insights import get_top_packages
+
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=29)
+
+            result = get_top_packages(
+                start_date.isoformat(),
+                end_date.isoformat()
+            )
+
+            assert isinstance(result, list)
+
+
 class TestInsightsAPI:
     """Tests for insights API endpoints."""
 
@@ -260,6 +323,23 @@ class TestInsightsAPI:
             assert 'stats' in data
             assert 'daily' in data
             assert 'by_zone' in data
+
+    def test_revenue_endpoint_returns_data(self, authenticated_client, app):
+        """GET /beach/api/insights/revenue returns revenue data."""
+        with app.app_context():
+            end_date = date.today()
+            start_date = end_date - timedelta(days=6)
+
+            response = authenticated_client.get(
+                f'/beach/api/insights/revenue?start_date={start_date}&end_date={end_date}'
+            )
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data['success'] is True
+            assert 'stats' in data
+            assert 'breakdown' in data
+            assert 'top_packages' in data
 
 
 if __name__ == '__main__':

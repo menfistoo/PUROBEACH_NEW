@@ -12,7 +12,10 @@ from models.insights import (
     get_pending_checkins_count,
     get_occupancy_comparison,
     get_occupancy_range,
-    get_occupancy_stats
+    get_occupancy_stats,
+    get_revenue_stats,
+    get_revenue_by_type,
+    get_top_packages
 )
 
 
@@ -103,6 +106,56 @@ def register_routes(bp):
                 'stats': stats,
                 'daily': daily,
                 'by_zone': by_zone
+            })
+
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    @bp.route('/insights/revenue', methods=['GET'])
+    @login_required
+    def get_insights_revenue():
+        """
+        Get revenue analytics for a date range.
+
+        Query params:
+            - start_date: Start date (YYYY-MM-DD)
+            - end_date: End date (YYYY-MM-DD)
+
+        Response JSON:
+        {
+            "success": true,
+            "stats": {
+                "total_revenue": 5000.00,
+                "paid_reservations": 50,
+                "avg_per_reservation": 100.00
+            },
+            "breakdown": {
+                "by_reservation_type": [...],
+                "by_customer_type": [...]
+            },
+            "top_packages": [...]
+        }
+        """
+        try:
+            # Get date range from params, default to last 30 days
+            end_date = request.args.get('end_date', date.today().isoformat())
+            start_date = request.args.get(
+                'start_date',
+                (date.today() - timedelta(days=29)).isoformat()
+            )
+
+            stats = get_revenue_stats(start_date, end_date)
+            breakdown = get_revenue_by_type(start_date, end_date)
+            top_packages = get_top_packages(start_date, end_date)
+
+            return jsonify({
+                'success': True,
+                'stats': stats,
+                'breakdown': breakdown,
+                'top_packages': top_packages
             })
 
         except Exception as e:
