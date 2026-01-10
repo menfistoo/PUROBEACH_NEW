@@ -230,11 +230,12 @@ def _get_occupancy_for_date(target_date: str) -> dict:
             SELECT COUNT(DISTINCT rf.furniture_id)
             FROM beach_reservation_furniture rf
             JOIN beach_reservations r ON rf.reservation_id = r.id
-            JOIN beach_reservation_states s ON r.current_state = s.name
+            LEFT JOIN beach_reservation_states s ON r.current_state = s.name
             WHERE rf.assignment_date = ?
               AND (s.is_availability_releasing = 0 OR s.is_availability_releasing IS NULL)
         ''', (target_date,))
-        occupied = occupied_cursor.fetchone()[0]
+        result = occupied_cursor.fetchone()
+        occupied = result[0] if result else 0
 
         rate = round((occupied / total) * 100, 1) if total > 0 else 0.0
 
