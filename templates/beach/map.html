@@ -1365,8 +1365,8 @@
         // ==========================================================================
         const blockManager = new BlockManager({
             getCurrentDate: () => map.getCurrentDate(),
-            onBlockSuccess: () => map.loadData(),
-            onUnblockSuccess: () => map.loadData(),
+            onBlockSuccess: () => map.refreshAvailability(),
+            onUnblockSuccess: () => map.refreshAvailability(),
             getBlockInfo: (furnitureId) => {
                 const data = map.getData();
                 return data?.blocks?.[furnitureId] || null;
@@ -1391,8 +1391,8 @@
             getCurrentDate: () => map.getCurrentDate(),
             getZones: () => map.getData()?.zones || [],
             getFurnitureTypes: () => map.getData()?.furniture_types || {},
-            onCreateSuccess: () => map.loadData(),
-            onDeleteSuccess: () => map.loadData()
+            onCreateSuccess: () => map.refreshAvailability(),
+            onDeleteSuccess: () => map.refreshAvailability()
         });
 
         // Wire up temp furniture callbacks

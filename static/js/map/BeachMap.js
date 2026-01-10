@@ -378,6 +378,11 @@ export class BeachMap {
     render() {
         if (!this.data) return;
 
+        // Preserve scroll position before re-rendering
+        const wrapper = this.container.closest('.map-canvas-wrapper');
+        const scrollLeft = wrapper?.scrollLeft || 0;
+        const scrollTop = wrapper?.scrollTop || 0;
+
         const { width, height } = this.data.map_dimensions;
         this.svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
@@ -396,6 +401,14 @@ export class BeachMap {
 
         // Apply zoom
         this.applyZoom();
+
+        // Restore scroll position after browser processes DOM changes
+        if (wrapper) {
+            requestAnimationFrame(() => {
+                wrapper.scrollLeft = scrollLeft;
+                wrapper.scrollTop = scrollTop;
+            });
+        }
 
         // Notify render complete
         if (this.callbacks.onRender) {
@@ -432,7 +445,7 @@ export class BeachMap {
 
         // Always multi-select on tap (mobile-first)
         this.selection.select(item.id, true);
-        this.render();
+        this.updateFurnitureSelectionVisuals();
         this.selection.updatePanel(this.data);
 
         if (this.callbacks.onFurnitureClick) {
@@ -446,19 +459,19 @@ export class BeachMap {
 
     selectFurniture(id, addToSelection = false) {
         this.selection.select(id, addToSelection);
-        this.render();
+        this.updateFurnitureSelectionVisuals();
         this.selection.updatePanel(this.data);
     }
 
     deselectFurniture(id) {
         this.selection.deselect(id);
-        this.render();
+        this.updateFurnitureSelectionVisuals();
         this.selection.updatePanel(this.data);
     }
 
     clearSelection() {
         this.selection.clear();
-        this.render();
+        this.updateFurnitureSelectionVisuals();
         this.selection.updatePanel(this.data);
     }
 
@@ -476,6 +489,61 @@ export class BeachMap {
 
     updateSelectionPanel() {
         this.selection.updatePanel(this.data);
+    }
+
+    /**
+     * Update furniture selection visuals without full re-render
+     * This preserves scroll position by only updating CSS classes/styles
+     */
+    updateFurnitureSelectionVisuals() {
+        const selectedSet = this.selection.getSelectedSet();
+        const furnitureGroups = this.furnitureLayer.querySelectorAll('g[data-furniture-id]');
+
+        furnitureGroups.forEach(group => {
+            const id = parseInt(group.getAttribute('data-furniture-id'));
+            const rect = group.querySelector('rect');
+            if (!rect) return;
+
+            const isSelected = selectedSet.has(id);
+
+            // Get furniture data to determine base colors
+            const item = this.data?.furniture?.find(f => f.id === id);
+            if (!item) return;
+
+            // Determine availability status
+            const availStatus = this.data?.availability?.[id];
+            const isBlocked = this.data?.blocks?.[id];
+
+            if (isSelected) {
+                // Apply selection styling
+                rect.setAttribute('fill', this.colors.selectedFill);
+                rect.setAttribute('stroke', this.colors.selectedStroke);
+                group.setAttribute('filter', 'url(#selected-glow)');
+            } else {
+                // Remove selection styling, restore base colors
+                group.removeAttribute('filter');
+
+                if (isBlocked) {
+                    rect.setAttribute('fill', this.colors.blockedFill);
+                    rect.setAttribute('stroke', this.colors.blockedStroke);
+                } else if (availStatus && !availStatus.available) {
+                    // Occupied furniture - use state colors if available
+                    const stateColors = this.colors.stateColors?.[availStatus.state_code];
+                    if (stateColors) {
+                        rect.setAttribute('fill', stateColors.fill);
+                        rect.setAttribute('stroke', stateColors.stroke);
+                    } else {
+                        // Fallback for occupied without state colors
+                        rect.setAttribute('fill', this.colors.availableFill);
+                        rect.setAttribute('stroke', this.colors.availableStroke);
+                    }
+                } else {
+                    // Available furniture
+                    rect.setAttribute('fill', this.colors.availableFill);
+                    rect.setAttribute('stroke', this.colors.availableStroke);
+                }
+            }
+        });
     }
 
     // =========================================================================
@@ -577,6 +645,7 @@ export class BeachMap {
 
         try {
             await this.loadData();
+            this.render();
         } catch (error) {
             console.error('Auto-refresh error:', error);
         }
