@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard del Dia - Beach Club{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        border-radius: 12px;
+        border: 1px solid #E8E8E8;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .kpi-value {
+        font-size: 36px;
+        font-weight: 700;
+        color: #1A3A5C;
+    }
+    .kpi-label {
+        font-size: 14px;
+        color: #4B5563;
+        margin-top: 4px;
+    }
+    .kpi-trend {
+        font-size: 13px;
+        margin-top: 8px;
+    }
+    .trend-up { color: #4A7C59; }
+    .trend-down { color: #C1444F; }
+    .trend-same { color: #9CA3AF; }
+
+    .kpi-subtitle {
+        font-size: 12px;
+        color: #9CA3AF;
+    }
+
+    .zone-bar-container {
+        background: #E8E8E8;
+        border-radius: 4px;
+        height: 24px;
+        overflow: hidden;
+    }
+    .zone-bar {
+        background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+    .zone-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .zone-name {
+        width: 140px;
+        font-size: 14px;
+        color: #1F2937;
+    }
+    .zone-bar-wrapper {
+        flex: 1;
+        margin: 0 12px;
+    }
+    .zone-rate {
+        width: 50px;
+        text-align: right;
+        font-weight: 600;
+        color: #1A3A5C;
+    }
+
+    .refresh-btn {
+        color: #D4AF37;
+        border-color: #D4AF37;
+    }
+    .refresh-btn:hover {
+        background: #D4AF37;
+        color: white;
+    }
+
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+    .loading-overlay.hidden {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1" style="color: #1A3A5C;">
+                <i class="fas fa-chart-line me-2" style="color: #D4AF37;"></i>
+                Dashboard del Dia
+            </h1>
+            <p class="text-muted mb-0" id="current-date"></p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary refresh-btn" id="refresh-btn" aria-label="Actualizar datos">
+                <i class="fas fa-sync-alt me-1"></i> Actualizar
+            </button>
+            {% if current_user_can('beach.insights.analytics') %}
+            <a href="{{ url_for('beach.insights_analytics') }}" class="btn btn-primary">
+                Ver Analiticas Avanzadas <i class="fas fa-arrow-right ms-1"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Occupancy -->
+        <div class="col-md-4">
+            <div class="card kpi-card h-100 position-relative">
+                <div class="loading-overlay hidden" id="loading-occupancy">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="kpi-value" id="kpi-occupancy-rate">--</div>
+                    <div class="kpi-label">Ocupacion del Dia</div>
+                    <div class="kpi-trend" id="kpi-occupancy-trend">
+                        <span class="trend-icon"></span>
+                        <span class="trend-text"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Free Furniture -->
+        <div class="col-md-4">
+            <div class="card kpi-card h-100 position-relative">
+                <div class="loading-overlay hidden" id="loading-free">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="kpi-value" id="kpi-free-count">--</div>
+                    <div class="kpi-label">Mobiliario Libre</div>
+                    <div class="kpi-subtitle" id="kpi-free-breakdown"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Check-ins -->
+        <div class="col-md-4">
+            <div class="card kpi-card h-100 position-relative">
+                <div class="loading-overlay hidden" id="loading-pending">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+                <div class="card-body text-center py-4">
+                    <div class="kpi-value" id="kpi-pending-count">--</div>
+                    <div class="kpi-label">Reservas Pendientes</div>
+                    <div class="kpi-subtitle">de Check-in</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Occupancy by Zone -->
+    <div class="card">
+        <div class="card-header" style="background: #F5E6D3; border-bottom: 2px solid #D4AF37;">
+            <h5 class="card-title mb-0" style="color: #1A3A5C;">
+                <i class="fas fa-map-marker-alt me-2" style="color: #D4AF37;"></i>
+                Ocupacion por Zona
+            </h5>
+        </div>
+        <div class="card-body position-relative">
+            <div class="loading-overlay hidden" id="loading-zones">
+                <div class="spinner-border text-warning" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
+            <div id="zones-container">
+                <!-- Zones will be rendered here -->
+            </div>
+            <div id="zones-empty" class="text-center text-muted py-4 d-none">
+                No hay zonas configuradas
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set current date
+    const now = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('current-date').textContent =
+        now.toLocaleDateString('es-ES', options).replace(/^\w/, c => c.toUpperCase());
+
+    // Load data
+    loadDashboardData();
+
+    // Refresh button
+    document.getElementById('refresh-btn').addEventListener('click', function() {
+        loadDashboardData();
+    });
+});
+
+function loadDashboardData() {
+    // Show loading
+    document.querySelectorAll('.loading-overlay').forEach(el => el.classList.remove('hidden'));
+
+    fetch('/beach/api/insights/today')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderOccupancy(data.occupancy, data.comparison);
+                renderPendingCheckins(data.pending_checkins);
+                renderZones(data.zones);
+            } else {
+                console.error('Error loading insights:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching insights:', error);
+        })
+        .finally(() => {
+            // Hide loading
+            document.querySelectorAll('.loading-overlay').forEach(el => el.classList.add('hidden'));
+        });
+}
+
+function renderOccupancy(occupancy, comparison) {
+    // Rate
+    document.getElementById('kpi-occupancy-rate').textContent = occupancy.rate + '%';
+
+    // Trend
+    const trendContainer = document.getElementById('kpi-occupancy-trend');
+    let trendClass = 'trend-same';
+    let trendIcon = 'fa-minus';
+    let trendText = 'igual que ayer';
+
+    if (comparison.trend === 'up') {
+        trendClass = 'trend-up';
+        trendIcon = 'fa-arrow-up';
+        trendText = '+' + comparison.difference + '% vs ayer';
+    } else if (comparison.trend === 'down') {
+        trendClass = 'trend-down';
+        trendIcon = 'fa-arrow-down';
+        trendText = comparison.difference + '% vs ayer';
+    }
+
+    trendContainer.className = 'kpi-trend ' + trendClass;
+    trendContainer.innerHTML = '<i class="fas ' + trendIcon + ' me-1"></i>' + trendText;
+
+    // Free count
+    const freeCount = occupancy.total - occupancy.occupied;
+    document.getElementById('kpi-free-count').textContent = freeCount;
+
+    // Breakdown by type
+    const breakdown = [];
+    for (const [code, typeData] of Object.entries(occupancy.by_type || {})) {
+        if (typeData.free > 0) {
+            breakdown.push(typeData.name + ' ' + typeData.free);
+        }
+    }
+    document.getElementById('kpi-free-breakdown').textContent =
+        breakdown.length > 0 ? breakdown.join(' | ') : '';
+}
+
+function renderPendingCheckins(count) {
+    document.getElementById('kpi-pending-count').textContent = count;
+}
+
+function renderZones(zones) {
+    const container = document.getElementById('zones-container');
+    const emptyState = document.getElementById('zones-empty');
+
+    if (!zones || zones.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('d-none');
+        return;
+    }
+
+    emptyState.classList.add('d-none');
+
+    let html = '';
+    zones.forEach(zone => {
+        html += `
+            <div class="zone-row">
+                <div class="zone-name">${zone.zone_name}</div>
+                <div class="zone-bar-wrapper">
+                    <div class="zone-bar-container">
+                        <div class="zone-bar" style="width: ${zone.rate}%"></div>
+                    </div>
+                </div>
+                <div class="zone-rate">${zone.rate}%</div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+</script>
+{% endblock %}
