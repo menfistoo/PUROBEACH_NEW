@@ -215,7 +215,13 @@ def get_reservation_pool_data(
             """, (reservation_id,))
 
             for row in cursor.fetchall():
-                day_assignments[row['assignment_date']] = row['furniture_numbers']
+                # Ensure date key is a string for JSON serialization
+                assign_date = row['assignment_date']
+                if hasattr(assign_date, 'isoformat'):
+                    assign_date = assign_date.isoformat()
+                elif not isinstance(assign_date, str):
+                    assign_date = str(assign_date)
+                day_assignments[assign_date] = row['furniture_numbers']
 
         # Parse preferences
         preferences = []

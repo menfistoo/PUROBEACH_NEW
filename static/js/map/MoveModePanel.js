@@ -3,7 +3,7 @@
  * Displays the pool of reservations waiting to be assigned during move mode
  */
 
-import { formatDateDisplay } from './utils.js';
+import { formatDateDisplay, showToast } from './utils.js';
 
 /**
  * Move Mode Panel Class
@@ -143,9 +143,26 @@ export class MoveModePanel {
 
         // Add restore handlers
         this.poolList.querySelectorAll('.restore-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                // TODO: Implement restore to original position
+                const card = btn.closest('.move-mode-card');
+                const resId = parseInt(card.dataset.reservationId);
+                const res = this.moveMode.pool.find(r => r.reservation_id === resId);
+
+                // Use initialFurniture (what it had when first entering pool)
+                if (!res || !res.initialFurniture?.length) {
+                    showToast('No hay posición original para restaurar', 'warning');
+                    return;
+                }
+
+                // Get original furniture IDs (furniture_id is the actual furniture, id is the assignment record)
+                const originalIds = res.initialFurniture.map(f => f.furniture_id || f.id);
+
+                // Assign back to original furniture
+                const result = await this.moveMode.assignFurniture(resId, originalIds);
+                if (result.success) {
+                    showToast('Posición original restaurada', 'success');
+                }
             });
         });
 
@@ -166,7 +183,9 @@ export class MoveModePanel {
             ? `<span class="badge bg-info ms-1" title="${res.total_days} días">📅${res.total_days}</span>`
             : '';
 
-        const originalFurniture = res.original_furniture?.map(f => f.number).join(', ') || '-';
+        // Use initialFurniture (what it had when entering pool) or fall back to original_furniture
+        const furnitureSource = res.initialFurniture?.length > 0 ? res.initialFurniture : res.original_furniture;
+        const originalFurniture = furnitureSource?.map(f => f.number || f.furniture_number).join(', ') || '-';
         const roomDisplay = res.room_number
             ? `<span class="badge bg-primary me-1"><i class="fas fa-door-open me-1"></i>${res.room_number}</span>`
             : '';

@@ -325,8 +325,9 @@ export const FurnitureMixin = (Base) => class extends Base {
         window.moveMode.activate(this.state.currentDate);
 
         // Unassign furniture from this reservation to add it to the pool
+        // Pass the original furniture array so we can track what needs to be restored
         if (furnitureIds.length > 0) {
-            await window.moveMode.unassignFurniture(reservation.id, furnitureIds, false);
+            await window.moveMode.unassignFurniture(reservation.id, furnitureIds, false, currentFurniture);
         } else {
             // No furniture assigned, just load the reservation to pool
             await window.moveMode.loadReservationToPool(reservation.id);

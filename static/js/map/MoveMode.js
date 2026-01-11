@@ -25,15 +25,15 @@ export class MoveMode {
         this.selectedReservationId = null;
         this.undoStack = [];
 
-        // Event callbacks
+        // Event callbacks (arrays to support multiple listeners)
         this.callbacks = {
-            onActivate: null,
-            onDeactivate: null,
-            onPoolUpdate: null,
-            onSelectionChange: null,
-            onFurnitureHighlight: null,
-            onUndo: null,
-            onError: null
+            onActivate: [],
+            onDeactivate: [],
+            onPoolUpdate: [],
+            onSelectionChange: [],
+            onFurnitureHighlight: [],
+            onUndo: [],
+            onError: []
         };
     }
 
@@ -44,7 +44,7 @@ export class MoveMode {
      */
     on(event, callback) {
         if (event in this.callbacks) {
-            this.callbacks[event] = callback;
+            this.callbacks[event].push(callback);
         }
     }
 
@@ -55,7 +55,7 @@ export class MoveMode {
      */
     emit(event, data) {
         if (this.callbacks[event]) {
-            this.callbacks[event](data);
+            this.callbacks[event].forEach(cb => cb(data));
         }
     }
 
@@ -199,9 +199,10 @@ export class MoveMode {
      * @param {number} reservationId - Reservation ID
      * @param {Array} furnitureIds - Furniture IDs to unassign
      * @param {boolean} isCtrlClick - Whether Ctrl was held (single furniture mode)
+     * @param {Array} initialFurnitureOverride - Optional: all furniture before any unassigning (for pool tracking)
      * @returns {Promise<Object>} Result object
      */
-    async unassignFurniture(reservationId, furnitureIds, isCtrlClick = false) {
+    async unassignFurniture(reservationId, furnitureIds, isCtrlClick = false, initialFurnitureOverride = null) {
         if (!this.active) {
             return { success: false, error: 'Move mode not active' };
         }
@@ -232,7 +233,8 @@ export class MoveMode {
                 });
 
                 // Load/update pool data for this reservation
-                await this.loadReservationToPool(reservationId);
+                // Pass initialFurnitureOverride if provided (to track original furniture before unassigning)
+                await this.loadReservationToPool(reservationId, initialFurnitureOverride);
 
                 showToast(`${result.unassigned_count} mobiliario liberado`, 'success');
             }
@@ -302,8 +304,9 @@ export class MoveMode {
     /**
      * Load reservation data into the pool
      * @param {number} reservationId - Reservation ID
+     * @param {Array} initialFurnitureOverride - Optional: furniture that was assigned before entering pool
      */
-    async loadReservationToPool(reservationId) {
+    async loadReservationToPool(reservationId, initialFurnitureOverride = null) {
         try {
             const url = `${this.options.apiBaseUrl}/pool-data?reservation_id=${reservationId}&date=${this.currentDate}`;
             const response = await fetch(url, {
@@ -322,15 +325,51 @@ export class MoveMode {
             const assignedCount = data.original_furniture?.length || 0;
             const totalNeeded = data.num_people || 1;
 
+            // Update or add to pool
+            const existingIndex = this.pool.findIndex(r => r.reservation_id === reservationId);
+
+            // Preserve initial furniture (what was assigned when first entering pool)
+            let initialFurniture;
+            if (existingIndex >= 0 && this.pool[existingIndex].initialFurniture) {
+                // Keep the original initial furniture from when it first entered the pool
+                initialFurniture = this.pool[existingIndex].initialFurniture;
+            } else if (initialFurnitureOverride && initialFurnitureOverride.length > 0) {
+                // Use override if provided (from enterMoveMode before unassigning)
+                initialFurniture = initialFurnitureOverride;
+            } else {
+                // Fallback to current furniture from API
+                initialFurniture = data.original_furniture || [];
+            }
+
+            // Calculate completion status
+            // A reservation is complete when it has the same furniture count as when it entered the pool
+            // (or at least totalNeeded if it's new and somehow has all it needs)
+            let isComplete;
+            if (existingIndex >= 0) {
+                // Already in pool: complete when restored to original count
+                const originalCount = this.pool[existingIndex].initialFurniture?.length || totalNeeded;
+                isComplete = assignedCount >= originalCount;
+            } else {
+                // New to pool: if we're loading it, it means furniture was just unassigned
+                // So it should enter the pool (isComplete = false)
+                // Unless it somehow still has everything it needs
+                isComplete = false;
+            }
+
+            // For display purposes, totalNeeded should be the original furniture count
+            // (what needs to be restored), not just num_people
+            const displayTotalNeeded = existingIndex >= 0
+                ? (this.pool[existingIndex].initialFurniture?.length || totalNeeded)
+                : (initialFurniture.length || totalNeeded);
+
             const poolEntry = {
                 ...data,
                 assignedCount,
-                totalNeeded,
-                isComplete: assignedCount >= totalNeeded
+                totalNeeded: displayTotalNeeded,
+                isComplete,
+                initialFurniture  // The furniture it had when it first entered the pool
             };
 
-            // Update or add to pool
-            const existingIndex = this.pool.findIndex(r => r.reservation_id === reservationId);
             if (existingIndex >= 0) {
                 if (poolEntry.isComplete) {
                     // Remove from pool if complete
