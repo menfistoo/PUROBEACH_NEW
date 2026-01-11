@@ -512,7 +512,7 @@ export class BeachMap {
 
             // Determine availability status
             const availStatus = this.data?.availability?.[id];
-            const isBlocked = this.data?.blocks?.[id];
+            const blockInfo = this.data?.blocks?.[id];
 
             if (isSelected) {
                 // Apply selection styling
@@ -523,27 +523,51 @@ export class BeachMap {
                 // Remove selection styling, restore base colors
                 group.removeAttribute('filter');
 
-                if (isBlocked) {
-                    rect.setAttribute('fill', this.colors.blockedFill);
-                    rect.setAttribute('stroke', this.colors.blockedStroke);
+                if (blockInfo) {
+                    // Blocked furniture - use color from block data or default gray
+                    const blockFill = blockInfo.color || '#9CA3AF';
+                    rect.setAttribute('fill', blockFill);
+                    rect.setAttribute('stroke', this.darkenColor(blockFill, 30));
                 } else if (availStatus && !availStatus.available) {
-                    // Occupied furniture - use state colors if available
-                    const stateColors = this.colors.stateColors?.[availStatus.state_code];
-                    if (stateColors) {
-                        rect.setAttribute('fill', stateColors.fill);
-                        rect.setAttribute('stroke', stateColors.stroke);
+                    // Occupied furniture - use state colors from data
+                    const state = availStatus.state;
+                    const stateColor = state && this.data?.state_colors?.[state];
+                    if (stateColor) {
+                        rect.setAttribute('fill', stateColor);
+                        rect.setAttribute('stroke', this.darkenColor(stateColor, 30));
                     } else {
-                        // Fallback for occupied without state colors
+                        // Fallback if no state color defined
+                        const typeConfig = this.data?.furniture_types?.[item.furniture_type] || {};
+                        rect.setAttribute('fill', typeConfig.fill_color || '#A0522D');
+                        rect.setAttribute('stroke', typeConfig.stroke_color || '#654321');
+                    }
+                } else {
+                    // Available furniture - check if temporary
+                    if (item.is_temporary) {
+                        rect.setAttribute('fill', '#E0F2FE');
+                        rect.setAttribute('stroke', '#0EA5E9');
+                    } else {
                         rect.setAttribute('fill', this.colors.availableFill);
                         rect.setAttribute('stroke', this.colors.availableStroke);
                     }
-                } else {
-                    // Available furniture
-                    rect.setAttribute('fill', this.colors.availableFill);
-                    rect.setAttribute('stroke', this.colors.availableStroke);
                 }
             }
         });
+    }
+
+    /**
+     * Darken a hex color by a percentage
+     * @param {string} color - Hex color string
+     * @param {number} percent - Percentage to darken (0-100)
+     * @returns {string} Darkened hex color
+     */
+    darkenColor(color, percent) {
+        const num = parseInt(color.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = Math.max(0, (num >> 16) - amt);
+        const G = Math.max(0, ((num >> 8) & 0x00FF) - amt);
+        const B = Math.max(0, (num & 0x0000FF) - amt);
+        return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
     }
 
     // =========================================================================
