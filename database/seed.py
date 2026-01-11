@@ -57,6 +57,7 @@ def seed_database(db):
         ('beach.furniture.view', 'Gestor de Mobiliario', 'config', 1, 23, 'fa-couch', '/beach/config/furniture-manager', menu_config_id),
         ('beach.pricing.view', 'Precios', 'config', 1, 24, 'fa-tags', '/beach/config/pricing', menu_config_id),
         ('beach.states.view', 'Estados', 'config', 1, 25, 'fa-toggle-on', '/beach/config/states', menu_config_id),
+        ('beach.characteristics.view', 'Caracteristicas', 'config', 1, 26, 'fa-list-check', '/beach/config/characteristics', menu_config_id),
 
         # Operaciones children
         ('beach.map.view', 'Mapa', 'operations', 1, 31, 'fa-map', '/beach/map', menu_operations_id),
@@ -95,6 +96,7 @@ def seed_database(db):
         ('beach.furniture.manage', 'Gestionar Mobiliario', 'config'),
         ('beach.pricing.manage', 'Gestionar Precios', 'config'),
         ('beach.states.manage', 'Gestionar Estados', 'config'),
+        ('beach.characteristics.manage', 'Gestionar Caracteristicas', 'config'),
         ('beach.config.manage', 'Gestionar Configuración', 'config'),
         ('beach.reports.export', 'Exportar Datos', 'reports'),
         ('api.access', 'Acceso API', 'api'),
