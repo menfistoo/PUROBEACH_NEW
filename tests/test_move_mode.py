@@ -295,3 +295,108 @@ class TestAssignFurniture:
             # Should succeed (idempotent operation)
             assert result['success'] is True
             assert result['assigned_count'] == 1
+
+
+class TestGetPoolData:
+    """Tests for getting reservation data for the pool panel."""
+
+    def test_get_reservation_pool_data(self, app):
+        """Should return complete reservation data for pool display."""
+        from models.move_mode import get_reservation_pool_data
+        from database import get_db
+
+        with app.app_context():
+            today = date.today().isoformat()
+
+            with get_db() as conn:
+                cursor = conn.cursor()
+                reservation_id, _, _, assignment_date = \
+                    create_test_reservation_with_furniture(cursor, today)
+                conn.commit()
+
+            result = get_reservation_pool_data(reservation_id, assignment_date)
+
+            # Verify structure
+            assert 'reservation_id' in result
+            assert 'customer_name' in result
+            assert 'room_number' in result
+            assert 'num_people' in result
+            assert 'preferences' in result
+            assert 'original_furniture' in result
+            assert 'is_multiday' in result
+            assert 'total_days' in result
+
+            # Verify values
+            assert result['reservation_id'] == reservation_id
+            assert result['num_people'] == 2  # From test setup
+            assert len(result['original_furniture']) == 2  # Two furniture items
+
+    def test_get_reservation_pool_data_not_found(self, app):
+        """Should return error for non-existent reservation."""
+        from models.move_mode import get_reservation_pool_data
+
+        with app.app_context():
+            today = date.today().isoformat()
+            result = get_reservation_pool_data(99999, today)
+
+            assert 'error' in result
+
+    def test_get_reservation_pool_data_multiday(self, app):
+        """Should identify multi-day reservations correctly."""
+        from models.move_mode import get_reservation_pool_data
+        from database import get_db
+
+        with app.app_context():
+            today = date.today()
+            tomorrow = (today + timedelta(days=1)).isoformat()
+            today_str = today.isoformat()
+
+            with get_db() as conn:
+                cursor = conn.cursor()
+
+                # Create customer
+                cursor.execute("SELECT id FROM beach_customers LIMIT 1")
+                customer = cursor.fetchone()
+                if not customer:
+                    cursor.execute("""
+                        INSERT INTO beach_customers (first_name, last_name, customer_type, phone)
+                        VALUES ('MultiDay', 'Guest', 'externo', '555-9999')
+                    """)
+                    customer_id = cursor.lastrowid
+                else:
+                    customer_id = customer['id']
+
+                # Get state
+                cursor.execute("SELECT id FROM beach_reservation_states LIMIT 1")
+                state = cursor.fetchone()
+
+                # Get furniture
+                cursor.execute("SELECT id FROM beach_furniture WHERE active = 1 LIMIT 1")
+                furniture = cursor.fetchone()
+
+                if not furniture:
+                    pytest.skip("No furniture in test database")
+
+                # Create multi-day reservation (2 days)
+                cursor.execute("""
+                    INSERT INTO beach_reservations
+                    (customer_id, state_id, start_date, end_date, num_people, created_at)
+                    VALUES (?, ?, ?, ?, 1, datetime('now'))
+                """, (customer_id, state['id'], today_str, tomorrow))
+                reservation_id = cursor.lastrowid
+
+                # Add furniture for both days
+                cursor.execute("""
+                    INSERT INTO beach_reservation_furniture (reservation_id, furniture_id, assignment_date)
+                    VALUES (?, ?, ?)
+                """, (reservation_id, furniture['id'], today_str))
+                cursor.execute("""
+                    INSERT INTO beach_reservation_furniture (reservation_id, furniture_id, assignment_date)
+                    VALUES (?, ?, ?)
+                """, (reservation_id, furniture['id'], tomorrow))
+                conn.commit()
+
+            result = get_reservation_pool_data(reservation_id, today_str)
+
+            assert result['is_multiday'] is True
+            assert result['total_days'] == 2

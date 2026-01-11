@@ -121,3 +121,132 @@ def assign_furniture_for_date(
             'reservation_id': reservation_id,
             'date': assignment_date
         }
+
+
+def get_reservation_pool_data(
+    reservation_id: int,
+    target_date: str
+) -> Dict[str, Any]:
+    """
+    Get comprehensive reservation data for the pool panel display.
+
+    Args:
+        reservation_id: The reservation ID
+        target_date: The date being viewed (YYYY-MM-DD)
+
+    Returns:
+        Dict with reservation details, customer info, preferences,
+        original furniture, and multi-day info
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Get reservation and customer info
+        cursor.execute("""
+            SELECT
+                r.id,
+                r.ticket_number,
+                r.num_people,
+                r.start_date,
+                r.end_date,
+                r.preferences,
+                r.notes,
+                r.parent_reservation_id,
+                c.id as customer_id,
+                c.first_name,
+                c.last_name,
+                c.room_number,
+                c.customer_type,
+                c.email,
+                c.phone
+            FROM beach_reservations r
+            JOIN beach_customers c ON r.customer_id = c.id
+            WHERE r.id = ?
+        """, (reservation_id,))
+
+        res = cursor.fetchone()
+        if not res:
+            return {'error': 'Reserva no encontrada'}
+
+        # Get furniture assignments for target date
+        cursor.execute("""
+            SELECT
+                f.id,
+                f.number,
+                f.furniture_type,
+                f.capacity,
+                z.name as zone_name
+            FROM beach_reservation_furniture rf
+            JOIN beach_furniture f ON rf.furniture_id = f.id
+            LEFT JOIN beach_zones z ON f.zone_id = z.id
+            WHERE rf.reservation_id = ? AND rf.assignment_date = ?
+        """, (reservation_id, target_date))
+
+        furniture = [dict(row) for row in cursor.fetchall()]
+
+        # Calculate multi-day info
+        # Handle both string and date object from SQLite
+        start_date = res['start_date']
+        end_date = res['end_date']
+        if isinstance(start_date, str):
+            start = datetime.strptime(start_date, '%Y-%m-%d').date()
+        else:
+            start = start_date
+        if isinstance(end_date, str):
+            end = datetime.strptime(end_date, '%Y-%m-%d').date()
+        else:
+            end = end_date
+
+        total_days = (end - start).days + 1
+        is_multiday = total_days > 1
+
+        # Get all day assignments for multi-day
+        day_assignments = {}
+        if is_multiday:
+            cursor.execute("""
+                SELECT
+                    rf.assignment_date,
+                    GROUP_CONCAT(f.number) as furniture_numbers
+                FROM beach_reservation_furniture rf
+                JOIN beach_furniture f ON rf.furniture_id = f.id
+                WHERE rf.reservation_id = ?
+                GROUP BY rf.assignment_date
+                ORDER BY rf.assignment_date
+            """, (reservation_id,))
+
+            for row in cursor.fetchall():
+                day_assignments[row['assignment_date']] = row['furniture_numbers']
+
+        # Parse preferences
+        preferences = []
+        if res['preferences']:
+            pref_codes = [p.strip() for p in res['preferences'].split(',') if p.strip()]
+            if pref_codes:
+                placeholders = ','.join('?' * len(pref_codes))
+                cursor.execute(f"""
+                    SELECT code, name, icon
+                    FROM beach_preferences
+                    WHERE code IN ({placeholders})
+                """, pref_codes)
+                preferences = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            'reservation_id': res['id'],
+            'ticket_number': res['ticket_number'],
+            'customer_id': res['customer_id'],
+            'customer_name': f"{res['first_name']} {res['last_name']}",
+            'customer_type': res['customer_type'],
+            'room_number': res['room_number'],
+            'email': res['email'],
+            'phone': res['phone'],
+            'num_people': res['num_people'],
+            'preferences': preferences,
+            'notes': res['notes'],
+            'original_furniture': furniture,
+            'is_multiday': is_multiday,
+            'total_days': total_days,
+            'start_date': start.isoformat() if hasattr(start, 'isoformat') else str(start),
+            'end_date': end.isoformat() if hasattr(end, 'isoformat') else str(end),
+            'day_assignments': day_assignments,
+            'target_date': target_date
+        }
