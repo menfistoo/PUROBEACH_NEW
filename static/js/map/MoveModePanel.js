@@ -48,11 +48,16 @@ export class MoveModePanel {
                 </div>
 
                 <div class="move-mode-panel-footer">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="moveModeUndoBtn" disabled>
                             <i class="fas fa-undo me-1"></i>Deshacer
                         </button>
                         <small class="text-muted" id="moveModeUndoCount"></small>
+                    </div>
+                    <div class="move-mode-shortcuts">
+                        <small class="text-muted d-block"><kbd>Clic</kbd> Liberar 1 mobiliario</small>
+                        <small class="text-muted d-block"><kbd>Ctrl+Clic</kbd> Liberar toda la reserva</small>
+                        <small class="text-muted d-block"><kbd>Ctrl+Z</kbd> Deshacer</small>
                     </div>
                 </div>
 

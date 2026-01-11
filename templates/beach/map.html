@@ -3293,10 +3293,15 @@
                             });
 
                         // Occupied furniture - unassign from its reservation
+                        // Ctrl+click releases ALL furniture, normal click releases just one
+                        const furnitureToUnassign = event?.ctrlKey
+                            ? allFurnitureForReservation.map(f => f.furniture_id)
+                            : [item.id];
+
                         const result = await moveMode.unassignFurniture(
                             availability.reservation_id,
-                            [item.id],
-                            event?.ctrlKey || false,
+                            furnitureToUnassign,
+                            false,
                             allFurnitureForReservation  // Pass all furniture for correct totalNeeded
                         );
                         if (result.success) {
