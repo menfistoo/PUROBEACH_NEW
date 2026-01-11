@@ -22,7 +22,7 @@
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <h6 class="mb-3">Informacion Basica</h6>
+                    <h6 class="mb-3">Información Básica</h6>
 
                     <div class="mb-3">
                         <label for="package_name" class="form-label">Nombre del Paquete <span class="text-danger">*</span></label>
@@ -32,9 +32,9 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="package_description" class="form-label">Descripcion</label>
+                        <label for="package_description" class="form-label">Descripción</label>
                         <textarea class="form-control" id="package_description" name="package_description"
-                                  rows="3" placeholder="Descripcion detallada del paquete...">{{ package.package_description if package else '' }}</textarea>
+                                  rows="3" placeholder="Descripción detallada del paquete...">{{ package.package_description if package else '' }}</textarea>
                     </div>
 
                     <hr>
@@ -67,7 +67,7 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="min_people" class="form-label">Personas Minimas</label>
+                                <label for="min_people" class="form-label">Personas Mínimas</label>
                                 <input type="number" class="form-control" id="min_people" name="min_people"
                                        value="{{ package.min_people if package else 1 }}"
                                        min="1" max="20" placeholder="1">
@@ -75,7 +75,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="standard_people" class="form-label">Personas Estandar</label>
+                                <label for="standard_people" class="form-label">Personas Estándar</label>
                                 <input type="number" class="form-control" id="standard_people" name="standard_people"
                                        value="{{ package.standard_people if package else 2 }}"
                                        min="1" max="20" placeholder="2">
@@ -84,7 +84,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="max_people" class="form-label">Personas Maximas</label>
+                                <label for="max_people" class="form-label">Personas Máximas</label>
                                 <input type="number" class="form-control" id="max_people" name="max_people"
                                        value="{{ package.max_people if package else 4 }}"
                                        min="1" max="20" placeholder="4">
@@ -93,7 +93,7 @@
                     </div>
 
                     <hr>
-                    <h6 class="mb-3">Restricciones y Validez</h6>
+                    <h6 class="mb-3">Restricciones y Período de Validez</h6>
 
                     <div class="row">
                         <div class="col-md-6">
@@ -143,14 +143,14 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="valid_from" class="form-label">Valido Desde</label>
+                                <label for="valid_from" class="form-label">Válido Desde</label>
                                 <input type="date" class="form-control" id="valid_from" name="valid_from"
                                        value="{{ package.valid_from if package else '' }}">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="valid_until" class="form-label">Valido Hasta</label>
+                                <label for="valid_until" class="form-label">Válido Hasta</label>
                                 <input type="date" class="form-control" id="valid_until" name="valid_until"
                                        value="{{ package.valid_until if package else '' }}">
                             </div>
@@ -194,7 +194,7 @@
         {% if mode == 'edit' and package %}
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Informacion</h5>
+                <h5 class="card-title mb-0">Información</h5>
             </div>
             <div class="card-body">
                 <p class="small mb-1">

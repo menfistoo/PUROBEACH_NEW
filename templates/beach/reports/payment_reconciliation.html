@@ -1069,9 +1069,9 @@
                 '<i class="fas ' + methodIcon + '"></i>' + methodText + '</span>';
         }
 
-        // Ticket cell
+        // Ticket cell (escaped for XSS protection)
         const ticketCell = res.payment_ticket_number
-            ? '<span class="ticket-cell">' + res.payment_ticket_number + '</span>'
+            ? '<span class="ticket-cell">' + escapeHtml(res.payment_ticket_number) + '</span>'
             : '<span class="ticket-cell no-ticket">Sin ticket</span>';
 
         // Customer name (escaped for XSS protection)

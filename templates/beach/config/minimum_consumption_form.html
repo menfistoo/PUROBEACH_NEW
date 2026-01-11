@@ -22,28 +22,28 @@
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <h6 class="mb-3">Informacion Basica</h6>
+                    <h6 class="mb-3">Información Básica</h6>
 
                     <div class="mb-3">
-                        <label for="policy_name" class="form-label">Nombre de la Politica <span class="text-danger">*</span></label>
+                        <label for="policy_name" class="form-label">Nombre de la Política <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="policy_name" name="policy_name"
                                value="{{ policy.policy_name if policy else '' }}"
                                required maxlength="255" placeholder="Balinesa Premium - Internos">
                     </div>
 
                     <div class="mb-3">
-                        <label for="policy_description" class="form-label">Descripcion</label>
+                        <label for="policy_description" class="form-label">Descripción</label>
                         <textarea class="form-control" id="policy_description" name="policy_description"
-                                  rows="3" placeholder="Descripcion detallada de la politica...">{{ policy.policy_description if policy else '' }}</textarea>
+                                  rows="3" placeholder="Descripción detallada de la política...">{{ policy.policy_description if policy else '' }}</textarea>
                     </div>
 
                     <hr>
-                    <h6 class="mb-3">Monto y Calculo</h6>
+                    <h6 class="mb-3">Monto y Cálculo</h6>
 
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="minimum_amount" class="form-label">Monto Minimo (€) <span class="text-danger">*</span></label>
+                                <label for="minimum_amount" class="form-label">Monto Mínimo (€) <span class="text-danger">*</span></label>
                                 <input type="number" class="form-control" id="minimum_amount" name="minimum_amount"
                                        value="{{ policy.minimum_amount if policy else '' }}"
                                        required min="0.01" step="0.01" placeholder="50.00">
@@ -51,7 +51,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="calculation_type" class="form-label">Tipo de Calculo <span class="text-danger">*</span></label>
+                                <label for="calculation_type" class="form-label">Tipo de Cálculo <span class="text-danger">*</span></label>
                                 <select class="form-select" id="calculation_type" name="calculation_type" required>
                                     <option value="per_reservation" {% if not policy or policy.calculation_type == 'per_reservation' %}selected{% endif %}>
                                         Por Reserva (monto fijo)
@@ -65,7 +65,7 @@
                     </div>
 
                     <hr>
-                    <h6 class="mb-3">Condiciones de Aplicacion</h6>
+                    <h6 class="mb-3">Condiciones de Aplicación</h6>
 
                     <div class="row">
                         <div class="col-md-4">
@@ -130,7 +130,7 @@
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1"
                                    {% if policy.is_active %}checked{% endif %}>
-                            <label class="form-check-label" for="is_active">Politica activa</label>
+                            <label class="form-check-label" for="is_active">Política activa</label>
                         </div>
                     </div>
                     {% endif %}
@@ -153,11 +153,11 @@
         {% if mode == 'edit' and policy %}
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Informacion</h5>
+                <h5 class="card-title mb-0">Información</h5>
             </div>
             <div class="card-body">
                 <p class="small mb-1">
-                    <strong>Reservas con esta politica:</strong> {{ policy.usage_count or 0 }}
+                    <strong>Reservas con esta política:</strong> {{ policy.usage_count or 0 }}
                 </p>
                 <p class="small mb-0">
                     <strong>Creado:</strong> {{ (policy.created_at|string)[:10] if policy.created_at else 'N/A' }}
