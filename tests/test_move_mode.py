@@ -474,3 +474,106 @@ class TestPreferenceMatching:
             for f in result['furniture']:
                 assert f['match_score'] == 0
                 assert f['matched_preferences'] == []
+
+
+class TestMoveModeAPI:
+    """Tests for move mode API endpoints."""
+
+    def test_unassign_api_endpoint(self, authenticated_client, app):
+        """Should unassign furniture via API endpoint."""
+        from database import get_db
+
+        with app.app_context():
+            today = date.today().isoformat()
+
+            with get_db() as conn:
+                cursor = conn.cursor()
+                reservation_id, furniture_id, _, assignment_date = \
+                    create_test_reservation_with_furniture(cursor, today)
+                conn.commit()
+
+        response = authenticated_client.post('/beach/api/move-mode/unassign', json={
+            'reservation_id': reservation_id,
+            'furniture_ids': [furniture_id],
+            'date': assignment_date
+        })
+
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is True
+        assert data['unassigned_count'] == 1
+
+    def test_assign_api_endpoint(self, authenticated_client, app):
+        """Should assign furniture via API endpoint."""
+        from database import get_db
+
+        with app.app_context():
+            today = date.today().isoformat()
+
+            with get_db() as conn:
+                cursor = conn.cursor()
+                reservation_id, furniture_id, _, assignment_date = \
+                    create_test_reservation_with_furniture(cursor, today)
+
+                # Get a different furniture to assign
+                cursor.execute("""
+                    SELECT id FROM beach_furniture
+                    WHERE active = 1 AND id NOT IN (
+                        SELECT furniture_id FROM beach_reservation_furniture
+                        WHERE assignment_date = ?
+                    )
+                    LIMIT 1
+                """, (assignment_date,))
+                available = cursor.fetchone()
+                conn.commit()
+
+            if not available:
+                pytest.skip("No available furniture")
+
+            new_furniture_id = available['id']
+
+        response = authenticated_client.post('/beach/api/move-mode/assign', json={
+            'reservation_id': reservation_id,
+            'furniture_ids': [new_furniture_id],
+            'date': assignment_date
+        })
+
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is True
+
+    def test_pool_data_api_endpoint(self, authenticated_client, app):
+        """Should get pool data via API endpoint."""
+        from database import get_db
+
+        with app.app_context():
+            today = date.today().isoformat()
+
+            with get_db() as conn:
+                cursor = conn.cursor()
+                reservation_id, _, _, assignment_date = \
+                    create_test_reservation_with_furniture(cursor, today)
+                conn.commit()
+
+        response = authenticated_client.get(
+            f'/beach/api/move-mode/pool-data?reservation_id={reservation_id}&date={assignment_date}'
+        )
+
+        assert response.status_code == 200
+        data = response.get_json()
+        assert 'reservation_id' in data
+        assert 'customer_name' in data
+        assert 'original_furniture' in data
+
+    def test_preferences_match_api_endpoint(self, authenticated_client, app):
+        """Should get preference matches via API endpoint."""
+        with app.app_context():
+            today = date.today().isoformat()
+
+        response = authenticated_client.get(
+            f'/beach/api/move-mode/preferences-match?date={today}'
+        )
+
+        assert response.status_code == 200
+        data = response.get_json()
+        assert 'furniture' in data
