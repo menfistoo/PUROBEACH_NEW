@@ -3279,11 +3279,24 @@
                     const selectedRes = moveMode.getSelectedReservation();
 
                     if (availability && !availability.available && availability.reservation_id) {
+                        // Get ALL furniture for this reservation before unassigning
+                        // This is needed for proper totalNeeded calculation in move mode pool
+                        const allFurnitureForReservation = Object.entries(data.availability)
+                            .filter(([id, av]) => av.reservation_id === availability.reservation_id)
+                            .map(([id, av]) => {
+                                const furnitureItem = data.furniture.find(f => f.id === parseInt(id));
+                                return {
+                                    furniture_id: parseInt(id),
+                                    number: furnitureItem?.number || av.furniture_number
+                                };
+                            });
+
                         // Occupied furniture - unassign from its reservation
                         const result = await moveMode.unassignFurniture(
                             availability.reservation_id,
                             [item.id],
-                            event?.ctrlKey || false
+                            event?.ctrlKey || false,
+                            allFurnitureForReservation  // Pass all furniture for correct totalNeeded
                         );
                         if (result.success) {
                             map.refreshAvailability();
