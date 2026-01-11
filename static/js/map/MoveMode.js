@@ -71,7 +71,7 @@ export class MoveMode {
      * Activate move mode
      * @param {string} date - Current date in YYYY-MM-DD format
      */
-    activate(date) {
+    async activate(date) {
         if (this.active) return;
 
         this.active = true;
@@ -82,6 +82,35 @@ export class MoveMode {
 
         this.emit('onActivate', { date });
         showToast('Modo Mover activado', 'info');
+
+        // Load any reservations that already need furniture assignments
+        await this.loadUnassignedReservations();
+    }
+
+    /**
+     * Load all reservations that have insufficient furniture for the current date
+     */
+    async loadUnassignedReservations() {
+        try {
+            const url = `${this.options.apiBaseUrl}/unassigned?date=${this.currentDate}`;
+            const response = await fetch(url, {
+                headers: { 'X-CSRFToken': getCSRFToken() }
+            });
+
+            if (!response.ok) return;
+
+            const data = await response.json();
+
+            if (data.reservation_ids && data.reservation_ids.length > 0) {
+                // Load each unassigned reservation into the pool
+                for (const resId of data.reservation_ids) {
+                    await this.loadReservationToPool(resId);
+                }
+                showToast(`${data.reservation_ids.length} reserva(s) sin asignar`, 'warning');
+            }
+        } catch (error) {
+            console.error('Error loading unassigned reservations:', error);
+        }
     }
 
     /**

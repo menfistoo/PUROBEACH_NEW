@@ -15,7 +15,8 @@ from models.move_mode import (
     unassign_furniture_for_date,
     assign_furniture_for_date,
     get_reservation_pool_data,
-    get_furniture_preference_matches
+    get_furniture_preference_matches,
+    get_unassigned_reservations
 )
 
 
@@ -218,6 +219,38 @@ def register_routes(bp):
             )
 
             return jsonify(result)
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @bp.route('/move-mode/unassigned', methods=['GET'])
+    @login_required
+    @permission_required('beach.map.view')
+    def move_mode_unassigned():
+        """
+        Get all reservations with insufficient furniture for a date.
+
+        Query params:
+        - date: YYYY-MM-DD (required)
+
+        Response JSON:
+        {
+            "reservation_ids": [int, ...],
+            "date": "YYYY-MM-DD"
+        }
+        """
+        try:
+            target_date = request.args.get('date')
+
+            if not target_date:
+                return jsonify({'error': 'date es requerido'}), 400
+
+            reservation_ids = get_unassigned_reservations(target_date)
+
+            return jsonify({
+                'reservation_ids': reservation_ids,
+                'date': target_date
+            })
 
         except Exception as e:
             return jsonify({'error': str(e)}), 500

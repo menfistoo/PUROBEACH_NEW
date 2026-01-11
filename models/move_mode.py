@@ -258,6 +258,47 @@ def get_reservation_pool_data(
         }
 
 
+def get_unassigned_reservations(target_date: str) -> List[Dict[str, Any]]:
+    """
+    Get all reservations for a date that have insufficient furniture capacity.
+
+    A reservation is considered unassigned if its assigned furniture capacity
+    is less than num_people.
+
+    Args:
+        target_date: Date to check (YYYY-MM-DD)
+
+    Returns:
+        List of reservation IDs that need furniture assignments
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Get all active reservations for this date
+        # (reservations where start_date <= target_date <= end_date)
+        # and their state is not availability-releasing
+        cursor.execute("""
+            SELECT
+                r.id as reservation_id,
+                r.num_people,
+                COALESCE(SUM(f.capacity), 0) as assigned_capacity
+            FROM beach_reservations r
+            LEFT JOIN beach_reservation_furniture rf
+                ON r.id = rf.reservation_id AND rf.assignment_date = ?
+            LEFT JOIN beach_furniture f ON rf.furniture_id = f.id
+            LEFT JOIN beach_reservation_daily_states ds
+                ON r.id = ds.reservation_id AND ds.state_date = ?
+            LEFT JOIN beach_reservation_states s
+                ON COALESCE(ds.state_id, r.state_id) = s.id
+            WHERE r.start_date <= ? AND r.end_date >= ?
+            AND (s.is_availability_releasing IS NULL OR s.is_availability_releasing = 0)
+            GROUP BY r.id
+            HAVING assigned_capacity < r.num_people
+        """, (target_date, target_date, target_date, target_date))
+
+        return [row['reservation_id'] for row in cursor.fetchall()]
+
+
 def get_furniture_preference_matches(
     preference_codes: List[str],
     target_date: str,
