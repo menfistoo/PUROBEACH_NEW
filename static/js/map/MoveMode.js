@@ -93,13 +93,19 @@ export class MoveMode {
     async loadUnassignedReservations() {
         try {
             const url = `${this.options.apiBaseUrl}/unassigned?date=${this.currentDate}`;
+            console.log('[MoveMode] Loading unassigned reservations from:', url);
+
             const response = await fetch(url, {
                 headers: { 'X-CSRFToken': getCSRFToken() }
             });
 
-            if (!response.ok) return;
+            if (!response.ok) {
+                console.error('[MoveMode] API error:', response.status, response.statusText);
+                return;
+            }
 
             const data = await response.json();
+            console.log('[MoveMode] Unassigned response:', data);
 
             if (data.reservation_ids && data.reservation_ids.length > 0) {
                 // Load each unassigned reservation into the pool
@@ -109,7 +115,7 @@ export class MoveMode {
                 showToast(`${data.reservation_ids.length} reserva(s) sin asignar`, 'warning');
             }
         } catch (error) {
-            console.error('Error loading unassigned reservations:', error);
+            console.error('[MoveMode] Error loading unassigned reservations:', error);
         }
     }
 
