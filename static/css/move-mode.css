@@ -64,6 +64,39 @@
     right: 0;
 }
 
+#moveModePanel.visible.collapsed {
+    right: calc(-1 * var(--move-mode-panel-width) + 40px);
+}
+
+#moveModePanel .collapse-toggle {
+    position: absolute;
+    left: -32px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 48px;
+    background: white;
+    border: 1px solid #E8E8E8;
+    border-right: none;
+    border-radius: 6px 0 0 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6B7280;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+#moveModePanel .collapse-toggle:hover {
+    background: var(--move-mode-accent);
+    color: var(--move-mode-secondary);
+}
+
+#moveModePanel.collapsed .collapse-toggle i {
+    transform: rotate(180deg);
+}
+
 /* =============================================================================
    PANEL STRUCTURE
    ============================================================================= */
@@ -133,9 +166,9 @@
 
 .move-mode-card {
     background: white;
-    border: 2px solid #e9ecef;
-    border-radius: 10px;
-    margin-bottom: 10px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    margin-bottom: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
     overflow: hidden;
@@ -143,16 +176,17 @@
 
 .move-mode-card:hover {
     border-color: var(--move-mode-primary);
-    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.2);
+    box-shadow: 0 1px 4px rgba(212, 175, 55, 0.2);
 }
 
 .move-mode-card.selected {
     border-color: var(--move-mode-primary);
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
+    border-width: 2px;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
 }
 
 .move-mode-card .card-header {
-    padding: 10px 12px;
+    padding: 6px 10px;
     background: var(--move-mode-accent);
     border-bottom: 1px solid #e9ecef;
     display: flex;
@@ -164,11 +198,12 @@
 .move-mode-card .customer-name {
     font-weight: 600;
     color: var(--move-mode-secondary);
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .move-mode-card .card-body {
-    padding: 10px 12px;
+    padding: 6px 10px;
+    font-size: 11px;
 }
 
 .move-mode-card .card-body i {

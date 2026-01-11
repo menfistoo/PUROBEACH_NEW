@@ -28,11 +28,14 @@ export class MoveModePanel {
      */
     createPanelStructure() {
         this.container.innerHTML = `
+            <button type="button" class="collapse-toggle" id="moveModeCollapseBtn" title="Colapsar panel">
+                <i class="fas fa-chevron-right"></i>
+            </button>
             <div class="move-mode-panel">
                 <div class="move-mode-panel-header">
                     <h5>
                         <i class="fas fa-exchange-alt me-2"></i>
-                        Reservas sin asignar
+                        Sin asignar
                         <span class="badge bg-warning text-dark ms-2" id="moveModePoolCount">0</span>
                     </h5>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="moveModeExitBtn" title="Salir del modo mover">
@@ -76,6 +79,7 @@ export class MoveModePanel {
         this.undoCount = document.getElementById('moveModeUndoCount');
         this.legend = document.getElementById('moveModeLegend');
         this.legendItems = document.getElementById('moveModeLegendItems');
+        this.collapseBtn = document.getElementById('moveModeCollapseBtn');
     }
 
     /**
@@ -90,6 +94,11 @@ export class MoveModePanel {
         // Undo button
         this.undoBtn?.addEventListener('click', () => {
             this.moveMode.undo();
+        });
+
+        // Collapse button
+        this.collapseBtn?.addEventListener('click', () => {
+            this.toggleCollapse();
         });
 
         // MoveMode events
@@ -114,6 +123,14 @@ export class MoveModePanel {
      */
     hide() {
         this.container?.classList.remove('visible');
+        this.container?.classList.remove('collapsed');
+    }
+
+    /**
+     * Toggle panel collapsed state
+     */
+    toggleCollapse() {
+        this.container?.classList.toggle('collapsed');
     }
 
     /**
