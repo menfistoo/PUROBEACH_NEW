@@ -143,6 +143,8 @@ def register_routes(bp):
         """
         Get comprehensive reservation data for the pool panel.
 
+        Auto-syncs customer preferences to reservation if reservation has none.
+
         Query params:
         - reservation_id: int (required)
         - date: YYYY-MM-DD (required)
@@ -173,6 +175,20 @@ def register_routes(bp):
 
             if 'error' in result:
                 return jsonify(result), 404
+
+            # Auto-sync customer preferences if reservation has none
+            if not result.get('preferences') and result.get('customer_id'):
+                from models.characteristic_assignments import (
+                    get_customer_characteristics,
+                    set_reservation_characteristics
+                )
+                customer_chars = get_customer_characteristics(result['customer_id'])
+                if customer_chars:
+                    # Sync customer preferences to reservation
+                    char_ids = [c['id'] for c in customer_chars]
+                    set_reservation_characteristics(reservation_id, char_ids)
+                    # Reload pool data with synced preferences
+                    result = get_reservation_pool_data(reservation_id, target_date)
 
             return jsonify(result)
 
