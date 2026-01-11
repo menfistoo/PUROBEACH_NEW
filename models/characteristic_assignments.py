@@ -289,6 +289,29 @@ def set_customer_characteristics_by_codes(customer_id: int, codes: list[str]) ->
     return set_customer_characteristics(customer_id, char_ids)
 
 
+def set_reservation_characteristics_by_codes(reservation_id: int, codes: list[str]) -> bool:
+    """
+    Set reservation characteristics using code strings.
+    Converts codes to IDs and sets characteristics.
+
+    Args:
+        reservation_id: Reservation ID
+        codes: List of characteristic codes
+
+    Returns:
+        True if successful
+    """
+    from models.characteristic import get_characteristic_by_code
+
+    char_ids = []
+    for code in codes:
+        char = get_characteristic_by_code(code)
+        if char:
+            char_ids.append(char['id'])
+
+    return set_reservation_characteristics(reservation_id, char_ids)
+
+
 # =============================================================================
 # BACKWARD COMPATIBILITY (PREFERENCE SYNC)
 # =============================================================================
@@ -328,19 +351,93 @@ def get_customer_preference_codes(customer_id: int) -> list[str]:
     return [c['code'] for c in characteristics]
 
 
+def sync_preferences_to_reservation(reservation_id: int, preferences_csv: str) -> bool:
+    """
+    Sync preferences to reservation characteristics junction table.
+
+    Args:
+        reservation_id: Reservation ID
+        preferences_csv: Comma-separated characteristic codes
+
+    Returns:
+        True if successful
+    """
+    if not preferences_csv:
+        return set_reservation_characteristics(reservation_id, [])
+
+    codes = [c.strip() for c in preferences_csv.split(',') if c.strip()]
+    return set_reservation_characteristics_by_codes(reservation_id, codes)
+
+
 def sync_customer_preferences_to_reservations(customer_id: int, preferences_csv: str = None) -> int:
     """
-    Sync customer preferences to all active/future reservations (stub).
+    Sync customer preferences to all active/future reservations.
 
-    This is a complex operation that would need to update the
-    beach_reservation_characteristics junction table. For now, returns 0.
+    Updates both the preferences CSV column and the
+    beach_reservation_characteristics junction table.
 
     Args:
         customer_id: Customer ID
-        preferences_csv: Optional new preferences to sync
+        preferences_csv: Optional new preferences to sync (if None, uses customer's current)
 
     Returns:
-        Number of reservations updated (currently 0, stub implementation)
+        Number of reservations updated
     """
-    # TODO: Implement full sync to beach_reservation_characteristics
-    return 0
+    from models.characteristic import get_characteristic_by_code
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Get preference codes to sync
+        if preferences_csv is None:
+            # Use customer's current preferences
+            codes = get_customer_preference_codes(customer_id)
+        else:
+            codes = [c.strip() for c in preferences_csv.split(',') if c.strip()]
+
+        # Get characteristic IDs for the codes
+        char_ids = []
+        for code in codes:
+            char = get_characteristic_by_code(code)
+            if char:
+                char_ids.append(char['id'])
+
+        # Get all active/future reservations for this customer
+        cursor.execute('''
+            SELECT id FROM beach_reservations
+            WHERE customer_id = ?
+            AND reservation_date >= date('now')
+        ''', (customer_id,))
+
+        reservations = cursor.fetchall()
+        updated_count = 0
+
+        for res in reservations:
+            res_id = res['id']
+
+            # Update preferences CSV column
+            csv_value = ','.join(codes) if codes else ''
+            cursor.execute('''
+                UPDATE beach_reservations
+                SET preferences = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (csv_value, res_id))
+
+            # Clear existing reservation characteristics
+            cursor.execute('''
+                DELETE FROM beach_reservation_characteristics
+                WHERE reservation_id = ?
+            ''', (res_id,))
+
+            # Insert new characteristics
+            for char_id in char_ids:
+                cursor.execute('''
+                    INSERT INTO beach_reservation_characteristics
+                    (reservation_id, characteristic_id)
+                    VALUES (?, ?)
+                ''', (res_id, char_id))
+
+            updated_count += 1
+
+        conn.commit()
+        return updated_count

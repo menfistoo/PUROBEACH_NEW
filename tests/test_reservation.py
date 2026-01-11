@@ -306,10 +306,10 @@ class TestReservationPreferences:
                 phone='555-PREF-TST'
             )
 
-            # Get preference IDs
+            # Get characteristic IDs (preferences are now characteristics)
             db = get_db()
             cursor = db.cursor()
-            cursor.execute('SELECT id FROM beach_preferences LIMIT 2')
+            cursor.execute('SELECT id FROM beach_characteristics LIMIT 2')
             pref_ids = [r['id'] for r in cursor.fetchall()]
 
             if pref_ids:
@@ -335,10 +335,10 @@ class TestReservationPreferences:
                 phone='555-SYNC-001'
             )
 
-            # Get preference codes
+            # Get characteristic codes (preferences are now characteristics)
             db = get_db()
             cursor = db.cursor()
-            cursor.execute('SELECT code FROM beach_preferences LIMIT 2')
+            cursor.execute('SELECT code FROM beach_characteristics LIMIT 2')
             pref_codes = [r['code'] for r in cursor.fetchall()]
 
             if pref_codes:

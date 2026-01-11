@@ -211,8 +211,8 @@ def get_top_customers(start_date: str, end_date: str, limit: int = 10) -> list:
 
 def get_popular_preferences(start_date: str, end_date: str, limit: int = 10) -> list:
     """
-    Get most popular customer preferences for customers with reservations in a date range.
-    Preferences are linked to customers via beach_customer_preferences.
+    Get most popular customer preferences (characteristics) for customers with reservations in a date range.
+    Preferences are linked to customers via beach_customer_characteristics.
 
     Args:
         start_date: Start date (YYYY-MM-DD)
@@ -225,18 +225,18 @@ def get_popular_preferences(start_date: str, end_date: str, limit: int = 10) -> 
     with get_db() as conn:
         cursor = conn.execute('''
             SELECT
-                p.id as preference_id,
-                p.name as preference_name,
-                p.code as preference_code,
-                COUNT(DISTINCT cp.customer_id) as count
-            FROM beach_preferences p
-            JOIN beach_customer_preferences cp ON p.id = cp.preference_id
-            JOIN beach_reservations r ON r.customer_id = cp.customer_id
+                c.id as preference_id,
+                c.name as preference_name,
+                c.code as preference_code,
+                COUNT(DISTINCT cc.customer_id) as count
+            FROM beach_characteristics c
+            JOIN beach_customer_characteristics cc ON c.id = cc.characteristic_id
+            JOIN beach_reservations r ON r.customer_id = cc.customer_id
             LEFT JOIN beach_reservation_states s ON r.current_state = s.name
             WHERE r.start_date BETWEEN ? AND ?
-              AND p.active = 1
+              AND c.active = 1
               AND (s.is_availability_releasing = 0 OR s.is_availability_releasing IS NULL)
-            GROUP BY p.id, p.name, p.code
+            GROUP BY c.id, c.name, c.code
             ORDER BY count DESC
             LIMIT ?
         ''', (start_date, end_date, limit))

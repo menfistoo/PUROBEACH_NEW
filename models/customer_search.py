@@ -380,10 +380,10 @@ def merge_customers(source_id: int, target_id: int) -> bool:
                 WHERE customer_id = ?
             ''', (target_id, source_id))
 
-            # Transfer preferences (ignore duplicates)
+            # Transfer characteristics (preferences) - ignore duplicates
             cursor.execute('''
-                INSERT OR IGNORE INTO beach_customer_preferences (customer_id, preference_id)
-                SELECT ?, preference_id FROM beach_customer_preferences WHERE customer_id = ?
+                INSERT OR IGNORE INTO beach_customer_characteristics (customer_id, characteristic_id)
+                SELECT ?, characteristic_id FROM beach_customer_characteristics WHERE customer_id = ?
             ''', (target_id, source_id))
 
             # Transfer tags (ignore duplicates)
@@ -401,8 +401,8 @@ def merge_customers(source_id: int, target_id: int) -> bool:
                 WHERE id = ?
             ''', (source['total_visits'], source['total_spent'], target_id))
 
-            # Delete source customer preferences and tags
-            cursor.execute('DELETE FROM beach_customer_preferences WHERE customer_id = ?', (source_id,))
+            # Delete source customer characteristics and tags
+            cursor.execute('DELETE FROM beach_customer_characteristics WHERE customer_id = ?', (source_id,))
             cursor.execute('DELETE FROM beach_customer_tags WHERE customer_id = ?', (source_id,))
 
             # Delete source customer

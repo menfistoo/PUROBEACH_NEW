@@ -3,6 +3,7 @@ Beach furniture data access functions.
 Handles furniture CRUD operations and furniture type management.
 """
 
+import json
 from database import get_db
 from datetime import datetime
 
@@ -121,6 +122,7 @@ def create_furniture(number: str, zone_id: int, furniture_type: str, capacity: i
         position_x: X coordinate for map
         position_y: Y coordinate for map
         **kwargs: Optional fields (rotation, width, height, features, is_temporary, valid_date)
+                  features can be a list of codes, JSON string, or comma-separated string
 
     Returns:
         New furniture ID
@@ -131,10 +133,13 @@ def create_furniture(number: str, zone_id: int, furniture_type: str, capacity: i
         rotation = kwargs.get('rotation', 0)
         width = kwargs.get('width', 60)
         height = kwargs.get('height', 40)
-        features = kwargs.get('features', '')
+        features_input = kwargs.get('features', '')
         is_temporary = kwargs.get('is_temporary', 0)
         valid_date = kwargs.get('valid_date', None)
         fill_color = kwargs.get('fill_color', None)
+
+        # Convert features to JSON string for legacy column
+        features_json = _normalize_features_to_json(features_input)
 
         cursor.execute('''
             INSERT INTO beach_furniture
@@ -142,10 +147,15 @@ def create_furniture(number: str, zone_id: int, furniture_type: str, capacity: i
              rotation, width, height, features, is_temporary, valid_date, fill_color)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (number, zone_id, furniture_type, capacity, position_x, position_y,
-              rotation, width, height, features, is_temporary, valid_date, fill_color))
+              rotation, width, height, features_json, is_temporary, valid_date, fill_color))
 
+        furniture_id = cursor.lastrowid
         conn.commit()
-        return cursor.lastrowid
+
+        # Sync to junction table
+        _sync_features_to_junction_table(furniture_id, features_input)
+
+        return furniture_id
 
 
 def update_furniture(furniture_id: int, **kwargs) -> bool:
@@ -154,14 +164,16 @@ def update_furniture(furniture_id: int, **kwargs) -> bool:
 
     Args:
         furniture_id: Furniture ID to update
-        **kwargs: Fields to update
+        **kwargs: Fields to update (features can be list, JSON, or comma-separated)
 
     Returns:
         True if updated successfully
     """
+    features_input = kwargs.pop('features', None)
+
     with get_db() as conn:
         allowed_fields = ['number', 'zone_id', 'capacity', 'position_x', 'position_y',
-                          'rotation', 'width', 'height', 'features', 'active', 'fill_color']
+                          'rotation', 'width', 'height', 'active', 'fill_color']
         updates = []
         values = []
 
@@ -170,7 +182,17 @@ def update_furniture(furniture_id: int, **kwargs) -> bool:
                 updates.append(f'{field} = ?')
                 values.append(kwargs[field])
 
+        # Handle features separately - normalize and add to update
+        if features_input is not None:
+            features_json = _normalize_features_to_json(features_input)
+            updates.append('features = ?')
+            values.append(features_json)
+
         if not updates:
+            # Even if no DB fields to update, sync features if provided
+            if features_input is not None:
+                _sync_features_to_junction_table(furniture_id, features_input)
+                return True
             return False
 
         values.append(furniture_id)
@@ -179,6 +201,10 @@ def update_furniture(furniture_id: int, **kwargs) -> bool:
         cursor = conn.cursor()
         cursor.execute(query, values)
         conn.commit()
+
+        # Sync features to junction table
+        if features_input is not None:
+            _sync_features_to_junction_table(furniture_id, features_input)
 
         return cursor.rowcount > 0
 
@@ -478,3 +504,100 @@ def batch_update_furniture_positions(updates: list) -> int:
 
         conn.commit()
         return updated
+
+
+# =============================================================================
+# HELPER FUNCTIONS FOR CHARACTERISTICS SYNC
+# =============================================================================
+
+def _normalize_features_to_json(features_input) -> str:
+    """
+    Normalize features input to JSON string for legacy column.
+
+    Args:
+        features_input: Can be list, JSON string, or comma-separated string
+
+    Returns:
+        JSON string (e.g., '["primera_linea", "sombra"]')
+    """
+    if not features_input:
+        return '[]'
+
+    # Already a list
+    if isinstance(features_input, list):
+        return json.dumps(features_input)
+
+    # Try to parse as JSON
+    if isinstance(features_input, str):
+        try:
+            parsed = json.loads(features_input)
+            if isinstance(parsed, list):
+                return features_input  # Already valid JSON
+        except json.JSONDecodeError:
+            pass
+
+        # Comma-separated string
+        codes = [c.strip() for c in features_input.split(',') if c.strip()]
+        return json.dumps(codes)
+
+    return '[]'
+
+
+def _parse_features_to_codes(features_input) -> list:
+    """
+    Parse features input to list of codes.
+
+    Args:
+        features_input: Can be list, JSON string, or comma-separated string
+
+    Returns:
+        List of feature codes
+    """
+    if not features_input:
+        return []
+
+    # Already a list
+    if isinstance(features_input, list):
+        return features_input
+
+    # Try to parse as JSON
+    if isinstance(features_input, str):
+        try:
+            parsed = json.loads(features_input)
+            if isinstance(parsed, list):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+
+        # Comma-separated string
+        return [c.strip() for c in features_input.split(',') if c.strip()]
+
+    return []
+
+
+def _sync_features_to_junction_table(furniture_id: int, features_input) -> None:
+    """
+    Sync features to beach_furniture_characteristics junction table.
+
+    Args:
+        furniture_id: Furniture ID
+        features_input: Features in any format (list, JSON, comma-separated)
+    """
+    from models.characteristic import get_characteristic_by_code
+    from models.characteristic_assignments import set_furniture_characteristics
+
+    codes = _parse_features_to_codes(features_input)
+
+    if not codes:
+        # Clear all characteristics
+        set_furniture_characteristics(furniture_id, [])
+        return
+
+    # Convert codes to IDs
+    char_ids = []
+    for code in codes:
+        char = get_characteristic_by_code(code)
+        if char:
+            char_ids.append(char['id'])
+
+    set_furniture_characteristics(furniture_id, char_ids)

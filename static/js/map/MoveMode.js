@@ -388,6 +388,15 @@ export class MoveMode {
             }
 
             this.emit('onPoolUpdate', { pool: this.pool });
+
+            // Re-apply preference highlights if reservation is still selected
+            if (this.selectedReservationId === reservationId && !poolEntry.isComplete) {
+                const selectedRes = this.pool.find(r => r.reservation_id === reservationId);
+                if (selectedRes?.preferences?.length > 0) {
+                    this.requestPreferenceHighlights(selectedRes.preferences);
+                }
+            }
+
             return poolEntry;
         } catch (error) {
             console.error('Error loading pool data:', error);

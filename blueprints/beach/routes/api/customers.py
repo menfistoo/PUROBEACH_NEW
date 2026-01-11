@@ -404,27 +404,16 @@ def register_routes(bp):
             # Convert list to CSV for sync function
             preferences_csv = ','.join(preference_codes) if preference_codes else ''
 
-            # Sync to customer and all reservations (bidirectional)
+            # Sync to customer profile
             success = sync_preferences_to_customer(customer_id, preferences_csv, replace=True)
 
             if success:
+                # Also sync to all active/future reservations
+                from models.characteristic_assignments import sync_customer_preferences_to_reservations
+                reservations_updated = sync_customer_preferences_to_reservations(customer_id, preferences_csv)
+
                 # Get updated preferences for response
                 updated_prefs = get_customer_preferences(customer_id)
-
-                # Count reservations updated (get from sync function if possible)
-                from models.reservation import get_customer_preference_codes
-                from database import get_db
-
-                # Count active/future reservations for this customer
-                with get_db() as conn:
-                    cursor = conn.execute('''
-                        SELECT COUNT(*) as count
-                        FROM beach_reservations
-                        WHERE customer_id = ?
-                        AND reservation_date >= date('now')
-                    ''', (customer_id,))
-                    result = cursor.fetchone()
-                    reservations_updated = result['count'] if result else 0
 
                 return jsonify({
                     'success': True,
@@ -436,7 +425,7 @@ def register_routes(bp):
                         'icon': p.get('icon')
                     } for p in updated_prefs],
                     'reservations_updated': reservations_updated,
-                    'message': 'Preferencias actualizadas'
+                    'message': f'Preferencias actualizadas ({reservations_updated} reservas sincronizadas)'
                 })
             else:
                 return jsonify({

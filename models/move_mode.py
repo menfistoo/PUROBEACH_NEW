@@ -222,7 +222,7 @@ def get_reservation_pool_data(
                 assign_date = _date_to_str(row['assignment_date'])
                 day_assignments[assign_date] = row['furniture_numbers']
 
-        # Parse preferences
+        # Parse preferences (now stored in beach_characteristics)
         preferences = []
         if res['preferences']:
             pref_codes = [p.strip() for p in res['preferences'].split(',') if p.strip()]
@@ -230,7 +230,7 @@ def get_reservation_pool_data(
                 placeholders = ','.join('?' * len(pref_codes))
                 cursor.execute(f"""
                     SELECT code, name, icon
-                    FROM beach_preferences
+                    FROM beach_characteristics
                     WHERE code IN ({placeholders})
                 """, pref_codes)
                 preferences = [dict(row) for row in cursor.fetchall()]
@@ -302,8 +302,11 @@ def get_furniture_preference_matches(
     """
     Get all furniture with preference match scores for a given date.
 
+    Uses beach_furniture_characteristics junction table to match
+    furniture characteristics against requested preference codes.
+
     Args:
-        preference_codes: List of preference codes to match
+        preference_codes: List of characteristic codes to match
         target_date: Date to check availability (YYYY-MM-DD)
         zone_id: Optional zone to filter by
 
@@ -313,18 +316,18 @@ def get_furniture_preference_matches(
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Get preference feature mappings
-        pref_features = {}
+        # Get characteristic IDs for the requested codes
+        char_ids = {}
         if preference_codes:
             placeholders = ','.join('?' * len(preference_codes))
             cursor.execute(f"""
-                SELECT code, maps_to_feature
-                FROM beach_preferences
+                SELECT id, code
+                FROM beach_characteristics
                 WHERE code IN ({placeholders})
             """, preference_codes)
-            pref_features = {row['code']: row['maps_to_feature'] for row in cursor.fetchall()}
+            char_ids = {row['code']: row['id'] for row in cursor.fetchall()}
 
-        # Get all active furniture
+        # Get all active furniture with their characteristics
         zone_filter = "AND f.zone_id = ?" if zone_id else ""
         zone_params = (zone_id,) if zone_id else ()
 
@@ -333,7 +336,6 @@ def get_furniture_preference_matches(
                 f.id,
                 f.number,
                 f.capacity,
-                f.features,
                 f.zone_id,
                 f.furniture_type,
                 z.name as zone_name
@@ -346,9 +348,25 @@ def get_furniture_preference_matches(
 
         all_furniture = [dict(row) for row in cursor.fetchall()]
 
+        # Get characteristics for all furniture
+        furniture_chars = {}
+        if all_furniture:
+            furniture_ids = [f['id'] for f in all_furniture]
+            placeholders = ','.join('?' * len(furniture_ids))
+            cursor.execute(f"""
+                SELECT fc.furniture_id, c.code
+                FROM beach_furniture_characteristics fc
+                JOIN beach_characteristics c ON fc.characteristic_id = c.id
+                WHERE fc.furniture_id IN ({placeholders})
+            """, furniture_ids)
+
+            for row in cursor.fetchall():
+                fid = row['furniture_id']
+                if fid not in furniture_chars:
+                    furniture_chars[fid] = set()
+                furniture_chars[fid].add(row['code'])
+
         # Get occupied furniture for the date
-        # Check for any furniture assignment, regardless of state
-        # (state filtering is handled at reservation level)
         cursor.execute("""
             SELECT DISTINCT rf.furniture_id
             FROM beach_reservation_furniture rf
@@ -360,14 +378,10 @@ def get_furniture_preference_matches(
         # Calculate match scores
         result_furniture = []
         for f in all_furniture:
-            furniture_features = set()
-            if f['features']:
-                furniture_features = {feat.strip() for feat in f['features'].split(',') if feat.strip()}
+            furn_char_codes = furniture_chars.get(f['id'], set())
 
-            matched = []
-            for pref_code, feature in pref_features.items():
-                if feature and feature in furniture_features:
-                    matched.append(pref_code)
+            # Match against requested codes
+            matched = [code for code in preference_codes if code in furn_char_codes]
 
             total_prefs = len(preference_codes) if preference_codes else 1
             match_score = len(matched) / total_prefs if total_prefs > 0 and preference_codes else 0

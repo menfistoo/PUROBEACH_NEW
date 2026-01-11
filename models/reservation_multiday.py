@@ -291,6 +291,15 @@ def create_linked_multiday_reservations(
 
             conn.commit()
 
+            # Sync preferences to reservation characteristics junction table
+            if preferences:
+                from models.characteristic_assignments import sync_preferences_to_reservation
+                # Sync to parent reservation
+                sync_preferences_to_reservation(parent_id, preferences)
+                # Sync to child reservations
+                for child in children:
+                    sync_preferences_to_reservation(child['id'], preferences)
+
             # Sync preferences to customer profile
             if preferences:
                 sync_preferences_to_customer(customer_id, preferences)
@@ -382,6 +391,12 @@ def update_multiday_reservations(
 
             # Sync preferences if updated
             if 'preferences' in fields:
+                from models.characteristic_assignments import sync_preferences_to_reservation
+                # Sync to all updated reservations
+                for res_id in updated_ids:
+                    sync_preferences_to_reservation(res_id, fields['preferences'])
+
+                # Also sync to customer profile
                 cursor.execute('SELECT customer_id FROM beach_reservations WHERE id = ?', (parent_id,))
                 row = cursor.fetchone()
                 if row:

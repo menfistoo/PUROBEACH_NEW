@@ -432,12 +432,8 @@ export class MoveModePanel {
         // Re-render to update selection state
         this.renderPool(this.moveMode.getPool());
 
-        // Show/hide legend
-        if (reservation && reservation.preferences?.length > 0) {
-            this.legend.style.display = 'block';
-        } else {
-            this.legend.style.display = 'none';
-        }
+        // Legend is hidden - furniture highlighting on map shows matches instead
+        this.legend.style.display = 'none';
     }
 
     /**
@@ -445,17 +441,10 @@ export class MoveModePanel {
      * @param {Array} preferences - Preferences to display
      */
     updateLegend(preferences) {
-        if (!this.legendItems) return;
-
-        if (!preferences || preferences.length === 0) {
+        // Legend is hidden - furniture highlighting on map shows matches instead
+        if (this.legend) {
             this.legend.style.display = 'none';
-            return;
         }
-
-        this.legend.style.display = 'block';
-        this.legendItems.innerHTML = preferences.map(p =>
-            `<div class="legend-item"><span class="legend-icon">${p.icon || '⭐'}</span> ${p.name}</div>`
-        ).join('');
     }
 
     /**

@@ -833,6 +833,12 @@
             <i class="fas fa-exchange-alt"></i>
         </button>
 
+        <!-- Move Mode Pool Warning (red indicator when reservations need assignment) -->
+        <div class="pool-warning-indicator" id="poolWarningIndicator" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span class="pool-warning-count" id="poolWarningCount">0</span>
+        </div>
+
         <!-- Refresh Button -->
         <button type="button" class="toolbar-btn" id="btn-refresh" title="Actualizar">
             <i class="fas fa-sync-alt"></i>
@@ -1462,12 +1468,79 @@
         moveMode.on('onDeactivate', () => {
             moveModeBtn?.classList.remove('active');
             document.querySelector('.beach-map-container')?.classList.remove('move-mode-active');
+            map.clearPreferenceHighlights();
             map.refreshAvailability();
+            // Hide pool warning when move mode deactivated
+            document.getElementById('poolWarningIndicator').style.display = 'none';
         });
 
-        // Wire up pool update to refresh map
-        moveMode.on('onPoolUpdate', () => {
+        // Wire up pool update to refresh map and update warning indicator
+        const poolWarningIndicator = document.getElementById('poolWarningIndicator');
+        const poolWarningCount = document.getElementById('poolWarningCount');
+
+        moveMode.on('onPoolUpdate', (data) => {
             map.refreshAvailability();
+
+            // Update pool warning indicator
+            const unassignedCount = (data.pool || []).filter(r => r.assignedCount < r.totalNeeded).length;
+            if (unassignedCount > 0) {
+                poolWarningIndicator.style.display = 'flex';
+                poolWarningCount.textContent = unassignedCount;
+            } else {
+                poolWarningIndicator.style.display = 'none';
+            }
+        });
+
+        // Click on warning indicator opens move mode panel
+        poolWarningIndicator?.addEventListener('click', () => {
+            if (!moveMode.isActive()) {
+                moveMode.activate(map.getCurrentDate());
+                moveModeBtn?.classList.add('active');
+                document.querySelector('.beach-map-container')?.classList.add('move-mode-active');
+            }
+        });
+
+        // Check for unassigned reservations and update warning indicator
+        async function checkUnassignedReservations(date) {
+            try {
+                const response = await fetch(`/beach/api/move-mode/unassigned?date=${date}`, {
+                    headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const count = data.reservation_ids?.length || 0;
+                    if (count > 0) {
+                        poolWarningIndicator.style.display = 'flex';
+                        poolWarningCount.textContent = count;
+                    } else {
+                        poolWarningIndicator.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking unassigned reservations:', error);
+            }
+        }
+
+        // Check on page load
+        checkUnassignedReservations(map.getCurrentDate());
+
+        // Check when date changes
+        map.on('onDateChange', (newDate) => {
+            checkUnassignedReservations(newDate);
+        });
+
+        // Wire up furniture highlighting for preference matches (tiered)
+        moveMode.on('onFurnitureHighlight', (data) => {
+            const furniture = data.furniture || [];
+            // Full match: 100% of preferences matched
+            const fullMatchIds = furniture
+                .filter(f => f.match_score === 1)
+                .map(f => f.id || f.furniture_id);
+            // Partial match: some but not all preferences matched
+            const partialMatchIds = furniture
+                .filter(f => f.match_score > 0 && f.match_score < 1)
+                .map(f => f.id || f.furniture_id);
+            map.applyPreferenceHighlights(fullMatchIds, partialMatchIds);
         });
 
         // Expose moveMode to BeachMap for furniture click handling

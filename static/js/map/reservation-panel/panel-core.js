@@ -38,6 +38,9 @@ class NewReservationPanel {
             waitlistEntryId: null  // Track waitlist entry ID for conversion
         };
 
+        // Available characteristics (loaded from API)
+        this.availableCharacteristics = [];
+
         // Cache DOM elements
         this.cacheElements();
 
@@ -81,7 +84,7 @@ class NewReservationPanel {
         this.numPeopleInput = document.getElementById('newPanelNumPeople');
         this.notesInput = document.getElementById('newPanelNotes');
         this.preferencesInput = document.getElementById('newPanelPreferences');
-        this.preferenceChips = document.querySelectorAll('#newPanelPreferenceChips .pref-chip');
+        this.preferenceChipsContainer = document.getElementById('newPanelPreferenceChips');
 
         // Buttons
         this.closeBtn = document.getElementById('newPanelCloseBtn');
@@ -120,6 +123,55 @@ class NewReservationPanel {
     }
 
     /**
+     * Load available characteristics from API
+     */
+    async loadCharacteristics() {
+        try {
+            const response = await fetch(`${this.options.apiBaseUrl}/preferences`);
+            if (response.ok) {
+                const result = await response.json();
+                this.availableCharacteristics = result.preferences || [];
+                this.renderPreferenceChips();
+            }
+        } catch (error) {
+            console.warn('Could not load characteristics:', error);
+            if (this.preferenceChipsContainer) {
+                this.preferenceChipsContainer.innerHTML =
+                    '<span class="text-muted small">Error al cargar preferencias</span>';
+            }
+        }
+    }
+
+    /**
+     * Render preference chips dynamically
+     */
+    renderPreferenceChips() {
+        if (!this.preferenceChipsContainer) return;
+
+        if (this.availableCharacteristics.length === 0) {
+            this.preferenceChipsContainer.innerHTML =
+                '<span class="text-muted small">No hay preferencias disponibles</span>';
+            return;
+        }
+
+        const chipsHtml = this.availableCharacteristics.map(char => {
+            // Normalize icon class
+            let icon = char.icon || 'fa-star';
+            if (!icon.startsWith('fas ') && !icon.startsWith('far ') && !icon.startsWith('fab ')) {
+                icon = 'fas ' + icon;
+            }
+            const isActive = this.state.preferences.includes(char.code);
+            return `
+                <button type="button" class="pref-chip ${isActive ? 'active' : ''}" data-pref="${char.code}">
+                    <i class="${icon}"></i> ${char.name}
+                </button>
+            `;
+        }).join('');
+
+        this.preferenceChipsContainer.innerHTML = chipsHtml;
+    }
+
+    /**
      * Setup event listeners
      */
     setupEventListeners() {
@@ -139,10 +191,16 @@ class NewReservationPanel {
         const guestSelector = document.getElementById('newPanelGuestSelector');
         guestSelector?.addEventListener('change', () => this.customerHandler.onGuestSelectorChange());
 
-        // Preference chips
-        this.preferenceChips?.forEach(chip => {
-            chip.addEventListener('click', () => this.togglePreference(chip));
+        // Preference chips - use event delegation for dynamic chips
+        this.preferenceChipsContainer?.addEventListener('click', (e) => {
+            const chip = e.target.closest('.pref-chip');
+            if (chip) {
+                this.togglePreference(chip);
+            }
         });
+
+        // Load available characteristics
+        this.loadCharacteristics();
 
         // Keyboard: Escape to close
         document.addEventListener('keydown', (e) => {
@@ -475,7 +533,9 @@ class NewReservationPanel {
      * Clear all preferences
      */
     clearPreferences() {
-        this.preferenceChips?.forEach(chip => chip.classList.remove('active'));
+        // Query all chips within the container (dynamic chips)
+        const chips = this.preferenceChipsContainer?.querySelectorAll('.pref-chip');
+        chips?.forEach(chip => chip.classList.remove('active'));
         this.state.preferences = [];
         if (this.preferencesInput) {
             this.preferencesInput.value = '';

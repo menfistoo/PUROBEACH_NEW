@@ -258,6 +258,11 @@ def create_beach_reservation(
 
             conn.commit()
 
+            # Sync preferences to reservation characteristics junction table
+            if preferences:
+                from models.characteristic_assignments import sync_preferences_to_reservation
+                sync_preferences_to_reservation(reservation_id, preferences)
+
             # Sync preferences to customer profile
             if preferences:
                 sync_preferences_to_customer(customer_id, preferences)

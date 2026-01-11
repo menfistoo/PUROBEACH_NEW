@@ -801,6 +801,49 @@ export class BeachMap {
     }
 
     // =========================================================================
+    // MOVE MODE PREFERENCE HIGHLIGHTS
+    // =========================================================================
+
+    /**
+     * Highlight furniture items that match customer preferences (for move mode)
+     * Supports tiered highlighting: full match vs partial match
+     * @param {Array} fullMatchIds - Furniture IDs with 100% preference match
+     * @param {Array} partialMatchIds - Furniture IDs with partial match (>0% but <100%)
+     */
+    applyPreferenceHighlights(fullMatchIds = [], partialMatchIds = []) {
+        // Clear previous preference highlights
+        this.clearPreferenceHighlights();
+
+        // Add full match highlight (strong green glow)
+        fullMatchIds.forEach(id => {
+            const furnitureEl = this.furnitureLayer.querySelector(`[data-furniture-id="${id}"]`);
+            if (furnitureEl) {
+                furnitureEl.classList.add('preference-match-full');
+            }
+        });
+
+        // Add partial match highlight (lighter highlight)
+        partialMatchIds.forEach(id => {
+            const furnitureEl = this.furnitureLayer.querySelector(`[data-furniture-id="${id}"]`);
+            if (furnitureEl) {
+                furnitureEl.classList.add('preference-match-partial');
+            }
+        });
+    }
+
+    /**
+     * Clear all preference match highlights
+     */
+    clearPreferenceHighlights() {
+        this.furnitureLayer.querySelectorAll('.preference-match-full').forEach(el => {
+            el.classList.remove('preference-match-full');
+        });
+        this.furnitureLayer.querySelectorAll('.preference-match-partial').forEach(el => {
+            el.classList.remove('preference-match-partial');
+        });
+    }
+
+    // =========================================================================
     // UTILITIES
     // =========================================================================
 

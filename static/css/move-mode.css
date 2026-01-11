@@ -469,6 +469,54 @@
     }
 }
 
+/* Preference match highlights - tiered based on match score */
+
+/* Full match (100%) - strong green glow */
+.furniture-item.preference-match-full {
+    filter: drop-shadow(0 0 12px #4A7C59) drop-shadow(0 0 24px #4A7C59);
+    animation: preference-glow-full 1.5s ease-in-out infinite;
+}
+
+.furniture-item.preference-match-full rect,
+.furniture-item.preference-match-full circle,
+.furniture-item.preference-match-full ellipse,
+.furniture-item.preference-match-full polygon {
+    stroke: #4A7C59 !important;
+    stroke-width: 4px !important;
+}
+
+@keyframes preference-glow-full {
+    0%, 100% {
+        filter: drop-shadow(0 0 12px #4A7C59) drop-shadow(0 0 24px #4A7C59);
+    }
+    50% {
+        filter: drop-shadow(0 0 18px #4A7C59) drop-shadow(0 0 36px #4A7C59);
+    }
+}
+
+/* Partial match (>0% but <100%) - lighter amber glow */
+.furniture-item.preference-match-partial {
+    filter: drop-shadow(0 0 6px #E5A33D) drop-shadow(0 0 12px #E5A33D);
+    animation: preference-glow-partial 2.5s ease-in-out infinite;
+}
+
+.furniture-item.preference-match-partial rect,
+.furniture-item.preference-match-partial circle,
+.furniture-item.preference-match-partial ellipse,
+.furniture-item.preference-match-partial polygon {
+    stroke: #E5A33D !important;
+    stroke-width: 2px !important;
+}
+
+@keyframes preference-glow-partial {
+    0%, 100% {
+        filter: drop-shadow(0 0 6px #E5A33D) drop-shadow(0 0 12px #E5A33D);
+    }
+    50% {
+        filter: drop-shadow(0 0 10px #E5A33D) drop-shadow(0 0 20px #E5A33D);
+    }
+}
+
 /* =============================================================================
    TOOLBAR BUTTON
    ============================================================================= */
@@ -596,4 +644,51 @@
     font-weight: 500;
     font-family: inherit;
     border: 1px solid #E8E8E8;
+}
+
+/* =============================================================================
+   POOL WARNING INDICATOR (Toolbar)
+   ============================================================================= */
+
+.pool-warning-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #C1444F;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    animation: pool-warning-pulse 1.5s ease-in-out infinite;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(193, 68, 79, 0.4);
+}
+
+.pool-warning-indicator:hover {
+    background: #a83a44;
+}
+
+.pool-warning-indicator i {
+    font-size: 14px;
+}
+
+.pool-warning-count {
+    background: white;
+    color: #C1444F;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 20px;
+    text-align: center;
+}
+
+@keyframes pool-warning-pulse {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(193, 68, 79, 0.4);
+    }
+    50% {
+        box-shadow: 0 2px 16px rgba(193, 68, 79, 0.7);
+    }
 }
