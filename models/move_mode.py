@@ -258,7 +258,7 @@ def get_reservation_pool_data(
         }
 
 
-def get_unassigned_reservations(target_date: str) -> List[Dict[str, Any]]:
+def get_unassigned_reservations(target_date: str) -> List[int]:
     """
     Get all reservations for a date that have insufficient furniture capacity.
 
@@ -274,27 +274,41 @@ def get_unassigned_reservations(target_date: str) -> List[Dict[str, Any]]:
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Get all active reservations for this date
-        # (reservations where start_date <= target_date <= end_date)
-        # and their state is not availability-releasing
+        # Get all reservations for this date that are not in a releasing state
+        # and have insufficient furniture capacity
         cursor.execute("""
             SELECT
                 r.id as reservation_id,
                 r.num_people,
-                COALESCE(SUM(f.capacity), 0) as assigned_capacity
+                COALESCE(
+                    (SELECT SUM(f.capacity)
+                     FROM beach_reservation_furniture rf
+                     JOIN beach_furniture f ON rf.furniture_id = f.id
+                     WHERE rf.reservation_id = r.id
+                     AND rf.assignment_date = ?),
+                    0
+                ) as assigned_capacity
             FROM beach_reservations r
-            LEFT JOIN beach_reservation_furniture rf
-                ON r.id = rf.reservation_id AND rf.assignment_date = ?
-            LEFT JOIN beach_furniture f ON rf.furniture_id = f.id
-            LEFT JOIN beach_reservation_daily_states ds
-                ON r.id = ds.reservation_id AND ds.state_date = ?
-            LEFT JOIN beach_reservation_states s
-                ON COALESCE(ds.state_id, r.state_id) = s.id
             WHERE r.start_date <= ? AND r.end_date >= ?
-            AND (s.is_availability_releasing IS NULL OR s.is_availability_releasing = 0)
-            GROUP BY r.id
-            HAVING assigned_capacity < r.num_people
-        """, (target_date, target_date, target_date, target_date))
+            AND NOT EXISTS (
+                -- Exclude reservations in availability-releasing states
+                SELECT 1 FROM beach_reservation_states s
+                WHERE s.id = COALESCE(
+                    (SELECT ds.state_id FROM beach_reservation_daily_states ds
+                     WHERE ds.reservation_id = r.id AND ds.state_date = ?),
+                    r.state_id
+                )
+                AND s.is_availability_releasing = 1
+            )
+            AND COALESCE(
+                (SELECT SUM(f.capacity)
+                 FROM beach_reservation_furniture rf
+                 JOIN beach_furniture f ON rf.furniture_id = f.id
+                 WHERE rf.reservation_id = r.id
+                 AND rf.assignment_date = ?),
+                0
+            ) < r.num_people
+        """, (target_date, target_date, target_date, target_date, target_date))
 
         return [row['reservation_id'] for row in cursor.fetchall()]
 
