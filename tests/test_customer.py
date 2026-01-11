@@ -207,7 +207,7 @@ class TestCustomerPreferencesAndTags:
     def test_set_customer_preferences(self, app):
         """Test setting customer preferences."""
         with app.app_context():
-            from models.preference import get_all_preferences
+            from models.characteristic import get_all_characteristics
 
             customer_id = create_customer(
                 customer_type='externo',
@@ -216,10 +216,10 @@ class TestCustomerPreferencesAndTags:
                 phone='555-PREF'
             )
 
-            preferences = get_all_preferences()
-            if preferences:
-                pref_ids = [preferences[0]['id']]
-                set_customer_preferences(customer_id, pref_ids)
+            characteristics = get_all_characteristics()
+            if characteristics:
+                char_ids = [characteristics[0]['id']]
+                set_customer_preferences(customer_id, char_ids)
 
                 customer = get_customer_with_details(customer_id)
                 assert len(customer['preferences']) == 1

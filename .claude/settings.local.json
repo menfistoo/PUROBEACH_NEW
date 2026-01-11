@@ -86,7 +86,9 @@
       "Bash(git merge-base:*)",
       "Bash(set FLASK_APP=app.py)",
       "Bash(DATABASE_PATH=\"C:/Users/catia/programas/PuroBeach/PuroBeach/instance/beach_club.db\" python:*)",
-      "Bash(if not exist \"C:\\\\Users\\\\catia\\\\programas\\\\PuroBeach\\\\PuroBeach\\\\migrations\" mkdir \"C:\\\\Users\\\\catia\\\\programas\\\\PuroBeach\\\\PuroBeach\\\\migrations\")"
+      "Bash(if not exist \"C:\\\\Users\\\\catia\\\\programas\\\\PuroBeach\\\\PuroBeach\\\\migrations\" mkdir \"C:\\\\Users\\\\catia\\\\programas\\\\PuroBeach\\\\PuroBeach\\\\migrations\")",
+      "Bash(git -C \"C:/Users/catia/programas/PuroBeach/PuroBeach\" status --short)",
+      "Bash(git -C \"C:/Users/catia/programas/PuroBeach/PuroBeach\" diff --name-only HEAD)"
     ]
   }
 }

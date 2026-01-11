@@ -12,7 +12,7 @@ from .state import get_default_state
 from .reservation_availability import check_furniture_availability_bulk
 
 # Re-export preference sync functions for backward compatibility
-from .reservation_preferences import (
+from .characteristic_assignments import (
     sync_preferences_to_customer,
     get_customer_preference_codes,
     sync_customer_preferences_to_reservations

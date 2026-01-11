@@ -45,7 +45,7 @@ from models.reservation import (
     get_beach_reservation_by_id
 )
 from models.customer import get_customer_by_id
-from models.preference import get_customer_preferences
+from models.characteristic_assignments import get_customer_characteristics
 from database import get_db
 
 
@@ -82,7 +82,7 @@ def register_routes(bp):
         customer_id = reservation.get('customer_id')
         if customer_id:
             customer = get_customer_by_id(customer_id)
-            customer_preferences = get_customer_preferences(customer_id)
+            customer_preferences = get_customer_characteristics(customer_id)
 
             # For interno customers with room number, fetch hotel guest info
             if customer and customer.get('customer_type') == 'interno' and customer.get('room_number'):

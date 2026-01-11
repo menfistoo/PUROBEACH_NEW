@@ -12,7 +12,7 @@ from models.customer import (
     set_customer_preferences, set_customer_tags, find_duplicates,
     merge_customers, find_potential_duplicates_for_customer
 )
-from models.preference import get_all_preferences, get_preference_by_id
+from models.characteristic import get_all_characteristics, get_characteristic_by_id
 from models.reservation import sync_preferences_to_customer
 from models.tag import get_all_tags
 
@@ -52,7 +52,7 @@ def list():
 @permission_required('beach.customers.create')
 def create():
     """Create new customer."""
-    preferences = get_all_preferences()
+    preferences = get_all_characteristics()
     tags = get_all_tags()
 
     if request.method == 'POST':
@@ -151,7 +151,7 @@ def edit(customer_id):
         flash('Cliente no encontrado', 'error')
         return redirect(url_for('beach.customers'))
 
-    preferences = get_all_preferences()
+    preferences = get_all_characteristics()
     tags = get_all_tags()
 
     if request.method == 'POST':
@@ -194,7 +194,7 @@ def edit(customer_id):
                 # Convert preference IDs to codes for sync
                 pref_codes = []
                 for pid in pref_ids:
-                    pref = get_preference_by_id(int(pid))
+                    pref = get_characteristic_by_id(int(pid))
                     if pref:
                         pref_codes.append(pref['code'])
                 preferences_csv = ','.join(pref_codes)

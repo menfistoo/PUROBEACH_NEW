@@ -260,3 +260,87 @@ def score_characteristic_match(furniture_id: int, requested_ids: list[int]) -> d
         'matched': matched,
         'missing': missing
     }
+
+
+# =============================================================================
+# HELPER FUNCTIONS (CODE-BASED)
+# =============================================================================
+
+def set_customer_characteristics_by_codes(customer_id: int, codes: list[str]) -> bool:
+    """
+    Set customer characteristics using code strings.
+    Converts codes to IDs and sets characteristics.
+
+    Args:
+        customer_id: Customer ID
+        codes: List of characteristic codes
+
+    Returns:
+        True if successful
+    """
+    from models.characteristic import get_characteristic_by_code
+
+    char_ids = []
+    for code in codes:
+        char = get_characteristic_by_code(code)
+        if char:
+            char_ids.append(char['id'])
+
+    return set_customer_characteristics(customer_id, char_ids)
+
+
+# =============================================================================
+# BACKWARD COMPATIBILITY (PREFERENCE SYNC)
+# =============================================================================
+
+def sync_preferences_to_customer(customer_id: int, preferences_csv: str, replace: bool = False) -> bool:
+    """
+    Sync preferences from reservation to customer (backward compatibility).
+
+    Args:
+        customer_id: Customer ID
+        preferences_csv: Comma-separated characteristic codes
+        replace: If True, replace all. If False, merge with existing.
+
+    Returns:
+        True if successful
+    """
+    if not preferences_csv:
+        if replace:
+            return set_customer_characteristics(customer_id, [])
+        return True
+
+    codes = [c.strip() for c in preferences_csv.split(',') if c.strip()]
+    return set_customer_characteristics_by_codes(customer_id, codes)
+
+
+def get_customer_preference_codes(customer_id: int) -> list[str]:
+    """
+    Get customer preference codes (backward compatibility).
+
+    Args:
+        customer_id: Customer ID
+
+    Returns:
+        List of characteristic codes
+    """
+    characteristics = get_customer_characteristics(customer_id)
+    return [c['code'] for c in characteristics]
+
+
+def sync_customer_preferences_to_reservations(customer_id: int, preferences_csv: str = None) -> int:
+    """
+    Sync customer preferences to all active/future reservations (stub).
+
+    This is a complex operation that would need to update the
+    beach_reservation_characteristics junction table. For now, returns 0.
+
+    Args:
+        customer_id: Customer ID
+        preferences_csv: Optional new preferences to sync
+
+    Returns:
+        Number of reservations updated (currently 0, stub implementation)
+    """
+    # TODO: Implement full sync to beach_reservation_characteristics
+    return 0

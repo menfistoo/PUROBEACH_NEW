@@ -201,18 +201,18 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.config.map_editor.view')
     def map_editor_get_features():
-        """Get available furniture features from preferences."""
-        from models.preference import get_all_preferences
+        """Get available furniture features (characteristics)."""
+        from models.characteristic import get_all_characteristics
 
-        preferences = get_all_preferences(active_only=True)
-        # Only return preferences that map to furniture features
+        characteristics = get_all_characteristics(active_only=True)
         features = [
             {
-                'code': p['maps_to_feature'],
-                'name': p['name'],
-                'icon': p['icon']
+                'code': c['code'],
+                'name': c['name'],
+                'icon': c['icon'],
+                'color': c['color']
             }
-            for p in preferences if p.get('maps_to_feature')
+            for c in characteristics
         ]
 
         return jsonify({

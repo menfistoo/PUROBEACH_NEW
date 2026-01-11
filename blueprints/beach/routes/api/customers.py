@@ -10,7 +10,7 @@ from models.customer import (
     create_customer, set_customer_preferences, search_customers_unified,
     create_customer_from_hotel_guest
 )
-from models.preference import get_all_preferences
+from models.characteristic import get_all_characteristics
 from models.reservation import sync_preferences_to_customer
 from models.reservation import get_customer_reservation_history, get_customer_preferred_furniture
 from models.hotel_guest import get_guests_by_room, search_guests
@@ -354,20 +354,20 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.customers.view')
     def list_preferences():
-        """Get all available customer preferences."""
+        """Get all available characteristics (unified preferences)."""
         active_only = request.args.get('active', 'true').lower() == 'true'
-        preferences = get_all_preferences(active_only=active_only)
+        characteristics = get_all_characteristics(active_only=active_only)
 
         return jsonify({
             'success': True,
             'preferences': [{
-                'id': p['id'],
-                'code': p['code'],
-                'name': p['name'],
-                'description': p.get('description'),
-                'icon': p.get('icon'),
-                'maps_to_feature': p.get('maps_to_feature')
-            } for p in preferences]
+                'id': c['id'],
+                'code': c['code'],
+                'name': c['name'],
+                'description': c.get('description'),
+                'icon': c.get('icon'),
+                'color': c.get('color')
+            } for c in characteristics]
         })
 
     @bp.route('/customers/<int:customer_id>/preferences', methods=['PUT'])
