@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Conciliacion de Pagos - PuroBeach{% endblock %}
+{% block title %}Conciliación de Pagos - PuroBeach{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -625,8 +625,8 @@
 <!-- Page Header -->
 <div class="page-header">
     <div>
-        <h2><i class="fas fa-cash-register me-2"></i>Conciliacion de Pagos</h2>
-        <small class="text-muted">Gestion de cobros y tickets del dia</small>
+        <h2><i class="fas fa-cash-register me-2"></i>Conciliación de Pagos</h2>
+        <small class="text-muted">Gestión de cobros y tickets del día</small>
     </div>
     <div class="header-controls">
         <input type="date" id="selected-date" class="form-control"
@@ -650,7 +650,7 @@
         <div class="summary-card-count" id="summary-card-count">0 reservas</div>
     </div>
     <div class="summary-card room-charge">
-        <div class="summary-card-label">Cargo Habitacion</div>
+        <div class="summary-card-label">Cargo Habitación</div>
         <div class="summary-card-amount" id="summary-room-amount">--</div>
         <div class="summary-card-count" id="summary-room-count">0 reservas</div>
     </div>
@@ -680,7 +680,7 @@
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <label class="form-label">Metodo de Pago</label>
+            <label class="form-label">Método de Pago</label>
             <div class="filter-pills" id="filter-method">
                 <span class="filter-pill active" data-value="">Todos</span>
                 <span class="filter-pill" data-value="efectivo">Efectivo</span>
@@ -725,7 +725,7 @@
                     <th>Zona</th>
                     <th>Importe</th>
                     <th>Estado</th>
-                    <th>Metodo</th>
+                    <th>Método</th>
                     <th>Ticket</th>
                     <th>Acciones</th>
                 </tr>
@@ -757,7 +757,7 @@
                 <!-- Payment method selection -->
                 <div class="payment-method-section">
                     <div class="payment-method-label">
-                        <i class="fas fa-wallet"></i>Metodo de Pago
+                        <i class="fas fa-wallet"></i>Método de Pago
                     </div>
                     <div class="payment-method-options">
                         <div class="payment-method-option">
@@ -787,7 +787,7 @@
                 <!-- Ticket number input -->
                 <div class="ticket-input-section">
                     <label for="modal-ticket-number">
-                        <i class="fas fa-receipt"></i>Numero de Ticket (opcional)
+                        <i class="fas fa-receipt"></i>Número de Ticket (opcional)
                     </label>
                     <input type="text" id="modal-ticket-number" placeholder="Ej: 12345" autocomplete="off">
                 </div>
@@ -1074,18 +1074,21 @@
             ? '<span class="ticket-cell">' + res.payment_ticket_number + '</span>'
             : '<span class="ticket-cell no-ticket">Sin ticket</span>';
 
+        // Customer name (escaped for XSS protection)
+        const escapedCustomerName = escapeHtml(res.customer_name);
+
         // Action button
         const actionBtn = res.paid
             ? '<button class="btn btn-collect" disabled><i class="fas fa-check me-1"></i>Cobrado</button>'
             : '<button class="btn btn-collect" ' +
               'data-reservation-id="' + res.id + '" ' +
-              'data-customer-name="' + (res.customer_name || '').replace(/"/g, '&quot;') + '" ' +
+              'data-customer-name="' + escapedCustomerName + '" ' +
               'data-amount="' + (res.final_price || 0) + '">' +
               '<i class="fas fa-hand-holding-usd me-1"></i>Cobrar</button>';
 
         return '<tr data-reservation-id="' + res.id + '">' +
             '<td><div class="customer-cell">' +
-            '<span class="customer-name">' + (res.customer_name || '-') + '</span>' +
+            '<span class="customer-name">' + (escapedCustomerName || '-') + '</span>' +
             '<span class="customer-detail">' + customerTypeIcon + '</span>' +
             '</div></td>' +
             '<td><span class="badge bg-secondary">' + (res.customer_type === 'interno' ? 'Interno' : 'Externo') + '</span></td>' +
@@ -1123,7 +1126,7 @@
         const ticketNumber = document.getElementById('modal-ticket-number').value.trim();
 
         if (!paymentMethodEl) {
-            showToast('Seleccione un metodo de pago', 'error');
+            showToast('Seleccione un método de pago', 'error');
             return;
         }
 
@@ -1179,6 +1182,15 @@
     // =============================================================================
     // UTILITIES
     // =============================================================================
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;')
+                  .replace(/'/g, '&#39;');
+    }
 
     function formatCurrency(amount) {
         return new Intl.NumberFormat('es-ES', {
