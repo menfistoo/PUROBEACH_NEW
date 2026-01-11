@@ -1127,7 +1127,7 @@ git commit -m "feat(routes): add characteristics admin routes"
         {% if characteristics %}
         <div class="table-responsive">
             <table class="table table-hover" id="characteristics-table">
-                <thead>
+                <thead style="background-color: #F5E6D3;">
                     <tr>
                         <th style="width: 40px;"></th>
                         <th style="width: 60px;" class="text-center">Color</th>
@@ -1162,10 +1162,10 @@ git commit -m "feat(routes): add characteristics admin routes"
                         </td>
                         <td><code>{{ char.code }}</code></td>
                         <td class="text-center">
-                            <span class="badge bg-secondary">{{ char.furniture_count or 0 }}</span>
+                            <span class="badge" style="background-color: #8B7355;">{{ char.furniture_count or 0 }}</span>
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-secondary">{{ char.reservation_count or 0 }}</span>
+                            <span class="badge" style="background-color: #8B7355;">{{ char.reservation_count or 0 }}</span>
                         </td>
                         <td class="text-center">
                             {% if char.active %}
@@ -1207,7 +1207,7 @@ git commit -m "feat(routes): add characteristics admin routes"
 </div>
 
 <div class="card mt-4">
-    <div class="card-header">
+    <div class="card-header" style="background-color: #F5E6D3;">
         <h5 class="card-title mb-0"><i class="fa-solid fa-info-circle"></i> Como funcionan las caracteristicas</h5>
     </div>
     <div class="card-body">
@@ -1410,7 +1410,7 @@ git commit -m "feat(templates): add characteristics list view"
             </div>
             <div class="card-body">
                 <div class="d-flex flex-wrap gap-2">
-                    {% set colors = ['#D4AF37', '#1A3A5C', '#4A7C59', '#C1444F', '#E5A33D', '#6B7280', '#17A2B8', '#6F42C1'] %}
+                    {% set colors = ['#D4AF37', '#1A3A5C', '#4A7C59', '#C1444F', '#E5A33D', '#8B7355', '#4A90A4', '#7FB5B5'] %}
                     {% for c in colors %}
                     <button type="button" class="btn color-btn"
                             style="background-color: {{ c }}; width: 36px; height: 36px; border: 2px solid white; border-radius: 50%;"
