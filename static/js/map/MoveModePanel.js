@@ -14,6 +14,13 @@ export class MoveModePanel {
         this.container = document.getElementById(containerId);
         this.moveMode = moveMode;
 
+        // Filter state
+        this.filters = {
+            type: 'all',  // all, interno, externo
+            vip: false,
+            hasPreferences: false
+        };
+
         // Create panel structure if container exists
         if (this.container) {
             this.createPanelStructure();
@@ -41,6 +48,22 @@ export class MoveModePanel {
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="moveModeExitBtn" title="Salir del modo mover">
                         <i class="fas fa-times"></i>
                     </button>
+                </div>
+
+                <div class="move-mode-filters" id="moveModeFilters">
+                    <div class="filter-group">
+                        <button type="button" class="filter-btn active" data-filter="type" data-value="all">Todos</button>
+                        <button type="button" class="filter-btn" data-filter="type" data-value="interno">Interno</button>
+                        <button type="button" class="filter-btn" data-filter="type" data-value="externo">Externo</button>
+                    </div>
+                    <div class="filter-toggles">
+                        <label class="filter-toggle" title="Solo VIP">
+                            <input type="checkbox" id="filterVip"> <i class="fas fa-star"></i>
+                        </label>
+                        <label class="filter-toggle" title="Con preferencias">
+                            <input type="checkbox" id="filterPrefs"> <i class="fas fa-heart"></i>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="move-mode-panel-body" id="moveModePoolList">
@@ -80,6 +103,9 @@ export class MoveModePanel {
         this.legend = document.getElementById('moveModeLegend');
         this.legendItems = document.getElementById('moveModeLegendItems');
         this.collapseBtn = document.getElementById('moveModeCollapseBtn');
+        this.filterVip = document.getElementById('filterVip');
+        this.filterPrefs = document.getElementById('filterPrefs');
+        this.filterBtns = document.querySelectorAll('.filter-btn[data-filter="type"]');
     }
 
     /**
@@ -99,6 +125,28 @@ export class MoveModePanel {
         // Collapse button
         this.collapseBtn?.addEventListener('click', () => {
             this.toggleCollapse();
+        });
+
+        // Filter type buttons
+        this.filterBtns?.forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.filters.type = btn.dataset.value;
+                this.renderPool(this.moveMode.getPool());
+            });
+        });
+
+        // Filter VIP checkbox
+        this.filterVip?.addEventListener('change', () => {
+            this.filters.vip = this.filterVip.checked;
+            this.renderPool(this.moveMode.getPool());
+        });
+
+        // Filter preferences checkbox
+        this.filterPrefs?.addEventListener('change', () => {
+            this.filters.hasPreferences = this.filterPrefs.checked;
+            this.renderPool(this.moveMode.getPool());
         });
 
         // MoveMode events
@@ -134,14 +182,49 @@ export class MoveModePanel {
     }
 
     /**
+     * Apply filters to pool
+     * @param {Array} pool - Full pool
+     * @returns {Array} Filtered pool
+     */
+    applyFilters(pool) {
+        return pool.filter(res => {
+            // Type filter
+            if (this.filters.type !== 'all') {
+                if (res.customer_type !== this.filters.type) return false;
+            }
+
+            // VIP filter (check for VIP tag)
+            if (this.filters.vip) {
+                const isVip = res.tags?.some(t =>
+                    t.name?.toLowerCase().includes('vip') ||
+                    t.code?.toLowerCase().includes('vip')
+                ) || res.is_vip;
+                if (!isVip) return false;
+            }
+
+            // Preferences filter
+            if (this.filters.hasPreferences) {
+                if (!res.preferences || res.preferences.length === 0) return false;
+            }
+
+            return true;
+        });
+    }
+
+    /**
      * Render the pool of reservations
      * @param {Array} pool - Pool reservations
      */
     renderPool(pool) {
         if (!this.poolList) return;
 
-        // Update count badge
-        this.poolCount.textContent = pool.length;
+        // Apply filters
+        const filteredPool = this.applyFilters(pool);
+
+        // Update count badge (show filtered/total)
+        this.poolCount.textContent = filteredPool.length === pool.length
+            ? pool.length
+            : `${filteredPool.length}/${pool.length}`;
 
         if (pool.length === 0) {
             this.poolList.innerHTML = `
@@ -153,7 +236,17 @@ export class MoveModePanel {
             return;
         }
 
-        this.poolList.innerHTML = pool.map(res => this.renderReservationCard(res)).join('');
+        if (filteredPool.length === 0) {
+            this.poolList.innerHTML = `
+                <div class="move-mode-empty-state">
+                    <i class="fas fa-filter fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">Sin resultados con estos filtros</p>
+                </div>
+            `;
+            return;
+        }
+
+        this.poolList.innerHTML = filteredPool.map(res => this.renderReservationCard(res)).join('');
 
         // Add click handlers to cards
         this.poolList.querySelectorAll('.move-mode-card').forEach(card => {
