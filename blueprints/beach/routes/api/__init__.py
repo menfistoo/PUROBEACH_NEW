@@ -16,6 +16,7 @@ from blueprints.beach.routes.api import pricing
 from blueprints.beach.routes.api import states
 from blueprints.beach.routes.api import waitlist
 from blueprints.beach.routes.api import insights
+from blueprints.beach.routes.api import move_mode
 
 # Register all route functions on the blueprint
 customers.register_routes(api_bp)
@@ -25,3 +26,4 @@ pricing.register_routes(api_bp)
 states.register_routes(api_bp)
 waitlist.register_routes(api_bp)
 insights.register_routes(api_bp)
+move_mode.register_routes(api_bp)

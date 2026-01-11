@@ -182,6 +182,7 @@ export class ReservationPanelBase {
         this.furnitureViewMode = document.getElementById('furnitureViewMode');
         this.furnitureChipsContainer = document.getElementById('panelFurnitureChips');
         this.furnitureChangeBtn = document.getElementById('panelChangeFurnitureBtn');
+        this.moveModeBtn = document.getElementById('panelMoveModeBtn');
         this.furnitureSummary = document.getElementById('furnitureSummary');
 
         // Furniture section - Reassignment mode
@@ -280,6 +281,9 @@ export class ReservationPanelBase {
 
         // Furniture change button
         this.furnitureChangeBtn?.addEventListener('click', () => this.enterReassignmentMode());
+
+        // Move mode button - enters global move mode from this reservation
+        this.moveModeBtn?.addEventListener('click', () => this.enterMoveMode());
 
         // Reassignment mode buttons
         this.reassignmentCancelBtn?.addEventListener('click', () => this.exitReassignmentMode(true));
