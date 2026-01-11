@@ -1,5 +1,5 @@
 """Payment reconciliation report routes."""
-from datetime import date
+from datetime import date, datetime
 from flask import render_template, request, jsonify
 from flask_login import login_required
 
@@ -21,6 +21,13 @@ def register_routes(bp):
     def payment_reconciliation_view():
         """Render payment reconciliation report page."""
         selected_date = request.args.get('date', date.today().isoformat())
+
+        # Validate date format
+        try:
+            datetime.strptime(selected_date, '%Y-%m-%d')
+        except ValueError:
+            selected_date = date.today().isoformat()
+
         zones = get_all_zones()
 
         return render_template(
@@ -35,6 +42,13 @@ def register_routes(bp):
     def payment_reconciliation_data():
         """Get payment reconciliation data as JSON."""
         selected_date = request.args.get('date', date.today().isoformat())
+
+        # Validate date format
+        try:
+            datetime.strptime(selected_date, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'success': False, 'message': 'Fecha inválida'}), 400
+
         payment_status = request.args.get('status')
         payment_method = request.args.get('method')
         zone_id = request.args.get('zone_id', type=int)
@@ -81,11 +95,25 @@ def register_routes(bp):
                 'message': 'Faltan datos requeridos'
             }), 400
 
-        success = mark_reservation_paid(
-            reservation_id=reservation_id,
-            payment_method=payment_method,
-            ticket_number=ticket_number
-        )
+        # Validate payment method
+        valid_methods = ('efectivo', 'tarjeta', 'cargo_habitacion')
+        if payment_method not in valid_methods:
+            return jsonify({
+                'success': False,
+                'message': 'Método de pago inválido'
+            }), 400
+
+        try:
+            success = mark_reservation_paid(
+                reservation_id=reservation_id,
+                payment_method=payment_method,
+                ticket_number=ticket_number
+            )
+        except Exception:
+            return jsonify({
+                'success': False,
+                'message': 'Error al procesar el pago'
+            }), 500
 
         if success:
             return jsonify({
