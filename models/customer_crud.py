@@ -175,6 +175,11 @@ def delete_customer(customer_id: int) -> bool:
     Delete customer (hard delete).
     Only allowed if no active reservations.
 
+    Handles cascade deletion of:
+    - Past reservations (and their furniture, daily_states, tags via CASCADE)
+    - Reservation status history
+    - Waitlist converted_reservation_id references
+
     Args:
         customer_id: Customer ID to delete
 
@@ -198,6 +203,43 @@ def delete_customer(customer_id: int) -> bool:
     if cursor.fetchone()['count'] > 0:
         raise ValueError('No se puede eliminar cliente con reservas activas')
 
+    # Get all reservation IDs for this customer (to clean up references)
+    cursor.execute(
+        'SELECT id FROM beach_reservations WHERE customer_id = ?',
+        (customer_id,)
+    )
+    reservation_ids = [row['id'] for row in cursor.fetchall()]
+
+    if reservation_ids:
+        placeholders = ','.join('?' * len(reservation_ids))
+
+        # Clear parent_reservation_id references (child reservations pointing to these)
+        cursor.execute(f'''
+            UPDATE beach_reservations
+            SET parent_reservation_id = NULL
+            WHERE parent_reservation_id IN ({placeholders})
+        ''', reservation_ids)
+
+        # Clear converted_reservation_id in waitlist
+        cursor.execute(f'''
+            UPDATE beach_waitlist
+            SET converted_reservation_id = NULL
+            WHERE converted_reservation_id IN ({placeholders})
+        ''', reservation_ids)
+
+        # Delete reservation status history
+        cursor.execute(f'''
+            DELETE FROM reservation_status_history
+            WHERE reservation_id IN ({placeholders})
+        ''', reservation_ids)
+
+        # Delete reservations (furniture, daily_states, tags cascade automatically)
+        cursor.execute(f'''
+            DELETE FROM beach_reservations
+            WHERE id IN ({placeholders})
+        ''', reservation_ids)
+
+    # Delete customer (customer_tags, customer_preferences, waitlist cascade automatically)
     cursor.execute('DELETE FROM beach_customers WHERE id = ?', (customer_id,))
     db.commit()
 

@@ -10,7 +10,7 @@
         <i class="fa-solid fa-euro-sign"></i>
         {{ page_title }} de Consumo Mínimo
     </h2>
-    <a href="{{ url_for('beach.beach_config.minimum_consumption') }}" class="btn btn-secondary">
+    <a href="{{ url_for('beach.beach_config.pricing', tab='minimum-consumption') }}" class="btn btn-secondary">
         <i class="fa-solid fa-arrow-left"></i> Volver
     </a>
 </div>
@@ -142,7 +142,7 @@
                             <i class="fa-solid fa-save"></i>
                             {{ 'Crear Política' if mode == 'create' else 'Guardar Cambios' }}
                         </button>
-                        <a href="{{ url_for('beach.beach_config.minimum_consumption') }}" class="btn btn-secondary">Cancelar</a>
+                        <a href="{{ url_for('beach.beach_config.pricing', tab='minimum-consumption') }}" class="btn btn-secondary">Cancelar</a>
                     </div>
                 </form>
             </div>

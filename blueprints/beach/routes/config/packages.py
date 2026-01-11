@@ -15,13 +15,10 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.config.packages.view')
     def packages():
-        """List all packages."""
-        from models.package import get_all_packages
-        show_inactive = request.args.get('show_inactive', '0') == '1'
-        all_packages = get_all_packages(active_only=not show_inactive)
-        return render_template('beach/config/packages.html',
-                             packages=all_packages,
-                             show_inactive=show_inactive)
+        """Redirect to unified pricing page (packages tab)."""
+        # Preserve show_inactive parameter
+        show_inactive = request.args.get('show_inactive', '0')
+        return redirect(url_for('beach.beach_config.pricing', tab='packages', show_inactive_packages=show_inactive))
 
     @bp.route('/packages/create', methods=['GET', 'POST'])
     @login_required
@@ -77,7 +74,7 @@ def register_routes(bp):
                     display_order=display_order
                 )
                 flash('Paquete creado correctamente', 'success')
-                return redirect(url_for('beach.beach_config.packages'))
+                return redirect(url_for('beach.beach_config.pricing', tab='packages'))
 
             except ValueError as e:
                 flash(str(e), 'error')
@@ -105,7 +102,7 @@ def register_routes(bp):
         package = get_package_by_id(package_id)
         if not package:
             flash('Paquete no encontrado', 'error')
-            return redirect(url_for('beach.beach_config.packages'))
+            return redirect(url_for('beach.beach_config.pricing', tab='packages'))
 
         if request.method == 'POST':
             # Get form fields
@@ -159,7 +156,7 @@ def register_routes(bp):
                     flash('Paquete actualizado correctamente', 'success')
                 else:
                     flash('No se realizaron cambios', 'warning')
-                return redirect(url_for('beach.beach_config.packages'))
+                return redirect(url_for('beach.beach_config.pricing', tab='packages'))
 
             except ValueError as e:
                 flash(str(e), 'error')
@@ -193,7 +190,7 @@ def register_routes(bp):
         except Exception as e:
             flash(f'Error al eliminar: {str(e)}', 'error')
 
-        return redirect(url_for('beach.beach_config.packages'))
+        return redirect(url_for('beach.beach_config.pricing', tab='packages'))
 
     @bp.route('/packages/reorder', methods=['POST'])
     @login_required

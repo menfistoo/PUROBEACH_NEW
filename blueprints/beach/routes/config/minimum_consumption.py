@@ -15,13 +15,10 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.config.minimum_consumption.view')
     def minimum_consumption():
-        """List all minimum consumption policies."""
-        from models.pricing import get_all_minimum_consumption_policies
-        show_inactive = request.args.get('show_inactive', '0') == '1'
-        all_policies = get_all_minimum_consumption_policies(active_only=not show_inactive)
-        return render_template('beach/config/minimum_consumption.html',
-                             policies=all_policies,
-                             show_inactive=show_inactive)
+        """Redirect to unified pricing page (minimum consumption tab)."""
+        # Preserve show_inactive parameter
+        show_inactive = request.args.get('show_inactive', '0')
+        return redirect(url_for('beach.beach_config.pricing', tab='minimum-consumption', show_inactive_policies=show_inactive))
 
     @bp.route('/minimum-consumption/create', methods=['GET', 'POST'])
     @login_required
@@ -65,7 +62,7 @@ def register_routes(bp):
                     priority_order=priority_order
                 )
                 flash('Política de consumo mínimo creada correctamente', 'success')
-                return redirect(url_for('beach.beach_config.minimum_consumption'))
+                return redirect(url_for('beach.beach_config.pricing', tab='minimum-consumption'))
 
             except ValueError as e:
                 flash(str(e), 'error')
@@ -93,7 +90,7 @@ def register_routes(bp):
         policy = get_minimum_consumption_policy_by_id(policy_id)
         if not policy:
             flash('Política no encontrada', 'error')
-            return redirect(url_for('beach.beach_config.minimum_consumption'))
+            return redirect(url_for('beach.beach_config.pricing', tab='minimum-consumption'))
 
         if request.method == 'POST':
             # Get form fields
@@ -135,7 +132,7 @@ def register_routes(bp):
                     flash('Política actualizada correctamente', 'success')
                 else:
                     flash('No se realizaron cambios', 'warning')
-                return redirect(url_for('beach.beach_config.minimum_consumption'))
+                return redirect(url_for('beach.beach_config.pricing', tab='minimum-consumption'))
 
             except ValueError as e:
                 flash(str(e), 'error')
@@ -169,7 +166,7 @@ def register_routes(bp):
         except Exception as e:
             flash(f'Error al eliminar: {str(e)}', 'error')
 
-        return redirect(url_for('beach.beach_config.minimum_consumption'))
+        return redirect(url_for('beach.beach_config.pricing', tab='minimum-consumption'))
 
     @bp.route('/minimum-consumption/reorder', methods=['POST'])
     @login_required
