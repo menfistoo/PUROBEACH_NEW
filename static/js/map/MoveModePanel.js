@@ -55,9 +55,9 @@ export class MoveModePanel {
                         <small class="text-muted" id="moveModeUndoCount"></small>
                     </div>
                     <div class="move-mode-shortcuts">
-                        <small class="text-muted d-block"><kbd>Clic</kbd> Liberar 1 mobiliario</small>
-                        <small class="text-muted d-block"><kbd>Ctrl+Clic</kbd> Liberar toda la reserva</small>
-                        <small class="text-muted d-block"><kbd>Ctrl+Z</kbd> Deshacer</small>
+                        <span><kbd>Clic</kbd> 1 item</span>
+                        <span><kbd>Ctrl+Clic</kbd> Todos</span>
+                        <span><kbd>Ctrl+Z</kbd> Deshacer</span>
                     </div>
                 </div>
 
