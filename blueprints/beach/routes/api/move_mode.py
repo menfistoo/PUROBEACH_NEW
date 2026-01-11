@@ -20,6 +20,32 @@ from models.move_mode import (
 )
 
 
+def _validate_furniture_request(data):
+    """
+    Validate common fields for furniture assign/unassign requests.
+
+    Args:
+        data: JSON request data
+
+    Returns:
+        Tuple of (reservation_id, furniture_ids, target_date, error_response)
+        error_response is None if validation passes, otherwise a tuple of (response, status_code)
+    """
+    if not data:
+        return None, None, None, (jsonify({'success': False, 'error': 'No se recibieron datos'}), 400)
+
+    reservation_id = data.get('reservation_id')
+    furniture_ids = data.get('furniture_ids', [])
+    target_date = data.get('date')
+
+    if not reservation_id:
+        return None, None, None, (jsonify({'success': False, 'error': 'reservation_id es requerido'}), 400)
+    if not target_date:
+        return None, None, None, (jsonify({'success': False, 'error': 'date es requerido'}), 400)
+
+    return reservation_id, furniture_ids, target_date, None
+
+
 def register_routes(bp):
     """Register move mode API routes on the blueprint."""
 
@@ -47,26 +73,15 @@ def register_routes(bp):
         }
         """
         try:
-            data = request.get_json()
-
-            if not data:
-                return jsonify({'success': False, 'error': 'No se recibieron datos'}), 400
-
-            reservation_id = data.get('reservation_id')
-            furniture_ids = data.get('furniture_ids', [])
-            target_date = data.get('date')
-
-            if not reservation_id:
-                return jsonify({'success': False, 'error': 'reservation_id es requerido'}), 400
-            if not target_date:
-                return jsonify({'success': False, 'error': 'date es requerido'}), 400
+            reservation_id, furniture_ids, target_date, error = _validate_furniture_request(request.get_json())
+            if error:
+                return error
 
             result = unassign_furniture_for_date(
                 reservation_id=reservation_id,
                 furniture_ids=furniture_ids,
                 assignment_date=target_date
             )
-
             return jsonify(result)
 
         except Exception as e:
@@ -103,19 +118,9 @@ def register_routes(bp):
         }
         """
         try:
-            data = request.get_json()
-
-            if not data:
-                return jsonify({'success': False, 'error': 'No se recibieron datos'}), 400
-
-            reservation_id = data.get('reservation_id')
-            furniture_ids = data.get('furniture_ids', [])
-            target_date = data.get('date')
-
-            if not reservation_id:
-                return jsonify({'success': False, 'error': 'reservation_id es requerido'}), 400
-            if not target_date:
-                return jsonify({'success': False, 'error': 'date es requerido'}), 400
+            reservation_id, furniture_ids, target_date, error = _validate_furniture_request(request.get_json())
+            if error:
+                return error
 
             result = assign_furniture_for_date(
                 reservation_id=reservation_id,
@@ -124,7 +129,7 @@ def register_routes(bp):
             )
 
             if not result.get('success'):
-                return jsonify(result), 409  # Conflict
+                return jsonify(result), 409
 
             return jsonify(result)
 

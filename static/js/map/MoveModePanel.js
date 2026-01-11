@@ -182,31 +182,35 @@ export class MoveModePanel {
     }
 
     /**
+     * Check if reservation has VIP status
+     * @private
+     * @param {Object} res - Reservation object
+     * @returns {boolean} True if VIP
+     */
+    _isVip(res) {
+        if (res.is_vip) return true;
+        return res.tags?.some(t =>
+            t.name?.toLowerCase().includes('vip') ||
+            t.code?.toLowerCase().includes('vip')
+        ) || false;
+    }
+
+    /**
      * Apply filters to pool
      * @param {Array} pool - Full pool
      * @returns {Array} Filtered pool
      */
     applyFilters(pool) {
         return pool.filter(res => {
-            // Type filter
-            if (this.filters.type !== 'all') {
-                if (res.customer_type !== this.filters.type) return false;
+            if (this.filters.type !== 'all' && res.customer_type !== this.filters.type) {
+                return false;
             }
-
-            // VIP filter (check for VIP tag)
-            if (this.filters.vip) {
-                const isVip = res.tags?.some(t =>
-                    t.name?.toLowerCase().includes('vip') ||
-                    t.code?.toLowerCase().includes('vip')
-                ) || res.is_vip;
-                if (!isVip) return false;
+            if (this.filters.vip && !this._isVip(res)) {
+                return false;
             }
-
-            // Preferences filter
-            if (this.filters.hasPreferences) {
-                if (!res.preferences || res.preferences.length === 0) return false;
+            if (this.filters.hasPreferences && (!res.preferences || res.preferences.length === 0)) {
+                return false;
             }
-
             return true;
         });
     }
@@ -285,6 +289,20 @@ export class MoveModePanel {
     }
 
     /**
+     * Get furniture numbers display string
+     * @private
+     * @param {Object} res - Reservation data
+     * @returns {string} Comma-separated furniture numbers or '-'
+     */
+    _getFurnitureDisplay(res) {
+        const furniture = res.initialFurniture?.length > 0
+            ? res.initialFurniture
+            : res.original_furniture;
+        if (!furniture || furniture.length === 0) return '-';
+        return furniture.map(f => f.number || f.furniture_number).join(', ');
+    }
+
+    /**
      * Render a single reservation card
      * @param {Object} res - Reservation data
      * @returns {string} HTML string
@@ -297,10 +315,6 @@ export class MoveModePanel {
         const multidayBadge = res.is_multiday
             ? `<span class="badge bg-info ms-1" title="${res.total_days} días">📅${res.total_days}</span>`
             : '';
-
-        // Use initialFurniture (what it had when entering pool) or fall back to original_furniture
-        const furnitureSource = res.initialFurniture?.length > 0 ? res.initialFurniture : res.original_furniture;
-        const originalFurniture = furnitureSource?.map(f => f.number || f.furniture_number).join(', ') || '-';
         const roomDisplay = res.room_number
             ? `<span class="badge bg-primary me-1"><i class="fas fa-door-open me-1"></i>${res.room_number}</span>`
             : '';
@@ -318,7 +332,7 @@ export class MoveModePanel {
                         <span class="preference-dots">${prefDots}</span>
                     </div>
                     <div class="text-muted small">
-                        <i class="fas fa-map-marker-alt me-1"></i>Era: ${originalFurniture}
+                        <i class="fas fa-map-marker-alt me-1"></i>Era: ${this._getFurnitureDisplay(res)}
                     </div>
                     <div class="progress-indicator mt-2">
                         ${progressDots}

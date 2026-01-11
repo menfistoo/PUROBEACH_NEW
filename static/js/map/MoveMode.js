@@ -120,6 +120,18 @@ export class MoveMode {
     }
 
     /**
+     * Reset internal state to initial values
+     * @private
+     */
+    _resetState() {
+        this.active = false;
+        this.currentDate = null;
+        this.pool = [];
+        this.selectedReservationId = null;
+        this.undoStack = [];
+    }
+
+    /**
      * Deactivate move mode
      * @returns {boolean} True if deactivated, false if pool not empty
      */
@@ -140,12 +152,7 @@ export class MoveMode {
             return false;
         }
 
-        this.active = false;
-        this.currentDate = null;
-        this.pool = [];
-        this.selectedReservationId = null;
-        this.undoStack = [];
-
+        this._resetState();
         this.emit('onDeactivate', {});
         showToast('Modo Mover desactivado', 'info');
         return true;
@@ -155,12 +162,7 @@ export class MoveMode {
      * Force deactivate (used when user confirms abandoning unassigned reservations)
      */
     forceDeactivate() {
-        this.active = false;
-        this.currentDate = null;
-        this.pool = [];
-        this.selectedReservationId = null;
-        this.undoStack = [];
-
+        this._resetState();
         this.emit('onDeactivate', { forced: true });
     }
 
@@ -243,23 +245,9 @@ export class MoveMode {
         }
 
         try {
-            const response = await fetch(`${this.options.apiBaseUrl}/unassign`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    reservation_id: reservationId,
-                    furniture_ids: furnitureIds,
-                    date: this.currentDate
-                })
-            });
-
-            const result = await response.json();
+            const result = await this._callApi('unassign', reservationId, furnitureIds);
 
             if (result.success && result.unassigned_count > 0) {
-                // Add to undo stack
                 this.pushUndo({
                     type: 'unassign',
                     reservation_id: reservationId,
@@ -267,10 +255,7 @@ export class MoveMode {
                     date: this.currentDate
                 });
 
-                // Load/update pool data for this reservation
-                // Pass initialFurnitureOverride if provided (to track original furniture before unassigning)
                 await this.loadReservationToPool(reservationId, initialFurnitureOverride);
-
                 showToast(`${result.unassigned_count} mobiliario liberado`, 'success');
             }
 
@@ -295,23 +280,9 @@ export class MoveMode {
         }
 
         try {
-            const response = await fetch(`${this.options.apiBaseUrl}/assign`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    reservation_id: reservationId,
-                    furniture_ids: furnitureIds,
-                    date: this.currentDate
-                })
-            });
-
-            const result = await response.json();
+            const result = await this._callApi('assign', reservationId, furnitureIds);
 
             if (result.success) {
-                // Add to undo stack
                 this.pushUndo({
                     type: 'assign',
                     reservation_id: reservationId,
@@ -319,10 +290,8 @@ export class MoveMode {
                     date: this.currentDate
                 });
 
-                // Update pool data
                 await this.loadReservationToPool(reservationId);
-
-                showToast(`Asignado a mobiliario`, 'success');
+                showToast('Asignado a mobiliario', 'success');
             } else if (result.error) {
                 showToast(result.error, 'warning');
             }
@@ -334,6 +303,35 @@ export class MoveMode {
             showToast('Error al asignar mobiliario', 'error');
             return { success: false, error: error.message };
         }
+    }
+
+    /**
+     * Calculate the sum of furniture capacities
+     * @private
+     * @param {Array} furniture - Array of furniture objects
+     * @returns {number} Total capacity
+     */
+    _calculateCapacity(furniture) {
+        if (!furniture || furniture.length === 0) return 0;
+        return furniture.reduce((sum, f) => sum + (f.capacity || 1), 0);
+    }
+
+    /**
+     * Determine initial furniture for a pool entry
+     * @private
+     * @param {number} existingIndex - Index in pool, or -1 if not found
+     * @param {Array} initialFurnitureOverride - Override from caller
+     * @param {Array} apiFurniture - Furniture from API response
+     * @returns {Array} Initial furniture to use
+     */
+    _resolveInitialFurniture(existingIndex, initialFurnitureOverride, apiFurniture) {
+        if (existingIndex >= 0 && this.pool[existingIndex].initialFurniture) {
+            return this.pool[existingIndex].initialFurniture;
+        }
+        if (initialFurnitureOverride && initialFurnitureOverride.length > 0) {
+            return initialFurnitureOverride;
+        }
+        return apiFurniture || [];
     }
 
     /**
@@ -356,47 +354,25 @@ export class MoveMode {
                 throw new Error(data.error);
             }
 
-            // Calculate assigned capacity (sum of furniture capacities)
-            const assignedCapacity = data.original_furniture?.reduce(
-                (sum, f) => sum + (f.capacity || 1), 0
-            ) || 0;
-            // totalNeeded is always based on num_people, not furniture capacity
+            const assignedCapacity = this._calculateCapacity(data.original_furniture);
             const totalNeeded = data.num_people || 1;
-
-            // Update or add to pool
             const existingIndex = this.pool.findIndex(r => r.reservation_id === reservationId);
-
-            // Preserve initial furniture (what was assigned when first entering pool)
-            let initialFurniture;
-            if (existingIndex >= 0 && this.pool[existingIndex].initialFurniture) {
-                // Keep the original initial furniture from when it first entered the pool
-                initialFurniture = this.pool[existingIndex].initialFurniture;
-            } else if (initialFurnitureOverride && initialFurnitureOverride.length > 0) {
-                // Use override if provided (from enterMoveMode before unassigning)
-                initialFurniture = initialFurnitureOverride;
-            } else {
-                // Fallback to current furniture from API
-                initialFurniture = data.original_furniture || [];
-            }
-
-            // Calculate completion status based on capacity vs num_people
-            // A reservation is complete when assigned capacity >= num_people
-            const isComplete = assignedCapacity >= totalNeeded;
-
-            // For display, always use num_people as the target
-            const displayTotalNeeded = totalNeeded;
+            const initialFurniture = this._resolveInitialFurniture(
+                existingIndex,
+                initialFurnitureOverride,
+                data.original_furniture
+            );
 
             const poolEntry = {
                 ...data,
-                assignedCount: assignedCapacity,  // Now capacity-based
-                totalNeeded: displayTotalNeeded,
-                isComplete,
-                initialFurniture  // The furniture it had when it first entered the pool
+                assignedCount: assignedCapacity,
+                totalNeeded,
+                isComplete: assignedCapacity >= totalNeeded,
+                initialFurniture
             };
 
             if (existingIndex >= 0) {
                 if (poolEntry.isComplete) {
-                    // Remove from pool if complete
                     this.pool.splice(existingIndex, 1);
                     if (this.selectedReservationId === reservationId) {
                         this.deselectReservation();
@@ -405,9 +381,7 @@ export class MoveMode {
                     this.pool[existingIndex] = poolEntry;
                 }
             } else if (!poolEntry.isComplete) {
-                // Add to pool if not complete
                 this.pool.push(poolEntry);
-                // Auto-select if it's the first
                 if (this.pool.length === 1) {
                     this.selectReservation(reservationId);
                 }
@@ -476,10 +450,15 @@ export class MoveMode {
     }
 
     /**
-     * Internal assign without undo tracking
+     * Make a move mode API call
+     * @private
+     * @param {string} action - 'assign' or 'unassign'
+     * @param {number} reservationId - Reservation ID
+     * @param {Array} furnitureIds - Furniture IDs
+     * @returns {Promise<Object>} API response
      */
-    async assignFurnitureInternal(reservationId, furnitureIds) {
-        const response = await fetch(`${this.options.apiBaseUrl}/assign`, {
+    async _callApi(action, reservationId, furnitureIds) {
+        const response = await fetch(`${this.options.apiBaseUrl}/${action}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -495,22 +474,23 @@ export class MoveMode {
     }
 
     /**
+     * Internal assign without undo tracking
+     * @param {number} reservationId - Reservation ID
+     * @param {Array} furnitureIds - Furniture IDs to assign
+     * @returns {Promise<Object>} API response
+     */
+    async assignFurnitureInternal(reservationId, furnitureIds) {
+        return this._callApi('assign', reservationId, furnitureIds);
+    }
+
+    /**
      * Internal unassign without undo tracking
+     * @param {number} reservationId - Reservation ID
+     * @param {Array} furnitureIds - Furniture IDs to unassign
+     * @returns {Promise<Object>} API response
      */
     async unassignFurnitureInternal(reservationId, furnitureIds) {
-        const response = await fetch(`${this.options.apiBaseUrl}/unassign`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify({
-                reservation_id: reservationId,
-                furniture_ids: furnitureIds,
-                date: this.currentDate
-            })
-        });
-        return response.json();
+        return this._callApi('unassign', reservationId, furnitureIds);
     }
 
     /**

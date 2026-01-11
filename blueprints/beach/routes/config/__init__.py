@@ -12,7 +12,6 @@ config_bp = Blueprint('beach_config', __name__, url_prefix='/config')
 from blueprints.beach.routes.config import zones
 from blueprints.beach.routes.config import furniture_types
 from blueprints.beach.routes.config import furniture
-from blueprints.beach.routes.config import preferences
 from blueprints.beach.routes.config import characteristics
 from blueprints.beach.routes.config import tags
 from blueprints.beach.routes.config import states
@@ -24,7 +23,6 @@ from blueprints.beach.routes.config import pricing
 zones.register_routes(config_bp)
 furniture_types.register_routes(config_bp)
 furniture.register_routes(config_bp)
-preferences.register_routes(config_bp)
 characteristics.register_routes(config_bp)
 tags.register_routes(config_bp)
 states.register_routes(config_bp)

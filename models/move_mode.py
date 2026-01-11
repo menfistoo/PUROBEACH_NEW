@@ -5,8 +5,22 @@ Handles furniture assignment changes during move mode operations.
 """
 
 from database import get_db
-from datetime import datetime
-from typing import List, Dict, Any, Optional
+from datetime import date, datetime
+from typing import List, Dict, Any, Optional, Union
+
+
+def _parse_date(value: Union[str, date]) -> date:
+    """Parse a date value from SQLite which may be string or date object."""
+    if isinstance(value, str):
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    return value
+
+
+def _date_to_str(value: Union[str, date]) -> str:
+    """Convert a date value to ISO format string."""
+    if hasattr(value, 'isoformat'):
+        return value.isoformat()
+    return str(value)
 
 
 def unassign_furniture_for_date(
@@ -185,18 +199,8 @@ def get_reservation_pool_data(
         furniture = [dict(row) for row in cursor.fetchall()]
 
         # Calculate multi-day info
-        # Handle both string and date object from SQLite
-        start_date = res['start_date']
-        end_date = res['end_date']
-        if isinstance(start_date, str):
-            start = datetime.strptime(start_date, '%Y-%m-%d').date()
-        else:
-            start = start_date
-        if isinstance(end_date, str):
-            end = datetime.strptime(end_date, '%Y-%m-%d').date()
-        else:
-            end = end_date
-
+        start = _parse_date(res['start_date'])
+        end = _parse_date(res['end_date'])
         total_days = (end - start).days + 1
         is_multiday = total_days > 1
 
@@ -215,12 +219,7 @@ def get_reservation_pool_data(
             """, (reservation_id,))
 
             for row in cursor.fetchall():
-                # Ensure date key is a string for JSON serialization
-                assign_date = row['assignment_date']
-                if hasattr(assign_date, 'isoformat'):
-                    assign_date = assign_date.isoformat()
-                elif not isinstance(assign_date, str):
-                    assign_date = str(assign_date)
+                assign_date = _date_to_str(row['assignment_date'])
                 day_assignments[assign_date] = row['furniture_numbers']
 
         # Parse preferences
@@ -251,8 +250,8 @@ def get_reservation_pool_data(
             'original_furniture': furniture,
             'is_multiday': is_multiday,
             'total_days': total_days,
-            'start_date': start.isoformat() if hasattr(start, 'isoformat') else str(start),
-            'end_date': end.isoformat() if hasattr(end, 'isoformat') else str(end),
+            'start_date': start.isoformat(),
+            'end_date': end.isoformat(),
             'day_assignments': day_assignments,
             'target_date': target_date
         }
@@ -263,7 +262,7 @@ def get_unassigned_reservations(target_date: str) -> List[int]:
     Get all reservations for a date that have insufficient furniture capacity.
 
     A reservation is considered unassigned if its assigned furniture capacity
-    is less than num_people.
+    is less than num_people and the reservation state is not availability-releasing.
 
     Args:
         target_date: Date to check (YYYY-MM-DD)
@@ -274,39 +273,25 @@ def get_unassigned_reservations(target_date: str) -> List[int]:
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Simple approach: get all reservations for this date with their capacity
+        # Single query that joins state info and filters in one pass
         cursor.execute("""
             SELECT
                 r.id as reservation_id,
                 r.num_people,
-                r.state_id,
                 COALESCE(SUM(f.capacity), 0) as assigned_capacity
             FROM beach_reservations r
+            LEFT JOIN beach_reservation_states rs ON r.state_id = rs.id
             LEFT JOIN beach_reservation_furniture rf
                 ON r.id = rf.reservation_id AND rf.assignment_date = ?
             LEFT JOIN beach_furniture f ON rf.furniture_id = f.id
-            WHERE r.start_date <= ? AND r.end_date >= ?
+            WHERE r.start_date <= ?
+              AND r.end_date >= ?
+              AND (rs.is_availability_releasing IS NULL OR rs.is_availability_releasing = 0)
             GROUP BY r.id
             HAVING assigned_capacity < r.num_people
         """, (target_date, target_date, target_date))
 
-        results = []
-        for row in cursor.fetchall():
-            # Check if state is availability-releasing
-            state_id = row['state_id']
-            if state_id:
-                cursor.execute("""
-                    SELECT is_availability_releasing
-                    FROM beach_reservation_states
-                    WHERE id = ?
-                """, (state_id,))
-                state = cursor.fetchone()
-                if state and state['is_availability_releasing']:
-                    continue  # Skip cancelled/no-show reservations
-
-            results.append(row['reservation_id'])
-
-        return results
+        return [row['reservation_id'] for row in cursor.fetchall()]
 
 
 def get_furniture_preference_matches(

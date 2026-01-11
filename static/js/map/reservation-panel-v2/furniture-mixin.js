@@ -348,41 +348,56 @@ export const FurnitureMixin = (Base) => class extends Base {
     // =========================================================================
 
     /**
+     * Get capacity status information
+     * @private
+     * @param {number} totalCapacity - Total furniture capacity
+     * @param {number} numPeople - Number of people needed
+     * @returns {Object} Status with message and CSS class
+     */
+    _getCapacityStatus(totalCapacity, numPeople) {
+        if (totalCapacity < numPeople) {
+            return {
+                message: `Capacidad insuficiente: ${totalCapacity}/${numPeople} personas`,
+                cssClass: 'capacity-insufficient',
+                icon: 'Warning'
+            };
+        }
+        if (totalCapacity > numPeople) {
+            return {
+                message: `Capacidad excedente: ${totalCapacity}/${numPeople} personas`,
+                cssClass: 'capacity-excess',
+                icon: 'Info'
+            };
+        }
+        return {
+            message: `Capacidad correcta: ${totalCapacity}/${numPeople} personas`,
+            cssClass: 'capacity-correct',
+            icon: 'Check'
+        };
+    }
+
+    /**
      * Update reassignment UI (counter and chips)
      * Shows capacity status and enables/disables save button
      */
     updateReassignmentUI() {
         const selected = this.reassignmentState.selectedFurniture;
         const max = this.reassignmentState.maxAllowed;
-
-        // Calculate total capacity
         const totalCapacity = selected.reduce((sum, f) => sum + (f.capacity || 2), 0);
         const numPeople = this.state.data?.reservation?.num_people || max;
 
-        // Determine capacity status
-        let capacityStatus = '';
-        let capacityClass = '';
-        if (selected.length > 0) {
-            if (totalCapacity < numPeople) {
-                capacityStatus = ` Warning: Capacidad insuficiente: ${totalCapacity}/${numPeople} personas`;
-                capacityClass = 'capacity-insufficient';
-            } else if (totalCapacity > numPeople) {
-                capacityStatus = ` Info: Capacidad excedente: ${totalCapacity}/${numPeople} personas`;
-                capacityClass = 'capacity-excess';
-            } else {
-                capacityStatus = ` Check: Capacidad correcta: ${totalCapacity}/${numPeople} personas`;
-                capacityClass = 'capacity-correct';
-            }
-        }
-
         // Update counter with capacity info
         if (this.reassignmentCounter) {
-            this.reassignmentCounter.innerHTML = `
-                ${selected.length} / ${max} seleccionados
-                <span class="${capacityClass}" style="display: block; font-size: 11px; margin-top: 4px;">
-                    ${capacityStatus}
-                </span>
-            `;
+            let capacityHtml = '';
+            if (selected.length > 0) {
+                const status = this._getCapacityStatus(totalCapacity, numPeople);
+                capacityHtml = `
+                    <span class="${status.cssClass}" style="display: block; font-size: 11px; margin-top: 4px;">
+                        ${status.icon}: ${status.message}
+                    </span>
+                `;
+            }
+            this.reassignmentCounter.innerHTML = `${selected.length} / ${max} seleccionados${capacityHtml}`;
         }
 
         // Update new chips
@@ -391,14 +406,13 @@ export const FurnitureMixin = (Base) => class extends Base {
                 this.reassignmentNewChips.innerHTML =
                     '<span class="text-muted" style="font-size: 12px;">Ninguno seleccionado</span>';
             } else {
-                const chipsHtml = selected.map(f => `
+                this.reassignmentNewChips.innerHTML = selected.map(f => `
                     <span class="furniture-chip">
                         <span class="furniture-type-icon">${getFurnitureIcon(f.type_name)}</span>
                         ${f.number || f.furniture_number || `#${f.id}`}
                         <span style="font-size: 10px; opacity: 0.7;">(${f.capacity || 2}p)</span>
                     </span>
                 `).join('');
-                this.reassignmentNewChips.innerHTML = chipsHtml;
             }
         }
 
@@ -407,17 +421,10 @@ export const FurnitureMixin = (Base) => class extends Base {
             const hasSelection = selected.length > 0;
             const hasInsufficientCapacity = totalCapacity < numPeople;
 
-            // Disable button if no selection OR insufficient capacity
             this.reassignmentSaveBtn.disabled = !hasSelection || hasInsufficientCapacity;
-
-            // Update button text to indicate why it's disabled
-            if (hasInsufficientCapacity) {
-                const icon = this.reassignmentSaveBtn.querySelector('i');
-                const iconHtml = icon ? `<i class="${icon.className}"></i> ` : '';
-                this.reassignmentSaveBtn.innerHTML = `${iconHtml}Capacidad insuficiente`;
-            } else {
-                this.reassignmentSaveBtn.innerHTML = '<i class="fas fa-check"></i> Guardar cambios';
-            }
+            this.reassignmentSaveBtn.innerHTML = hasInsufficientCapacity
+                ? '<i class="fas fa-exclamation-triangle"></i> Capacidad insuficiente'
+                : '<i class="fas fa-check"></i> Guardar cambios';
         }
     }
 

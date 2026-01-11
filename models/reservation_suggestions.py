@@ -16,10 +16,8 @@ from .reservation_suggestions_map import (
 
 from .reservation_suggestions_scoring import (
     validate_cluster_contiguity,
-    get_furniture_features,
     score_preference_match,
-    score_capacity_match,
-    PREFERENCE_TO_FEATURE
+    score_capacity_match
 )
 
 
