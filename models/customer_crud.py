@@ -283,27 +283,27 @@ def find_duplicates(phone: str, customer_type: str, room_number: str = None) -> 
 
 
 # =============================================================================
-# PREFERENCES
+# PREFERENCES (NOW CHARACTERISTICS)
 # =============================================================================
 
 def get_customer_preferences(customer_id: int) -> list:
     """
-    Get customer preferences.
+    Get customer preferences (characteristics).
 
     Args:
         customer_id: Customer ID
 
     Returns:
-        List of preference dicts
+        List of characteristic dicts
     """
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT p.*
-            FROM beach_preferences p
-            JOIN beach_customer_preferences cp ON p.id = cp.preference_id
-            WHERE cp.customer_id = ?
-            ORDER BY p.name
+            SELECT c.*
+            FROM beach_characteristics c
+            JOIN beach_customer_characteristics cc ON c.id = cc.characteristic_id
+            WHERE cc.customer_id = ?
+            ORDER BY c.display_order, c.name
         ''', (customer_id,))
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
@@ -311,24 +311,24 @@ def get_customer_preferences(customer_id: int) -> list:
 
 def set_customer_preferences(customer_id: int, preference_ids: list) -> None:
     """
-    Set customer preferences (replaces existing).
+    Set customer preferences (characteristics) - replaces existing.
 
     Args:
         customer_id: Customer ID
-        preference_ids: List of preference IDs to assign
+        preference_ids: List of characteristic IDs to assign
     """
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Remove existing preferences
-        cursor.execute('DELETE FROM beach_customer_preferences WHERE customer_id = ?', (customer_id,))
+        # Remove existing characteristics
+        cursor.execute('DELETE FROM beach_customer_characteristics WHERE customer_id = ?', (customer_id,))
 
-        # Add new preferences
-        for pref_id in preference_ids:
+        # Add new characteristics
+        for char_id in preference_ids:
             cursor.execute('''
-                INSERT INTO beach_customer_preferences (customer_id, preference_id)
+                INSERT INTO beach_customer_characteristics (customer_id, characteristic_id)
                 VALUES (?, ?)
-            ''', (customer_id, pref_id))
+            ''', (customer_id, char_id))
 
         conn.commit()
 

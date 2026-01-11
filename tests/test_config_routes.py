@@ -59,9 +59,9 @@ class TestConfigRoutesRequireAuth:
         response = client.get('/beach/config/furniture-types')
         assert response.status_code == 302
 
-    def test_preferences_requires_auth(self, client):
-        """Test that preferences list requires authentication."""
-        response = client.get('/beach/config/preferences')
+    def test_characteristics_requires_auth(self, client):
+        """Test that characteristics list requires authentication."""
+        response = client.get('/beach/config/characteristics')
         assert response.status_code == 302
 
     def test_tags_requires_auth(self, client):
@@ -90,10 +90,10 @@ class TestConfigRoutesExist:
         rules = [rule.rule for rule in app.url_map.iter_rules()]
         assert '/beach/config/furniture-types' in rules
 
-    def test_preference_routes_exist(self, app):
-        """Test that preference routes are registered."""
+    def test_characteristic_routes_exist(self, app):
+        """Test that characteristic routes are registered."""
         rules = [rule.rule for rule in app.url_map.iter_rules()]
-        assert '/beach/config/preferences' in rules
+        assert '/beach/config/characteristics' in rules
 
     def test_tag_routes_exist(self, app):
         """Test that tag routes are registered."""
