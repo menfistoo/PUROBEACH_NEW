@@ -265,3 +265,102 @@ def migrate_add_map_editor_permission() -> bool:
         db.rollback()
         print(f"Migration failed: {e}")
         raise
+
+
+def migrate_add_payment_reconciliation_permission() -> bool:
+    """
+    Add payment reconciliation report permission.
+
+    Creates:
+    - beach.reports.payment_reconciliation permission
+    - Assigns to admin and manager roles
+    - Adds to menu under Informes section
+
+    Returns:
+        True if migration applied, False if already exists
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if already exists
+    cursor.execute(
+        "SELECT id FROM permissions WHERE code = ?",
+        ('beach.reports.payment_reconciliation',)
+    )
+    if cursor.fetchone():
+        print("Payment reconciliation permission already exists")
+        return False
+
+    print("Adding payment reconciliation permission...")
+
+    try:
+        # Find or create Informes parent menu
+        cursor.execute(
+            "SELECT id FROM permissions WHERE code = ?",
+            ('menu.reports',)
+        )
+        parent_row = cursor.fetchone()
+
+        if not parent_row:
+            # Create parent menu item for reports (values from seed.py)
+            cursor.execute("""
+                INSERT INTO permissions (code, name, module, is_menu_item, menu_order, menu_icon)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, ('menu.reports', 'Informes', 'reports', 1, 40, 'fa-chart-line'))
+            parent_id = cursor.lastrowid
+            print("  Created parent menu 'Informes'")
+        else:
+            parent_id = parent_row[0]
+            print("  Found existing parent menu 'Informes'")
+
+        # Create the permission
+        cursor.execute("""
+            INSERT INTO permissions (
+                code, name, module, is_menu_item,
+                menu_order, menu_icon, menu_url, parent_permission_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            'beach.reports.payment_reconciliation',
+            'Conciliación de Pagos',
+            'reports',
+            1,
+            61,
+            'fa-cash-register',
+            '/beach/reports/payment-reconciliation',
+            parent_id
+        ))
+
+        permission_id = cursor.lastrowid
+        print(f"  Created permission: beach.reports.payment_reconciliation (id: {permission_id})")
+
+        # Look up role IDs once
+        cursor.execute("SELECT id FROM roles WHERE name = 'admin'")
+        admin_row = cursor.fetchone()
+        admin_role_id = admin_row[0] if admin_row else None
+
+        cursor.execute("SELECT id FROM roles WHERE name = 'manager'")
+        manager_row = cursor.fetchone()
+        manager_role_id = manager_row[0] if manager_row else None
+
+        # Assign permission and parent menu to roles
+        for role_name, role_id in [('admin', admin_role_id), ('manager', manager_role_id)]:
+            if role_id:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+                    VALUES (?, ?)
+                """, (role_id, permission_id))
+                cursor.execute("""
+                    INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+                    VALUES (?, ?)
+                """, (role_id, parent_id))
+                print(f"  Assigned to {role_name} role")
+
+        db.commit()
+        print("Payment reconciliation permission created successfully")
+        return True
+
+    except Exception as e:
+        db.rollback()
+        print(f"Migration failed: {e}")
+        raise
