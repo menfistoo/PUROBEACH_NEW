@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% set page_title = "Caracteristicas" %}
+
+{% block title %}Caracteristicas - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0"><i class="fa-solid fa-list-check"></i> Caracteristicas</h2>
+        {% if show_inactive %}
+        <small class="text-muted">Mostrando caracteristicas inactivas</small>
+        {% endif %}
+    </div>
+    <div class="d-flex gap-2">
+        {% if show_inactive %}
+        <a href="{{ url_for('beach.beach_config.characteristics') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-eye-slash"></i> Ocultar Inactivas
+        </a>
+        {% else %}
+        <a href="{{ url_for('beach.beach_config.characteristics', show_inactive='1') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-eye"></i> Ver Inactivas
+        </a>
+        {% endif %}
+        <a href="{{ url_for('beach.beach_config.characteristics_create') }}" class="btn btn-primary">
+            <i class="fa-solid fa-plus"></i> Nueva Caracteristica
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if characteristics %}
+        <div class="table-responsive">
+            <table class="table table-hover" id="characteristics-table">
+                <thead style="background-color: #F5E6D3;">
+                    <tr>
+                        <th style="width: 40px;"></th>
+                        <th style="width: 60px;" class="text-center">Color</th>
+                        <th>Nombre</th>
+                        <th>Codigo</th>
+                        <th class="text-center" style="width: 100px;">Mobiliario</th>
+                        <th class="text-center" style="width: 100px;">Reservas</th>
+                        <th style="width: 80px;" class="text-center">Estado</th>
+                        <th style="width: 120px;" class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="sortable-characteristics">
+                    {% for char in characteristics %}
+                    <tr class="{% if not char.active %}table-secondary{% endif %}" data-id="{{ char.id }}">
+                        <td class="text-center drag-handle" style="cursor: grab;">
+                            <i class="fa-solid fa-grip-vertical text-muted"></i>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge" style="background-color: {{ char.color }}; min-width: 30px;">
+                                {% if char.icon %}
+                                <i class="fa-solid {{ char.icon }}"></i>
+                                {% else %}
+                                &nbsp;
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <strong>{{ char.name }}</strong>
+                            {% if char.description %}
+                            <br><small class="text-muted">{{ char.description }}</small>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ char.code }}</code></td>
+                        <td class="text-center">
+                            <span class="badge" style="background-color: #8B7355;">{{ char.furniture_count or 0 }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge" style="background-color: #8B7355;">{{ char.reservation_count or 0 }}</span>
+                        </td>
+                        <td class="text-center">
+                            {% if char.active %}
+                            <span class="badge bg-success">Activa</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactiva</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ url_for('beach.beach_config.characteristics_edit', characteristic_id=char.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="Editar">
+                                <i class="fa-solid fa-edit"></i>
+                            </a>
+                            <form method="POST"
+                                  action="{{ url_for('beach.beach_config.characteristics_delete', characteristic_id=char.id) }}"
+                                  class="d-inline"
+                                  onsubmit="return confirm('Eliminar caracteristica {{ char.name }}?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fa-solid fa-list-check fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No hay caracteristicas configuradas</p>
+            <a href="{{ url_for('beach.beach_config.characteristics_create') }}" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Crear primera caracteristica
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header" style="background-color: #F5E6D3;">
+        <h5 class="card-title mb-0"><i class="fa-solid fa-info-circle"></i> Como funcionan las caracteristicas</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-2">Las caracteristicas unifican el sistema de preferencias:</p>
+        <ul class="mb-0">
+            <li><strong>Mobiliario:</strong> Asigna caracteristicas al mobiliario para definir sus atributos (ej: "Primera Linea", "Sombra")</li>
+            <li><strong>Reservas:</strong> El cliente indica que caracteristicas desea y el sistema sugiere mobiliario compatible</li>
+            <li><strong>Matching:</strong> El algoritmo de sugerencias compara directamente las caracteristicas</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tbody = document.getElementById('sortable-characteristics');
+    if (tbody) {
+        new Sortable(tbody, {
+            handle: '.drag-handle',
+            animation: 150,
+            onEnd: function() {
+                const order = Array.from(tbody.querySelectorAll('tr'))
+                    .map(row => parseInt(row.dataset.id));
+
+                fetch('{{ url_for("beach.beach_config.characteristics_reorder") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ order: order })
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
