@@ -24,6 +24,10 @@ def drop_tables(db):
         'beach_reservation_states',
         'beach_customer_preferences',
         'beach_preferences',
+        'beach_customer_characteristics',
+        'beach_reservation_characteristics',
+        'beach_furniture_characteristics',
+        'beach_characteristics',
         'beach_customer_tags',
         'beach_tags',
         'beach_customers',
@@ -296,6 +300,45 @@ def create_tables(db):
             customer_id INTEGER REFERENCES beach_customers(id) ON DELETE CASCADE,
             preference_id INTEGER REFERENCES beach_preferences(id) ON DELETE CASCADE,
             PRIMARY KEY (customer_id, preference_id)
+        )
+    ''')
+
+    # Características system (unified preferences + features)
+    db.execute('''
+        CREATE TABLE beach_characteristics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT,
+            icon TEXT,
+            color TEXT DEFAULT '#D4AF37',
+            active INTEGER DEFAULT 1,
+            display_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    db.execute('''
+        CREATE TABLE beach_furniture_characteristics (
+            furniture_id INTEGER REFERENCES beach_furniture(id) ON DELETE CASCADE,
+            characteristic_id INTEGER REFERENCES beach_characteristics(id) ON DELETE CASCADE,
+            PRIMARY KEY (furniture_id, characteristic_id)
+        )
+    ''')
+
+    db.execute('''
+        CREATE TABLE beach_reservation_characteristics (
+            reservation_id INTEGER REFERENCES beach_reservations(id) ON DELETE CASCADE,
+            characteristic_id INTEGER REFERENCES beach_characteristics(id) ON DELETE CASCADE,
+            PRIMARY KEY (reservation_id, characteristic_id)
+        )
+    ''')
+
+    db.execute('''
+        CREATE TABLE beach_customer_characteristics (
+            customer_id INTEGER REFERENCES beach_customers(id) ON DELETE CASCADE,
+            characteristic_id INTEGER REFERENCES beach_characteristics(id) ON DELETE CASCADE,
+            PRIMARY KEY (customer_id, characteristic_id)
         )
     ''')
 
