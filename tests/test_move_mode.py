@@ -400,3 +400,77 @@ class TestGetPoolData:
 
             assert result['is_multiday'] is True
             assert result['total_days'] == 2
+
+
+class TestPreferenceMatching:
+    """Tests for furniture preference matching."""
+
+    def test_get_furniture_preference_matches_structure(self, app):
+        """Should return furniture with preference match scores."""
+        from models.move_mode import get_furniture_preference_matches
+
+        with app.app_context():
+            today = date.today().isoformat()
+
+            result = get_furniture_preference_matches(
+                preference_codes=['pref_sombra', 'pref_primera_linea'],
+                target_date=today
+            )
+
+            assert 'furniture' in result
+            assert isinstance(result['furniture'], list)
+
+            # Each furniture should have match info
+            for f in result['furniture']:
+                assert 'id' in f
+                assert 'number' in f
+                assert 'available' in f
+                assert 'match_score' in f
+                assert 'matched_preferences' in f
+
+    def test_get_furniture_preference_matches_availability(self, app):
+        """Should mark occupied furniture as unavailable."""
+        from models.move_mode import get_furniture_preference_matches
+        from database import get_db
+
+        with app.app_context():
+            today = date.today().isoformat()
+
+            # Create a reservation with furniture to make some occupied
+            with get_db() as conn:
+                cursor = conn.cursor()
+                reservation_id, occupied_id, _, _ = \
+                    create_test_reservation_with_furniture(cursor, today)
+                conn.commit()
+
+            result = get_furniture_preference_matches(
+                preference_codes=[],
+                target_date=today
+            )
+
+            # Find the occupied furniture in results
+            occupied_furniture = next(
+                (f for f in result['furniture'] if f['id'] == occupied_id),
+                None
+            )
+
+            if occupied_furniture:
+                assert occupied_furniture['available'] is False
+
+    def test_get_furniture_preference_matches_empty_prefs(self, app):
+        """Should work with empty preference list."""
+        from models.move_mode import get_furniture_preference_matches
+
+        with app.app_context():
+            today = date.today().isoformat()
+
+            result = get_furniture_preference_matches(
+                preference_codes=[],
+                target_date=today
+            )
+
+            assert 'furniture' in result
+            # All furniture should have match_score of 0 with no preferences
+            for f in result['furniture']:
+                assert f['match_score'] == 0
+                assert f['matched_preferences'] == []

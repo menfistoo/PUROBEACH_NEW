@@ -250,3 +250,100 @@ def get_reservation_pool_data(
             'day_assignments': day_assignments,
             'target_date': target_date
         }
+
+
+def get_furniture_preference_matches(
+    preference_codes: List[str],
+    target_date: str,
+    zone_id: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Get all furniture with preference match scores for a given date.
+
+    Args:
+        preference_codes: List of preference codes to match
+        target_date: Date to check availability (YYYY-MM-DD)
+        zone_id: Optional zone to filter by
+
+    Returns:
+        Dict with furniture list including availability and match scores
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Get preference feature mappings
+        pref_features = {}
+        if preference_codes:
+            placeholders = ','.join('?' * len(preference_codes))
+            cursor.execute(f"""
+                SELECT code, maps_to_feature
+                FROM beach_preferences
+                WHERE code IN ({placeholders})
+            """, preference_codes)
+            pref_features = {row['code']: row['maps_to_feature'] for row in cursor.fetchall()}
+
+        # Get all active furniture
+        zone_filter = "AND f.zone_id = ?" if zone_id else ""
+        zone_params = (zone_id,) if zone_id else ()
+
+        cursor.execute(f"""
+            SELECT
+                f.id,
+                f.number,
+                f.capacity,
+                f.features,
+                f.zone_id,
+                f.furniture_type,
+                z.name as zone_name
+            FROM beach_furniture f
+            LEFT JOIN beach_zones z ON f.zone_id = z.id
+            WHERE f.active = 1
+            {zone_filter}
+            ORDER BY f.zone_id, f.number
+        """, zone_params)
+
+        all_furniture = [dict(row) for row in cursor.fetchall()]
+
+        # Get occupied furniture for the date
+        # Check for any furniture assignment, regardless of state
+        # (state filtering is handled at reservation level)
+        cursor.execute("""
+            SELECT DISTINCT rf.furniture_id
+            FROM beach_reservation_furniture rf
+            WHERE rf.assignment_date = ?
+        """, (target_date,))
+
+        occupied_ids = {row['furniture_id'] for row in cursor.fetchall()}
+
+        # Calculate match scores
+        result_furniture = []
+        for f in all_furniture:
+            furniture_features = set()
+            if f['features']:
+                furniture_features = {feat.strip() for feat in f['features'].split(',') if feat.strip()}
+
+            matched = []
+            for pref_code, feature in pref_features.items():
+                if feature and feature in furniture_features:
+                    matched.append(pref_code)
+
+            total_prefs = len(preference_codes) if preference_codes else 1
+            match_score = len(matched) / total_prefs if total_prefs > 0 and preference_codes else 0
+
+            result_furniture.append({
+                'id': f['id'],
+                'number': f['number'],
+                'capacity': f['capacity'],
+                'furniture_type': f['furniture_type'],
+                'zone_id': f['zone_id'],
+                'zone_name': f['zone_name'],
+                'available': f['id'] not in occupied_ids,
+                'match_score': match_score,
+                'matched_preferences': matched
+            })
+
+        return {
+            'furniture': result_furniture,
+            'date': target_date,
+            'preferences_requested': preference_codes
+        }
