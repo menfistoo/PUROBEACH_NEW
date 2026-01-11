@@ -1,0 +1,1223 @@
+{% extends "base.html" %}
+
+{% block title %}Conciliacion de Pagos - PuroBeach{% endblock %}
+
+{% block extra_css %}
+<style>
+/* =============================================================================
+   PAYMENT RECONCILIATION REPORT STYLES
+   ============================================================================= */
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header h2 {
+    color: var(--color-secondary, #1A3A5C);
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.page-header h2 i {
+    color: var(--color-primary, #D4AF37);
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.header-controls .form-control {
+    width: auto;
+}
+
+/* =============================================================================
+   SUMMARY CARDS
+   ============================================================================= */
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid var(--color-border, #E8E8E8);
+    border-top: 4px solid var(--color-primary, #D4AF37);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.summary-card.cash {
+    border-top-color: var(--color-success, #4A7C59);
+}
+
+.summary-card.card {
+    border-top-color: var(--color-info, #4A90A4);
+}
+
+.summary-card.room-charge {
+    border-top-color: var(--color-secondary, #1A3A5C);
+}
+
+.summary-card.pending {
+    border-top-color: var(--color-warning, #E5A33D);
+}
+
+.summary-card-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary, #4B5563);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.summary-card-amount {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-secondary, #1A3A5C);
+    line-height: 1.2;
+}
+
+.summary-card-count {
+    font-size: 13px;
+    color: var(--color-text-muted, #9CA3AF);
+    margin-top: 0.25rem;
+}
+
+/* Ticket indicator */
+.ticket-indicator {
+    background: var(--color-accent, #F5E6D3);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 14px;
+    color: var(--color-secondary, #1A3A5C);
+}
+
+.ticket-indicator i {
+    color: var(--color-primary, #D4AF37);
+}
+
+.ticket-indicator .count {
+    font-weight: 600;
+}
+
+/* =============================================================================
+   FILTER BAR
+   ============================================================================= */
+
+.filter-bar {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid var(--color-border, #E8E8E8);
+}
+
+.filter-bar .row {
+    align-items: flex-end;
+}
+
+.filter-bar .form-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary, #4B5563);
+    margin-bottom: 4px;
+}
+
+.filter-bar .form-control,
+.filter-bar .form-select {
+    font-size: 14px;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+}
+
+/* Filter pills */
+.filter-pills {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-pill {
+    padding: 0.4rem 0.75rem;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--color-border, #E8E8E8);
+    background: #fff;
+    color: var(--color-text-secondary, #4B5563);
+    transition: all 0.2s ease;
+}
+
+.filter-pill:hover {
+    border-color: var(--color-primary, #D4AF37);
+    color: var(--color-primary, #D4AF37);
+}
+
+.filter-pill.active {
+    background: var(--color-primary, #D4AF37);
+    border-color: var(--color-primary, #D4AF37);
+    color: #fff;
+}
+
+/* =============================================================================
+   DATA TABLE
+   ============================================================================= */
+
+.data-table-container {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid var(--color-border, #E8E8E8);
+    overflow: hidden;
+}
+
+.data-table {
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.data-table thead th {
+    background: var(--color-accent, #F5E6D3);
+    color: var(--color-secondary, #1A3A5C);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--color-primary, #D4AF37);
+    padding: 0.875rem 1rem;
+    white-space: nowrap;
+}
+
+.data-table tbody td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-border, #E8E8E8);
+    font-size: 14px;
+}
+
+.data-table tbody tr:hover {
+    background: #FAFAFA;
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Customer cell */
+.customer-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.customer-cell .customer-name {
+    font-weight: 500;
+    color: var(--color-text, #1F2937);
+}
+
+.customer-cell .customer-detail {
+    font-size: 12px;
+    color: var(--color-text-secondary, #4B5563);
+}
+
+.customer-cell .customer-detail i {
+    margin-right: 4px;
+    opacity: 0.7;
+}
+
+/* Furniture cell */
+.furniture-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.furniture-badge {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #F3F4F6;
+    color: var(--color-text-secondary, #4B5563);
+    border: 1px solid #E5E7EB;
+}
+
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-badge.paid {
+    background: rgba(74, 124, 89, 0.15);
+    color: var(--color-success, #4A7C59);
+}
+
+.status-badge.pending {
+    background: rgba(229, 163, 61, 0.15);
+    color: var(--color-warning, #E5A33D);
+}
+
+/* Method badges */
+.method-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #F3F4F6;
+    color: var(--color-text-secondary, #4B5563);
+}
+
+.method-badge.cash {
+    background: rgba(74, 124, 89, 0.1);
+    color: var(--color-success, #4A7C59);
+}
+
+.method-badge.card {
+    background: rgba(74, 144, 164, 0.1);
+    color: var(--color-info, #4A90A4);
+}
+
+.method-badge.room {
+    background: rgba(26, 58, 92, 0.1);
+    color: var(--color-secondary, #1A3A5C);
+}
+
+/* Ticket cell */
+.ticket-cell {
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.ticket-cell.no-ticket {
+    color: var(--color-text-muted, #9CA3AF);
+    font-style: italic;
+}
+
+/* Amount cell */
+.amount-cell {
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
+}
+
+/* Action button */
+.btn-collect {
+    background: linear-gradient(135deg, var(--color-primary, #D4AF37) 0%, var(--color-primary-dark, #B8960C) 100%);
+    border: none;
+    color: #fff;
+    padding: 0.35rem 0.75rem;
+    font-size: 13px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-collect:hover {
+    background: linear-gradient(135deg, #E5C04A 0%, var(--color-primary, #D4AF37) 100%);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.btn-collect:disabled {
+    background: #E8E8E8;
+    color: #9CA3AF;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-text-secondary, #4B5563);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    opacity: 0.3;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+/* Loading state */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255,255,255,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.loading-overlay.hidden {
+    display: none;
+}
+
+/* =============================================================================
+   PAYMENT MODAL
+   ============================================================================= */
+
+.payment-modal .modal-content {
+    border-radius: 16px;
+    border: none;
+    overflow: hidden;
+}
+
+.payment-modal .modal-header {
+    background: linear-gradient(135deg, #1A3A5C 0%, #2A4A6C 100%);
+    color: #fff;
+    padding: 1rem 1.5rem;
+}
+
+.payment-modal .modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.payment-modal .modal-body {
+    padding: 1.5rem;
+}
+
+.payment-modal .modal-footer {
+    background: #FAFAFA;
+    border-top: 1px solid var(--color-border, #E8E8E8);
+    padding: 1rem 1.5rem;
+}
+
+/* Payment info header */
+.payment-info-header {
+    background: var(--color-accent, #F5E6D3);
+    margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.payment-customer-name {
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
+    font-size: 16px;
+}
+
+.payment-amount {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-primary, #D4AF37);
+}
+
+/* Payment method selection */
+.payment-method-section {
+    margin-bottom: 1.5rem;
+}
+
+.payment-method-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+}
+
+.payment-method-label i {
+    color: var(--color-primary, #D4AF37);
+    margin-right: 0.5rem;
+}
+
+.payment-method-options {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.payment-method-option {
+    flex: 1;
+    min-width: 120px;
+}
+
+.payment-method-option input[type="radio"] {
+    display: none;
+}
+
+.payment-method-option label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 2px solid var(--color-border, #E8E8E8);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #fff;
+}
+
+.payment-method-option label:hover {
+    border-color: var(--color-primary, #D4AF37);
+}
+
+.payment-method-option input[type="radio"]:checked + label {
+    border-color: var(--color-primary, #D4AF37);
+    background: rgba(212, 175, 55, 0.1);
+}
+
+.payment-method-option label i {
+    font-size: 1.5rem;
+    color: var(--color-text-secondary, #4B5563);
+}
+
+.payment-method-option input[type="radio"]:checked + label i {
+    color: var(--color-primary, #D4AF37);
+}
+
+.payment-method-option label span {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text, #1F2937);
+}
+
+/* Ticket input section */
+.ticket-input-section {
+    margin-bottom: 1rem;
+}
+
+.ticket-input-section label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.ticket-input-section label i {
+    color: var(--color-primary, #D4AF37);
+    margin-right: 0.5rem;
+}
+
+.ticket-input-section input {
+    border: 2px solid var(--color-border, #E8E8E8);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 14px;
+    width: 100%;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ticket-input-section input:focus {
+    border-color: var(--color-primary, #D4AF37);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    outline: none;
+}
+
+/* =============================================================================
+   TOAST NOTIFICATIONS
+   ============================================================================= */
+
+.toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1100;
+}
+
+.toast {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toast.toast-success {
+    background: var(--color-success, #4A7C59);
+    color: #fff;
+}
+
+.toast.toast-error {
+    background: var(--color-error, #C1444F);
+    color: #fff;
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
+
+@media (max-width: 992px) {
+    .summary-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .header-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-bar .row > div {
+        margin-bottom: 0.5rem;
+    }
+
+    .data-table {
+        font-size: 13px;
+    }
+
+    .data-table thead th,
+    .data-table tbody td {
+        padding: 0.5rem;
+    }
+
+    .payment-method-options {
+        flex-direction: column;
+    }
+
+    .payment-method-option {
+        min-width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h2><i class="fas fa-cash-register me-2"></i>Conciliacion de Pagos</h2>
+        <small class="text-muted">Gestion de cobros y tickets del dia</small>
+    </div>
+    <div class="header-controls">
+        <input type="date" id="selected-date" class="form-control"
+               value="{{ selected_date }}" aria-label="Fecha seleccionada">
+        <button type="button" class="btn btn-outline-primary" id="btn-refresh" aria-label="Actualizar datos">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-cards">
+    <div class="summary-card cash">
+        <div class="summary-card-label">Efectivo</div>
+        <div class="summary-card-amount" id="summary-cash-amount">--</div>
+        <div class="summary-card-count" id="summary-cash-count">0 reservas</div>
+    </div>
+    <div class="summary-card card">
+        <div class="summary-card-label">Tarjeta</div>
+        <div class="summary-card-amount" id="summary-card-amount">--</div>
+        <div class="summary-card-count" id="summary-card-count">0 reservas</div>
+    </div>
+    <div class="summary-card room-charge">
+        <div class="summary-card-label">Cargo Habitacion</div>
+        <div class="summary-card-amount" id="summary-room-amount">--</div>
+        <div class="summary-card-count" id="summary-room-count">0 reservas</div>
+    </div>
+    <div class="summary-card pending">
+        <div class="summary-card-label">Pendiente</div>
+        <div class="summary-card-amount" id="summary-pending-amount">--</div>
+        <div class="summary-card-count" id="summary-pending-count">0 reservas</div>
+    </div>
+</div>
+
+<!-- Ticket Indicator -->
+<div class="ticket-indicator">
+    <i class="fas fa-receipt"></i>
+    <span>Tickets:</span>
+    <span class="count" id="ticket-indicator">0/0 registrados</span>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <div class="row g-3">
+        <div class="col-md-3 col-6">
+            <label class="form-label">Estado de Pago</label>
+            <div class="filter-pills" id="filter-status">
+                <span class="filter-pill active" data-value="">Todos</span>
+                <span class="filter-pill" data-value="paid">Pagado</span>
+                <span class="filter-pill" data-value="pending">Pendiente</span>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <label class="form-label">Metodo de Pago</label>
+            <div class="filter-pills" id="filter-method">
+                <span class="filter-pill active" data-value="">Todos</span>
+                <span class="filter-pill" data-value="efectivo">Efectivo</span>
+                <span class="filter-pill" data-value="tarjeta">Tarjeta</span>
+                <span class="filter-pill" data-value="cargo_habitacion">Cargo Hab.</span>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <label class="form-label">Zona</label>
+            <select class="form-select" id="filter-zone">
+                <option value="">Todas las zonas</option>
+                {% for zone in zones %}
+                <option value="{{ zone.id }}">{{ zone.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 col-6">
+            <label class="form-label">Ticket</label>
+            <div class="filter-pills" id="filter-ticket">
+                <span class="filter-pill active" data-value="">Todos</span>
+                <span class="filter-pill" data-value="1">Con ticket</span>
+                <span class="filter-pill" data-value="0">Sin ticket</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="data-table-container position-relative">
+    <div class="loading-overlay hidden" id="loading-overlay">
+        <div class="spinner-border text-warning" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table data-table" id="data-table">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Tipo</th>
+                    <th>Mobiliario</th>
+                    <th>Zona</th>
+                    <th>Importe</th>
+                    <th>Estado</th>
+                    <th>Metodo</th>
+                    <th>Ticket</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Data will be loaded dynamically -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade payment-modal" id="payment-modal" tabindex="-1" aria-labelledby="payment-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="payment-modal-label">
+                    <i class="fas fa-credit-card me-2"></i>Registrar Pago
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Payment info header -->
+                <div class="payment-info-header">
+                    <span class="payment-customer-name" id="modal-customer-name">-</span>
+                    <span class="payment-amount" id="modal-amount">0.00</span>
+                </div>
+
+                <!-- Payment method selection -->
+                <div class="payment-method-section">
+                    <div class="payment-method-label">
+                        <i class="fas fa-wallet"></i>Metodo de Pago
+                    </div>
+                    <div class="payment-method-options">
+                        <div class="payment-method-option">
+                            <input type="radio" name="payment-method" id="method-cash" value="efectivo">
+                            <label for="method-cash">
+                                <i class="fas fa-money-bill-wave"></i>
+                                <span>Efectivo</span>
+                            </label>
+                        </div>
+                        <div class="payment-method-option">
+                            <input type="radio" name="payment-method" id="method-card" value="tarjeta">
+                            <label for="method-card">
+                                <i class="fas fa-credit-card"></i>
+                                <span>Tarjeta</span>
+                            </label>
+                        </div>
+                        <div class="payment-method-option">
+                            <input type="radio" name="payment-method" id="method-room" value="cargo_habitacion">
+                            <label for="method-room">
+                                <i class="fas fa-hotel"></i>
+                                <span>Cargo Hab.</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ticket number input -->
+                <div class="ticket-input-section">
+                    <label for="modal-ticket-number">
+                        <i class="fas fa-receipt"></i>Numero de Ticket (opcional)
+                    </label>
+                    <input type="text" id="modal-ticket-number" placeholder="Ej: 12345" autocomplete="off">
+                </div>
+
+                <!-- Hidden reservation ID -->
+                <input type="hidden" id="modal-reservation-id">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-confirm-payment">
+                    <i class="fas fa-check me-1"></i>Confirmar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// =============================================================================
+// PAYMENT RECONCILIATION JAVASCRIPT
+// =============================================================================
+
+(function() {
+    'use strict';
+
+    // State
+    let currentFilters = {
+        date: '{{ selected_date }}',
+        status: '',
+        method: '',
+        zone_id: '',
+        has_ticket: ''
+    };
+
+    let paymentModal = null;
+
+    // DOM Elements
+    const elements = {
+        dateInput: document.getElementById('selected-date'),
+        refreshBtn: document.getElementById('btn-refresh'),
+        tableBody: document.getElementById('table-body'),
+        loadingOverlay: document.getElementById('loading-overlay'),
+        zoneFilter: document.getElementById('filter-zone'),
+        confirmPaymentBtn: document.getElementById('btn-confirm-payment'),
+        toastContainer: document.getElementById('toast-container')
+    };
+
+    // =============================================================================
+    // INITIALIZATION
+    // =============================================================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initModal();
+        initFilters();
+        initEventListeners();
+        loadData();
+    });
+
+    function initModal() {
+        const modalEl = document.getElementById('payment-modal');
+        if (modalEl) {
+            paymentModal = new bootstrap.Modal(modalEl);
+        }
+    }
+
+    function initFilters() {
+        // Status filter pills
+        initFilterPills('filter-status', function(value) {
+            currentFilters.status = value;
+            loadData();
+        });
+
+        // Method filter pills
+        initFilterPills('filter-method', function(value) {
+            currentFilters.method = value;
+            loadData();
+        });
+
+        // Ticket filter pills
+        initFilterPills('filter-ticket', function(value) {
+            currentFilters.has_ticket = value;
+            loadData();
+        });
+    }
+
+    function initFilterPills(containerId, onChange) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        container.querySelectorAll('.filter-pill').forEach(function(pill) {
+            pill.addEventListener('click', function() {
+                container.querySelectorAll('.filter-pill').forEach(function(p) {
+                    p.classList.remove('active');
+                });
+                this.classList.add('active');
+                onChange(this.dataset.value);
+            });
+        });
+    }
+
+    function initEventListeners() {
+        // Date change
+        elements.dateInput.addEventListener('change', function() {
+            currentFilters.date = this.value;
+            loadData();
+        });
+
+        // Refresh button
+        elements.refreshBtn.addEventListener('click', function() {
+            loadData();
+        });
+
+        // Zone filter
+        elements.zoneFilter.addEventListener('change', function() {
+            currentFilters.zone_id = this.value;
+            loadData();
+        });
+
+        // Confirm payment
+        elements.confirmPaymentBtn.addEventListener('click', function() {
+            submitPayment();
+        });
+    }
+
+    // =============================================================================
+    // DATA LOADING
+    // =============================================================================
+
+    function loadData() {
+        showLoading(true);
+
+        const params = new URLSearchParams();
+        params.append('date', currentFilters.date);
+        if (currentFilters.status) params.append('status', currentFilters.status);
+        if (currentFilters.method) params.append('method', currentFilters.method);
+        if (currentFilters.zone_id) params.append('zone_id', currentFilters.zone_id);
+        if (currentFilters.has_ticket !== '') params.append('has_ticket', currentFilters.has_ticket);
+
+        fetch('/beach/reports/api/payment-reconciliation?' + params.toString())
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('Error al cargar datos');
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    renderSummary(data.summary);
+                    renderTicketIndicator(data.ticket_stats);
+                    renderTable(data.reservations);
+                } else {
+                    showToast('Error: ' + (data.error || 'Error desconocido'), 'error');
+                }
+            })
+            .catch(function(error) {
+                console.error('Error loading data:', error);
+                showToast('Error al cargar los datos', 'error');
+            })
+            .finally(function() {
+                showLoading(false);
+            });
+    }
+
+    // =============================================================================
+    // RENDERING
+    // =============================================================================
+
+    function renderSummary(summary) {
+        // Cash
+        document.getElementById('summary-cash-amount').textContent =
+            formatCurrency(summary.cash?.amount || 0);
+        document.getElementById('summary-cash-count').textContent =
+            (summary.cash?.count || 0) + ' reservas';
+
+        // Card
+        document.getElementById('summary-card-amount').textContent =
+            formatCurrency(summary.card?.amount || 0);
+        document.getElementById('summary-card-count').textContent =
+            (summary.card?.count || 0) + ' reservas';
+
+        // Room charge
+        document.getElementById('summary-room-amount').textContent =
+            formatCurrency(summary.room_charge?.amount || 0);
+        document.getElementById('summary-room-count').textContent =
+            (summary.room_charge?.count || 0) + ' reservas';
+
+        // Pending
+        document.getElementById('summary-pending-amount').textContent =
+            formatCurrency(summary.pending?.amount || 0);
+        document.getElementById('summary-pending-count').textContent =
+            (summary.pending?.count || 0) + ' reservas';
+    }
+
+    function renderTicketIndicator(ticketStats) {
+        const indicator = document.getElementById('ticket-indicator');
+        if (ticketStats) {
+            indicator.textContent =
+                ticketStats.with_ticket + '/' + ticketStats.total + ' registrados';
+        } else {
+            indicator.textContent = '0/0 registrados';
+        }
+    }
+
+    function renderTable(reservations) {
+        const tbody = elements.tableBody;
+
+        if (!reservations || reservations.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state">' +
+                '<i class="fas fa-receipt"></i>' +
+                '<p class="mb-1">No se encontraron reservas</p>' +
+                '<small>Pruebe con otros filtros o fecha</small>' +
+                '</td></tr>';
+            return;
+        }
+
+        let html = '';
+        reservations.forEach(function(res) {
+            html += renderTableRow(res);
+        });
+
+        tbody.innerHTML = html;
+
+        // Attach event listeners to collect buttons
+        tbody.querySelectorAll('.btn-collect').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const resId = this.dataset.reservationId;
+                const customerName = this.dataset.customerName;
+                const amount = this.dataset.amount;
+                openPaymentModal(resId, customerName, amount);
+            });
+        });
+    }
+
+    function renderTableRow(res) {
+        // Customer cell
+        const customerTypeIcon = res.customer_type === 'interno'
+            ? '<i class="fas fa-hotel"></i>Hab. ' + (res.room_number || '-')
+            : '<i class="fas fa-user"></i>Externo';
+
+        // Furniture badges
+        let furnitureBadges = '-';
+        if (res.furniture_names) {
+            const furniture = res.furniture_names.split(',');
+            furnitureBadges = furniture.slice(0, 2).map(function(f) {
+                return '<span class="furniture-badge">' + f.trim() + '</span>';
+            }).join('');
+            if (furniture.length > 2) {
+                furnitureBadges += '<span class="furniture-badge">+' + (furniture.length - 2) + '</span>';
+            }
+        }
+
+        // Status badge
+        const statusClass = res.paid ? 'paid' : 'pending';
+        const statusText = res.paid ? 'Pagado' : 'Pendiente';
+
+        // Method badge
+        let methodBadge = '-';
+        if (res.payment_method) {
+            const methodClass = res.payment_method === 'efectivo' ? 'cash'
+                : res.payment_method === 'tarjeta' ? 'card'
+                : res.payment_method === 'cargo_habitacion' ? 'room'
+                : '';
+            const methodIcon = res.payment_method === 'efectivo' ? 'fa-money-bill-wave'
+                : res.payment_method === 'tarjeta' ? 'fa-credit-card'
+                : res.payment_method === 'cargo_habitacion' ? 'fa-hotel'
+                : 'fa-question';
+            const methodText = res.payment_method === 'efectivo' ? 'Efectivo'
+                : res.payment_method === 'tarjeta' ? 'Tarjeta'
+                : res.payment_method === 'cargo_habitacion' ? 'Cargo Hab.'
+                : res.payment_method;
+            methodBadge = '<span class="method-badge ' + methodClass + '">' +
+                '<i class="fas ' + methodIcon + '"></i>' + methodText + '</span>';
+        }
+
+        // Ticket cell
+        const ticketCell = res.payment_ticket_number
+            ? '<span class="ticket-cell">' + res.payment_ticket_number + '</span>'
+            : '<span class="ticket-cell no-ticket">Sin ticket</span>';
+
+        // Action button
+        const actionBtn = res.paid
+            ? '<button class="btn btn-collect" disabled><i class="fas fa-check me-1"></i>Cobrado</button>'
+            : '<button class="btn btn-collect" ' +
+              'data-reservation-id="' + res.id + '" ' +
+              'data-customer-name="' + (res.customer_name || '').replace(/"/g, '&quot;') + '" ' +
+              'data-amount="' + (res.final_price || 0) + '">' +
+              '<i class="fas fa-hand-holding-usd me-1"></i>Cobrar</button>';
+
+        return '<tr data-reservation-id="' + res.id + '">' +
+            '<td><div class="customer-cell">' +
+            '<span class="customer-name">' + (res.customer_name || '-') + '</span>' +
+            '<span class="customer-detail">' + customerTypeIcon + '</span>' +
+            '</div></td>' +
+            '<td><span class="badge bg-secondary">' + (res.customer_type === 'interno' ? 'Interno' : 'Externo') + '</span></td>' +
+            '<td><div class="furniture-cell">' + furnitureBadges + '</div></td>' +
+            '<td>' + (res.zone_name || '-') + '</td>' +
+            '<td class="amount-cell">' + formatCurrency(res.final_price || 0) + '</td>' +
+            '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>' +
+            '<td>' + methodBadge + '</td>' +
+            '<td>' + ticketCell + '</td>' +
+            '<td>' + actionBtn + '</td>' +
+            '</tr>';
+    }
+
+    // =============================================================================
+    // PAYMENT MODAL
+    // =============================================================================
+
+    function openPaymentModal(reservationId, customerName, amount) {
+        document.getElementById('modal-reservation-id').value = reservationId;
+        document.getElementById('modal-customer-name').textContent = customerName;
+        document.getElementById('modal-amount').textContent = formatCurrency(parseFloat(amount));
+        document.getElementById('modal-ticket-number').value = '';
+
+        // Reset payment method selection
+        document.querySelectorAll('input[name="payment-method"]').forEach(function(radio) {
+            radio.checked = false;
+        });
+
+        paymentModal.show();
+    }
+
+    function submitPayment() {
+        const reservationId = document.getElementById('modal-reservation-id').value;
+        const paymentMethodEl = document.querySelector('input[name="payment-method"]:checked');
+        const ticketNumber = document.getElementById('modal-ticket-number').value.trim();
+
+        if (!paymentMethodEl) {
+            showToast('Seleccione un metodo de pago', 'error');
+            return;
+        }
+
+        const paymentMethod = paymentMethodEl.value;
+
+        // Disable button during submission
+        elements.confirmPaymentBtn.disabled = true;
+        elements.confirmPaymentBtn.innerHTML =
+            '<span class="spinner-border spinner-border-sm me-1"></span>Procesando...';
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        fetch('/beach/reports/api/payment-reconciliation/mark-paid', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken || ''
+            },
+            body: JSON.stringify({
+                reservation_id: reservationId,
+                payment_method: paymentMethod,
+                ticket_number: ticketNumber || null
+            })
+        })
+        .then(function(response) {
+            if (!response.ok) {
+                return response.json().then(function(data) {
+                    throw new Error(data.error || 'Error al procesar pago');
+                });
+            }
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.success) {
+                paymentModal.hide();
+                showToast('Pago registrado correctamente', 'success');
+                loadData(); // Reload table
+            } else {
+                showToast('Error: ' + (data.error || 'Error desconocido'), 'error');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error submitting payment:', error);
+            showToast(error.message || 'Error al procesar el pago', 'error');
+        })
+        .finally(function() {
+            elements.confirmPaymentBtn.disabled = false;
+            elements.confirmPaymentBtn.innerHTML =
+                '<i class="fas fa-check me-1"></i>Confirmar Pago';
+        });
+    }
+
+    // =============================================================================
+    // UTILITIES
+    // =============================================================================
+
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('es-ES', {
+            style: 'currency',
+            currency: 'EUR'
+        }).format(amount);
+    }
+
+    function showLoading(show) {
+        if (show) {
+            elements.loadingOverlay.classList.remove('hidden');
+        } else {
+            elements.loadingOverlay.classList.add('hidden');
+        }
+    }
+
+    function showToast(message, type) {
+        const toastId = 'toast-' + Date.now();
+        const toastClass = type === 'success' ? 'toast-success' : 'toast-error';
+        const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+
+        const toastHtml = '<div id="' + toastId + '" class="toast ' + toastClass + '" role="alert">' +
+            '<div class="toast-body d-flex align-items-center">' +
+            '<i class="fas ' + icon + ' me-2"></i>' +
+            '<span>' + message + '</span>' +
+            '</div>' +
+            '</div>';
+
+        elements.toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+        const toastEl = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        toast.show();
+
+        toastEl.addEventListener('hidden.bs.toast', function() {
+            toastEl.remove();
+        });
+    }
+
+})();
+</script>
+{% endblock %}
