@@ -296,6 +296,52 @@ export const FurnitureMixin = (Base) => class extends Base {
         return this.state.mode === 'reassignment';
     }
 
+    /**
+     * Enter move mode from this reservation
+     * Closes the panel and activates global move mode with this reservation
+     */
+    async enterMoveMode() {
+        const reservation = this.state.data?.reservation;
+        if (!reservation) return;
+
+        // Check if window.moveMode is available
+        if (!window.moveMode) {
+            showToast('Modo mover no disponible', 'error');
+            return;
+        }
+
+        // Get current furniture IDs for this date
+        const currentFurniture = (reservation.furniture || []).filter(f => {
+            const assignDate = parseDateToYMD(f.assignment_date);
+            return assignDate === this.state.currentDate;
+        });
+
+        const furnitureIds = currentFurniture.map(f => f.furniture_id || f.id);
+
+        // Close the panel first
+        this.close();
+
+        // Activate move mode
+        window.moveMode.activate(this.state.currentDate);
+
+        // Unassign furniture from this reservation to add it to the pool
+        if (furnitureIds.length > 0) {
+            await window.moveMode.unassignFurniture(reservation.id, furnitureIds, false);
+        } else {
+            // No furniture assigned, just load the reservation to pool
+            await window.moveMode.loadReservationToPool(reservation.id);
+        }
+
+        // Update toolbar button state
+        const moveModeBtn = document.getElementById('btn-move-mode');
+        if (moveModeBtn) {
+            moveModeBtn.classList.add('active');
+        }
+        document.querySelector('.beach-map-container')?.classList.add('move-mode-active');
+
+        showToast('Modo mover activado - selecciona nuevo mobiliario', 'info');
+    }
+
     // =========================================================================
     // REASSIGNMENT UI
     // =========================================================================

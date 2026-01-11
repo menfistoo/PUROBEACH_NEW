@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map-temporary.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/waitlist.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/offline.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/move-mode.css') }}">
 <style>
     /* =============================================================================
    MOBILE-FIRST MAP PAGE LAYOUT
@@ -827,6 +828,11 @@
             <i class="fas fa-plus-circle"></i>
         </button>
 
+        <!-- Move Mode Button -->
+        <button type="button" class="toolbar-btn" id="btn-move-mode" title="Modo Mover - Reorganizar mobiliario">
+            <i class="fas fa-exchange-alt"></i>
+        </button>
+
         <!-- Refresh Button -->
         <button type="button" class="toolbar-btn" id="btn-refresh" title="Actualizar">
             <i class="fas fa-sync-alt"></i>
@@ -961,6 +967,9 @@
             <i class="fas fa-minus"></i>
         </button>
     </div>
+
+    <!-- Move Mode Panel (Slides in from right) -->
+    <div id="moveModePanel"></div>
 </div>
 
 <!-- Bottom Action Bar (Slides up on selection) -->
@@ -1349,6 +1358,8 @@
     import { SearchManager } from '{{ url_for("static", filename="js/map/SearchManager.js") }}';
     import { BlockManager } from '{{ url_for("static", filename="js/map/block-manager.js") }}';
     import { TempFurnitureManager } from '{{ url_for("static", filename="js/map/temp-furniture-manager.js") }}';
+    import { MoveMode } from '{{ url_for("static", filename="js/map/MoveMode.js") }}';
+    import { MoveModePanel } from '{{ url_for("static", filename="js/map/MoveModePanel.js") }}';
 
     document.addEventListener('DOMContentLoaded', function () {
         // ==========================================================================
@@ -1414,6 +1425,60 @@
                 tempFurnitureManager.showCreateModal(100, 100, firstZoneId);
             });
         }
+
+        // ==========================================================================
+        // MOVE MODE MANAGER (Furniture reassignment)
+        // ==========================================================================
+        const moveMode = new MoveMode({
+            apiBaseUrl: '/beach/api/move-mode'
+        });
+
+        const moveModePanel = new MoveModePanel('moveModePanel', moveMode);
+
+        // Move mode button handler
+        const moveModeBtn = document.getElementById('btn-move-mode');
+        if (moveModeBtn) {
+            moveModeBtn.addEventListener('click', () => {
+                if (moveMode.isActive()) {
+                    moveMode.deactivate();
+                    moveModeBtn.classList.remove('active');
+                    document.querySelector('.beach-map-container')?.classList.remove('move-mode-active');
+                } else {
+                    moveMode.activate(map.getCurrentDate());
+                    moveModeBtn.classList.add('active');
+                    document.querySelector('.beach-map-container')?.classList.add('move-mode-active');
+                }
+            });
+        }
+
+        // Update move mode when date changes
+        map.on('onDateChange', (newDate) => {
+            if (moveMode.isActive()) {
+                moveMode.currentDate = newDate;
+            }
+        });
+
+        // Wire up move mode deactivate to update button state
+        moveMode.on('onDeactivate', () => {
+            moveModeBtn?.classList.remove('active');
+            document.querySelector('.beach-map-container')?.classList.remove('move-mode-active');
+            map.refreshAvailability();
+        });
+
+        // Wire up pool update to refresh map
+        moveMode.on('onPoolUpdate', () => {
+            map.refreshAvailability();
+        });
+
+        // Expose moveMode to BeachMap for furniture click handling
+        window.moveMode = moveMode;
+
+        // Keyboard shortcuts for move mode
+        document.addEventListener('keydown', (event) => {
+            if (moveMode.isActive()) {
+                moveMode.handleKeyboard(event);
+            }
+        });
 
         // ==========================================================================
         // WAITLIST MANAGER (Waitlist panel functionality)
@@ -3206,6 +3271,40 @@
             try {
                 const data = map.getData();
                 const availability = data.availability[item.id];
+
+                // Handle move mode - furniture reassignment
+                if (moveMode.isActive()) {
+                    map.deselectFurniture(item.id); // Don't select during move mode
+
+                    const selectedRes = moveMode.getSelectedReservation();
+
+                    if (availability && !availability.available && availability.reservation_id) {
+                        // Occupied furniture - unassign from its reservation
+                        const result = await moveMode.unassignFurniture(
+                            availability.reservation_id,
+                            [item.id],
+                            event?.ctrlKey || false
+                        );
+                        if (result.success) {
+                            map.refreshAvailability();
+                        }
+                    } else if (selectedRes && availability?.available) {
+                        // Available furniture with reservation selected - assign
+                        const result = await moveMode.assignFurniture(
+                            selectedRes.reservation_id,
+                            [item.id]
+                        );
+                        if (result.success) {
+                            map.refreshAvailability();
+                        }
+                    } else if (!selectedRes) {
+                        // No reservation selected
+                        if (window.PuroBeach && window.PuroBeach.showToast) {
+                            window.PuroBeach.showToast('Selecciona una reserva del panel primero', 'info');
+                        }
+                    }
+                    return;
+                }
 
                 // Handle panel reassignment mode
                 // Note: map.handleFurnitureClick already called selectFurniture before this callback
