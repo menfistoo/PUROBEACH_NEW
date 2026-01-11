@@ -61,16 +61,16 @@ def get_user_by_id(user_id: int) -> dict:
     Returns:
         User dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT u.*, r.name as role_name, r.display_name as role_display_name
-        FROM users u
-        LEFT JOIN roles r ON u.role_id = r.id
-        WHERE u.id = ?
-    ''', (user_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT u.*, r.name as role_name, r.display_name as role_display_name
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+            WHERE u.id = ?
+        ''', (user_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_user_by_username(username: str) -> dict:
@@ -83,16 +83,16 @@ def get_user_by_username(username: str) -> dict:
     Returns:
         User dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT u.*, r.name as role_name, r.display_name as role_display_name
-        FROM users u
-        LEFT JOIN roles r ON u.role_id = r.id
-        WHERE u.username = ?
-    ''', (username,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT u.*, r.name as role_name, r.display_name as role_display_name
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+            WHERE u.username = ?
+        ''', (username,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_user_by_email(email: str) -> dict:
@@ -105,16 +105,16 @@ def get_user_by_email(email: str) -> dict:
     Returns:
         User dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT u.*, r.name as role_name, r.display_name as role_display_name
-        FROM users u
-        LEFT JOIN roles r ON u.role_id = r.id
-        WHERE u.email = ?
-    ''', (email,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT u.*, r.name as role_name, r.display_name as role_display_name
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+            WHERE u.email = ?
+        ''', (email,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_all_users(active_only: bool = True) -> list:
@@ -127,23 +127,23 @@ def get_all_users(active_only: bool = True) -> list:
     Returns:
         List of user dicts
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT u.*, r.name as role_name, r.display_name as role_display_name
-        FROM users u
-        LEFT JOIN roles r ON u.role_id = r.id
-    '''
+        query = '''
+            SELECT u.*, r.name as role_name, r.display_name as role_display_name
+            FROM users u
+            LEFT JOIN roles r ON u.role_id = r.id
+        '''
 
-    if active_only:
-        query += ' WHERE u.active = 1'
+        if active_only:
+            query += ' WHERE u.active = 1'
 
-    query += ' ORDER BY u.created_at DESC'
+        query += ' ORDER BY u.created_at DESC'
 
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def create_user(username: str, email: str, password: str, full_name: str = None, role_id: int = None) -> int:
@@ -163,17 +163,17 @@ def create_user(username: str, email: str, password: str, full_name: str = None,
     Raises:
         sqlite3.IntegrityError if username or email already exists
     """
-    db = get_db()
     password_hash = generate_password_hash(password)
 
-    cursor = db.cursor()
-    cursor.execute('''
-        INSERT INTO users (username, email, password_hash, full_name, role_id)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (username, email, password_hash, full_name, role_id))
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO users (username, email, password_hash, full_name, role_id)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (username, email, password_hash, full_name, role_id))
 
-    db.commit()
-    return cursor.lastrowid
+        conn.commit()
+        return cursor.lastrowid
 
 
 def update_user(user_id: int, **kwargs) -> bool:
@@ -187,8 +187,6 @@ def update_user(user_id: int, **kwargs) -> bool:
     Returns:
         True if updated successfully
     """
-    db = get_db()
-
     # Build dynamic update query
     allowed_fields = ['email', 'full_name', 'role_id', 'active', 'theme_preference']
     updates = []
@@ -208,11 +206,12 @@ def update_user(user_id: int, **kwargs) -> bool:
 
     query = f'UPDATE users SET {", ".join(updates)} WHERE id = ?'
 
-    cursor = db.cursor()
-    cursor.execute(query, values)
-    db.commit()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, values)
+        conn.commit()
 
-    return cursor.rowcount > 0
+        return cursor.rowcount > 0
 
 
 def update_password(user_id: int, new_password: str) -> bool:
@@ -226,18 +225,18 @@ def update_password(user_id: int, new_password: str) -> bool:
     Returns:
         True if updated successfully
     """
-    db = get_db()
     password_hash = generate_password_hash(new_password)
 
-    cursor = db.cursor()
-    cursor.execute('''
-        UPDATE users
-        SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    ''', (password_hash, user_id))
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE users
+            SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (password_hash, user_id))
 
-    db.commit()
-    return cursor.rowcount > 0
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 def delete_user(user_id: int) -> bool:
@@ -250,15 +249,15 @@ def delete_user(user_id: int) -> bool:
     Returns:
         True if deleted successfully
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        UPDATE users SET active = 0, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    ''', (user_id,))
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE users SET active = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (user_id,))
 
-    db.commit()
-    return cursor.rowcount > 0
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 def update_last_login(user_id: int) -> None:
@@ -268,13 +267,13 @@ def update_last_login(user_id: int) -> None:
     Args:
         user_id: User ID
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        UPDATE users SET last_login = CURRENT_TIMESTAMP
-        WHERE id = ?
-    ''', (user_id,))
-    db.commit()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE users SET last_login = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (user_id,))
+        conn.commit()
 
 
 def check_password(user_dict: dict, password: str) -> bool:

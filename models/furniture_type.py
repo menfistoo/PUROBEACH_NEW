@@ -23,24 +23,24 @@ def get_all_furniture_types(active_only: bool = True) -> list:
     Returns:
         List of furniture type dicts sorted by display_order
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT ft.*,
-               (SELECT COUNT(*) FROM beach_furniture
-                WHERE furniture_type = ft.type_code AND active = 1) as furniture_count
-        FROM beach_furniture_types ft
-    '''
+        query = '''
+            SELECT ft.*,
+                   (SELECT COUNT(*) FROM beach_furniture
+                    WHERE furniture_type = ft.type_code AND active = 1) as furniture_count
+            FROM beach_furniture_types ft
+        '''
 
-    if active_only:
-        query += ' WHERE ft.active = 1'
+        if active_only:
+            query += ' WHERE ft.active = 1'
 
-    query += ' ORDER BY ft.display_order, ft.display_name'
+        query += ' ORDER BY ft.display_order, ft.display_name'
 
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_furniture_type_by_id(type_id: int) -> Optional[dict]:
@@ -53,11 +53,11 @@ def get_furniture_type_by_id(type_id: int) -> Optional[dict]:
     Returns:
         Furniture type dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_furniture_types WHERE id = ?', (type_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_furniture_types WHERE id = ?', (type_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_furniture_type_by_code(type_code: str) -> Optional[dict]:
@@ -70,11 +70,11 @@ def get_furniture_type_by_code(type_code: str) -> Optional[dict]:
     Returns:
         Furniture type dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_furniture_types WHERE type_code = ?', (type_code,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_furniture_types WHERE type_code = ?', (type_code,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 # =============================================================================
@@ -120,32 +120,32 @@ def create_furniture_type(type_code: str, display_name: str, **kwargs) -> int:
     if not is_valid:
         raise ValueError('; '.join(errors.values()))
 
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    # Build dynamic insert
-    fields = ['type_code', 'display_name']
-    values = [type_code, display_name]
+        # Build dynamic insert
+        fields = ['type_code', 'display_name']
+        values = [type_code, display_name]
 
-    optional_fields = [
-        'icon', 'default_color', 'min_capacity', 'max_capacity', 'is_suite_only', 'notes',
-        'map_shape', 'custom_svg', 'default_width', 'default_height',
-        'border_radius', 'fill_color', 'stroke_color', 'stroke_width', 'status_colors',
-        'default_capacity', 'default_rotation', 'is_decorative',
-        'number_prefix', 'number_start', 'default_features', 'allowed_zones', 'display_order'
-    ]
+        optional_fields = [
+            'icon', 'default_color', 'min_capacity', 'max_capacity', 'is_suite_only', 'notes',
+            'map_shape', 'custom_svg', 'default_width', 'default_height',
+            'border_radius', 'fill_color', 'stroke_color', 'stroke_width', 'status_colors',
+            'default_capacity', 'default_rotation', 'is_decorative',
+            'number_prefix', 'number_start', 'default_features', 'allowed_zones', 'display_order'
+        ]
 
-    for field in optional_fields:
-        if field in kwargs and kwargs[field] is not None:
-            fields.append(field)
-            values.append(kwargs[field])
+        for field in optional_fields:
+            if field in kwargs and kwargs[field] is not None:
+                fields.append(field)
+                values.append(kwargs[field])
 
-    placeholders = ', '.join(['?' for _ in fields])
-    query = f'INSERT INTO beach_furniture_types ({", ".join(fields)}) VALUES ({placeholders})'
+        placeholders = ', '.join(['?' for _ in fields])
+        query = f'INSERT INTO beach_furniture_types ({", ".join(fields)}) VALUES ({placeholders})'
 
-    cursor.execute(query, values)
-    db.commit()
-    return cursor.lastrowid
+        cursor.execute(query, values)
+        conn.commit()
+        return cursor.lastrowid
 
 
 # =============================================================================
@@ -171,8 +171,6 @@ def update_furniture_type(type_id: int, **kwargs) -> bool:
     if not is_valid:
         raise ValueError('; '.join(errors.values()))
 
-    db = get_db()
-
     # Extended allowed fields
     allowed_fields = [
         'display_name', 'icon', 'default_color', 'min_capacity', 'max_capacity',
@@ -197,11 +195,12 @@ def update_furniture_type(type_id: int, **kwargs) -> bool:
     values.append(type_id)
     query = f'UPDATE beach_furniture_types SET {", ".join(updates)} WHERE id = ?'
 
-    cursor = db.cursor()
-    cursor.execute(query, values)
-    db.commit()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, values)
+        conn.commit()
 
-    return cursor.rowcount > 0
+        return cursor.rowcount > 0
 
 
 # =============================================================================
@@ -222,31 +221,31 @@ def delete_furniture_type(type_id: int) -> bool:
     Raises:
         ValueError if type has active furniture
     """
-    db = get_db()
-    cursor = db.cursor()
-
     # Get type code
     ftype = get_furniture_type_by_id(type_id)
     if not ftype:
         return False
 
-    # Check for active furniture using this type
-    cursor.execute('''
-        SELECT COUNT(*) as count
-        FROM beach_furniture
-        WHERE furniture_type = ? AND active = 1
-    ''', (ftype['type_code'],))
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    if cursor.fetchone()['count'] > 0:
-        raise ValueError('No se puede eliminar tipo con mobiliario activo')
+        # Check for active furniture using this type
+        cursor.execute('''
+            SELECT COUNT(*) as count
+            FROM beach_furniture
+            WHERE furniture_type = ? AND active = 1
+        ''', (ftype['type_code'],))
 
-    cursor.execute('''
-        UPDATE beach_furniture_types SET active = 0
-        WHERE id = ?
-    ''', (type_id,))
+        if cursor.fetchone()['count'] > 0:
+            raise ValueError('No se puede eliminar tipo con mobiliario activo')
 
-    db.commit()
-    return cursor.rowcount > 0
+        cursor.execute('''
+            UPDATE beach_furniture_types SET active = 0
+            WHERE id = ?
+        ''', (type_id,))
+
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 # =============================================================================
@@ -270,60 +269,60 @@ def get_next_number_for_type(type_id: int, zone_id: int = None) -> str:
     Returns:
         Next available number string (e.g., "H15", "B3")
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    # Get type config
-    cursor.execute('''
-        SELECT type_code, number_prefix, number_start
-        FROM beach_furniture_types WHERE id = ?
-    ''', (type_id,))
-    ftype = cursor.fetchone()
+        # Get type config
+        cursor.execute('''
+            SELECT type_code, number_prefix, number_start
+            FROM beach_furniture_types WHERE id = ?
+        ''', (type_id,))
+        ftype = cursor.fetchone()
 
-    if not ftype:
-        return "1"
+        if not ftype:
+            return "1"
 
-    prefix = ftype['number_prefix'] or ''
-    start = ftype['number_start'] or 1
-    type_code = ftype['type_code']
+        prefix = ftype['number_prefix'] or ''
+        start = ftype['number_start'] or 1
+        type_code = ftype['type_code']
 
-    # Get all existing numbers for this type
-    query = '''
-        SELECT number FROM beach_furniture
-        WHERE furniture_type = ? AND active = 1
-    '''
-    params = [type_code]
+        # Get all existing numbers for this type
+        query = '''
+            SELECT number FROM beach_furniture
+            WHERE furniture_type = ? AND active = 1
+        '''
+        params = [type_code]
 
-    if prefix:
-        query += ' AND number LIKE ? || \'%\''
-        params.append(prefix)
+        if prefix:
+            query += ' AND number LIKE ? || \'%\''
+            params.append(prefix)
 
-    if zone_id:
-        query += ' AND zone_id = ?'
-        params.append(zone_id)
+        if zone_id:
+            query += ' AND zone_id = ?'
+            params.append(zone_id)
 
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
 
-    # Extract numeric parts and build a set of used numbers
-    used_numbers = set()
-    for row in rows:
-        try:
-            if prefix:
-                num_str = row['number'][len(prefix):]
-            else:
-                num_str = row['number']
-            num = int(num_str)
-            used_numbers.add(num)
-        except (ValueError, IndexError):
-            continue
+        # Extract numeric parts and build a set of used numbers
+        used_numbers = set()
+        for row in rows:
+            try:
+                if prefix:
+                    num_str = row['number'][len(prefix):]
+                else:
+                    num_str = row['number']
+                num = int(num_str)
+                used_numbers.add(num)
+            except (ValueError, IndexError):
+                continue
 
-    # Find first available number starting from 'start'
-    next_num = start
-    while next_num in used_numbers:
-        next_num += 1
+        # Find first available number starting from 'start'
+        next_num = start
+        while next_num in used_numbers:
+            next_num += 1
 
-    return f"{prefix}{next_num}"
+        return f"{prefix}{next_num}"
 
 
 # =============================================================================
@@ -545,18 +544,18 @@ def update_furniture_types_order(type_ids: list) -> bool:
     if not type_ids:
         return False
 
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    db.execute('BEGIN IMMEDIATE')
-    try:
-        for order, type_id in enumerate(type_ids, start=1):
-            cursor.execute('''
-                UPDATE beach_furniture_types SET display_order = ?
-                WHERE id = ?
-            ''', (order, type_id))
-        db.commit()
-        return True
-    except Exception:
-        db.rollback()
-        raise
+        conn.execute('BEGIN IMMEDIATE')
+        try:
+            for order, type_id in enumerate(type_ids, start=1):
+                cursor.execute('''
+                    UPDATE beach_furniture_types SET display_order = ?
+                    WHERE id = ?
+                ''', (order, type_id))
+            conn.commit()
+            return True
+        except Exception:
+            conn.rollback()
+            raise

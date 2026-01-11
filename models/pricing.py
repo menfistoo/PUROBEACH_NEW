@@ -20,23 +20,23 @@ def get_all_minimum_consumption_policies(active_only: bool = True) -> list:
     Returns:
         List of policy dictionaries ordered by priority_order
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT p.*,
-               (SELECT COUNT(*) FROM beach_reservations
-                WHERE minimum_consumption_policy_id = p.id) as usage_count
-        FROM beach_minimum_consumption_policies p
-    '''
+        query = '''
+            SELECT p.*,
+                   (SELECT COUNT(*) FROM beach_reservations
+                    WHERE minimum_consumption_policy_id = p.id) as usage_count
+            FROM beach_minimum_consumption_policies p
+        '''
 
-    if active_only:
-        query += ' WHERE p.is_active = 1'
+        if active_only:
+            query += ' WHERE p.is_active = 1'
 
-    query += ' ORDER BY p.priority_order DESC, p.policy_name'
+        query += ' ORDER BY p.priority_order DESC, p.policy_name'
 
-    cursor.execute(query)
-    return [dict(row) for row in cursor.fetchall()]
+        cursor.execute(query)
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def get_minimum_consumption_policy_by_id(policy_id: int) -> dict:
@@ -49,13 +49,13 @@ def get_minimum_consumption_policy_by_id(policy_id: int) -> dict:
     Returns:
         Policy dictionary or None
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT * FROM beach_minimum_consumption_policies WHERE id = ?
-    ''', (policy_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM beach_minimum_consumption_policies WHERE id = ?
+        ''', (policy_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_minimum_consumption_policy_by_name(name: str) -> dict:
@@ -68,13 +68,13 @@ def get_minimum_consumption_policy_by_name(name: str) -> dict:
     Returns:
         Policy dictionary or None
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT * FROM beach_minimum_consumption_policies WHERE policy_name = ?
-    ''', (name,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM beach_minimum_consumption_policies WHERE policy_name = ?
+        ''', (name,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_applicable_minimum_consumption_policy(
@@ -103,34 +103,34 @@ def get_applicable_minimum_consumption_policy(
     Returns:
         Most specific matching policy dictionary or None
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    # Build query with priority-based ordering
-    query = '''
-        SELECT *,
-               CASE
-                   WHEN furniture_type IS NOT NULL AND customer_type IS NOT NULL AND zone_id IS NOT NULL THEN 7
-                   WHEN furniture_type IS NOT NULL AND customer_type IS NOT NULL THEN 6
-                   WHEN furniture_type IS NOT NULL AND zone_id IS NOT NULL THEN 5
-                   WHEN customer_type IS NOT NULL AND zone_id IS NOT NULL THEN 4
-                   WHEN furniture_type IS NOT NULL THEN 3
-                   WHEN customer_type IS NOT NULL THEN 2
-                   WHEN zone_id IS NOT NULL THEN 1
-                   ELSE 0
-               END as match_priority
-        FROM beach_minimum_consumption_policies
-        WHERE is_active = 1
-        AND (furniture_type = ? OR furniture_type IS NULL)
-        AND (customer_type = ? OR customer_type IS NULL)
-        AND (zone_id = ? OR zone_id IS NULL)
-        ORDER BY match_priority DESC, priority_order DESC
-        LIMIT 1
-    '''
+        # Build query with priority-based ordering
+        query = '''
+            SELECT *,
+                   CASE
+                       WHEN furniture_type IS NOT NULL AND customer_type IS NOT NULL AND zone_id IS NOT NULL THEN 7
+                       WHEN furniture_type IS NOT NULL AND customer_type IS NOT NULL THEN 6
+                       WHEN furniture_type IS NOT NULL AND zone_id IS NOT NULL THEN 5
+                       WHEN customer_type IS NOT NULL AND zone_id IS NOT NULL THEN 4
+                       WHEN furniture_type IS NOT NULL THEN 3
+                       WHEN customer_type IS NOT NULL THEN 2
+                       WHEN zone_id IS NOT NULL THEN 1
+                       ELSE 0
+                   END as match_priority
+            FROM beach_minimum_consumption_policies
+            WHERE is_active = 1
+            AND (furniture_type = ? OR furniture_type IS NULL)
+            AND (customer_type = ? OR customer_type IS NULL)
+            AND (zone_id = ? OR zone_id IS NULL)
+            ORDER BY match_priority DESC, priority_order DESC
+            LIMIT 1
+        '''
 
-    cursor.execute(query, (furniture_type, customer_type, zone_id))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+        cursor.execute(query, (furniture_type, customer_type, zone_id))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def create_minimum_consumption_policy(
@@ -174,28 +174,28 @@ def create_minimum_consumption_policy(
     if get_minimum_consumption_policy_by_name(policy_name):
         raise ValueError(f"Policy with name '{policy_name}' already exists")
 
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        INSERT INTO beach_minimum_consumption_policies (
-            policy_name, policy_description, minimum_amount, calculation_type,
-            furniture_type, customer_type, zone_id, priority_order, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        policy_name.strip(),
-        kwargs.get('policy_description', '').strip() or None,
-        minimum_amount,
-        calculation_type,
-        kwargs.get('furniture_type'),
-        customer_type,
-        kwargs.get('zone_id'),
-        kwargs.get('priority_order', 0),
-        kwargs.get('is_active', 1)
-    ))
+        cursor.execute('''
+            INSERT INTO beach_minimum_consumption_policies (
+                policy_name, policy_description, minimum_amount, calculation_type,
+                furniture_type, customer_type, zone_id, priority_order, is_active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            policy_name.strip(),
+            kwargs.get('policy_description', '').strip() or None,
+            minimum_amount,
+            calculation_type,
+            kwargs.get('furniture_type'),
+            customer_type,
+            kwargs.get('zone_id'),
+            kwargs.get('priority_order', 0),
+            kwargs.get('is_active', 1)
+        ))
 
-    db.commit()
-    return cursor.lastrowid
+        conn.commit()
+        return cursor.lastrowid
 
 
 def update_minimum_consumption_policy(policy_id: int, **kwargs) -> bool:
@@ -263,14 +263,14 @@ def update_minimum_consumption_policy(policy_id: int, **kwargs) -> bool:
 
     values.append(policy_id)
 
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = f'UPDATE beach_minimum_consumption_policies SET {", ".join(updates)} WHERE id = ?'
-    cursor.execute(query, values)
-    db.commit()
+        query = f'UPDATE beach_minimum_consumption_policies SET {", ".join(updates)} WHERE id = ?'
+        cursor.execute(query, values)
+        conn.commit()
 
-    return True
+        return True
 
 
 def delete_minimum_consumption_policy(policy_id: int) -> bool:
@@ -290,17 +290,17 @@ def delete_minimum_consumption_policy(policy_id: int) -> bool:
     if not policy:
         raise ValueError(f"Policy with ID {policy_id} not found")
 
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        UPDATE beach_minimum_consumption_policies
-        SET is_active = 0
-        WHERE id = ?
-    ''', (policy_id,))
+        cursor.execute('''
+            UPDATE beach_minimum_consumption_policies
+            SET is_active = 0
+            WHERE id = ?
+        ''', (policy_id,))
 
-    db.commit()
-    return True
+        conn.commit()
+        return True
 
 
 def reorder_minimum_consumption_policies(policy_ids: list) -> bool:
@@ -313,20 +313,20 @@ def reorder_minimum_consumption_policies(policy_ids: list) -> bool:
     Returns:
         True if successful
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    # Reverse enumerate to get higher priority for first items
-    for idx, policy_id in enumerate(policy_ids):
-        priority = len(policy_ids) - idx
-        cursor.execute('''
-            UPDATE beach_minimum_consumption_policies
-            SET priority_order = ?
-            WHERE id = ?
-        ''', (priority, policy_id))
+        # Reverse enumerate to get higher priority for first items
+        for idx, policy_id in enumerate(policy_ids):
+            priority = len(policy_ids) - idx
+            cursor.execute('''
+                UPDATE beach_minimum_consumption_policies
+                SET priority_order = ?
+                WHERE id = ?
+            ''', (priority, policy_id))
 
-    db.commit()
-    return True
+        conn.commit()
+        return True
 
 
 # =============================================================================
@@ -341,20 +341,20 @@ def get_price_catalog() -> list:
     Returns:
         List of price catalog dicts
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT pc.*,
-               z.name as zone_name,
-               ft.display_name as furniture_type_name
-        FROM beach_price_catalog pc
-        LEFT JOIN beach_zones z ON pc.zone_id = z.id
-        LEFT JOIN beach_furniture_types ft ON pc.furniture_type = ft.type_code
-        WHERE pc.active = 1
-        ORDER BY pc.name
-    ''')
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT pc.*,
+                   z.name as zone_name,
+                   ft.display_name as furniture_type_name
+            FROM beach_price_catalog pc
+            LEFT JOIN beach_zones z ON pc.zone_id = z.id
+            LEFT JOIN beach_furniture_types ft ON pc.furniture_type = ft.type_code
+            WHERE pc.active = 1
+            ORDER BY pc.name
+        ''')
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def calculate_price(furniture_type: str, customer_type: str, zone_id: int, date: str) -> float:

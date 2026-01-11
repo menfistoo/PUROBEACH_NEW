@@ -16,24 +16,24 @@ def get_all_tags(active_only: bool = True) -> list:
     Returns:
         List of tag dicts
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT t.*,
-               (SELECT COUNT(*) FROM beach_customer_tags WHERE tag_id = t.id) as customer_count,
-               (SELECT COUNT(*) FROM beach_reservation_tags WHERE tag_id = t.id) as reservation_count
-        FROM beach_tags t
-    '''
+        query = '''
+            SELECT t.*,
+                   (SELECT COUNT(*) FROM beach_customer_tags WHERE tag_id = t.id) as customer_count,
+                   (SELECT COUNT(*) FROM beach_reservation_tags WHERE tag_id = t.id) as reservation_count
+            FROM beach_tags t
+        '''
 
-    if active_only:
-        query += ' WHERE t.active = 1'
+        if active_only:
+            query += ' WHERE t.active = 1'
 
-    query += ' ORDER BY t.name'
+        query += ' ORDER BY t.name'
 
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_tag_by_id(tag_id: int) -> dict:
@@ -46,11 +46,11 @@ def get_tag_by_id(tag_id: int) -> dict:
     Returns:
         Tag dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_tags WHERE id = ?', (tag_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_tags WHERE id = ?', (tag_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_tag_by_name(name: str) -> dict:
@@ -63,11 +63,11 @@ def get_tag_by_name(name: str) -> dict:
     Returns:
         Tag dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_tags WHERE name = ?', (name,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_tags WHERE name = ?', (name,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def create_tag(name: str, color: str = '#6C757D', description: str = None) -> int:
@@ -85,21 +85,21 @@ def create_tag(name: str, color: str = '#6C757D', description: str = None) -> in
     Raises:
         ValueError if name already exists
     """
-    db = get_db()
-    cursor = db.cursor()
-
     # Check if name exists
     existing = get_tag_by_name(name)
     if existing:
         raise ValueError(f'Ya existe una etiqueta con el nombre "{name}"')
 
-    cursor.execute('''
-        INSERT INTO beach_tags (name, color, description)
-        VALUES (?, ?, ?)
-    ''', (name, color, description))
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    db.commit()
-    return cursor.lastrowid
+        cursor.execute('''
+            INSERT INTO beach_tags (name, color, description)
+            VALUES (?, ?, ?)
+        ''', (name, color, description))
+
+        conn.commit()
+        return cursor.lastrowid
 
 
 def update_tag(tag_id: int, **kwargs) -> bool:
@@ -113,8 +113,6 @@ def update_tag(tag_id: int, **kwargs) -> bool:
     Returns:
         True if updated successfully
     """
-    db = get_db()
-
     allowed_fields = ['name', 'color', 'description', 'active']
     updates = []
     values = []
@@ -130,11 +128,12 @@ def update_tag(tag_id: int, **kwargs) -> bool:
     values.append(tag_id)
     query = f'UPDATE beach_tags SET {", ".join(updates)} WHERE id = ?'
 
-    cursor = db.cursor()
-    cursor.execute(query, values)
-    db.commit()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, values)
+        conn.commit()
 
-    return cursor.rowcount > 0
+        return cursor.rowcount > 0
 
 
 def delete_tag(tag_id: int) -> bool:
@@ -147,16 +146,16 @@ def delete_tag(tag_id: int) -> bool:
     Returns:
         True if deleted successfully
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        UPDATE beach_tags SET active = 0
-        WHERE id = ?
-    ''', (tag_id,))
+        cursor.execute('''
+            UPDATE beach_tags SET active = 0
+            WHERE id = ?
+        ''', (tag_id,))
 
-    db.commit()
-    return cursor.rowcount > 0
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 # Customer tag operations
@@ -171,17 +170,17 @@ def get_customer_tags(customer_id: int) -> list:
     Returns:
         List of tag dicts
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT t.*
-        FROM beach_tags t
-        JOIN beach_customer_tags ct ON t.id = ct.tag_id
-        WHERE ct.customer_id = ?
-        ORDER BY t.name
-    ''', (customer_id,))
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT t.*
+            FROM beach_tags t
+            JOIN beach_customer_tags ct ON t.id = ct.tag_id
+            WHERE ct.customer_id = ?
+            ORDER BY t.name
+        ''', (customer_id,))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def assign_tag_to_customer(customer_id: int, tag_id: int) -> bool:
@@ -195,18 +194,18 @@ def assign_tag_to_customer(customer_id: int, tag_id: int) -> bool:
     Returns:
         True if assigned successfully
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    try:
-        cursor.execute('''
-            INSERT OR IGNORE INTO beach_customer_tags (customer_id, tag_id)
-            VALUES (?, ?)
-        ''', (customer_id, tag_id))
-        db.commit()
-        return True
-    except Exception:
-        return False
+        try:
+            cursor.execute('''
+                INSERT OR IGNORE INTO beach_customer_tags (customer_id, tag_id)
+                VALUES (?, ?)
+            ''', (customer_id, tag_id))
+            conn.commit()
+            return True
+        except Exception:
+            return False
 
 
 def remove_tag_from_customer(customer_id: int, tag_id: int) -> bool:
@@ -220,16 +219,16 @@ def remove_tag_from_customer(customer_id: int, tag_id: int) -> bool:
     Returns:
         True if removed successfully
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        DELETE FROM beach_customer_tags
-        WHERE customer_id = ? AND tag_id = ?
-    ''', (customer_id, tag_id))
+        cursor.execute('''
+            DELETE FROM beach_customer_tags
+            WHERE customer_id = ? AND tag_id = ?
+        ''', (customer_id, tag_id))
 
-    db.commit()
-    return cursor.rowcount > 0
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 # Reservation tag operations
@@ -244,17 +243,17 @@ def get_reservation_tags(reservation_id: int) -> list:
     Returns:
         List of tag dicts
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT t.*
-        FROM beach_tags t
-        JOIN beach_reservation_tags rt ON t.id = rt.tag_id
-        WHERE rt.reservation_id = ?
-        ORDER BY t.name
-    ''', (reservation_id,))
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT t.*
+            FROM beach_tags t
+            JOIN beach_reservation_tags rt ON t.id = rt.tag_id
+            WHERE rt.reservation_id = ?
+            ORDER BY t.name
+        ''', (reservation_id,))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def assign_tag_to_reservation(reservation_id: int, tag_id: int) -> bool:
@@ -268,18 +267,18 @@ def assign_tag_to_reservation(reservation_id: int, tag_id: int) -> bool:
     Returns:
         True if assigned successfully
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    try:
-        cursor.execute('''
-            INSERT OR IGNORE INTO beach_reservation_tags (reservation_id, tag_id)
-            VALUES (?, ?)
-        ''', (reservation_id, tag_id))
-        db.commit()
-        return True
-    except Exception:
-        return False
+        try:
+            cursor.execute('''
+                INSERT OR IGNORE INTO beach_reservation_tags (reservation_id, tag_id)
+                VALUES (?, ?)
+            ''', (reservation_id, tag_id))
+            conn.commit()
+            return True
+        except Exception:
+            return False
 
 
 def remove_tag_from_reservation(reservation_id: int, tag_id: int) -> bool:
@@ -293,13 +292,13 @@ def remove_tag_from_reservation(reservation_id: int, tag_id: int) -> bool:
     Returns:
         True if removed successfully
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        DELETE FROM beach_reservation_tags
-        WHERE reservation_id = ? AND tag_id = ?
-    ''', (reservation_id, tag_id))
+        cursor.execute('''
+            DELETE FROM beach_reservation_tags
+            WHERE reservation_id = ? AND tag_id = ?
+        ''', (reservation_id, tag_id))
 
-    db.commit()
-    return cursor.rowcount > 0
+        conn.commit()
+        return cursor.rowcount > 0

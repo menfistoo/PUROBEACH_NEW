@@ -16,24 +16,24 @@ def get_all_zones(active_only: bool = True) -> list:
     Returns:
         List of zone dicts ordered by display_order
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT z.*,
-               (SELECT COUNT(*) FROM beach_furniture WHERE zone_id = z.id) as furniture_count,
-               (SELECT COUNT(*) FROM beach_zones WHERE parent_zone_id = z.id) as child_count
-        FROM beach_zones z
-    '''
+        query = '''
+            SELECT z.*,
+                   (SELECT COUNT(*) FROM beach_furniture WHERE zone_id = z.id) as furniture_count,
+                   (SELECT COUNT(*) FROM beach_zones WHERE parent_zone_id = z.id) as child_count
+            FROM beach_zones z
+        '''
 
-    if active_only:
-        query += ' WHERE z.active = 1'
+        if active_only:
+            query += ' WHERE z.active = 1'
 
-    query += ' ORDER BY z.display_order, z.name'
+        query += ' ORDER BY z.display_order, z.name'
 
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_zone_by_id(zone_id: int) -> dict:
@@ -46,11 +46,11 @@ def get_zone_by_id(zone_id: int) -> dict:
     Returns:
         Zone dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_zones WHERE id = ?', (zone_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_zones WHERE id = ?', (zone_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def create_zone(
@@ -77,22 +77,22 @@ def create_zone(
     Returns:
         New zone ID
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    # Get next display order
-    cursor.execute('SELECT COALESCE(MAX(display_order), 0) + 1 FROM beach_zones')
-    display_order = cursor.fetchone()[0]
+        # Get next display order
+        cursor.execute('SELECT COALESCE(MAX(display_order), 0) + 1 FROM beach_zones')
+        display_order = cursor.fetchone()[0]
 
-    cursor.execute('''
-        INSERT INTO beach_zones (name, description, parent_zone_id, color, display_order,
-                                 canvas_width, canvas_height, background_color)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (name, description, parent_zone_id, color, display_order,
-          canvas_width, canvas_height, background_color))
+        cursor.execute('''
+            INSERT INTO beach_zones (name, description, parent_zone_id, color, display_order,
+                                     canvas_width, canvas_height, background_color)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (name, description, parent_zone_id, color, display_order,
+              canvas_width, canvas_height, background_color))
 
-    db.commit()
-    return cursor.lastrowid
+        conn.commit()
+        return cursor.lastrowid
 
 
 def update_zone(zone_id: int, **kwargs) -> bool:
@@ -107,8 +107,6 @@ def update_zone(zone_id: int, **kwargs) -> bool:
     Returns:
         True if updated successfully
     """
-    db = get_db()
-
     allowed_fields = ['name', 'description', 'color', 'display_order', 'active', 'parent_zone_id',
                       'canvas_width', 'canvas_height', 'background_color']
     updates = []
@@ -125,11 +123,12 @@ def update_zone(zone_id: int, **kwargs) -> bool:
     values.append(zone_id)
     query = f'UPDATE beach_zones SET {", ".join(updates)} WHERE id = ?'
 
-    cursor = db.cursor()
-    cursor.execute(query, values)
-    db.commit()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, values)
+        conn.commit()
 
-    return cursor.rowcount > 0
+        return cursor.rowcount > 0
 
 
 def delete_zone(zone_id: int) -> bool:
@@ -146,34 +145,34 @@ def delete_zone(zone_id: int) -> bool:
     Raises:
         ValueError if zone has any furniture
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    # Check for any furniture (active or inactive)
-    cursor.execute('''
-        SELECT COUNT(*) as count
-        FROM beach_furniture
-        WHERE zone_id = ?
-    ''', (zone_id,))
+        # Check for any furniture (active or inactive)
+        cursor.execute('''
+            SELECT COUNT(*) as count
+            FROM beach_furniture
+            WHERE zone_id = ?
+        ''', (zone_id,))
 
-    if cursor.fetchone()['count'] > 0:
-        raise ValueError('No se puede eliminar zona con mobiliario asignado')
+        if cursor.fetchone()['count'] > 0:
+            raise ValueError('No se puede eliminar zona con mobiliario asignado')
 
-    # Check for child zones
-    cursor.execute('''
-        SELECT COUNT(*) as count
-        FROM beach_zones
-        WHERE parent_zone_id = ?
-    ''', (zone_id,))
+        # Check for child zones
+        cursor.execute('''
+            SELECT COUNT(*) as count
+            FROM beach_zones
+            WHERE parent_zone_id = ?
+        ''', (zone_id,))
 
-    if cursor.fetchone()['count'] > 0:
-        raise ValueError('No se puede eliminar zona con subzonas')
+        if cursor.fetchone()['count'] > 0:
+            raise ValueError('No se puede eliminar zona con subzonas')
 
-    # Hard delete
-    cursor.execute('DELETE FROM beach_zones WHERE id = ?', (zone_id,))
+        # Hard delete
+        cursor.execute('DELETE FROM beach_zones WHERE id = ?', (zone_id,))
 
-    db.commit()
-    return cursor.rowcount > 0
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 def get_zone_with_furniture(zone_id: int) -> dict:
@@ -186,33 +185,33 @@ def get_zone_with_furniture(zone_id: int) -> dict:
     Returns:
         Dict with zone data and furniture list, or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    # Get zone
-    cursor.execute('SELECT * FROM beach_zones WHERE id = ?', (zone_id,))
-    zone_row = cursor.fetchone()
-    if not zone_row:
-        return None
+        # Get zone
+        cursor.execute('SELECT * FROM beach_zones WHERE id = ?', (zone_id,))
+        zone_row = cursor.fetchone()
+        if not zone_row:
+            return None
 
-    zone = dict(zone_row)
+        zone = dict(zone_row)
 
-    # Get furniture with type info
-    cursor.execute('''
-        SELECT f.*,
-               ft.display_name as furniture_type_name,
-               ft.icon as furniture_type_icon,
-               ft.map_shape,
-               ft.fill_color as type_fill_color,
-               ft.stroke_color as type_stroke_color,
-               ft.stroke_width as type_stroke_width,
-               ft.border_radius as type_border_radius,
-               ft.is_decorative
-        FROM beach_furniture f
-        LEFT JOIN beach_furniture_types ft ON f.furniture_type = ft.type_code
-        WHERE f.zone_id = ? AND f.active = 1
-        ORDER BY f.number
-    ''', (zone_id,))
+        # Get furniture with type info
+        cursor.execute('''
+            SELECT f.*,
+                   ft.display_name as furniture_type_name,
+                   ft.icon as furniture_type_icon,
+                   ft.map_shape,
+                   ft.fill_color as type_fill_color,
+                   ft.stroke_color as type_stroke_color,
+                   ft.stroke_width as type_stroke_width,
+                   ft.border_radius as type_border_radius,
+                   ft.is_decorative
+            FROM beach_furniture f
+            LEFT JOIN beach_furniture_types ft ON f.furniture_type = ft.type_code
+            WHERE f.zone_id = ? AND f.active = 1
+            ORDER BY f.number
+        ''', (zone_id,))
 
-    zone['furniture'] = [dict(row) for row in cursor.fetchall()]
-    return zone
+        zone['furniture'] = [dict(row) for row in cursor.fetchall()]
+        return zone

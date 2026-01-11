@@ -16,19 +16,19 @@ def get_all_permissions(active_only: bool = True) -> list:
     Returns:
         List of permission dicts
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = 'SELECT * FROM permissions'
+        query = 'SELECT * FROM permissions'
 
-    if active_only:
-        query += ' WHERE active = 1'
+        if active_only:
+            query += ' WHERE active = 1'
 
-    query += ' ORDER BY module, menu_order, code'
+        query += ' ORDER BY module, menu_order, code'
 
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_permission_by_id(permission_id: int) -> dict:
@@ -41,11 +41,11 @@ def get_permission_by_id(permission_id: int) -> dict:
     Returns:
         Permission dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM permissions WHERE id = ?', (permission_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM permissions WHERE id = ?', (permission_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_permission_by_code(code: str) -> dict:
@@ -58,11 +58,11 @@ def get_permission_by_code(code: str) -> dict:
     Returns:
         Permission dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM permissions WHERE code = ?', (code,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM permissions WHERE code = ?', (code,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_menu_permissions() -> list:
@@ -72,15 +72,15 @@ def get_menu_permissions() -> list:
     Returns:
         List of menu permission dicts, ordered by menu_order
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT * FROM permissions
-        WHERE is_menu_item = 1 AND active = 1
-        ORDER BY menu_order
-    ''')
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM permissions
+            WHERE is_menu_item = 1 AND active = 1
+            ORDER BY menu_order
+        ''')
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_permissions_by_module(module: str, active_only: bool = True) -> list:
@@ -94,16 +94,16 @@ def get_permissions_by_module(module: str, active_only: bool = True) -> list:
     Returns:
         List of permission dicts for the module
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = 'SELECT * FROM permissions WHERE module = ?'
+        query = 'SELECT * FROM permissions WHERE module = ?'
 
-    if active_only:
-        query += ' AND active = 1'
+        if active_only:
+            query += ' AND active = 1'
 
-    query += ' ORDER BY code'
+        query += ' ORDER BY code'
 
-    cursor.execute(query, (module,))
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+        cursor.execute(query, (module,))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]

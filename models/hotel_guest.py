@@ -26,33 +26,33 @@ def get_all_hotel_guests(
     Returns:
         List of hotel guest dicts
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = 'SELECT * FROM hotel_guests WHERE 1=1'
-    params = []
+        query = 'SELECT * FROM hotel_guests WHERE 1=1'
+        params = []
 
-    if active_only:
-        query += ' AND departure_date >= date("now")'
+        if active_only:
+            query += ' AND departure_date >= date("now")'
 
-    if search:
-        query += ' AND (guest_name LIKE ? OR room_number LIKE ?)'
-        search_term = f'%{search}%'
-        params.extend([search_term, search_term])
+        if search:
+            query += ' AND (guest_name LIKE ? OR room_number LIKE ?)'
+            search_term = f'%{search}%'
+            params.extend([search_term, search_term])
 
-    if room_filter:
-        query += ' AND room_number = ?'
-        params.append(room_filter)
+        if room_filter:
+            query += ' AND room_number = ?'
+            params.append(room_filter)
 
-    if date_filter:
-        query += ' AND arrival_date <= ? AND departure_date >= ?'
-        params.extend([date_filter.isoformat(), date_filter.isoformat()])
+        if date_filter:
+            query += ' AND arrival_date <= ? AND departure_date >= ?'
+            params.extend([date_filter.isoformat(), date_filter.isoformat()])
 
-    query += ' ORDER BY room_number, arrival_date DESC'
+        query += ' ORDER BY room_number, arrival_date DESC'
 
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_hotel_guest_by_id(guest_id: int) -> Optional[Dict[str, Any]]:
@@ -65,11 +65,11 @@ def get_hotel_guest_by_id(guest_id: int) -> Optional[Dict[str, Any]]:
     Returns:
         Hotel guest dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM hotel_guests WHERE id = ?', (guest_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM hotel_guests WHERE id = ?', (guest_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_guests_by_room(room_number: str, check_date: date = None) -> List[Dict[str, Any]]:
@@ -86,41 +86,41 @@ def get_guests_by_room(room_number: str, check_date: date = None) -> List[Dict[s
     Returns:
         List of unique hotel guest dicts for the room (main guest first)
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    if check_date:
-        cursor.execute('''
-            SELECT * FROM hotel_guests
-            WHERE room_number = ?
-              AND arrival_date <= ?
-              AND departure_date >= ?
-            ORDER BY is_main_guest DESC, id DESC
-        ''', (room_number, check_date.isoformat(), check_date.isoformat()))
-    else:
-        cursor.execute('''
-            SELECT * FROM hotel_guests
-            WHERE room_number = ?
-            ORDER BY is_main_guest DESC, id DESC
-        ''', (room_number,))
+        if check_date:
+            cursor.execute('''
+                SELECT * FROM hotel_guests
+                WHERE room_number = ?
+                  AND arrival_date <= ?
+                  AND departure_date >= ?
+                ORDER BY is_main_guest DESC, id DESC
+            ''', (room_number, check_date.isoformat(), check_date.isoformat()))
+        else:
+            cursor.execute('''
+                SELECT * FROM hotel_guests
+                WHERE room_number = ?
+                ORDER BY is_main_guest DESC, id DESC
+            ''', (room_number,))
 
-    rows = cursor.fetchall()
+        rows = cursor.fetchall()
 
-    # Deduplicate by guest_name (case-insensitive)
-    # Keep the first occurrence (which is the one with is_main_guest=1 or highest ID)
-    seen_names = set()
-    unique_guests = []
-    for row in rows:
-        guest = dict(row)
-        name_key = guest['guest_name'].upper().strip() if guest['guest_name'] else ''
-        if name_key and name_key not in seen_names:
-            seen_names.add(name_key)
-            unique_guests.append(guest)
+        # Deduplicate by guest_name (case-insensitive)
+        # Keep the first occurrence (which is the one with is_main_guest=1 or highest ID)
+        seen_names = set()
+        unique_guests = []
+        for row in rows:
+            guest = dict(row)
+            name_key = guest['guest_name'].upper().strip() if guest['guest_name'] else ''
+            if name_key and name_key not in seen_names:
+                seen_names.add(name_key)
+                unique_guests.append(guest)
 
-    # Sort by is_main_guest DESC, then guest_name for consistent ordering
-    unique_guests.sort(key=lambda g: (-g.get('is_main_guest', 0), g.get('guest_name', '')))
+        # Sort by is_main_guest DESC, then guest_name for consistent ordering
+        unique_guests.sort(key=lambda g: (-g.get('is_main_guest', 0), g.get('guest_name', '')))
 
-    return unique_guests
+        return unique_guests
 
 
 def get_room_guest_count(room_number: str, check_date: date = None) -> int:
@@ -152,20 +152,20 @@ def search_guests(query: str, limit: int = 10) -> List[Dict[str, Any]]:
     Returns:
         List of matching hotel guest dicts
     """
-    db = get_db()
-    cursor = db.cursor()
-    search_term = f'%{query}%'
+    with get_db() as conn:
+        cursor = conn.cursor()
+        search_term = f'%{query}%'
 
-    cursor.execute('''
-        SELECT * FROM hotel_guests
-        WHERE (guest_name LIKE ? OR room_number LIKE ?)
-          AND departure_date >= date("now")
-        ORDER BY room_number, guest_name
-        LIMIT ?
-    ''', (search_term, search_term, limit))
+        cursor.execute('''
+            SELECT * FROM hotel_guests
+            WHERE (guest_name LIKE ? OR room_number LIKE ?)
+              AND departure_date >= date("now")
+            ORDER BY room_number, guest_name
+            LIMIT ?
+        ''', (search_term, search_term, limit))
 
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def create_hotel_guest(
@@ -208,25 +208,25 @@ def create_hotel_guest(
     Returns:
         New hotel guest ID
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        INSERT INTO hotel_guests (
-            room_number, guest_name, arrival_date, departure_date,
+        cursor.execute('''
+            INSERT INTO hotel_guests (
+                room_number, guest_name, arrival_date, departure_date,
+                num_adults, num_children, vip_code, guest_type,
+                nationality, email, phone, notes, source_file, is_main_guest, booking_reference
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            room_number, guest_name,
+            arrival_date.isoformat() if isinstance(arrival_date, date) else arrival_date,
+            departure_date.isoformat() if isinstance(departure_date, date) else departure_date,
             num_adults, num_children, vip_code, guest_type,
             nationality, email, phone, notes, source_file, is_main_guest, booking_reference
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        room_number, guest_name,
-        arrival_date.isoformat() if isinstance(arrival_date, date) else arrival_date,
-        departure_date.isoformat() if isinstance(departure_date, date) else departure_date,
-        num_adults, num_children, vip_code, guest_type,
-        nationality, email, phone, notes, source_file, is_main_guest, booking_reference
-    ))
+        ))
 
-    db.commit()
-    return cursor.lastrowid
+        conn.commit()
+        return cursor.lastrowid
 
 
 def upsert_hotel_guest(
@@ -258,104 +258,104 @@ def upsert_hotel_guest(
     Returns:
         Dict with 'id', 'action', 'is_main_guest', 'room_changed', 'old_room', 'new_room'
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    arrival_str = arrival_date.isoformat() if isinstance(arrival_date, date) else arrival_date
-    departure_str = departure_date.isoformat() if isinstance(departure_date, date) else departure_date
+        arrival_str = arrival_date.isoformat() if isinstance(arrival_date, date) else arrival_date
+        departure_str = departure_date.isoformat() if isinstance(departure_date, date) else departure_date
 
-    existing = None
-    room_changed = False
-    old_room = None
+        existing = None
+        room_changed = False
+        old_room = None
 
-    # Priority 1: Match by booking_reference + guest_name (if booking_reference provided)
-    if booking_reference:
-        cursor.execute('''
-            SELECT id, room_number, is_main_guest FROM hotel_guests
-            WHERE booking_reference = ? AND guest_name = ?
-        ''', (booking_reference, guest_name))
-        existing = cursor.fetchone()
-
-        if existing and existing['room_number'] != room_number:
-            room_changed = True
-            old_room = existing['room_number']
-
-    # Priority 2: Fallback to room + date + name matching
-    if not existing:
-        cursor.execute('''
-            SELECT id, room_number, is_main_guest FROM hotel_guests
-            WHERE room_number = ? AND arrival_date = ? AND guest_name = ?
-        ''', (room_number, arrival_str, guest_name))
-        existing = cursor.fetchone()
-
-    if existing:
-        # Update existing record
-        guest_id = existing['id']
-        is_main = existing['is_main_guest']
-        update_fields = ['departure_date = ?', 'updated_at = CURRENT_TIMESTAMP']
-        update_values = [departure_str]
-
-        # Update room_number if changed
-        if room_changed:
-            update_fields.append('room_number = ?')
-            update_values.append(room_number)
-
-        # Update booking_reference if provided and not already set
+        # Priority 1: Match by booking_reference + guest_name (if booking_reference provided)
         if booking_reference:
-            update_fields.append('booking_reference = ?')
-            update_values.append(booking_reference)
+            cursor.execute('''
+                SELECT id, room_number, is_main_guest FROM hotel_guests
+                WHERE booking_reference = ? AND guest_name = ?
+            ''', (booking_reference, guest_name))
+            existing = cursor.fetchone()
 
-        for field, value in kwargs.items():
-            if value is not None and field != 'is_main_guest':
-                update_fields.append(f'{field} = ?')
-                update_values.append(value)
+            if existing and existing['room_number'] != room_number:
+                room_changed = True
+                old_room = existing['room_number']
 
-        update_values.append(guest_id)
+        # Priority 2: Fallback to room + date + name matching
+        if not existing:
+            cursor.execute('''
+                SELECT id, room_number, is_main_guest FROM hotel_guests
+                WHERE room_number = ? AND arrival_date = ? AND guest_name = ?
+            ''', (room_number, arrival_str, guest_name))
+            existing = cursor.fetchone()
 
-        cursor.execute(f'''
-            UPDATE hotel_guests
-            SET {', '.join(update_fields)}
-            WHERE id = ?
-        ''', update_values)
+        if existing:
+            # Update existing record
+            guest_id = existing['id']
+            is_main = existing['is_main_guest']
+            update_fields = ['departure_date = ?', 'updated_at = CURRENT_TIMESTAMP']
+            update_values = [departure_str]
 
-        db.commit()
-        return {
-            'id': guest_id,
-            'action': 'updated',
-            'is_main_guest': is_main,
-            'room_changed': room_changed,
-            'old_room': old_room,
-            'new_room': room_number if room_changed else None
-        }
-    else:
-        # Check if this is the first guest for this room+date
-        cursor.execute('''
-            SELECT COUNT(*) as count FROM hotel_guests
-            WHERE room_number = ? AND arrival_date = ?
-        ''', (room_number, arrival_str))
-        existing_count = cursor.fetchone()['count']
+            # Update room_number if changed
+            if room_changed:
+                update_fields.append('room_number = ?')
+                update_values.append(room_number)
 
-        # First guest becomes main guest, others are additional
-        is_main_guest = 1 if existing_count == 0 else kwargs.get('is_main_guest', 0)
+            # Update booking_reference if provided and not already set
+            if booking_reference:
+                update_fields.append('booking_reference = ?')
+                update_values.append(booking_reference)
 
-        # Create new record
-        guest_id = create_hotel_guest(
-            room_number=room_number,
-            guest_name=guest_name,
-            arrival_date=arrival_date,
-            departure_date=departure_date,
-            is_main_guest=is_main_guest,
-            booking_reference=booking_reference,
-            **{k: v for k, v in kwargs.items() if k != 'is_main_guest'}
-        )
-        return {
-            'id': guest_id,
-            'action': 'created',
-            'is_main_guest': is_main_guest,
-            'room_changed': False,
-            'old_room': None,
-            'new_room': None
-        }
+            for field, value in kwargs.items():
+                if value is not None and field != 'is_main_guest':
+                    update_fields.append(f'{field} = ?')
+                    update_values.append(value)
+
+            update_values.append(guest_id)
+
+            cursor.execute(f'''
+                UPDATE hotel_guests
+                SET {', '.join(update_fields)}
+                WHERE id = ?
+            ''', update_values)
+
+            conn.commit()
+            return {
+                'id': guest_id,
+                'action': 'updated',
+                'is_main_guest': is_main,
+                'room_changed': room_changed,
+                'old_room': old_room,
+                'new_room': room_number if room_changed else None
+            }
+        else:
+            # Check if this is the first guest for this room+date
+            cursor.execute('''
+                SELECT COUNT(*) as count FROM hotel_guests
+                WHERE room_number = ? AND arrival_date = ?
+            ''', (room_number, arrival_str))
+            existing_count = cursor.fetchone()['count']
+
+            # First guest becomes main guest, others are additional
+            is_main_guest = 1 if existing_count == 0 else kwargs.get('is_main_guest', 0)
+
+            # Create new record
+            guest_id = create_hotel_guest(
+                room_number=room_number,
+                guest_name=guest_name,
+                arrival_date=arrival_date,
+                departure_date=departure_date,
+                is_main_guest=is_main_guest,
+                booking_reference=booking_reference,
+                **{k: v for k, v in kwargs.items() if k != 'is_main_guest'}
+            )
+            return {
+                'id': guest_id,
+                'action': 'created',
+                'is_main_guest': is_main_guest,
+                'room_changed': False,
+                'old_room': None,
+                'new_room': None
+            }
 
 
 def propagate_room_change(
@@ -380,71 +380,71 @@ def propagate_room_change(
     Returns:
         Dict with 'customer_updated', 'customer_id', 'reservations_updated'
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    result = {
-        'customer_updated': False,
-        'customer_id': None,
-        'reservations_updated': 0
-    }
+        result = {
+            'customer_updated': False,
+            'customer_id': None,
+            'reservations_updated': 0
+        }
 
-    # Find the beach_customer (interno with old room + name match)
-    # Use flexible name matching (guest_name could be "First Last" or "Last, First")
-    cursor.execute('''
-        SELECT id, first_name, last_name FROM beach_customers
-        WHERE customer_type = 'interno'
-          AND room_number = ?
-    ''', (old_room,))
+        # Find the beach_customer (interno with old room + name match)
+        # Use flexible name matching (guest_name could be "First Last" or "Last, First")
+        cursor.execute('''
+            SELECT id, first_name, last_name FROM beach_customers
+            WHERE customer_type = 'interno'
+              AND room_number = ?
+        ''', (old_room,))
 
-    customers = cursor.fetchall()
+        customers = cursor.fetchall()
 
-    # Find best match by name
-    matched_customer = None
-    guest_name_normalized = guest_name.lower().strip()
+        # Find best match by name
+        matched_customer = None
+        guest_name_normalized = guest_name.lower().strip()
 
-    for customer in customers:
-        first = (customer['first_name'] or '').lower().strip()
-        last = (customer['last_name'] or '').lower().strip()
-        full_name = f"{first} {last}".strip()
-        full_name_reversed = f"{last} {first}".strip()
+        for customer in customers:
+            first = (customer['first_name'] or '').lower().strip()
+            last = (customer['last_name'] or '').lower().strip()
+            full_name = f"{first} {last}".strip()
+            full_name_reversed = f"{last} {first}".strip()
 
-        # Check if guest_name matches any combination
-        if (guest_name_normalized == full_name or
-            guest_name_normalized == full_name_reversed or
-            guest_name_normalized in full_name or
-            full_name in guest_name_normalized):
-            matched_customer = customer
-            break
+            # Check if guest_name matches any combination
+            if (guest_name_normalized == full_name or
+                guest_name_normalized == full_name_reversed or
+                guest_name_normalized in full_name or
+                full_name in guest_name_normalized):
+                matched_customer = customer
+                break
 
-    if not matched_customer:
+        if not matched_customer:
+            return result
+
+        customer_id = matched_customer['id']
+        result['customer_id'] = customer_id
+
+        # Update customer's room_number
+        cursor.execute('''
+            UPDATE beach_customers
+            SET room_number = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (new_room, customer_id))
+
+        result['customer_updated'] = cursor.rowcount > 0
+
+        # Update current and future reservations (start_date >= today)
+        today = date.today().isoformat()
+        cursor.execute('''
+            UPDATE beach_reservations
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE customer_id = ?
+              AND start_date >= ?
+        ''', (customer_id, today))
+
+        result['reservations_updated'] = cursor.rowcount
+
+        conn.commit()
         return result
-
-    customer_id = matched_customer['id']
-    result['customer_id'] = customer_id
-
-    # Update customer's room_number
-    cursor.execute('''
-        UPDATE beach_customers
-        SET room_number = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    ''', (new_room, customer_id))
-
-    result['customer_updated'] = cursor.rowcount > 0
-
-    # Update current and future reservations (start_date >= today)
-    today = date.today().isoformat()
-    cursor.execute('''
-        UPDATE beach_reservations
-        SET updated_at = CURRENT_TIMESTAMP
-        WHERE customer_id = ?
-          AND start_date >= ?
-    ''', (customer_id, today))
-
-    result['reservations_updated'] = cursor.rowcount
-
-    db.commit()
-    return result
 
 
 def delete_hotel_guest(guest_id: int) -> bool:
@@ -457,11 +457,11 @@ def delete_hotel_guest(guest_id: int) -> bool:
     Returns:
         True if deleted successfully
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('DELETE FROM hotel_guests WHERE id = ?', (guest_id,))
-    db.commit()
-    return cursor.rowcount > 0
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM hotel_guests WHERE id = ?', (guest_id,))
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 def delete_guests_by_source(source_file: str) -> int:
@@ -474,11 +474,11 @@ def delete_guests_by_source(source_file: str) -> int:
     Returns:
         Number of records deleted
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('DELETE FROM hotel_guests WHERE source_file = ?', (source_file,))
-    db.commit()
-    return cursor.rowcount
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM hotel_guests WHERE source_file = ?', (source_file,))
+        conn.commit()
+        return cursor.rowcount
 
 
 def get_guest_count() -> Dict[str, int]:
@@ -488,36 +488,36 @@ def get_guest_count() -> Dict[str, int]:
     Returns:
         Dict with 'total', 'active', 'arriving_today', 'departing_today'
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('SELECT COUNT(*) as count FROM hotel_guests')
-    total = cursor.fetchone()['count']
+        cursor.execute('SELECT COUNT(*) as count FROM hotel_guests')
+        total = cursor.fetchone()['count']
 
-    cursor.execute('''
-        SELECT COUNT(*) as count FROM hotel_guests
-        WHERE departure_date >= date("now")
-    ''')
-    active = cursor.fetchone()['count']
+        cursor.execute('''
+            SELECT COUNT(*) as count FROM hotel_guests
+            WHERE departure_date >= date("now")
+        ''')
+        active = cursor.fetchone()['count']
 
-    cursor.execute('''
-        SELECT COUNT(*) as count FROM hotel_guests
-        WHERE arrival_date = date("now")
-    ''')
-    arriving = cursor.fetchone()['count']
+        cursor.execute('''
+            SELECT COUNT(*) as count FROM hotel_guests
+            WHERE arrival_date = date("now")
+        ''')
+        arriving = cursor.fetchone()['count']
 
-    cursor.execute('''
-        SELECT COUNT(*) as count FROM hotel_guests
-        WHERE departure_date = date("now")
-    ''')
-    departing = cursor.fetchone()['count']
+        cursor.execute('''
+            SELECT COUNT(*) as count FROM hotel_guests
+            WHERE departure_date = date("now")
+        ''')
+        departing = cursor.fetchone()['count']
 
-    return {
-        'total': total,
-        'active': active,
-        'arriving_today': arriving,
-        'departing_today': departing
-    }
+        return {
+            'total': total,
+            'active': active,
+            'arriving_today': arriving,
+            'departing_today': departing
+        }
 
 
 def get_distinct_rooms() -> List[str]:
@@ -527,11 +527,11 @@ def get_distinct_rooms() -> List[str]:
     Returns:
         List of room numbers
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT DISTINCT room_number FROM hotel_guests
-        WHERE departure_date >= date("now")
-        ORDER BY CAST(room_number AS INTEGER), room_number
-    ''')
-    return [row['room_number'] for row in cursor.fetchall()]
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT DISTINCT room_number FROM hotel_guests
+            WHERE departure_date >= date("now")
+            ORDER BY CAST(room_number AS INTEGER), room_number
+        ''')
+        return [row['room_number'] for row in cursor.fetchall()]

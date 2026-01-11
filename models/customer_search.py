@@ -67,168 +67,168 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
         - source='customer': from beach_customers table
         - source='hotel_guest': from hotel_guests table
     """
-    db = get_db()
-    cursor = db.cursor()
-    results = []
+    with get_db() as conn:
+        cursor = conn.cursor()
+        results = []
 
-    # Normalize the query for accent-insensitive search
-    normalized_query = normalize_text(query)
-    search_words = normalized_query.split()
+        # Normalize the query for accent-insensitive search
+        normalized_query = normalize_text(query)
+        search_words = normalized_query.split()
 
-    if not search_words:
-        return []
+        if not search_words:
+            return []
 
-    # Build SQL LIKE patterns for pre-filtering (improves performance)
-    like_patterns = [f'%{word}%' for word in search_words]
+        # Build SQL LIKE patterns for pre-filtering (improves performance)
+        like_patterns = [f'%{word}%' for word in search_words]
 
-    # Search beach_customers with SQL pre-filtering
-    customer_query = '''
-        SELECT c.*, 'customer' as source
-        FROM beach_customers c
-        WHERE 1=1
-    '''
-    params = []
-
-    # Add SQL-level filtering for each word
-    for pattern in like_patterns:
-        customer_query += '''
-            AND (LOWER(c.first_name || ' ' || COALESCE(c.last_name, '')) LIKE ?
-                 OR LOWER(c.email) LIKE ?
-                 OR c.phone LIKE ?
-                 OR c.room_number LIKE ?)
+        # Search beach_customers with SQL pre-filtering
+        customer_query = '''
+            SELECT c.*, 'customer' as source
+            FROM beach_customers c
+            WHERE 1=1
         '''
-        params.extend([pattern, pattern, pattern, pattern])
-
-    if customer_type:
-        customer_query += ' AND c.customer_type = ?'
-        params.append(customer_type)
-
-    customer_query += ' ORDER BY c.total_visits DESC, c.created_at DESC LIMIT ?'
-    params.append(limit * 5)
-
-    cursor.execute(customer_query, params)
-
-    customer_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number']
-    from datetime import date
-    today = date.today()
-
-    for row in cursor.fetchall():
-        customer = dict(row)
-        # Python-side filtering for accent-insensitive matching
-        if _matches_search(customer, search_words, customer_fields):
-            customer['display_name'] = f"{customer['first_name']} {customer['last_name'] or ''}".strip()
-
-            # For interno customers, check hotel guest data for check-in/check-out today
-            customer['is_checkin_today'] = False
-            customer['is_checkout_today'] = False
-            if customer.get('customer_type') == 'interno' and customer.get('room_number'):
-                cursor.execute('''
-                    SELECT arrival_date, departure_date
-                    FROM hotel_guests
-                    WHERE room_number = ?
-                      AND departure_date >= date('now')
-                      AND arrival_date <= date('now')
-                    ORDER BY (arrival_date = date('now')) DESC,
-                             (departure_date = date('now')) DESC
-                    LIMIT 1
-                ''', (customer['room_number'],))
-                hotel_row = cursor.fetchone()
-                if hotel_row:
-                    arrival = hotel_row['arrival_date']
-                    departure = hotel_row['departure_date']
-                    if isinstance(arrival, str):
-                        customer['is_checkin_today'] = arrival == today.isoformat()
-                    else:
-                        customer['is_checkin_today'] = arrival == today
-                    if isinstance(departure, str):
-                        customer['is_checkout_today'] = departure == today.isoformat()
-                    else:
-                        customer['is_checkout_today'] = departure == today
-                else:
-                    # No active hotel stay - skip this interno customer
-                    continue
-
-            results.append(customer)
-            if len(results) >= limit:
-                break
-
-    # Search hotel_guests (only if customer_type is not 'externo')
-    if customer_type != 'externo' and len(results) < limit:
-        guest_query = '''
-            SELECT h.*,
-                   'hotel_guest' as source,
-                   (SELECT COUNT(*) FROM hotel_guests h2
-                    WHERE h2.room_number = h.room_number
-                      AND h2.arrival_date = h.arrival_date
-                      AND h2.departure_date >= date('now')) as room_guest_count
-            FROM hotel_guests h
-            WHERE h.departure_date >= date('now')
-              AND h.arrival_date <= date('now')
-        '''
-        guest_params = []
+        params = []
 
         # Add SQL-level filtering for each word
         for pattern in like_patterns:
-            guest_query += '''
-                AND (LOWER(h.guest_name) LIKE ?
-                     OR h.room_number LIKE ?
-                     OR LOWER(h.email) LIKE ?
-                     OR h.phone LIKE ?)
+            customer_query += '''
+                AND (LOWER(c.first_name || ' ' || COALESCE(c.last_name, '')) LIKE ?
+                     OR LOWER(c.email) LIKE ?
+                     OR c.phone LIKE ?
+                     OR c.room_number LIKE ?)
             '''
-            guest_params.extend([pattern, pattern, pattern, pattern])
+            params.extend([pattern, pattern, pattern, pattern])
 
-        guest_query += '''
-            ORDER BY h.room_number,
-                     (h.arrival_date = date('now')) DESC,
-                     (h.departure_date = date('now')) DESC,
-                     h.is_main_guest DESC,
-                     h.guest_name
-            LIMIT ?
-        '''
-        guest_params.append(limit * 5)
+        if customer_type:
+            customer_query += ' AND c.customer_type = ?'
+            params.append(customer_type)
 
-        cursor.execute(guest_query, guest_params)
+        customer_query += ' ORDER BY c.total_visits DESC, c.created_at DESC LIMIT ?'
+        params.append(limit * 5)
 
-        # Get existing customer room numbers to avoid duplicates
-        existing_rooms = {c['room_number'] for c in results if c.get('room_number') and c.get('customer_type') == 'interno'}
-        # Track rooms we've already added from hotel_guests (show only main guest per room)
-        added_rooms = set()
+        cursor.execute(customer_query, params)
 
-        guest_fields = ['guest_name', 'room_number', 'email', 'phone']
+        customer_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number']
+        from datetime import date
+        today = date.today()
+
         for row in cursor.fetchall():
-            guest = dict(row)
-            room = guest['room_number']
-            # Skip if already have a customer with this room number
-            if room in existing_rooms:
-                continue
-            # Skip if we already added a guest from this room (show only main guest)
-            if room in added_rooms:
-                continue
+            customer = dict(row)
             # Python-side filtering for accent-insensitive matching
-            if _matches_search(guest, search_words, guest_fields):
-                guest_count = guest.get('room_guest_count', 1)
-                guest['display_name'] = guest['guest_name'] + (f" ({guest_count} huéspedes)" if guest_count > 1 else "")
-                guest['customer_type'] = 'interno'  # Hotel guests are always interno
-                # Check-in/Check-out today flags (compare date objects or strings)
-                from datetime import date
-                today = date.today()
-                arrival = guest.get('arrival_date')
-                departure = guest.get('departure_date')
-                # Handle both date objects and strings
-                if isinstance(arrival, str):
-                    guest['is_checkin_today'] = arrival == today.isoformat()
-                else:
-                    guest['is_checkin_today'] = arrival == today
-                if isinstance(departure, str):
-                    guest['is_checkout_today'] = departure == today.isoformat()
-                else:
-                    guest['is_checkout_today'] = departure == today
-                results.append(guest)
-                added_rooms.add(room)
+            if _matches_search(customer, search_words, customer_fields):
+                customer['display_name'] = f"{customer['first_name']} {customer['last_name'] or ''}".strip()
+
+                # For interno customers, check hotel guest data for check-in/check-out today
+                customer['is_checkin_today'] = False
+                customer['is_checkout_today'] = False
+                if customer.get('customer_type') == 'interno' and customer.get('room_number'):
+                    cursor.execute('''
+                        SELECT arrival_date, departure_date
+                        FROM hotel_guests
+                        WHERE room_number = ?
+                          AND departure_date >= date('now')
+                          AND arrival_date <= date('now')
+                        ORDER BY (arrival_date = date('now')) DESC,
+                                 (departure_date = date('now')) DESC
+                        LIMIT 1
+                    ''', (customer['room_number'],))
+                    hotel_row = cursor.fetchone()
+                    if hotel_row:
+                        arrival = hotel_row['arrival_date']
+                        departure = hotel_row['departure_date']
+                        if isinstance(arrival, str):
+                            customer['is_checkin_today'] = arrival == today.isoformat()
+                        else:
+                            customer['is_checkin_today'] = arrival == today
+                        if isinstance(departure, str):
+                            customer['is_checkout_today'] = departure == today.isoformat()
+                        else:
+                            customer['is_checkout_today'] = departure == today
+                    else:
+                        # No active hotel stay - skip this interno customer
+                        continue
+
+                results.append(customer)
                 if len(results) >= limit:
                     break
 
-    return results[:limit]
+        # Search hotel_guests (only if customer_type is not 'externo')
+        if customer_type != 'externo' and len(results) < limit:
+            guest_query = '''
+                SELECT h.*,
+                       'hotel_guest' as source,
+                       (SELECT COUNT(*) FROM hotel_guests h2
+                        WHERE h2.room_number = h.room_number
+                          AND h2.arrival_date = h.arrival_date
+                          AND h2.departure_date >= date('now')) as room_guest_count
+                FROM hotel_guests h
+                WHERE h.departure_date >= date('now')
+                  AND h.arrival_date <= date('now')
+            '''
+            guest_params = []
+
+            # Add SQL-level filtering for each word
+            for pattern in like_patterns:
+                guest_query += '''
+                    AND (LOWER(h.guest_name) LIKE ?
+                         OR h.room_number LIKE ?
+                         OR LOWER(h.email) LIKE ?
+                         OR h.phone LIKE ?)
+                '''
+                guest_params.extend([pattern, pattern, pattern, pattern])
+
+            guest_query += '''
+                ORDER BY h.room_number,
+                         (h.arrival_date = date('now')) DESC,
+                         (h.departure_date = date('now')) DESC,
+                         h.is_main_guest DESC,
+                         h.guest_name
+                LIMIT ?
+            '''
+            guest_params.append(limit * 5)
+
+            cursor.execute(guest_query, guest_params)
+
+            # Get existing customer room numbers to avoid duplicates
+            existing_rooms = {c['room_number'] for c in results if c.get('room_number') and c.get('customer_type') == 'interno'}
+            # Track rooms we've already added from hotel_guests (show only main guest per room)
+            added_rooms = set()
+
+            guest_fields = ['guest_name', 'room_number', 'email', 'phone']
+            for row in cursor.fetchall():
+                guest = dict(row)
+                room = guest['room_number']
+                # Skip if already have a customer with this room number
+                if room in existing_rooms:
+                    continue
+                # Skip if we already added a guest from this room (show only main guest)
+                if room in added_rooms:
+                    continue
+                # Python-side filtering for accent-insensitive matching
+                if _matches_search(guest, search_words, guest_fields):
+                    guest_count = guest.get('room_guest_count', 1)
+                    guest['display_name'] = guest['guest_name'] + (f" ({guest_count} huéspedes)" if guest_count > 1 else "")
+                    guest['customer_type'] = 'interno'  # Hotel guests are always interno
+                    # Check-in/Check-out today flags (compare date objects or strings)
+                    from datetime import date
+                    today = date.today()
+                    arrival = guest.get('arrival_date')
+                    departure = guest.get('departure_date')
+                    # Handle both date objects and strings
+                    if isinstance(arrival, str):
+                        guest['is_checkin_today'] = arrival == today.isoformat()
+                    else:
+                        guest['is_checkin_today'] = arrival == today
+                    if isinstance(departure, str):
+                        guest['is_checkout_today'] = departure == today.isoformat()
+                    else:
+                        guest['is_checkout_today'] = departure == today
+                    results.append(guest)
+                    added_rooms.add(room)
+                    if len(results) >= limit:
+                        break
+
+        return results[:limit]
 
 
 # =============================================================================
@@ -250,90 +250,90 @@ def create_customer_from_hotel_guest(hotel_guest_id: int, additional_data: dict 
     Raises:
         ValueError if hotel guest not found or customer already exists for room
     """
-    db = get_db()
-    cursor = db.cursor()
-    additional_data = additional_data or {}
+    with get_db() as conn:
+        cursor = conn.cursor()
+        additional_data = additional_data or {}
 
-    # Get hotel guest
-    cursor.execute('SELECT * FROM hotel_guests WHERE id = ?', (hotel_guest_id,))
-    guest = cursor.fetchone()
+        # Get hotel guest
+        cursor.execute('SELECT * FROM hotel_guests WHERE id = ?', (hotel_guest_id,))
+        guest = cursor.fetchone()
 
-    if not guest:
-        raise ValueError('Huesped no encontrado')
+        if not guest:
+            raise ValueError('Huesped no encontrado')
 
-    guest = dict(guest)
+        guest = dict(guest)
 
-    # Check if customer already exists for this room with this name
-    cursor.execute('''
-        SELECT id FROM beach_customers
-        WHERE customer_type = 'interno' AND room_number = ?
-          AND (first_name || ' ' || COALESCE(last_name, '')) LIKE ?
-    ''', (guest['room_number'], f"%{guest['guest_name']}%"))
-    existing = cursor.fetchone()
+        # Check if customer already exists for this room with this name
+        cursor.execute('''
+            SELECT id FROM beach_customers
+            WHERE customer_type = 'interno' AND room_number = ?
+              AND (first_name || ' ' || COALESCE(last_name, '')) LIKE ?
+        ''', (guest['room_number'], f"%{guest['guest_name']}%"))
+        existing = cursor.fetchone()
 
-    if existing:
-        # Return existing customer instead of creating duplicate
-        return {
-            'customer_id': existing['id'],
-            'customer': get_customer_by_id(existing['id']),
-            'action': 'existing'
+        if existing:
+            # Return existing customer instead of creating duplicate
+            return {
+                'customer_id': existing['id'],
+                'customer': get_customer_by_id(existing['id']),
+                'action': 'existing'
+            }
+
+        # Parse guest_name into first_name and last_name
+        name_parts = guest['guest_name'].strip().split(' ', 1) if guest['guest_name'] else ['', '']
+        first_name = name_parts[0] if name_parts else ''
+        last_name = name_parts[1] if len(name_parts) > 1 else ''
+
+        # Determine VIP status from vip_code
+        vip_status = 1 if guest.get('vip_code') else 0
+
+        # Map nationality to language
+        nationality_to_language = {
+            'DE': 'DE', 'AT': 'DE', 'CH': 'DE',
+            'GB': 'EN', 'US': 'EN', 'AU': 'EN', 'UK': 'EN', 'IE': 'EN',
+            'ES': 'ES', 'MX': 'ES', 'AR': 'ES', 'CO': 'ES',
+            'FR': 'FR', 'BE': 'FR',
+            'IT': 'IT',
+            'PT': 'PT', 'BR': 'PT',
+            'NL': 'NL',
+            'RU': 'RU',
         }
+        nationality = guest.get('nationality', '').upper().strip() if guest.get('nationality') else None
+        language = additional_data.get('language') or nationality_to_language.get(nationality)
 
-    # Parse guest_name into first_name and last_name
-    name_parts = guest['guest_name'].strip().split(' ', 1) if guest['guest_name'] else ['', '']
-    first_name = name_parts[0] if name_parts else ''
-    last_name = name_parts[1] if len(name_parts) > 1 else ''
+        # Use additional data if provided, otherwise use hotel guest data
+        email = additional_data.get('email') or guest.get('email')
+        phone = additional_data.get('phone') or guest.get('phone')
+        country_code = additional_data.get('country_code', '+34')
+        notes = additional_data.get('notes') or f"Huesped hotel (llegada: {guest.get('arrival_date')}, salida: {guest.get('departure_date')})"
 
-    # Determine VIP status from vip_code
-    vip_status = 1 if guest.get('vip_code') else 0
+        # Create beach_customer
+        cursor.execute('''
+            INSERT INTO beach_customers
+            (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status, language, country_code)
+            VALUES ('interno', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            first_name, last_name,
+            email, phone,
+            guest['room_number'],
+            notes,
+            vip_status,
+            language,
+            country_code
+        ))
 
-    # Map nationality to language
-    nationality_to_language = {
-        'DE': 'DE', 'AT': 'DE', 'CH': 'DE',
-        'GB': 'EN', 'US': 'EN', 'AU': 'EN', 'UK': 'EN', 'IE': 'EN',
-        'ES': 'ES', 'MX': 'ES', 'AR': 'ES', 'CO': 'ES',
-        'FR': 'FR', 'BE': 'FR',
-        'IT': 'IT',
-        'PT': 'PT', 'BR': 'PT',
-        'NL': 'NL',
-        'RU': 'RU',
-    }
-    nationality = guest.get('nationality', '').upper().strip() if guest.get('nationality') else None
-    language = additional_data.get('language') or nationality_to_language.get(nationality)
+        conn.commit()
+        customer_id = cursor.lastrowid
 
-    # Use additional data if provided, otherwise use hotel guest data
-    email = additional_data.get('email') or guest.get('email')
-    phone = additional_data.get('phone') or guest.get('phone')
-    country_code = additional_data.get('country_code', '+34')
-    notes = additional_data.get('notes') or f"Huesped hotel (llegada: {guest.get('arrival_date')}, salida: {guest.get('departure_date')})"
+        # Set preferences if provided
+        if additional_data.get('preferences'):
+            set_customer_preferences(customer_id, additional_data['preferences'])
 
-    # Create beach_customer
-    cursor.execute('''
-        INSERT INTO beach_customers
-        (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status, language, country_code)
-        VALUES ('interno', ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        first_name, last_name,
-        email, phone,
-        guest['room_number'],
-        notes,
-        vip_status,
-        language,
-        country_code
-    ))
-
-    db.commit()
-    customer_id = cursor.lastrowid
-
-    # Set preferences if provided
-    if additional_data.get('preferences'):
-        set_customer_preferences(customer_id, additional_data['preferences'])
-
-    return {
-        'customer_id': customer_id,
-        'customer': get_customer_by_id(customer_id),
-        'action': 'created'
-    }
+        return {
+            'customer_id': customer_id,
+            'customer': get_customer_by_id(customer_id),
+            'action': 'created'
+        }
 
 
 # =============================================================================
@@ -356,9 +356,6 @@ def merge_customers(source_id: int, target_id: int) -> bool:
     Raises:
         ValueError if source or target not found
     """
-    db = get_db()
-    cursor = db.cursor()
-
     # Validate both customers exist
     source = get_customer_by_id(source_id)
     target = get_customer_by_id(target_id)
@@ -370,47 +367,50 @@ def merge_customers(source_id: int, target_id: int) -> bool:
     if source_id == target_id:
         raise ValueError('No se puede fusionar un cliente consigo mismo')
 
-    try:
-        db.execute('BEGIN IMMEDIATE')
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-        # Transfer reservations
-        cursor.execute('''
-            UPDATE beach_reservations
-            SET customer_id = ?
-            WHERE customer_id = ?
-        ''', (target_id, source_id))
+        try:
+            conn.execute('BEGIN IMMEDIATE')
 
-        # Transfer preferences (ignore duplicates)
-        cursor.execute('''
-            INSERT OR IGNORE INTO beach_customer_preferences (customer_id, preference_id)
-            SELECT ?, preference_id FROM beach_customer_preferences WHERE customer_id = ?
-        ''', (target_id, source_id))
+            # Transfer reservations
+            cursor.execute('''
+                UPDATE beach_reservations
+                SET customer_id = ?
+                WHERE customer_id = ?
+            ''', (target_id, source_id))
 
-        # Transfer tags (ignore duplicates)
-        cursor.execute('''
-            INSERT OR IGNORE INTO beach_customer_tags (customer_id, tag_id)
-            SELECT ?, tag_id FROM beach_customer_tags WHERE customer_id = ?
-        ''', (target_id, source_id))
+            # Transfer preferences (ignore duplicates)
+            cursor.execute('''
+                INSERT OR IGNORE INTO beach_customer_preferences (customer_id, preference_id)
+                SELECT ?, preference_id FROM beach_customer_preferences WHERE customer_id = ?
+            ''', (target_id, source_id))
 
-        # Update target stats
-        cursor.execute('''
-            UPDATE beach_customers
-            SET total_visits = total_visits + ?,
-                total_spent = total_spent + ?,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        ''', (source['total_visits'], source['total_spent'], target_id))
+            # Transfer tags (ignore duplicates)
+            cursor.execute('''
+                INSERT OR IGNORE INTO beach_customer_tags (customer_id, tag_id)
+                SELECT ?, tag_id FROM beach_customer_tags WHERE customer_id = ?
+            ''', (target_id, source_id))
 
-        # Delete source customer preferences and tags
-        cursor.execute('DELETE FROM beach_customer_preferences WHERE customer_id = ?', (source_id,))
-        cursor.execute('DELETE FROM beach_customer_tags WHERE customer_id = ?', (source_id,))
+            # Update target stats
+            cursor.execute('''
+                UPDATE beach_customers
+                SET total_visits = total_visits + ?,
+                    total_spent = total_spent + ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (source['total_visits'], source['total_spent'], target_id))
 
-        # Delete source customer
-        cursor.execute('DELETE FROM beach_customers WHERE id = ?', (source_id,))
+            # Delete source customer preferences and tags
+            cursor.execute('DELETE FROM beach_customer_preferences WHERE customer_id = ?', (source_id,))
+            cursor.execute('DELETE FROM beach_customer_tags WHERE customer_id = ?', (source_id,))
 
-        db.commit()
-        return True
+            # Delete source customer
+            cursor.execute('DELETE FROM beach_customers WHERE id = ?', (source_id,))
 
-    except Exception as e:
-        db.rollback()
-        raise e
+            conn.commit()
+            return True
+
+        except Exception as e:
+            conn.rollback()
+            raise e

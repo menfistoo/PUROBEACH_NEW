@@ -16,24 +16,24 @@ def get_all_preferences(active_only: bool = True) -> list:
     Returns:
         List of preference dicts
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT p.*,
-               (SELECT COUNT(*) FROM beach_customer_preferences
-                WHERE preference_id = p.id) as usage_count
-        FROM beach_preferences p
-    '''
+        query = '''
+            SELECT p.*,
+                   (SELECT COUNT(*) FROM beach_customer_preferences
+                    WHERE preference_id = p.id) as usage_count
+            FROM beach_preferences p
+        '''
 
-    if active_only:
-        query += ' WHERE p.active = 1'
+        if active_only:
+            query += ' WHERE p.active = 1'
 
-    query += ' ORDER BY p.name'
+        query += ' ORDER BY p.name'
 
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_preference_by_id(preference_id: int) -> dict:
@@ -46,11 +46,11 @@ def get_preference_by_id(preference_id: int) -> dict:
     Returns:
         Preference dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_preferences WHERE id = ?', (preference_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_preferences WHERE id = ?', (preference_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_preference_by_code(code: str) -> dict:
@@ -63,11 +63,11 @@ def get_preference_by_code(code: str) -> dict:
     Returns:
         Preference dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_preferences WHERE code = ?', (code,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_preferences WHERE code = ?', (code,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def create_preference(code: str, name: str, description: str = None,
@@ -88,21 +88,21 @@ def create_preference(code: str, name: str, description: str = None,
     Raises:
         ValueError if code already exists
     """
-    db = get_db()
-    cursor = db.cursor()
-
     # Check if code exists
     existing = get_preference_by_code(code)
     if existing:
         raise ValueError(f'Ya existe una preferencia con el codigo "{code}"')
 
-    cursor.execute('''
-        INSERT INTO beach_preferences (code, name, description, icon, maps_to_feature)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (code, name, description, icon, maps_to_feature))
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    db.commit()
-    return cursor.lastrowid
+        cursor.execute('''
+            INSERT INTO beach_preferences (code, name, description, icon, maps_to_feature)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (code, name, description, icon, maps_to_feature))
+
+        conn.commit()
+        return cursor.lastrowid
 
 
 def update_preference(preference_id: int, **kwargs) -> bool:
@@ -116,8 +116,6 @@ def update_preference(preference_id: int, **kwargs) -> bool:
     Returns:
         True if updated successfully
     """
-    db = get_db()
-
     allowed_fields = ['name', 'description', 'icon', 'maps_to_feature', 'active']
     updates = []
     values = []
@@ -133,11 +131,12 @@ def update_preference(preference_id: int, **kwargs) -> bool:
     values.append(preference_id)
     query = f'UPDATE beach_preferences SET {", ".join(updates)} WHERE id = ?'
 
-    cursor = db.cursor()
-    cursor.execute(query, values)
-    db.commit()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, values)
+        conn.commit()
 
-    return cursor.rowcount > 0
+        return cursor.rowcount > 0
 
 
 def delete_preference(preference_id: int) -> bool:
@@ -150,16 +149,16 @@ def delete_preference(preference_id: int) -> bool:
     Returns:
         True if deleted successfully
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        UPDATE beach_preferences SET active = 0
-        WHERE id = ?
-    ''', (preference_id,))
+        cursor.execute('''
+            UPDATE beach_preferences SET active = 0
+            WHERE id = ?
+        ''', (preference_id,))
 
-    db.commit()
-    return cursor.rowcount > 0
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 def get_customer_preferences(customer_id: int) -> list:
@@ -172,17 +171,17 @@ def get_customer_preferences(customer_id: int) -> list:
     Returns:
         List of preference dicts
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT p.*
-        FROM beach_preferences p
-        JOIN beach_customer_preferences cp ON p.id = cp.preference_id
-        WHERE cp.customer_id = ?
-        ORDER BY p.name
-    ''', (customer_id,))
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT p.*
+            FROM beach_preferences p
+            JOIN beach_customer_preferences cp ON p.id = cp.preference_id
+            WHERE cp.customer_id = ?
+            ORDER BY p.name
+        ''', (customer_id,))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def assign_preference_to_customer(customer_id: int, preference_id: int) -> bool:
@@ -196,18 +195,18 @@ def assign_preference_to_customer(customer_id: int, preference_id: int) -> bool:
     Returns:
         True if assigned successfully
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    try:
-        cursor.execute('''
-            INSERT OR IGNORE INTO beach_customer_preferences (customer_id, preference_id)
-            VALUES (?, ?)
-        ''', (customer_id, preference_id))
-        db.commit()
-        return True
-    except Exception:
-        return False
+        try:
+            cursor.execute('''
+                INSERT OR IGNORE INTO beach_customer_preferences (customer_id, preference_id)
+                VALUES (?, ?)
+            ''', (customer_id, preference_id))
+            conn.commit()
+            return True
+        except Exception:
+            return False
 
 
 def remove_preference_from_customer(customer_id: int, preference_id: int) -> bool:
@@ -221,16 +220,16 @@ def remove_preference_from_customer(customer_id: int, preference_id: int) -> boo
     Returns:
         True if removed successfully
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        DELETE FROM beach_customer_preferences
-        WHERE customer_id = ? AND preference_id = ?
-    ''', (customer_id, preference_id))
+        cursor.execute('''
+            DELETE FROM beach_customer_preferences
+            WHERE customer_id = ? AND preference_id = ?
+        ''', (customer_id, preference_id))
 
-    db.commit()
-    return cursor.rowcount > 0
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 def get_preference_ids_by_codes(codes: list) -> list:
@@ -246,16 +245,16 @@ def get_preference_ids_by_codes(codes: list) -> list:
     if not codes:
         return []
 
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    placeholders = ','.join(['?' for _ in codes])
-    cursor.execute(f'''
-        SELECT id FROM beach_preferences
-        WHERE code IN ({placeholders})
-    ''', codes)
+        placeholders = ','.join(['?' for _ in codes])
+        cursor.execute(f'''
+            SELECT id FROM beach_preferences
+            WHERE code IN ({placeholders})
+        ''', codes)
 
-    return [row['id'] for row in cursor.fetchall()]
+        return [row['id'] for row in cursor.fetchall()]
 
 
 def set_customer_preferences_by_codes(customer_id: int, codes: list) -> bool:
@@ -270,24 +269,24 @@ def set_customer_preferences_by_codes(customer_id: int, codes: list) -> bool:
     Returns:
         True if updated successfully
     """
-    db = get_db()
-    cursor = db.cursor()
-
     # Get preference IDs from codes
     preference_ids = get_preference_ids_by_codes(codes)
 
-    # Delete existing preferences
-    cursor.execute('''
-        DELETE FROM beach_customer_preferences
-        WHERE customer_id = ?
-    ''', (customer_id,))
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    # Insert new preferences
-    for pref_id in preference_ids:
+        # Delete existing preferences
         cursor.execute('''
-            INSERT OR IGNORE INTO beach_customer_preferences (customer_id, preference_id)
-            VALUES (?, ?)
-        ''', (customer_id, pref_id))
+            DELETE FROM beach_customer_preferences
+            WHERE customer_id = ?
+        ''', (customer_id,))
 
-    db.commit()
-    return True
+        # Insert new preferences
+        for pref_id in preference_ids:
+            cursor.execute('''
+                INSERT OR IGNORE INTO beach_customer_preferences (customer_id, preference_id)
+                VALUES (?, ?)
+            ''', (customer_id, pref_id))
+
+        conn.commit()
+        return True

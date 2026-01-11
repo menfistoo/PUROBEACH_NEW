@@ -18,23 +18,23 @@ def get_all_states(active_only: bool = True) -> list:
     Returns:
         List of state dictionaries ordered by display_order
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT s.*,
-               (SELECT COUNT(*) FROM beach_reservations
-                WHERE current_state = s.name) as usage_count
-        FROM beach_reservation_states s
-    '''
+        query = '''
+            SELECT s.*,
+                   (SELECT COUNT(*) FROM beach_reservations
+                    WHERE current_state = s.name) as usage_count
+            FROM beach_reservation_states s
+        '''
 
-    if active_only:
-        query += ' WHERE s.active = 1'
+        if active_only:
+            query += ' WHERE s.active = 1'
 
-    query += ' ORDER BY s.display_order'
+        query += ' ORDER BY s.display_order'
 
-    cursor.execute(query)
-    return [dict(row) for row in cursor.fetchall()]
+        cursor.execute(query)
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def get_state_by_id(state_id: int) -> dict:
@@ -47,11 +47,11 @@ def get_state_by_id(state_id: int) -> dict:
     Returns:
         State dictionary or None
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_reservation_states WHERE id = ?', (state_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_reservation_states WHERE id = ?', (state_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_state_by_code(code: str) -> dict:
@@ -64,11 +64,11 @@ def get_state_by_code(code: str) -> dict:
     Returns:
         State dictionary or None
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_reservation_states WHERE code = ?', (code,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_reservation_states WHERE code = ?', (code,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_state_by_name(name: str) -> dict:
@@ -81,11 +81,11 @@ def get_state_by_name(name: str) -> dict:
     Returns:
         State dictionary or None
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_reservation_states WHERE name = ?', (name,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_reservation_states WHERE name = ?', (name,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_default_state() -> dict:
@@ -95,27 +95,27 @@ def get_default_state() -> dict:
     Returns:
         State record with is_default=1, or first active state as fallback
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        SELECT * FROM beach_reservation_states
-        WHERE is_default = 1 AND active = 1
-        LIMIT 1
-    ''')
-    row = cursor.fetchone()
-    if row:
-        return dict(row)
+        cursor.execute('''
+            SELECT * FROM beach_reservation_states
+            WHERE is_default = 1 AND active = 1
+            LIMIT 1
+        ''')
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
 
-    # Fallback: first active state
-    cursor.execute('''
-        SELECT * FROM beach_reservation_states
-        WHERE active = 1
-        ORDER BY display_order
-        LIMIT 1
-    ''')
-    row = cursor.fetchone()
-    return dict(row) if row else {'name': 'Confirmada', 'code': 'confirmada'}
+        # Fallback: first active state
+        cursor.execute('''
+            SELECT * FROM beach_reservation_states
+            WHERE active = 1
+            ORDER BY display_order
+            LIMIT 1
+        ''')
+        row = cursor.fetchone()
+        return dict(row) if row else {'name': 'Confirmada', 'code': 'confirmada'}
 
 
 def get_state_priority_map() -> dict:
@@ -125,14 +125,14 @@ def get_state_priority_map() -> dict:
     Returns:
         dict: {state_name: priority} mapping
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT name, display_priority
-        FROM beach_reservation_states
-        WHERE active = 1
-    ''')
-    return {row['name']: row['display_priority'] for row in cursor.fetchall()}
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT name, display_priority
+            FROM beach_reservation_states
+            WHERE active = 1
+        ''')
+        return {row['name']: row['display_priority'] for row in cursor.fetchall()}
 
 
 def get_incident_states() -> list:
@@ -142,13 +142,13 @@ def get_incident_states() -> list:
     Returns:
         List of state names with creates_incident=1
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT name FROM beach_reservation_states
-        WHERE creates_incident = 1 AND active = 1
-    ''')
-    return [row['name'] for row in cursor.fetchall()]
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT name FROM beach_reservation_states
+            WHERE creates_incident = 1 AND active = 1
+        ''')
+        return [row['name'] for row in cursor.fetchall()]
 
 
 def get_releasing_states() -> list:
@@ -158,13 +158,13 @@ def get_releasing_states() -> list:
     Returns:
         List of state names with is_availability_releasing=1
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT name FROM beach_reservation_states
-        WHERE is_availability_releasing = 1 AND active = 1
-    ''')
-    return [row['name'] for row in cursor.fetchall()]
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT name FROM beach_reservation_states
+            WHERE is_availability_releasing = 1 AND active = 1
+        ''')
+        return [row['name'] for row in cursor.fetchall()]
 
 
 def create_state(
@@ -194,29 +194,29 @@ def create_state(
     Raises:
         ValueError: If code already exists
     """
-    db = get_db()
-    cursor = db.cursor()
-
     # Check uniqueness
     existing = get_state_by_code(code)
     if existing:
         raise ValueError(f'Ya existe un estado con el codigo "{code}"')
 
-    # Get next display_order
-    cursor.execute('SELECT MAX(display_order) as max_order FROM beach_reservation_states')
-    row = cursor.fetchone()
-    next_order = (row['max_order'] or 0) + 1
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        INSERT INTO beach_reservation_states
-        (code, name, color, icon, is_availability_releasing, display_order,
-         display_priority, creates_incident, is_system, is_default, active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 1)
-    ''', (code, name, color, icon, is_availability_releasing, next_order,
-          display_priority, creates_incident))
+        # Get next display_order
+        cursor.execute('SELECT MAX(display_order) as max_order FROM beach_reservation_states')
+        row = cursor.fetchone()
+        next_order = (row['max_order'] or 0) + 1
 
-    db.commit()
-    return cursor.lastrowid
+        cursor.execute('''
+            INSERT INTO beach_reservation_states
+            (code, name, color, icon, is_availability_releasing, display_order,
+             display_priority, creates_incident, is_system, is_default, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 1)
+        ''', (code, name, color, icon, is_availability_releasing, next_order,
+              display_priority, creates_incident))
+
+        conn.commit()
+        return cursor.lastrowid
 
 
 def update_state(state_id: int, **kwargs) -> bool:
@@ -232,9 +232,6 @@ def update_state(state_id: int, **kwargs) -> bool:
     Returns:
         True if updated, False if no changes
     """
-    db = get_db()
-    cursor = db.cursor()
-
     # Check if system state
     state = get_state_by_id(state_id)
     if not state:
@@ -262,17 +259,20 @@ def update_state(state_id: int, **kwargs) -> bool:
     if not updates:
         return False
 
-    # If setting is_default=1, clear other defaults
-    if kwargs.get('is_default') == 1:
-        cursor.execute('UPDATE beach_reservation_states SET is_default = 0')
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    values.append(state_id)
-    query = f'UPDATE beach_reservation_states SET {", ".join(updates)} WHERE id = ?'
+        # If setting is_default=1, clear other defaults
+        if kwargs.get('is_default') == 1:
+            cursor.execute('UPDATE beach_reservation_states SET is_default = 0')
 
-    cursor.execute(query, values)
-    db.commit()
+        values.append(state_id)
+        query = f'UPDATE beach_reservation_states SET {", ".join(updates)} WHERE id = ?'
 
-    return cursor.rowcount > 0
+        cursor.execute(query, values)
+        conn.commit()
+
+        return cursor.rowcount > 0
 
 
 def delete_state(state_id: int) -> bool:
@@ -290,9 +290,6 @@ def delete_state(state_id: int) -> bool:
     Raises:
         ValueError: If state is a system state
     """
-    db = get_db()
-    cursor = db.cursor()
-
     # Check if system state
     state = get_state_by_id(state_id)
     if not state:
@@ -301,10 +298,12 @@ def delete_state(state_id: int) -> bool:
     if state['is_system']:
         raise ValueError('No se pueden eliminar estados del sistema')
 
-    cursor.execute('UPDATE beach_reservation_states SET active = 0 WHERE id = ?', (state_id,))
-    db.commit()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE beach_reservation_states SET active = 0 WHERE id = ?', (state_id,))
+        conn.commit()
 
-    return cursor.rowcount > 0
+        return cursor.rowcount > 0
 
 
 def reorder_states(state_ids: list) -> bool:
@@ -317,20 +316,20 @@ def reorder_states(state_ids: list) -> bool:
     Returns:
         True if successful
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    try:
-        for order, state_id in enumerate(state_ids, start=1):
-            cursor.execute('''
-                UPDATE beach_reservation_states
-                SET display_order = ?
-                WHERE id = ?
-            ''', (order, state_id))
+        try:
+            for order, state_id in enumerate(state_ids, start=1):
+                cursor.execute('''
+                    UPDATE beach_reservation_states
+                    SET display_order = ?
+                    WHERE id = ?
+                ''', (order, state_id))
 
-        db.commit()
-        return True
+            conn.commit()
+            return True
 
-    except Exception:
-        db.rollback()
-        return False
+        except Exception:
+            conn.rollback()
+            return False

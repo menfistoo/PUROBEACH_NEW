@@ -18,11 +18,11 @@ def get_config(key: str, default: str = None) -> Optional[str]:
     Returns:
         Config value string or default
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT value FROM beach_config WHERE key = ?', (key,))
-    row = cursor.fetchone()
-    return row['value'] if row else default
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT value FROM beach_config WHERE key = ?', (key,))
+        row = cursor.fetchone()
+        return row['value'] if row else default
 
 
 def get_config_int(key: str, default: int = 0) -> int:
@@ -89,10 +89,10 @@ def get_all_config() -> Dict[str, str]:
     Returns:
         Dict of all config values
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT key, value FROM beach_config')
-    return {row['key']: row['value'] for row in cursor.fetchall()}
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT key, value FROM beach_config')
+        return {row['key']: row['value'] for row in cursor.fetchall()}
 
 
 def get_map_config() -> Dict[str, Any]:
@@ -126,26 +126,26 @@ def set_config(key: str, value: str, description: str = None) -> bool:
     Returns:
         True if successful
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    # Check if exists
-    existing = get_config(key)
+        # Check if exists
+        existing = get_config(key)
 
-    if existing is not None:
-        cursor.execute('''
-            UPDATE beach_config
-            SET value = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE key = ?
-        ''', (value, key))
-    else:
-        cursor.execute('''
-            INSERT INTO beach_config (key, value, description)
-            VALUES (?, ?, ?)
-        ''', (key, value, description))
+        if existing is not None:
+            cursor.execute('''
+                UPDATE beach_config
+                SET value = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE key = ?
+            ''', (value, key))
+        else:
+            cursor.execute('''
+                INSERT INTO beach_config (key, value, description)
+                VALUES (?, ?, ?)
+            ''', (key, value, description))
 
-    db.commit()
-    return cursor.rowcount > 0
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 def delete_config(key: str) -> bool:
@@ -158,8 +158,8 @@ def delete_config(key: str) -> bool:
     Returns:
         True if deleted
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('DELETE FROM beach_config WHERE key = ?', (key,))
-    db.commit()
-    return cursor.rowcount > 0
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM beach_config WHERE key = ?', (key,))
+        conn.commit()
+        return cursor.rowcount > 0

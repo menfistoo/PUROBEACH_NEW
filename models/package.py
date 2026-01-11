@@ -18,23 +18,23 @@ def get_all_packages(active_only: bool = True) -> list:
     Returns:
         List of package dictionaries ordered by display_order
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT p.*,
-               (SELECT COUNT(*) FROM beach_reservations
-                WHERE package_id = p.id) as usage_count
-        FROM beach_packages p
-    '''
+        query = '''
+            SELECT p.*,
+                   (SELECT COUNT(*) FROM beach_reservations
+                    WHERE package_id = p.id) as usage_count
+            FROM beach_packages p
+        '''
 
-    if active_only:
-        query += ' WHERE p.active = 1'
+        if active_only:
+            query += ' WHERE p.active = 1'
 
-    query += ' ORDER BY p.display_order, p.package_name'
+        query += ' ORDER BY p.display_order, p.package_name'
 
-    cursor.execute(query)
-    return [dict(row) for row in cursor.fetchall()]
+        cursor.execute(query)
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def get_package_by_id(package_id: int) -> dict:
@@ -47,11 +47,11 @@ def get_package_by_id(package_id: int) -> dict:
     Returns:
         Package dictionary or None
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_packages WHERE id = ?', (package_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_packages WHERE id = ?', (package_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_package_by_name(name: str) -> dict:
@@ -64,11 +64,11 @@ def get_package_by_name(name: str) -> dict:
     Returns:
         Package dictionary or None
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM beach_packages WHERE package_name = ?', (name,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM beach_packages WHERE package_name = ?', (name,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_packages_by_zone(zone_id: int, active_only: bool = True) -> list:
@@ -82,18 +82,18 @@ def get_packages_by_zone(zone_id: int, active_only: bool = True) -> list:
     Returns:
         List of package dictionaries
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = 'SELECT * FROM beach_packages WHERE (zone_id = ? OR zone_id IS NULL)'
+        query = 'SELECT * FROM beach_packages WHERE (zone_id = ? OR zone_id IS NULL)'
 
-    if active_only:
-        query += ' AND active = 1'
+        if active_only:
+            query += ' AND active = 1'
 
-    query += ' ORDER BY display_order, package_name'
+        query += ' ORDER BY display_order, package_name'
 
-    cursor.execute(query, (zone_id,))
-    return [dict(row) for row in cursor.fetchall()]
+        cursor.execute(query, (zone_id,))
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def get_packages_by_customer_type(customer_type: str, active_only: bool = True) -> list:
@@ -107,21 +107,21 @@ def get_packages_by_customer_type(customer_type: str, active_only: bool = True) 
     Returns:
         List of package dictionaries
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT * FROM beach_packages
-        WHERE (customer_type = ? OR customer_type = 'both' OR customer_type IS NULL)
-    '''
+        query = '''
+            SELECT * FROM beach_packages
+            WHERE (customer_type = ? OR customer_type = 'both' OR customer_type IS NULL)
+        '''
 
-    if active_only:
-        query += ' AND active = 1'
+        if active_only:
+            query += ' AND active = 1'
 
-    query += ' ORDER BY display_order, package_name'
+        query += ' ORDER BY display_order, package_name'
 
-    cursor.execute(query, (customer_type,))
-    return [dict(row) for row in cursor.fetchall()]
+        cursor.execute(query, (customer_type,))
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def get_active_packages_for_date(date: str, customer_type: str = None, zone_id: int = None) -> list:
@@ -136,30 +136,30 @@ def get_active_packages_for_date(date: str, customer_type: str = None, zone_id: 
     Returns:
         List of active package dictionaries valid for the date
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT * FROM beach_packages
-        WHERE active = 1
-        AND (valid_from IS NULL OR valid_from <= ?)
-        AND (valid_until IS NULL OR valid_until >= ?)
-    '''
+        query = '''
+            SELECT * FROM beach_packages
+            WHERE active = 1
+            AND (valid_from IS NULL OR valid_from <= ?)
+            AND (valid_until IS NULL OR valid_until >= ?)
+        '''
 
-    params = [date, date]
+        params = [date, date]
 
-    if customer_type:
-        query += ' AND (customer_type = ? OR customer_type = \'both\' OR customer_type IS NULL)'
-        params.append(customer_type)
+        if customer_type:
+            query += ' AND (customer_type = ? OR customer_type = \'both\' OR customer_type IS NULL)'
+            params.append(customer_type)
 
-    if zone_id:
-        query += ' AND (zone_id = ? OR zone_id IS NULL)'
-        params.append(zone_id)
+        if zone_id:
+            query += ' AND (zone_id = ? OR zone_id IS NULL)'
+            params.append(zone_id)
 
-    query += ' ORDER BY display_order, package_name'
+        query += ' ORDER BY display_order, package_name'
 
-    cursor.execute(query, params)
-    return [dict(row) for row in cursor.fetchall()]
+        cursor.execute(query, params)
+        return [dict(row) for row in cursor.fetchall()]
 
 
 def create_package(package_name: str, base_price: float, price_type: str, **kwargs) -> int:
@@ -207,35 +207,35 @@ def create_package(package_name: str, base_price: float, price_type: str, **kwar
     if get_package_by_name(package_name):
         raise ValueError(f"Package with name '{package_name}' already exists")
 
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        INSERT INTO beach_packages (
-            package_name, package_description, base_price, price_type,
-            min_people, standard_people, max_people, furniture_types_included,
-            customer_type, zone_id, valid_from, valid_until,
-            active, display_order, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    ''', (
-        package_name.strip(),
-        kwargs.get('package_description', '').strip() or None,
-        base_price,
-        price_type,
-        min_people,
-        standard_people,
-        max_people,
-        kwargs.get('furniture_types_included'),
-        customer_type,
-        kwargs.get('zone_id'),
-        kwargs.get('valid_from'),
-        kwargs.get('valid_until'),
-        kwargs.get('active', 1),
-        kwargs.get('display_order', 0)
-    ))
+        cursor.execute('''
+            INSERT INTO beach_packages (
+                package_name, package_description, base_price, price_type,
+                min_people, standard_people, max_people, furniture_types_included,
+                customer_type, zone_id, valid_from, valid_until,
+                active, display_order, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ''', (
+            package_name.strip(),
+            kwargs.get('package_description', '').strip() or None,
+            base_price,
+            price_type,
+            min_people,
+            standard_people,
+            max_people,
+            kwargs.get('furniture_types_included'),
+            customer_type,
+            kwargs.get('zone_id'),
+            kwargs.get('valid_from'),
+            kwargs.get('valid_until'),
+            kwargs.get('active', 1),
+            kwargs.get('display_order', 0)
+        ))
 
-    db.commit()
-    return cursor.lastrowid
+        conn.commit()
+        return cursor.lastrowid
 
 
 def update_package(package_id: int, **kwargs) -> bool:
@@ -312,14 +312,14 @@ def update_package(package_id: int, **kwargs) -> bool:
     updates.append('updated_at = CURRENT_TIMESTAMP')
     values.append(package_id)
 
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = f'UPDATE beach_packages SET {", ".join(updates)} WHERE id = ?'
-    cursor.execute(query, values)
-    db.commit()
+        query = f'UPDATE beach_packages SET {", ".join(updates)} WHERE id = ?'
+        cursor.execute(query, values)
+        conn.commit()
 
-    return True
+        return True
 
 
 def delete_package(package_id: int) -> bool:
@@ -339,17 +339,17 @@ def delete_package(package_id: int) -> bool:
     if not package:
         raise ValueError(f"Package with ID {package_id} not found")
 
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        UPDATE beach_packages
-        SET active = 0, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    ''', (package_id,))
+        cursor.execute('''
+            UPDATE beach_packages
+            SET active = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (package_id,))
 
-    db.commit()
-    return True
+        conn.commit()
+        return True
 
 
 def reorder_packages(package_ids: list) -> bool:
@@ -362,15 +362,15 @@ def reorder_packages(package_ids: list) -> bool:
     Returns:
         True if successful
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    for idx, package_id in enumerate(package_ids):
-        cursor.execute('''
-            UPDATE beach_packages
-            SET display_order = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        ''', (idx, package_id))
+        for idx, package_id in enumerate(package_ids):
+            cursor.execute('''
+                UPDATE beach_packages
+                SET display_order = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (idx, package_id))
 
-    db.commit()
-    return True
+        conn.commit()
+        return True

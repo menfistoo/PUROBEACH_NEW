@@ -150,46 +150,46 @@ def get_furniture_features(furniture_id: int) -> list:
     Returns:
         list: Feature codes
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    features = []
+        features = []
 
-    # Get furniture zone and type features
-    cursor.execute('''
-        SELECT f.furniture_type, z.name as zone_name,
-               f.position_y, f.zone_id
-        FROM beach_furniture f
-        LEFT JOIN beach_zones z ON f.zone_id = z.id
-        WHERE f.id = ?
-    ''', (furniture_id,))
+        # Get furniture zone and type features
+        cursor.execute('''
+            SELECT f.furniture_type, z.name as zone_name,
+                   f.position_y, f.zone_id
+            FROM beach_furniture f
+            LEFT JOIN beach_zones z ON f.zone_id = z.id
+            WHERE f.id = ?
+        ''', (furniture_id,))
 
-    row = cursor.fetchone()
-    if row:
-        # Infer features from zone name
-        zone_name = (row['zone_name'] or '').lower()
+        row = cursor.fetchone()
+        if row:
+            # Infer features from zone name
+            zone_name = (row['zone_name'] or '').lower()
 
-        if 'primera' in zone_name or 'first' in zone_name:
-            features.append('first_line')
-        if 'premium' in zone_name or 'vip' in zone_name:
-            features.append('premium')
-        if 'sombra' in zone_name or 'shade' in zone_name:
-            features.append('shaded')
-        if 'sol' in zone_name or 'sun' in zone_name:
-            features.append('full_sun')
-        if 'tranquil' in zone_name or 'quiet' in zone_name:
-            features.append('quiet_zone')
-        if 'bar' in zone_name:
-            features.append('near_bar')
-        if 'piscina' in zone_name or 'pool' in zone_name:
-            features.append('near_pool')
+            if 'primera' in zone_name or 'first' in zone_name:
+                features.append('first_line')
+            if 'premium' in zone_name or 'vip' in zone_name:
+                features.append('premium')
+            if 'sombra' in zone_name or 'shade' in zone_name:
+                features.append('shaded')
+            if 'sol' in zone_name or 'sun' in zone_name:
+                features.append('full_sun')
+            if 'tranquil' in zone_name or 'quiet' in zone_name:
+                features.append('quiet_zone')
+            if 'bar' in zone_name:
+                features.append('near_bar')
+            if 'piscina' in zone_name or 'pool' in zone_name:
+                features.append('near_pool')
 
-        # Check if first row (low Y position = near sea)
-        if row['position_y'] and row['position_y'] < 100:
-            features.append('sea_view')
-            features.append('first_line')
+            # Check if first row (low Y position = near sea)
+            if row['position_y'] and row['position_y'] < 100:
+                features.append('sea_view')
+                features.append('first_line')
 
-    return features
+        return features
 
 
 def score_preference_match(furniture_id: int, preferences: list) -> dict:

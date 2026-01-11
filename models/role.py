@@ -16,25 +16,25 @@ def get_all_roles(active_only: bool = True) -> list:
     Returns:
         List of role dicts with permission count
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    query = '''
-        SELECT r.*,
-               COUNT(rp.permission_id) as permission_count,
-               (SELECT COUNT(*) FROM users WHERE role_id = r.id AND active = 1) as user_count
-        FROM roles r
-        LEFT JOIN role_permissions rp ON r.id = rp.role_id
-    '''
+        query = '''
+            SELECT r.*,
+                   COUNT(rp.permission_id) as permission_count,
+                   (SELECT COUNT(*) FROM users WHERE role_id = r.id AND active = 1) as user_count
+            FROM roles r
+            LEFT JOIN role_permissions rp ON r.id = rp.role_id
+        '''
 
-    if active_only:
-        query += ' WHERE r.active = 1'
+        if active_only:
+            query += ' WHERE r.active = 1'
 
-    query += ' GROUP BY r.id ORDER BY r.id'
+        query += ' GROUP BY r.id ORDER BY r.id'
 
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_role_by_id(role_id: int) -> dict:
@@ -47,11 +47,11 @@ def get_role_by_id(role_id: int) -> dict:
     Returns:
         Role dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM roles WHERE id = ?', (role_id,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM roles WHERE id = ?', (role_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_role_by_name(name: str) -> dict:
@@ -64,11 +64,11 @@ def get_role_by_name(name: str) -> dict:
     Returns:
         Role dict or None if not found
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM roles WHERE name = ?', (name,))
-    row = cursor.fetchone()
-    return dict(row) if row else None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM roles WHERE name = ?', (name,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_role_permissions(role_id: int) -> list:
@@ -81,17 +81,17 @@ def get_role_permissions(role_id: int) -> list:
     Returns:
         List of permission dicts
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT p.*
-        FROM permissions p
-        JOIN role_permissions rp ON p.id = rp.permission_id
-        WHERE rp.role_id = ?
-        ORDER BY p.module, p.code
-    ''', (role_id,))
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT p.*
+            FROM permissions p
+            JOIN role_permissions rp ON p.id = rp.permission_id
+            WHERE rp.role_id = ?
+            ORDER BY p.module, p.code
+        ''', (role_id,))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 
 def create_role(name: str, display_name: str, description: str = None, is_system: bool = False) -> int:
@@ -107,15 +107,15 @@ def create_role(name: str, display_name: str, description: str = None, is_system
     Returns:
         New role ID
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        INSERT INTO roles (name, display_name, description, is_system)
-        VALUES (?, ?, ?, ?)
-    ''', (name, display_name, description, 1 if is_system else 0))
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO roles (name, display_name, description, is_system)
+            VALUES (?, ?, ?, ?)
+        ''', (name, display_name, description, 1 if is_system else 0))
 
-    db.commit()
-    return cursor.lastrowid
+        conn.commit()
+        return cursor.lastrowid
 
 
 def update_role(role_id: int, **kwargs) -> bool:
@@ -129,8 +129,6 @@ def update_role(role_id: int, **kwargs) -> bool:
     Returns:
         True if updated successfully
     """
-    db = get_db()
-
     allowed_fields = ['display_name', 'description', 'active']
     updates = []
     values = []
@@ -146,11 +144,12 @@ def update_role(role_id: int, **kwargs) -> bool:
     values.append(role_id)
     query = f'UPDATE roles SET {", ".join(updates)} WHERE id = ?'
 
-    cursor = db.cursor()
-    cursor.execute(query, values)
-    db.commit()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, values)
+        conn.commit()
 
-    return cursor.rowcount > 0
+        return cursor.rowcount > 0
 
 
 def assign_permission(role_id: int, permission_id: int) -> bool:
@@ -164,19 +163,19 @@ def assign_permission(role_id: int, permission_id: int) -> bool:
     Returns:
         True if assigned successfully (or already assigned)
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    try:
-        cursor.execute('''
-            INSERT INTO role_permissions (role_id, permission_id)
-            VALUES (?, ?)
-        ''', (role_id, permission_id))
-        db.commit()
-        return True
-    except Exception:
-        # Already exists
-        return True
+        try:
+            cursor.execute('''
+                INSERT INTO role_permissions (role_id, permission_id)
+                VALUES (?, ?)
+            ''', (role_id, permission_id))
+            conn.commit()
+            return True
+        except Exception:
+            # Already exists
+            return True
 
 
 def revoke_permission(role_id: int, permission_id: int) -> bool:
@@ -190,15 +189,15 @@ def revoke_permission(role_id: int, permission_id: int) -> bool:
     Returns:
         True if revoked successfully
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        DELETE FROM role_permissions
-        WHERE role_id = ? AND permission_id = ?
-    ''', (role_id, permission_id))
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            DELETE FROM role_permissions
+            WHERE role_id = ? AND permission_id = ?
+        ''', (role_id, permission_id))
 
-    db.commit()
-    return cursor.rowcount > 0
+        conn.commit()
+        return cursor.rowcount > 0
 
 
 def has_users(role_id: int) -> bool:
@@ -211,13 +210,13 @@ def has_users(role_id: int) -> bool:
     Returns:
         True if role has active users
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT COUNT(*) as count
-        FROM users
-        WHERE role_id = ? AND active = 1
-    ''', (role_id,))
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT COUNT(*) as count
+            FROM users
+            WHERE role_id = ? AND active = 1
+        ''', (role_id,))
 
-    row = cursor.fetchone()
-    return row['count'] > 0
+        row = cursor.fetchone()
+        return row['count'] > 0

@@ -24,14 +24,14 @@ def get_customer_preference_codes(customer_id: int) -> list:
     Returns:
         list: Preference codes
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-        SELECT p.code FROM beach_preferences p
-        JOIN beach_customer_preferences cp ON p.id = cp.preference_id
-        WHERE cp.customer_id = ?
-    ''', (customer_id,))
-    return [row['code'] for row in cursor.fetchall()]
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT p.code FROM beach_preferences p
+            JOIN beach_customer_preferences cp ON p.id = cp.preference_id
+            WHERE cp.customer_id = ?
+        ''', (customer_id,))
+        return [row['code'] for row in cursor.fetchall()]
 
 
 # =============================================================================
@@ -52,44 +52,44 @@ def sync_preferences_to_customer(customer_id: int, preferences_csv: str,
     Returns:
         bool: Success status
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    try:
-        pref_codes = []
-        if preferences_csv:
-            pref_codes = [p.strip() for p in preferences_csv.split(',') if p.strip()]
+        try:
+            pref_codes = []
+            if preferences_csv:
+                pref_codes = [p.strip() for p in preferences_csv.split(',') if p.strip()]
 
-        if replace:
-            # Delete existing customer preferences
-            cursor.execute(
-                'DELETE FROM beach_customer_preferences WHERE customer_id = ?',
-                (customer_id,)
-            )
+            if replace:
+                # Delete existing customer preferences
+                cursor.execute(
+                    'DELETE FROM beach_customer_preferences WHERE customer_id = ?',
+                    (customer_id,)
+                )
 
-        # Get preference IDs for the codes
-        pref_ids = []
-        for code in pref_codes:
-            cursor.execute('SELECT id FROM beach_preferences WHERE code = ?', (code,))
-            row = cursor.fetchone()
-            if row:
-                pref_ids.append(row['id'])
-                cursor.execute('''
-                    INSERT OR IGNORE INTO beach_customer_preferences
-                    (customer_id, preference_id)
-                    VALUES (?, ?)
-                ''', (customer_id, row['id']))
+            # Get preference IDs for the codes
+            pref_ids = []
+            for code in pref_codes:
+                cursor.execute('SELECT id FROM beach_preferences WHERE code = ?', (code,))
+                row = cursor.fetchone()
+                if row:
+                    pref_ids.append(row['id'])
+                    cursor.execute('''
+                        INSERT OR IGNORE INTO beach_customer_preferences
+                        (customer_id, preference_id)
+                        VALUES (?, ?)
+                    ''', (customer_id, row['id']))
 
-        db.commit()
+            conn.commit()
 
-        # Propagate to all active/future reservations
-        sync_customer_preferences_to_reservations(customer_id, preferences_csv)
+            # Propagate to all active/future reservations
+            sync_customer_preferences_to_reservations(customer_id, preferences_csv)
 
-        return True
+            return True
 
-    except Exception:
-        db.rollback()
-        return False
+        except Exception:
+            conn.rollback()
+            return False
 
 
 def sync_customer_preferences_to_reservations(customer_id: int,
@@ -105,46 +105,46 @@ def sync_customer_preferences_to_reservations(customer_id: int,
     Returns:
         int: Number of reservations updated
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    try:
-        # Get preferences CSV if not provided
-        if preferences_csv is None:
-            codes = get_customer_preference_codes(customer_id)
-            preferences_csv = ','.join(codes) if codes else None
+        try:
+            # Get preferences CSV if not provided
+            if preferences_csv is None:
+                codes = get_customer_preference_codes(customer_id)
+                preferences_csv = ','.join(codes) if codes else None
 
-        # Get all active/future reservations for this customer
-        # Only update reservations that haven't been completed or cancelled
-        cursor.execute('''
-            SELECT r.id
-            FROM beach_reservations r
-            LEFT JOIN beach_reservation_daily_states rds
-                ON rds.reservation_id = r.id
-                AND rds.state_date = r.reservation_date
-            LEFT JOIN beach_reservation_states rs
-                ON rs.name = rds.state_name
-            WHERE r.customer_id = ?
-            AND r.reservation_date >= date('now')
-            AND (rs.is_availability_releasing IS NULL OR rs.is_availability_releasing = 0)
-        ''', (customer_id,))
+            # Get all active/future reservations for this customer
+            # Only update reservations that haven't been completed or cancelled
+            cursor.execute('''
+                SELECT r.id
+                FROM beach_reservations r
+                LEFT JOIN beach_reservation_daily_states rds
+                    ON rds.reservation_id = r.id
+                    AND rds.state_date = r.reservation_date
+                LEFT JOIN beach_reservation_states rs
+                    ON rs.name = rds.state_name
+                WHERE r.customer_id = ?
+                AND r.reservation_date >= date('now')
+                AND (rs.is_availability_releasing IS NULL OR rs.is_availability_releasing = 0)
+            ''', (customer_id,))
 
-        reservation_ids = [row['id'] for row in cursor.fetchall()]
+            reservation_ids = [row['id'] for row in cursor.fetchall()]
 
-        if not reservation_ids:
+            if not reservation_ids:
+                return 0
+
+            # Update all matching reservations
+            placeholders = ','.join('?' * len(reservation_ids))
+            cursor.execute(f'''
+                UPDATE beach_reservations
+                SET preferences = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id IN ({placeholders})
+            ''', [preferences_csv] + reservation_ids)
+
+            conn.commit()
+            return len(reservation_ids)
+
+        except Exception:
+            conn.rollback()
             return 0
-
-        # Update all matching reservations
-        placeholders = ','.join('?' * len(reservation_ids))
-        cursor.execute(f'''
-            UPDATE beach_reservations
-            SET preferences = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id IN ({placeholders})
-        ''', [preferences_csv] + reservation_ids)
-
-        db.commit()
-        return len(reservation_ids)
-
-    except Exception:
-        db.rollback()
-        return 0

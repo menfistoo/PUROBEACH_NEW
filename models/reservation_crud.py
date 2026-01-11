@@ -52,31 +52,31 @@ def generate_reservation_number(reservation_date: str = None, cursor=None, max_r
     date_obj = datetime.strptime(reservation_date, '%Y-%m-%d')
     date_prefix = date_obj.strftime('%y%m%d')  # YYMMDD
 
-    db = get_db()
-    cur = cursor or db.cursor()
+    with get_db() as conn:
+        cur = cursor or conn.cursor()
 
-    for attempt in range(max_retries):
-        # Find max sequential for the day
-        cur.execute('''
-            SELECT MAX(CAST(SUBSTR(ticket_number, 7, 2) AS INTEGER)) as max_seq
-            FROM beach_reservations
-            WHERE ticket_number LIKE ?
-        ''', (f'{date_prefix}%',))
+        for attempt in range(max_retries):
+            # Find max sequential for the day
+            cur.execute('''
+                SELECT MAX(CAST(SUBSTR(ticket_number, 7, 2) AS INTEGER)) as max_seq
+                FROM beach_reservations
+                WHERE ticket_number LIKE ?
+            ''', (f'{date_prefix}%',))
 
-        result = cur.fetchone()
-        next_seq = (result['max_seq'] or 0) + 1
+            result = cur.fetchone()
+            next_seq = (result['max_seq'] or 0) + 1
 
-        if next_seq > 99:
-            raise ValueError(f"Maximo de reservas diarias (99) alcanzado para {reservation_date}")
+            if next_seq > 99:
+                raise ValueError(f"Maximo de reservas diarias (99) alcanzado para {reservation_date}")
 
-        ticket_number = f"{date_prefix}{next_seq:02d}"
+            ticket_number = f"{date_prefix}{next_seq:02d}"
 
-        # Verify uniqueness
-        cur.execute('SELECT id FROM beach_reservations WHERE ticket_number = ?', (ticket_number,))
-        if not cur.fetchone():
-            return ticket_number
+            # Verify uniqueness
+            cur.execute('SELECT id FROM beach_reservations WHERE ticket_number = ?', (ticket_number,))
+            if not cur.fetchone():
+                return ticket_number
 
-    raise ValueError("No se pudo generar numero unico despues de varios intentos")
+        raise ValueError("No se pudo generar numero unico despues de varios intentos")
 
 
 def generate_child_reservation_number(parent_number: str, child_index: int) -> str:
@@ -167,106 +167,106 @@ def create_beach_reservation(
     """
     # Payment ticket and method are optional (for auditing purposes)
 
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    try:
-        cursor.execute('BEGIN IMMEDIATE')
+        try:
+            cursor.execute('BEGIN IMMEDIATE')
 
-        # Generate ticket number if not provided
-        if not ticket_number:
-            ticket_number = generate_reservation_number(reservation_date, cursor)
+            # Generate ticket number if not provided
+            if not ticket_number:
+                ticket_number = generate_reservation_number(reservation_date, cursor)
 
-        # Get default state from database
-        default_state = get_default_state()
-        initial_state = default_state.get('name', 'Confirmada')
+            # Get default state from database
+            default_state = get_default_state()
+            initial_state = default_state.get('name', 'Confirmada')
 
-        # Get customer's current room for original_room tracking
-        cursor.execute('''
-            SELECT room_number, customer_type FROM beach_customers WHERE id = ?
-        ''', (customer_id,))
-        customer_row = cursor.fetchone()
-        original_room = None
-        if customer_row and customer_row['customer_type'] == 'interno':
-            original_room = customer_row['room_number']
+            # Get customer's current room for original_room tracking
+            cursor.execute('''
+                SELECT room_number, customer_type FROM beach_customers WHERE id = ?
+            ''', (customer_id,))
+            customer_row = cursor.fetchone()
+            original_room = None
+            if customer_row and customer_row['customer_type'] == 'interno':
+                original_room = customer_row['room_number']
 
-        # Insert reservation
-        cursor.execute('''
-            INSERT INTO beach_reservations (
-                customer_id, ticket_number, reservation_date, start_date, end_date,
-                num_people, time_slot, current_states, current_state,
+            # Insert reservation
+            cursor.execute('''
+                INSERT INTO beach_reservations (
+                    customer_id, ticket_number, reservation_date, start_date, end_date,
+                    num_people, time_slot, current_states, current_state,
+                    payment_status, price, final_price, hamaca_included, price_catalog_id, paid,
+                    charge_to_room, charge_reference,
+                    minimum_consumption_amount, minimum_consumption_policy_id,
+                    package_id, payment_ticket_number, payment_method,
+                    check_in_date, check_out_date, preferences, notes,
+                    parent_reservation_id, reservation_type, created_by, created_at,
+                    original_room
+                ) VALUES (
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?,
+                    ?, ?,
+                    ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, CURRENT_TIMESTAMP,
+                    ?
+                )
+            ''', (
+                customer_id, ticket_number, reservation_date, reservation_date, reservation_date,
+                num_people, time_slot, initial_state, initial_state,
                 payment_status, price, final_price, hamaca_included, price_catalog_id, paid,
                 charge_to_room, charge_reference,
                 minimum_consumption_amount, minimum_consumption_policy_id,
                 package_id, payment_ticket_number, payment_method,
-                check_in_date, check_out_date, preferences, notes,
-                parent_reservation_id, reservation_type, created_by, created_at,
+                check_in_date, check_out_date, preferences, observations,
+                parent_reservation_id, reservation_type, created_by,
                 original_room
-            ) VALUES (
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?,
-                ?, ?,
-                ?, ?,
-                ?, ?, ?,
-                ?, ?, ?, ?,
-                ?, ?, ?, CURRENT_TIMESTAMP,
-                ?
-            )
-        ''', (
-            customer_id, ticket_number, reservation_date, reservation_date, reservation_date,
-            num_people, time_slot, initial_state, initial_state,
-            payment_status, price, final_price, hamaca_included, price_catalog_id, paid,
-            charge_to_room, charge_reference,
-            minimum_consumption_amount, minimum_consumption_policy_id,
-            package_id, payment_ticket_number, payment_method,
-            check_in_date, check_out_date, preferences, observations,
-            parent_reservation_id, reservation_type, created_by,
-            original_room
-        ))
+            ))
 
-        reservation_id = cursor.lastrowid
+            reservation_id = cursor.lastrowid
 
-        # Assign furniture (with availability check)
-        if furniture_ids:
-            # Check furniture availability before assigning
-            availability = check_furniture_availability_bulk(
-                furniture_ids=furniture_ids,
-                dates=[reservation_date],
-                exclude_reservation_id=None
-            )
-            if availability.get('conflicts'):
-                conflict_ids = list(availability['conflicts'].keys())
-                db.rollback()
-                raise ValueError(f"Mobiliario no disponible: {conflict_ids}")
+            # Assign furniture (with availability check)
+            if furniture_ids:
+                # Check furniture availability before assigning
+                availability = check_furniture_availability_bulk(
+                    furniture_ids=furniture_ids,
+                    dates=[reservation_date],
+                    exclude_reservation_id=None
+                )
+                if availability.get('conflicts'):
+                    conflict_ids = list(availability['conflicts'].keys())
+                    conn.rollback()
+                    raise ValueError(f"Mobiliario no disponible: {conflict_ids}")
 
-            for furniture_id in furniture_ids:
+                for furniture_id in furniture_ids:
+                    cursor.execute('''
+                        INSERT INTO beach_reservation_furniture
+                        (reservation_id, furniture_id, assignment_date)
+                        VALUES (?, ?, ?)
+                    ''', (reservation_id, furniture_id, reservation_date))
+
+            # Record initial state in history
+            state_id = default_state.get('id')
+            if state_id:
                 cursor.execute('''
-                    INSERT INTO beach_reservation_furniture
-                    (reservation_id, furniture_id, assignment_date)
-                    VALUES (?, ?, ?)
-                ''', (reservation_id, furniture_id, reservation_date))
+                    INSERT INTO reservation_status_history
+                    (reservation_id, old_state_id, new_state_id, changed_by, reason, created_at)
+                    VALUES (?, NULL, ?, ?, 'Creacion de reserva', CURRENT_TIMESTAMP)
+                ''', (reservation_id, state_id, created_by))
 
-        # Record initial state in history
-        state_id = default_state.get('id')
-        if state_id:
-            cursor.execute('''
-                INSERT INTO reservation_status_history
-                (reservation_id, old_state_id, new_state_id, changed_by, reason, created_at)
-                VALUES (?, NULL, ?, ?, 'Creacion de reserva', CURRENT_TIMESTAMP)
-            ''', (reservation_id, state_id, created_by))
+            conn.commit()
 
-        db.commit()
+            # Sync preferences to customer profile
+            if preferences:
+                sync_preferences_to_customer(customer_id, preferences)
 
-        # Sync preferences to customer profile
-        if preferences:
-            sync_preferences_to_customer(customer_id, preferences)
+            return reservation_id, ticket_number
 
-        return reservation_id, ticket_number
-
-    except Exception as e:
-        db.rollback()
-        raise
+        except Exception as e:
+            conn.rollback()
+            raise
 
 
 # =============================================================================
@@ -283,59 +283,59 @@ def get_beach_reservation_by_id(reservation_id: int) -> dict:
     Returns:
         dict: Reservation with customer, state, and furniture info
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        SELECT r.*,
-               c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
-               c.customer_type,
-               c.room_number as customer_room,
-               c.email as customer_email,
-               c.phone as customer_phone,
-               pkg.package_name,
-               pkg.package_description,
-               mcp.policy_name as minimum_consumption_policy_name,
-               CASE WHEN r.original_room IS NOT NULL
-                    AND r.original_room != c.room_number
-                    THEN 1 ELSE 0 END as room_changed
-        FROM beach_reservations r
-        JOIN beach_customers c ON r.customer_id = c.id
-        LEFT JOIN beach_packages pkg ON r.package_id = pkg.id
-        LEFT JOIN beach_minimum_consumption_policies mcp ON r.minimum_consumption_policy_id = mcp.id
-        WHERE r.id = ?
-    ''', (reservation_id,))
+        cursor.execute('''
+            SELECT r.*,
+                   c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
+                   c.customer_type,
+                   c.room_number as customer_room,
+                   c.email as customer_email,
+                   c.phone as customer_phone,
+                   pkg.package_name,
+                   pkg.package_description,
+                   mcp.policy_name as minimum_consumption_policy_name,
+                   CASE WHEN r.original_room IS NOT NULL
+                        AND r.original_room != c.room_number
+                        THEN 1 ELSE 0 END as room_changed
+            FROM beach_reservations r
+            JOIN beach_customers c ON r.customer_id = c.id
+            LEFT JOIN beach_packages pkg ON r.package_id = pkg.id
+            LEFT JOIN beach_minimum_consumption_policies mcp ON r.minimum_consumption_policy_id = mcp.id
+            WHERE r.id = ?
+        ''', (reservation_id,))
 
-    row = cursor.fetchone()
-    if not row:
-        return None
+        row = cursor.fetchone()
+        if not row:
+            return None
 
-    reservation = dict(row)
+        reservation = dict(row)
 
-    # Get furniture assignments
-    cursor.execute('''
-        SELECT rf.*, f.number, f.furniture_type, f.capacity,
-               z.name as zone_name
-        FROM beach_reservation_furniture rf
-        JOIN beach_furniture f ON rf.furniture_id = f.id
-        LEFT JOIN beach_zones z ON f.zone_id = z.id
-        WHERE rf.reservation_id = ?
-        ORDER BY rf.assignment_date, f.number
-    ''', (reservation_id,))
-    reservation['furniture'] = [dict(r) for r in cursor.fetchall()]
+        # Get furniture assignments
+        cursor.execute('''
+            SELECT rf.*, f.number, f.furniture_type, f.capacity,
+                   z.name as zone_name
+            FROM beach_reservation_furniture rf
+            JOIN beach_furniture f ON rf.furniture_id = f.id
+            LEFT JOIN beach_zones z ON f.zone_id = z.id
+            WHERE rf.reservation_id = ?
+            ORDER BY rf.assignment_date, f.number
+        ''', (reservation_id,))
+        reservation['furniture'] = [dict(r) for r in cursor.fetchall()]
 
-    # Get tags
-    cursor.execute('''
-        SELECT t.* FROM beach_tags t
-        JOIN beach_reservation_tags rt ON t.id = rt.tag_id
-        WHERE rt.reservation_id = ?
-    ''', (reservation_id,))
-    reservation['tags'] = [dict(r) for r in cursor.fetchall()]
+        # Get tags
+        cursor.execute('''
+            SELECT t.* FROM beach_tags t
+            JOIN beach_reservation_tags rt ON t.id = rt.tag_id
+            WHERE rt.reservation_id = ?
+        ''', (reservation_id,))
+        reservation['tags'] = [dict(r) for r in cursor.fetchall()]
 
-    # Calculate display color
-    reservation['display_color'] = calculate_reservation_color(reservation.get('current_states', ''))
+        # Calculate display color
+        reservation['display_color'] = calculate_reservation_color(reservation.get('current_states', ''))
 
-    return reservation
+        return reservation
 
 
 def get_beach_reservation_by_ticket(ticket_number: str) -> dict:
@@ -348,13 +348,13 @@ def get_beach_reservation_by_ticket(ticket_number: str) -> dict:
     Returns:
         dict: Reservation or None
     """
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT id FROM beach_reservations WHERE ticket_number = ?', (ticket_number,))
-    row = cursor.fetchone()
-    if row:
-        return get_beach_reservation_by_id(row['id'])
-    return None
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM beach_reservations WHERE ticket_number = ?', (ticket_number,))
+        row = cursor.fetchone()
+        if row:
+            return get_beach_reservation_by_id(row['id'])
+        return None
 
 
 def get_reservation_with_details(reservation_id: int) -> dict:
@@ -382,38 +382,38 @@ def update_beach_reservation(reservation_id: int, **kwargs) -> bool:
     Returns:
         bool: Success status
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    allowed_fields = [
-        'reservation_date', 'num_people', 'time_slot',
-        'payment_status', 'price', 'final_price', 'hamaca_included',
-        'price_catalog_id', 'paid', 'charge_to_room', 'charge_reference',
-        'minimum_consumption_amount', 'minimum_consumption_policy_id',
-        'package_id', 'payment_ticket_number', 'payment_method',
-        'check_in_date', 'check_out_date', 'preferences', 'notes', 'observations'
-    ]
+        allowed_fields = [
+            'reservation_date', 'num_people', 'time_slot',
+            'payment_status', 'price', 'final_price', 'hamaca_included',
+            'price_catalog_id', 'paid', 'charge_to_room', 'charge_reference',
+            'minimum_consumption_amount', 'minimum_consumption_policy_id',
+            'package_id', 'payment_ticket_number', 'payment_method',
+            'check_in_date', 'check_out_date', 'preferences', 'notes', 'observations'
+        ]
 
-    updates = []
-    values = []
+        updates = []
+        values = []
 
-    for field in allowed_fields:
-        if field in kwargs:
-            updates.append(f'{field} = ?')
-            values.append(kwargs[field])
+        for field in allowed_fields:
+            if field in kwargs:
+                updates.append(f'{field} = ?')
+                values.append(kwargs[field])
 
-    if not updates:
-        return False
+        if not updates:
+            return False
 
-    updates.append('updated_at = CURRENT_TIMESTAMP')
-    values.append(reservation_id)
+        updates.append('updated_at = CURRENT_TIMESTAMP')
+        values.append(reservation_id)
 
-    query = f'UPDATE beach_reservations SET {", ".join(updates)} WHERE id = ?'
+        query = f'UPDATE beach_reservations SET {", ".join(updates)} WHERE id = ?'
 
-    cursor.execute(query, values)
-    db.commit()
+        cursor.execute(query, values)
+        conn.commit()
 
-    return cursor.rowcount > 0
+        return cursor.rowcount > 0
 
 
 def update_reservation_with_furniture(
@@ -432,52 +432,52 @@ def update_reservation_with_furniture(
     Returns:
         bool: Success status
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    try:
-        # Update reservation fields
-        if kwargs:
-            update_beach_reservation(reservation_id, **kwargs)
+        try:
+            # Update reservation fields
+            if kwargs:
+                update_beach_reservation(reservation_id, **kwargs)
 
-        # Get reservation date
-        cursor.execute('SELECT reservation_date FROM beach_reservations WHERE id = ?',
-                      (reservation_id,))
-        row = cursor.fetchone()
-        if not row:
-            return False
-        res_date = row['reservation_date']
+            # Get reservation date
+            cursor.execute('SELECT reservation_date FROM beach_reservations WHERE id = ?',
+                          (reservation_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+            res_date = row['reservation_date']
 
-        # Check furniture availability (excluding current reservation)
-        availability = check_furniture_availability_bulk(
-            furniture_ids=furniture_ids,
-            dates=[res_date],
-            exclude_reservation_id=reservation_id
-        )
-        if availability.get('conflicts'):
-            conflict_ids = list(availability['conflicts'].keys())
-            raise ValueError(f"Mobiliario no disponible: {conflict_ids}")
+            # Check furniture availability (excluding current reservation)
+            availability = check_furniture_availability_bulk(
+                furniture_ids=furniture_ids,
+                dates=[res_date],
+                exclude_reservation_id=reservation_id
+            )
+            if availability.get('conflicts'):
+                conflict_ids = list(availability['conflicts'].keys())
+                raise ValueError(f"Mobiliario no disponible: {conflict_ids}")
 
-        # Clear existing assignments
-        cursor.execute('''
-            DELETE FROM beach_reservation_furniture
-            WHERE reservation_id = ? AND assignment_date = ?
-        ''', (reservation_id, res_date))
-
-        # Add new assignments
-        for furniture_id in furniture_ids:
+            # Clear existing assignments
             cursor.execute('''
-                INSERT INTO beach_reservation_furniture
-                (reservation_id, furniture_id, assignment_date)
-                VALUES (?, ?, ?)
-            ''', (reservation_id, furniture_id, res_date))
+                DELETE FROM beach_reservation_furniture
+                WHERE reservation_id = ? AND assignment_date = ?
+            ''', (reservation_id, res_date))
 
-        db.commit()
-        return True
+            # Add new assignments
+            for furniture_id in furniture_ids:
+                cursor.execute('''
+                    INSERT INTO beach_reservation_furniture
+                    (reservation_id, furniture_id, assignment_date)
+                    VALUES (?, ?, ?)
+                ''', (reservation_id, furniture_id, res_date))
 
-    except Exception:
-        db.rollback()
-        raise
+            conn.commit()
+            return True
+
+        except Exception:
+            conn.rollback()
+            raise
 
 
 # =============================================================================
@@ -502,23 +502,23 @@ def delete_reservation(reservation_id: int) -> bool:
     Returns:
         bool: Success status
     """
-    db = get_db()
-    cursor = db.cursor()
+    with get_db() as conn:
+        cursor = conn.cursor()
 
-    try:
-        # Delete from tables without CASCADE
-        cursor.execute('DELETE FROM reservation_status_history WHERE reservation_id = ?',
-                      (reservation_id,))
+        try:
+            # Delete from tables without CASCADE
+            cursor.execute('DELETE FROM reservation_status_history WHERE reservation_id = ?',
+                          (reservation_id,))
 
-        # Delete reservation (CASCADE handles the rest)
-        cursor.execute('DELETE FROM beach_reservations WHERE id = ?', (reservation_id,))
+            # Delete reservation (CASCADE handles the rest)
+            cursor.execute('DELETE FROM beach_reservations WHERE id = ?', (reservation_id,))
 
-        db.commit()
-        return cursor.rowcount > 0
+            conn.commit()
+            return cursor.rowcount > 0
 
-    except Exception:
-        db.rollback()
-        raise
+        except Exception:
+            conn.rollback()
+            raise
 
 
 # =============================================================================
