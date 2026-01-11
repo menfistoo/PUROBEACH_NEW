@@ -16,17 +16,8 @@ from database import get_db
 # CONSTANTS
 # =============================================================================
 
-# Preference code to furniture feature mapping
-PREFERENCE_TO_FEATURE = {
-    'pref_primera_linea': ['first_line', 'premium'],
-    'pref_sombra': ['shaded', 'umbrella'],
-    'pref_sol': ['full_sun'],
-    'pref_tranquilo': ['quiet_zone'],
-    'pref_cerca_bar': ['near_bar'],
-    'pref_cerca_piscina': ['near_pool'],
-    'pref_accesible': ['accessible'],
-    'pref_vista_mar': ['sea_view'],
-}
+# Note: PREFERENCE_TO_FEATURE mapping removed.
+# Now uses unified características system with direct ID matching.
 
 
 # =============================================================================
@@ -135,98 +126,52 @@ def validate_cluster_contiguity(furniture_ids: list, occupancy_map: dict) -> dic
 
 
 # =============================================================================
-# PREFERENCE MATCHING
+# PREFERENCE MATCHING (CARACTERÍSTICAS SYSTEM)
 # =============================================================================
-
-def get_furniture_features(furniture_id: int) -> list:
-    """
-    Get features/tags associated with furniture.
-
-    Checks furniture tags and zone features.
-
-    Args:
-        furniture_id: Furniture ID
-
-    Returns:
-        list: Feature codes
-    """
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        features = []
-
-        # Get furniture zone and type features
-        cursor.execute('''
-            SELECT f.furniture_type, z.name as zone_name,
-                   f.position_y, f.zone_id
-            FROM beach_furniture f
-            LEFT JOIN beach_zones z ON f.zone_id = z.id
-            WHERE f.id = ?
-        ''', (furniture_id,))
-
-        row = cursor.fetchone()
-        if row:
-            # Infer features from zone name
-            zone_name = (row['zone_name'] or '').lower()
-
-            if 'primera' in zone_name or 'first' in zone_name:
-                features.append('first_line')
-            if 'premium' in zone_name or 'vip' in zone_name:
-                features.append('premium')
-            if 'sombra' in zone_name or 'shade' in zone_name:
-                features.append('shaded')
-            if 'sol' in zone_name or 'sun' in zone_name:
-                features.append('full_sun')
-            if 'tranquil' in zone_name or 'quiet' in zone_name:
-                features.append('quiet_zone')
-            if 'bar' in zone_name:
-                features.append('near_bar')
-            if 'piscina' in zone_name or 'pool' in zone_name:
-                features.append('near_pool')
-
-            # Check if first row (low Y position = near sea)
-            if row['position_y'] and row['position_y'] < 100:
-                features.append('sea_view')
-                features.append('first_line')
-
-        return features
-
 
 def score_preference_match(furniture_id: int, preferences: list) -> dict:
     """
-    Calculate preference match score for furniture.
+    Score how well furniture matches requested characteristics.
+
+    Uses the unified características system - direct ID comparison.
 
     Args:
-        furniture_id: Furniture ID
-        preferences: List of preference codes
+        furniture_id: Furniture ID to score
+        preferences: List of characteristic IDs requested (NOT codes)
 
     Returns:
         dict: {
-            'score': float (0.0 - 1.0),
-            'matched': [str],
-            'unmatched': [str]
+            'score': float (0.0 to 1.0),
+            'matched': list of matched characteristic names,
+            'total_requested': int
         }
     """
+    from models.characteristic_assignments import score_characteristic_match
+
+    # Handle empty preferences
     if not preferences:
-        return {'score': 1.0, 'matched': [], 'unmatched': []}
+        return {
+            'score': 1.0,
+            'matched': [],
+            'total_requested': 0
+        }
 
-    features = get_furniture_features(furniture_id)
-    matched = []
-    unmatched = []
+    # Use the new characteristic matching system
+    result = score_characteristic_match(furniture_id, preferences)
 
-    for pref in preferences:
-        required_features = PREFERENCE_TO_FEATURE.get(pref, [])
-        if any(f in features for f in required_features):
-            matched.append(pref)
-        else:
-            unmatched.append(pref)
-
-    score = len(matched) / len(preferences) if preferences else 1.0
+    # Get matched characteristic names for display
+    matched_names = []
+    if result['matched']:
+        from models.characteristic import get_characteristic_by_id
+        for char_id in result['matched']:
+            char = get_characteristic_by_id(char_id)
+            if char:
+                matched_names.append(char['name'])
 
     return {
-        'score': score,
-        'matched': matched,
-        'unmatched': unmatched
+        'score': result['score'],
+        'matched': matched_names,
+        'total_requested': len(preferences)
     }
 
 
