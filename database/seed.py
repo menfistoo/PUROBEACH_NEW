@@ -254,23 +254,23 @@ def seed_database(db):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (code, name, color, icon, is_releasing, display_order, priority, incident, is_system, is_default))
 
-    # 11. Create Customer Preferences
-    preferences_data = [
-        ('pref_sombra', 'Sombra', 'Prefiere zona con sombra', 'fa-umbrella', 'sombra'),
-        ('pref_primera_linea', 'Primera Línea', 'Prefiere primera línea de playa', 'fa-water', 'primera_linea'),
-        ('pref_cerca_mar', 'Cerca del Mar', 'Lo más cerca posible del mar', 'fa-anchor', 'cerca_mar'),
-        ('pref_tranquila', 'Zona Tranquila', 'Prefiere zona alejada y tranquila', 'fa-volume-off', 'tranquila'),
-        ('pref_vip', 'VIP', 'Cliente VIP, zona premium', 'fa-star', 'vip'),
-        ('pref_cerca_bar', 'Cerca del Bar', 'Cerca del bar o zona de servicio', 'fa-martini-glass', 'cerca_bar'),
-        ('pref_familia', 'Zona Familiar', 'Zona adecuada para familias', 'fa-children', 'familia'),
-        ('pref_accesible', 'Acceso Fácil', 'Acceso fácil para movilidad reducida', 'fa-wheelchair', 'accesible'),
+    # 11. Create Características
+    characteristics_data = [
+        ('primera_linea', 'Primera Linea', 'Mobiliario en primera linea de playa', 'fa-water', '#1A3A5C'),
+        ('sombra', 'Sombra', 'Zona con sombra', 'fa-umbrella', '#4A7C59'),
+        ('cerca_mar', 'Cerca del Mar', 'Lo mas cerca posible del mar', 'fa-anchor', '#1A3A5C'),
+        ('tranquila', 'Zona Tranquila', 'Zona alejada y tranquila', 'fa-volume-off', '#6B7280'),
+        ('vip', 'VIP', 'Zona premium', 'fa-star', '#D4AF37'),
+        ('cerca_bar', 'Cerca del Bar', 'Cerca del bar o zona de servicio', 'fa-martini-glass', '#C1444F'),
+        ('familia', 'Zona Familiar', 'Zona adecuada para familias', 'fa-children', '#E5A33D'),
+        ('accesible', 'Acceso Facil', 'Acceso facil para movilidad reducida', 'fa-wheelchair', '#4A7C59'),
     ]
 
-    for code, name, description, icon, maps_to in preferences_data:
+    for idx, (code, name, description, icon, color) in enumerate(characteristics_data):
         db.execute('''
-            INSERT INTO beach_preferences (code, name, description, icon, maps_to_feature)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (code, name, description, icon, maps_to))
+            INSERT INTO beach_characteristics (code, name, description, icon, color, display_order)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (code, name, description, icon, color, idx))
 
     # 12. Create Default Configuration
     config_data = [
