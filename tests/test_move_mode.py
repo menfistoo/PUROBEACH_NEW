@@ -168,3 +168,130 @@ class TestUnassignFurniture:
             # Should succeed but with 0 unassigned
             assert result['success'] is True
             assert result['unassigned_count'] == 0
+
+
+class TestAssignFurniture:
+    """Tests for assigning furniture to reservations."""
+
+    def test_assign_furniture_success(self, app):
+        """Should assign available furniture to a reservation for a specific date."""
+        from models.move_mode import assign_furniture_for_date, unassign_furniture_for_date
+        from database import get_db
+
+        with app.app_context():
+            today = date.today().isoformat()
+
+            with get_db() as conn:
+                cursor = conn.cursor()
+
+                # Create reservation with furniture
+                reservation_id, original_furniture_id, _, assignment_date = \
+                    create_test_reservation_with_furniture(cursor, today)
+
+                # Find available furniture (not assigned today)
+                cursor.execute("""
+                    SELECT f.id FROM beach_furniture f
+                    WHERE f.active = 1
+                    AND f.id NOT IN (
+                        SELECT furniture_id
+                        FROM beach_reservation_furniture
+                        WHERE assignment_date = ?
+                    )
+                    LIMIT 1
+                """, (assignment_date,))
+                available = cursor.fetchone()
+                conn.commit()
+
+            if not available:
+                pytest.skip("No available furniture for today")
+
+            new_furniture_id = available['id']
+
+            # First unassign original
+            unassign_furniture_for_date(reservation_id, [original_furniture_id], assignment_date)
+
+            # Execute: Assign new furniture
+            result = assign_furniture_for_date(
+                reservation_id=reservation_id,
+                furniture_ids=[new_furniture_id],
+                assignment_date=assignment_date
+            )
+
+            # Verify
+            assert result['success'] is True
+            assert result['assigned_count'] == 1
+            assert new_furniture_id in result['furniture_ids']
+
+            # Verify furniture is assigned
+            with get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT COUNT(*) as cnt
+                    FROM beach_reservation_furniture
+                    WHERE reservation_id = ? AND furniture_id = ? AND assignment_date = ?
+                """, (reservation_id, new_furniture_id, assignment_date))
+                assert cursor.fetchone()['cnt'] == 1
+
+    def test_assign_furniture_already_taken_fails(self, app):
+        """Should fail when furniture is already assigned to another reservation."""
+        from models.move_mode import assign_furniture_for_date
+        from database import get_db
+
+        with app.app_context():
+            today = date.today().isoformat()
+
+            with get_db() as conn:
+                cursor = conn.cursor()
+
+                # Create first reservation with furniture
+                res1_id, furniture_id_1, furniture_id_2, assignment_date = \
+                    create_test_reservation_with_furniture(cursor, today)
+
+                # Create second reservation (no furniture initially)
+                cursor.execute("SELECT id FROM beach_customers LIMIT 1")
+                customer = cursor.fetchone()
+                cursor.execute("SELECT id FROM beach_reservation_states LIMIT 1")
+                state = cursor.fetchone()
+
+                cursor.execute("""
+                    INSERT INTO beach_reservations
+                    (customer_id, state_id, start_date, end_date, num_people, created_at)
+                    VALUES (?, ?, ?, ?, 2, datetime('now'))
+                """, (customer['id'], state['id'], assignment_date, assignment_date))
+                res2_id = cursor.lastrowid
+                conn.commit()
+
+            # Try to assign reservation 1's furniture to reservation 2
+            result = assign_furniture_for_date(
+                reservation_id=res2_id,
+                furniture_ids=[furniture_id_1],
+                assignment_date=assignment_date
+            )
+
+            assert result['success'] is False
+            assert 'error' in result
+
+    def test_assign_already_assigned_to_same_reservation_succeeds(self, app):
+        """Should succeed (idempotent) when furniture is already assigned to same reservation."""
+        from models.move_mode import assign_furniture_for_date
+        from database import get_db
+
+        with app.app_context():
+            today = date.today().isoformat()
+
+            with get_db() as conn:
+                cursor = conn.cursor()
+                reservation_id, furniture_id, _, assignment_date = \
+                    create_test_reservation_with_furniture(cursor, today)
+                conn.commit()
+
+            # Try to assign furniture that's already assigned to this reservation
+            result = assign_furniture_for_date(
+                reservation_id=reservation_id,
+                furniture_ids=[furniture_id],
+                assignment_date=assignment_date
+            )
+
+            # Should succeed (idempotent operation)
+            assert result['success'] is True
+            assert result['assigned_count'] == 1
