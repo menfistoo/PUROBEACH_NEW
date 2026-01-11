@@ -1,6 +1,6 @@
 """
 Beach blueprint initialization.
-Registers all beach-related routes (map, customers, reservations, config, api).
+Registers all beach-related routes (map, customers, reservations, config, api, reports).
 
 This module serves as the blueprint factory, assembling route modules into
 the main beach blueprint. Individual route logic is in:
@@ -9,6 +9,7 @@ the main beach blueprint. Individual route logic is in:
 - routes/reservations.py - Reservation CRUD
 - routes/config.py - Infrastructure configuration
 - routes/api.py - REST API endpoints
+- routes/reports.py - Reporting views
 """
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
@@ -31,6 +32,10 @@ beach_bp.register_blueprint(config_bp)
 # API routes (all REST endpoints)
 from blueprints.beach.routes.api import api_bp
 beach_bp.register_blueprint(api_bp, url_prefix='/api')
+
+# Reports routes
+from blueprints.beach.routes.reports import reports_bp
+beach_bp.register_blueprint(reports_bp)
 
 
 # =============================================================================
