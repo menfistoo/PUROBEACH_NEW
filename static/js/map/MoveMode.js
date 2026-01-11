@@ -321,8 +321,10 @@ export class MoveMode {
                 throw new Error(data.error);
             }
 
-            // Calculate assigned count
-            const assignedCount = data.original_furniture?.length || 0;
+            // Calculate assigned capacity (sum of furniture capacities)
+            const assignedCapacity = data.original_furniture?.reduce(
+                (sum, f) => sum + (f.capacity || 1), 0
+            ) || 0;
             const totalNeeded = data.num_people || 1;
 
             // Update or add to pool
@@ -341,30 +343,34 @@ export class MoveMode {
                 initialFurniture = data.original_furniture || [];
             }
 
+            // Helper to calculate total capacity from furniture array
+            const sumCapacity = (arr) => arr?.reduce((sum, f) => sum + (f.capacity || 1), 0) || 0;
+
+            // Calculate initial capacity (what was assigned when first entering pool)
+            const initialCapacity = existingIndex >= 0
+                ? sumCapacity(this.pool[existingIndex].initialFurniture)
+                : sumCapacity(initialFurniture);
+
             // Calculate completion status
-            // A reservation is complete when it has the same furniture count as when it entered the pool
-            // (or at least totalNeeded if it's new and somehow has all it needs)
+            // A reservation is complete when it has the same capacity as when it entered the pool
             let isComplete;
             if (existingIndex >= 0) {
-                // Already in pool: complete when restored to original count
-                const originalCount = this.pool[existingIndex].initialFurniture?.length || totalNeeded;
-                isComplete = assignedCount >= originalCount;
+                // Already in pool: complete when restored to original capacity
+                const originalCapacity = sumCapacity(this.pool[existingIndex].initialFurniture) || totalNeeded;
+                isComplete = assignedCapacity >= originalCapacity;
             } else {
                 // New to pool: if we're loading it, it means furniture was just unassigned
                 // So it should enter the pool (isComplete = false)
-                // Unless it somehow still has everything it needs
                 isComplete = false;
             }
 
-            // For display purposes, totalNeeded should be the original furniture count
-            // (what needs to be restored), not just num_people
-            const displayTotalNeeded = existingIndex >= 0
-                ? (this.pool[existingIndex].initialFurniture?.length || totalNeeded)
-                : (initialFurniture.length || totalNeeded);
+            // For display purposes, totalNeeded should be the original capacity
+            // (what needs to be restored), based on furniture capacities
+            const displayTotalNeeded = initialCapacity || totalNeeded;
 
             const poolEntry = {
                 ...data,
-                assignedCount,
+                assignedCount: assignedCapacity,  // Now capacity-based
                 totalNeeded: displayTotalNeeded,
                 isComplete,
                 initialFurniture  // The furniture it had when it first entered the pool
