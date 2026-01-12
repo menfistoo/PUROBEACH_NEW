@@ -645,3 +645,34 @@ def register_routes(bp: Blueprint) -> None:
 
         except Exception as e:
             return jsonify({'success': False, 'error': f'Error al cambiar fecha: {str(e)}'}), 500
+
+    @bp.route('/map/reservations/<int:reservation_id>/toggle-lock', methods=['PATCH'])
+    @login_required
+    @permission_required('beach.reservations.edit')
+    def toggle_reservation_lock(reservation_id: int) -> tuple[Response, int] | Response:
+        """
+        Toggle the furniture lock status for a reservation.
+
+        Request body:
+            locked: bool - True to lock, False to unlock
+
+        Returns:
+            JSON with success status and new lock state
+        """
+        data = request.get_json()
+
+        if data is None or 'locked' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Campo "locked" requerido'
+            }), 400
+
+        locked = bool(data['locked'])
+
+        from models.reservation_crud import toggle_furniture_lock
+        result = toggle_furniture_lock(reservation_id, locked)
+
+        if not result['success']:
+            return jsonify(result), 404
+
+        return jsonify(result)

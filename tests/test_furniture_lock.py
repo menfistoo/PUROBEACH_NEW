@@ -239,3 +239,67 @@ class TestMoveModeLockCheck:
             )
 
             assert result['success'] is True
+
+
+class TestToggleLockAPI:
+    """Tests for the toggle lock API endpoint."""
+
+    def test_toggle_lock_endpoint(self, client, app):
+        """Should toggle lock via API."""
+        from database import get_db
+
+        with app.app_context():
+            # Create test customer and reservation
+            with get_db() as conn:
+                cursor = conn.cursor()
+
+                # Get state ID
+                cursor.execute("SELECT id FROM beach_reservation_states LIMIT 1")
+                state_row = cursor.fetchone()
+                state_id = state_row['id'] if state_row else None
+
+                if not state_id:
+                    pytest.skip("No reservation states available")
+
+                # Create test customer
+                cursor.execute("""
+                    INSERT INTO beach_customers
+                    (first_name, last_name, customer_type, email, phone, created_at)
+                    VALUES ('Test', 'Customer', 'externo', 'test@test.com', '123456789', datetime('now'))
+                """)
+                customer_id = cursor.lastrowid
+
+                # Create test reservation
+                cursor.execute("""
+                    INSERT INTO beach_reservations
+                    (customer_id, state_id, start_date, end_date, num_people, created_at)
+                    VALUES (?, ?, date('now'), date('now'), 2, datetime('now'))
+                """, (customer_id, state_id))
+                reservation_id = cursor.lastrowid
+                conn.commit()
+
+            # Login first
+            client.post('/login', data={
+                'username': 'admin',
+                'password': 'admin123'
+            }, follow_redirects=True)
+
+            # Toggle lock ON
+            response = client.patch(
+                f'/beach/api/map/reservations/{reservation_id}/toggle-lock',
+                json={'locked': True}
+            )
+
+            assert response.status_code == 200
+            data = response.get_json()
+            assert data['success'] is True
+            assert data['is_furniture_locked'] is True
+
+    def test_toggle_lock_requires_auth(self, client, app):
+        """Should require authentication."""
+        response = client.patch(
+            '/beach/api/map/reservations/1/toggle-lock',
+            json={'locked': True}
+        )
+        # Should redirect to login or return 401
+        assert response.status_code in [302, 401]
