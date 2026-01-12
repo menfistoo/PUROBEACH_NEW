@@ -1,0 +1,614 @@
+{% extends "base.html" %}
+
+{% set page_title = "Registro de Auditoría" %}
+
+{% block title %}Registro de Auditoría - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fa-solid fa-clipboard-list"></i> Registro de Auditoría</h2>
+        <p class="text-muted mb-0">Historial de acciones del sistema</p>
+    </div>
+    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#statsModal">
+        <i class="fa-solid fa-chart-bar"></i> Estadísticas
+    </button>
+</div>
+
+<!-- Search Filters Card -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fa-solid fa-filter"></i> Filtros de Búsqueda</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('beach.admin.audit_logs') }}" id="filterForm">
+            <div class="row g-3">
+                <!-- User Filter -->
+                <div class="col-md-3">
+                    <label for="user_id" class="form-label">Usuario</label>
+                    <select name="user_id" id="user_id" class="form-select">
+                        <option value="">Todos los usuarios</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if filters.user_id == user.id %}selected{% endif %}>
+                            {{ user.username }}{% if user.full_name %} ({{ user.full_name }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Action Filter -->
+                <div class="col-md-2">
+                    <label for="action" class="form-label">Acción</label>
+                    <select name="action" id="action" class="form-select">
+                        <option value="">Todas las acciones</option>
+                        {% for act in actions %}
+                        <option value="{{ act }}" {% if filters.action == act %}selected{% endif %}>
+                            {{ act }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Entity Type Filter -->
+                <div class="col-md-2">
+                    <label for="entity_type" class="form-label">Tipo de Entidad</label>
+                    <select name="entity_type" id="entity_type" class="form-select">
+                        <option value="">Todas las entidades</option>
+                        {% for etype in entity_types %}
+                        <option value="{{ etype }}" {% if filters.entity_type == etype %}selected{% endif %}>
+                            {{ etype|capitalize }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Date Range -->
+                <div class="col-md-2">
+                    <label for="start_date" class="form-label">Fecha Desde</label>
+                    <input type="date" name="start_date" id="start_date" class="form-control"
+                           value="{{ filters.start_date or '' }}">
+                </div>
+
+                <div class="col-md-2">
+                    <label for="end_date" class="form-label">Fecha Hasta</label>
+                    <input type="date" name="end_date" id="end_date" class="form-control"
+                           value="{{ filters.end_date or '' }}">
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="col-md-1 d-flex align-items-end">
+                    <div class="btn-group w-100">
+                        <button type="submit" class="btn btn-primary" title="Buscar">
+                            <i class="fa-solid fa-search"></i>
+                        </button>
+                        <a href="{{ url_for('beach.admin.audit_logs') }}" class="btn btn-outline-secondary" title="Limpiar filtros">
+                            <i class="fa-solid fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results Info -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="text-muted">
+        <small>
+            <i class="fa-solid fa-info-circle"></i>
+            Mostrando {{ logs|length }} de {{ total }} registros
+            {% if filters.user_id or filters.action or filters.entity_type or filters.start_date or filters.end_date %}
+            (filtrado)
+            {% endif %}
+        </small>
+    </div>
+    <div>
+        <select class="form-select form-select-sm" style="width: auto;" onchange="updatePerPage(this.value)">
+            <option value="25" {% if per_page == 25 %}selected{% endif %}>25 por página</option>
+            <option value="50" {% if per_page == 50 %}selected{% endif %}>50 por página</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>100 por página</option>
+        </select>
+    </div>
+</div>
+
+<!-- Audit Log Table -->
+<div class="card">
+    <div class="card-body p-0">
+        {% if logs %}
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 160px;">Fecha/Hora</th>
+                        <th style="width: 120px;">Usuario</th>
+                        <th style="width: 100px;">Acción</th>
+                        <th style="width: 120px;">Entidad</th>
+                        <th>Detalles</th>
+                        <th style="width: 120px;">IP</th>
+                        <th style="width: 80px;">Ver</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>
+                            <small class="text-muted">
+                                {{ log.created_at|replace('T', ' ')|truncate(19, True, '') }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if log.username %}
+                            <span class="badge bg-secondary">
+                                <i class="fa-solid fa-user"></i> {{ log.username }}
+                            </span>
+                            {% else %}
+                            <span class="badge bg-light text-dark">
+                                <i class="fa-solid fa-robot"></i> Sistema
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.action == 'CREATE' %}
+                            <span class="badge bg-success">
+                                <i class="fa-solid fa-plus"></i> CREATE
+                            </span>
+                            {% elif log.action == 'UPDATE' %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fa-solid fa-edit"></i> UPDATE
+                            </span>
+                            {% elif log.action == 'DELETE' %}
+                            <span class="badge bg-danger">
+                                <i class="fa-solid fa-trash"></i> DELETE
+                            </span>
+                            {% elif log.action == 'VIEW' %}
+                            <span class="badge bg-info">
+                                <i class="fa-solid fa-eye"></i> VIEW
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ log.action }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">
+                                {{ log.entity_type|capitalize }}
+                            </span>
+                            {% if log.entity_id %}
+                            <small class="text-muted">#{{ log.entity_id }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.changes_parsed %}
+                                {% if log.changes_parsed.after %}
+                                    {% set after = log.changes_parsed.after %}
+                                    {% if after.customer_name %}
+                                    <small>{{ after.customer_name }}</small>
+                                    {% elif after.name %}
+                                    <small>{{ after.name }}</small>
+                                    {% elif after.first_name %}
+                                    <small>{{ after.first_name }} {{ after.last_name or '' }}</small>
+                                    {% elif after.furniture_name %}
+                                    <small>{{ after.furniture_name }}</small>
+                                    {% elif after.date %}
+                                    <small>{{ after.date }}</small>
+                                    {% else %}
+                                    <small class="text-muted">Ver detalles</small>
+                                    {% endif %}
+                                {% elif log.changes_parsed.before %}
+                                    {% set before = log.changes_parsed.before %}
+                                    {% if before.customer_name %}
+                                    <small>{{ before.customer_name }}</small>
+                                    {% elif before.name %}
+                                    <small>{{ before.name }}</small>
+                                    {% elif before.first_name %}
+                                    <small>{{ before.first_name }} {{ before.last_name or '' }}</small>
+                                    {% else %}
+                                    <small class="text-muted">Ver detalles</small>
+                                    {% endif %}
+                                {% else %}
+                                <small class="text-muted">Ver detalles</small>
+                                {% endif %}
+                            {% else %}
+                            <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ log.ip_address or '-' }}</small>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    onclick="showLogDetail({{ log.id }})" title="Ver detalles">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fa-solid fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <p class="text-muted mb-0">No se encontraron registros de auditoría</p>
+            {% if filters.user_id or filters.action or filters.entity_type or filters.start_date or filters.end_date %}
+            <p class="text-muted"><small>Pruebe con otros filtros</small></p>
+            <a href="{{ url_for('beach.admin.audit_logs') }}" class="btn btn-outline-primary">
+                <i class="fa-solid fa-times"></i> Limpiar filtros
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav aria-label="Paginación de auditoría" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <!-- Previous Page -->
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('beach.admin.audit_logs',
+                page=page-1,
+                per_page=per_page,
+                user_id=filters.user_id or '',
+                action=filters.action or '',
+                entity_type=filters.entity_type or '',
+                start_date=filters.start_date or '',
+                end_date=filters.end_date or ''
+            ) }}" aria-label="Anterior">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+        </li>
+
+        <!-- Page Numbers -->
+        {% set start_page = [1, page - 2]|max %}
+        {% set end_page = [total_pages, page + 2]|min %}
+
+        {% if start_page > 1 %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('beach.admin.audit_logs',
+                page=1,
+                per_page=per_page,
+                user_id=filters.user_id or '',
+                action=filters.action or '',
+                entity_type=filters.entity_type or '',
+                start_date=filters.start_date or '',
+                end_date=filters.end_date or ''
+            ) }}">1</a>
+        </li>
+        {% if start_page > 2 %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %}
+        {% endif %}
+
+        {% for p in range(start_page, end_page + 1) %}
+        <li class="page-item {% if p == page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('beach.admin.audit_logs',
+                page=p,
+                per_page=per_page,
+                user_id=filters.user_id or '',
+                action=filters.action or '',
+                entity_type=filters.entity_type or '',
+                start_date=filters.start_date or '',
+                end_date=filters.end_date or ''
+            ) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+
+        {% if end_page < total_pages %}
+        {% if end_page < total_pages - 1 %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('beach.admin.audit_logs',
+                page=total_pages,
+                per_page=per_page,
+                user_id=filters.user_id or '',
+                action=filters.action or '',
+                entity_type=filters.entity_type or '',
+                start_date=filters.start_date or '',
+                end_date=filters.end_date or ''
+            ) }}">{{ total_pages }}</a>
+        </li>
+        {% endif %}
+
+        <!-- Next Page -->
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('beach.admin.audit_logs',
+                page=page+1,
+                per_page=per_page,
+                user_id=filters.user_id or '',
+                action=filters.action or '',
+                entity_type=filters.entity_type or '',
+                start_date=filters.start_date or '',
+                end_date=filters.end_date or ''
+            ) }}" aria-label="Siguiente">
+                <i class="fa-solid fa-chevron-right"></i>
+            </a>
+        </li>
+    </ul>
+</nav>
+<div class="text-center text-muted mb-4">
+    <small>Página {{ page }} de {{ total_pages }}</small>
+</div>
+{% endif %}
+
+<!-- Log Detail Modal -->
+<div class="modal fade" id="logDetailModal" tabindex="-1" aria-labelledby="logDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logDetailModalLabel">
+                    <i class="fa-solid fa-clipboard-list"></i> Detalle del Registro
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" id="logDetailContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Modal -->
+<div class="modal fade" id="statsModal" tabindex="-1" aria-labelledby="statsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statsModalLabel">
+                    <i class="fa-solid fa-chart-bar"></i> Estadísticas de Auditoría
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" id="statsContent">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fa-solid fa-info-circle"></i> Acerca del Registro de Auditoría</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-2">El registro de auditoría captura todas las acciones importantes del sistema:</p>
+        <ul class="mb-0">
+            <li><strong>Reservas:</strong> Creación, modificación, cancelación y cambios de estado</li>
+            <li><strong>Clientes:</strong> Registro de nuevos clientes y actualizaciones de datos</li>
+            <li><strong>Configuración:</strong> Cambios en zonas, mobiliario, precios y etiquetas</li>
+        </ul>
+        <hr>
+        <p class="mb-0 text-muted">
+            <i class="fa-solid fa-clock"></i> Los registros se mantienen durante 90 días por política de retención.
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Show log detail in modal
+function showLogDetail(logId) {
+    const modal = new bootstrap.Modal(document.getElementById('logDetailModal'));
+    const content = document.getElementById('logDetailContent');
+
+    // Show loading spinner
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    `;
+
+    modal.show();
+
+    // Fetch log details
+    fetch(`{{ url_for('beach.admin.audit_log_detail', log_id=0) }}`.replace('/0', '/' + logId))
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const log = data.data;
+                content.innerHTML = renderLogDetail(log);
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fa-solid fa-exclamation-triangle"></i> ${data.error || 'Error al cargar el registro'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fa-solid fa-exclamation-triangle"></i> Error de conexión
+                </div>
+            `;
+        });
+}
+
+// Render log detail HTML
+function renderLogDetail(log) {
+    let html = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>ID:</strong> ${log.id}
+            </div>
+            <div class="col-md-6">
+                <strong>Fecha:</strong> ${log.created_at.replace('T', ' ').substring(0, 19)}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>Usuario:</strong> ${log.username || 'Sistema'}
+            </div>
+            <div class="col-md-6">
+                <strong>IP:</strong> ${log.ip_address || '-'}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>Acción:</strong> <span class="badge ${getActionBadgeClass(log.action)}">${log.action}</span>
+            </div>
+            <div class="col-md-6">
+                <strong>Entidad:</strong> ${log.entity_type} ${log.entity_id ? '#' + log.entity_id : ''}
+            </div>
+        </div>
+    `;
+
+    if (log.user_agent) {
+        html += `
+            <div class="mb-3">
+                <strong>User Agent:</strong>
+                <small class="text-muted d-block">${log.user_agent}</small>
+            </div>
+        `;
+    }
+
+    if (log.changes) {
+        html += `<hr><h6><i class="fa-solid fa-exchange-alt"></i> Cambios</h6>`;
+
+        if (log.changes.before || log.changes.after) {
+            html += `<div class="row">`;
+
+            if (log.changes.before) {
+                html += `
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-header py-2">
+                                <strong class="text-danger"><i class="fa-solid fa-minus-circle"></i> Antes</strong>
+                            </div>
+                            <div class="card-body py-2">
+                                <pre class="mb-0 small" style="max-height: 300px; overflow: auto;">${JSON.stringify(log.changes.before, null, 2)}</pre>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (log.changes.after) {
+                html += `
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-header py-2">
+                                <strong class="text-success"><i class="fa-solid fa-plus-circle"></i> Después</strong>
+                            </div>
+                            <div class="card-body py-2">
+                                <pre class="mb-0 small" style="max-height: 300px; overflow: auto;">${JSON.stringify(log.changes.after, null, 2)}</pre>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+        } else {
+            html += `<pre class="bg-light p-3 small" style="max-height: 300px; overflow: auto;">${JSON.stringify(log.changes, null, 2)}</pre>`;
+        }
+    }
+
+    return html;
+}
+
+// Get badge class for action
+function getActionBadgeClass(action) {
+    switch(action) {
+        case 'CREATE': return 'bg-success';
+        case 'UPDATE': return 'bg-warning text-dark';
+        case 'DELETE': return 'bg-danger';
+        case 'VIEW': return 'bg-info';
+        default: return 'bg-secondary';
+    }
+}
+
+// Update per_page parameter
+function updatePerPage(value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('per_page', value);
+    url.searchParams.set('page', '1'); // Reset to page 1
+    window.location.href = url.toString();
+}
+
+// Load statistics when modal opens
+document.getElementById('statsModal').addEventListener('show.bs.modal', function () {
+    const content = document.getElementById('statsContent');
+
+    fetch('{{ url_for('beach.admin.audit_log_stats') }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const stats = data.data;
+                content.innerHTML = `
+                    <h6><i class="fa-solid fa-database"></i> Retención de Datos</h6>
+                    <ul class="list-group mb-4">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Total de registros</span>
+                            <strong>${stats.retention.total_logs}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Registro más antiguo</span>
+                            <span>${stats.retention.oldest_log ? stats.retention.oldest_log.substring(0, 10) : 'N/A'}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Registro más reciente</span>
+                            <span>${stats.retention.newest_log ? stats.retention.newest_log.substring(0, 10) : 'N/A'}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Para eliminar (>90 días)</span>
+                            <span class="badge bg-warning text-dark">${stats.retention.logs_to_cleanup}</span>
+                        </li>
+                    </ul>
+
+                    <h6><i class="fa-solid fa-chart-pie"></i> Por Tipo de Acción</h6>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><span class="badge bg-success">CREATE</span></span>
+                            <strong>${stats.action_counts.CREATE || 0}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><span class="badge bg-warning text-dark">UPDATE</span></span>
+                            <strong>${stats.action_counts.UPDATE || 0}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><span class="badge bg-danger">DELETE</span></span>
+                            <strong>${stats.action_counts.DELETE || 0}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><span class="badge bg-info">VIEW</span></span>
+                            <strong>${stats.action_counts.VIEW || 0}</strong>
+                        </li>
+                    </ul>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fa-solid fa-exclamation-triangle"></i> Error al cargar estadísticas
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fa-solid fa-exclamation-triangle"></i> Error de conexión
+                </div>
+            `;
+        });
+});
+</script>
+{% endblock %}

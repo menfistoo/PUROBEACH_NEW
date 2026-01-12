@@ -7,6 +7,7 @@ from flask import request, jsonify
 from flask_login import login_required, current_user
 
 from utils.decorators import permission_required
+from utils.audit import log_create
 from models.furniture import get_all_furniture
 from models.reservation import (
     create_beach_reservation, check_furniture_availability_bulk
@@ -232,6 +233,18 @@ def register_routes(bp):
                     if preferences:
                         set_customer_characteristics_by_codes(customer_id, preferences)
 
+                    # Log audit entry for each created reservation
+                    if result.get('reservation_ids'):
+                        for res_id in result['reservation_ids']:
+                            reservation_data = {
+                                'customer_id': customer_id,
+                                'dates': dates,
+                                'num_people': num_people,
+                                'furniture_ids': furniture_ids or furniture_by_date,
+                                'ticket_number': result.get('parent_ticket')
+                            }
+                            log_create('reservation', res_id, data=reservation_data)
+
                     return jsonify({
                         'success': True,
                         'reservation_id': result['parent_id'],
@@ -271,6 +284,16 @@ def register_routes(bp):
                 # Two-way sync: Update customer preferences from reservation
                 if preferences:
                     set_customer_characteristics_by_codes(customer_id, preferences)
+
+                # Log audit entry for single-day reservation
+                reservation_data = {
+                    'customer_id': customer_id,
+                    'date': dates[0],
+                    'num_people': num_people,
+                    'furniture_ids': furniture_ids,
+                    'ticket_number': ticket_number
+                }
+                log_create('reservation', reservation_id, data=reservation_data)
 
                 return jsonify({
                     'success': True,

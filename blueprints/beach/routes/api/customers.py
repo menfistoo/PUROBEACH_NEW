@@ -5,6 +5,7 @@ Customer and hotel guest API routes.
 from flask import request, jsonify
 from flask_login import login_required
 from utils.decorators import permission_required
+from utils.audit import log_create, log_update
 from models.customer import (
     find_duplicates, get_customer_by_id, get_customer_preferences,
     create_customer, set_customer_preferences, search_customers_unified,
@@ -237,6 +238,18 @@ def register_routes(bp):
             preferences = get_customer_preferences(customer_id)
             pref_codes = [p['code'] for p in preferences]
 
+            # Log audit entry for customer creation
+            log_create('customer', customer_id, data={
+                'first_name': customer['first_name'],
+                'last_name': customer.get('last_name'),
+                'customer_type': customer['customer_type'],
+                'room_number': customer.get('room_number'),
+                'phone': customer.get('phone'),
+                'email': customer.get('email'),
+                'vip_status': customer.get('vip_status', 0),
+                'preferences': pref_codes
+            })
+
             return jsonify({
                 'success': True,
                 'customer': {
@@ -335,6 +348,18 @@ def register_routes(bp):
             result = create_customer_from_hotel_guest(hotel_guest_id)
 
             if result:
+                # Log audit entry for customer creation from hotel guest
+                customer = result.get('customer', result)
+                log_create('customer', customer.get('id', result.get('id')), data={
+                    'first_name': customer.get('first_name'),
+                    'last_name': customer.get('last_name'),
+                    'customer_type': customer.get('customer_type'),
+                    'room_number': customer.get('room_number'),
+                    'phone': customer.get('phone'),
+                    'email': customer.get('email'),
+                    'source_hotel_guest_id': hotel_guest_id
+                })
+
                 return jsonify({
                     'success': True,
                     'customer_id': result['id'],
@@ -401,6 +426,10 @@ def register_routes(bp):
             return jsonify({'success': False, 'error': 'preference_codes debe ser una lista'}), 400
 
         try:
+            # Capture before state for audit log
+            current_prefs = get_customer_preferences(customer_id)
+            before_pref_codes = [p['code'] for p in current_prefs]
+
             # Convert list to CSV for sync function
             preferences_csv = ','.join(preference_codes) if preference_codes else ''
 
@@ -414,6 +443,20 @@ def register_routes(bp):
 
                 # Get updated preferences for response
                 updated_prefs = get_customer_preferences(customer_id)
+
+                # Log audit entry for customer preferences update
+                log_update('customer', customer_id,
+                    before={
+                        'first_name': customer['first_name'],
+                        'last_name': customer.get('last_name'),
+                        'preferences': before_pref_codes
+                    },
+                    after={
+                        'first_name': customer['first_name'],
+                        'last_name': customer.get('last_name'),
+                        'preferences': preference_codes
+                    }
+                )
 
                 return jsonify({
                     'success': True,

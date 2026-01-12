@@ -5,6 +5,7 @@ Reservation API routes including availability, multi-day, and suggestions.
 from flask import request, jsonify
 from flask_login import login_required, current_user
 from utils.decorators import permission_required
+from utils.audit import log_create, log_update, log_delete
 from models.reservation import (
     get_reservation_with_details, get_available_furniture,
     get_status_history, add_reservation_state, remove_reservation_state,
@@ -81,6 +82,19 @@ def register_routes(bp):
         updates = mapped_data
 
         try:
+            # Capture before state for audit log
+            before_state = {
+                'id': reservation['id'],
+                'customer_id': reservation.get('customer_id'),
+                'num_people': reservation.get('num_people'),
+                'current_states': reservation.get('current_states'),
+                'notes': reservation.get('notes'),
+                'paid': reservation.get('paid'),
+                'final_price': reservation.get('final_price'),
+                'payment_method': reservation.get('payment_method'),
+                'payment_ticket_number': reservation.get('payment_ticket_number')
+            }
+
             # Handle state change separately
             if 'state_id' in data:
                 state_id = data['state_id']
@@ -109,6 +123,21 @@ def register_routes(bp):
             if updates:
                 update_beach_reservation(reservation_id, **updates)
 
+            # Log audit entry for the update
+            updated_reservation = get_reservation_with_details(reservation_id)
+            after_state = {
+                'id': updated_reservation['id'],
+                'customer_id': updated_reservation.get('customer_id'),
+                'num_people': updated_reservation.get('num_people'),
+                'current_states': updated_reservation.get('current_states'),
+                'notes': updated_reservation.get('notes'),
+                'paid': updated_reservation.get('paid'),
+                'final_price': updated_reservation.get('final_price'),
+                'payment_method': updated_reservation.get('payment_method'),
+                'payment_ticket_number': updated_reservation.get('payment_ticket_number')
+            }
+            log_update('reservation', reservation_id, before=before_state, after=after_state)
+
             return jsonify({'success': True})
 
         except Exception as e:
@@ -130,10 +159,17 @@ def register_routes(bp):
         if not reservation:
             return jsonify({'error': 'Reserva no encontrada'}), 404
 
+        # Capture before state for audit logging
+        before_state = {
+            'id': reservation['id'],
+            'current_states': reservation.get('current_states')
+        }
+
         try:
             current_states = reservation.get('current_states', '')
             current_state_list = [s.strip() for s in current_states.split(',') if s.strip()]
             has_state = state_name in current_state_list
+            result_action = None
 
             # Set action: remove all existing states and set the new one
             if action == 'set':
@@ -150,21 +186,32 @@ def register_routes(bp):
                         reservation_id, state_name,
                         changed_by=current_user.username if current_user else 'system'
                     )
-                return jsonify({'success': True, 'action': 'set', 'state': state_name})
+                result_action = 'set'
 
             elif action == 'add' or (action == 'toggle' and not has_state):
                 add_reservation_state(
                     reservation_id, state_name,
                     changed_by=current_user.username if current_user else 'system'
                 )
-                return jsonify({'success': True, 'action': 'added', 'state': state_name})
+                result_action = 'added'
 
             elif action == 'remove' or (action == 'toggle' and has_state):
                 remove_reservation_state(
                     reservation_id, state_name,
                     changed_by=current_user.username if current_user else 'system'
                 )
-                return jsonify({'success': True, 'action': 'removed', 'state': state_name})
+                result_action = 'removed'
+
+            # Log audit entry for state change
+            if result_action:
+                updated_reservation = get_reservation_with_details(reservation_id)
+                after_state = {
+                    'id': updated_reservation['id'],
+                    'current_states': updated_reservation.get('current_states')
+                }
+                log_update('reservation', reservation_id, before=before_state, after=after_state)
+
+            return jsonify({'success': True, 'action': result_action, 'state': state_name})
 
         except Exception as e:
             return jsonify({'error': str(e)}), 500
@@ -398,6 +445,17 @@ def register_routes(bp):
                 hamaca_included=data.get('hamaca_included', 1)
             )
 
+            # Log audit entry for each created reservation
+            if result.get('success') and result.get('reservation_ids'):
+                for res_id in result['reservation_ids']:
+                    reservation_data = {
+                        'customer_id': customer_id,
+                        'dates': dates,
+                        'num_people': num_people,
+                        'furniture_ids': furniture_ids or furniture_by_date
+                    }
+                    log_create('reservation', res_id, data=reservation_data)
+
             return jsonify(result)
 
         except ValueError as e:
@@ -424,6 +482,16 @@ def register_routes(bp):
         """Cancel all reservations in a multi-day group."""
         data = request.get_json() or {}
 
+        # Capture before state for audit logging
+        before_summary = get_multiday_summary(reservation_id)
+        before_state = None
+        if before_summary:
+            before_state = {
+                'reservation_ids': before_summary.get('reservation_ids', []),
+                'total_reservations': before_summary.get('total_reservations'),
+                'customer_name': before_summary.get('customer_name')
+            }
+
         try:
             result = cancel_multiday_reservations(
                 parent_id=reservation_id,
@@ -431,6 +499,10 @@ def register_routes(bp):
                 notes=data.get('notes', ''),
                 cancel_children=data.get('cancel_children', True)
             )
+
+            # Log audit entry for cancellation (DELETE action)
+            if result.get('success'):
+                log_delete('reservation', reservation_id, data=before_state)
 
             return jsonify(result)
 

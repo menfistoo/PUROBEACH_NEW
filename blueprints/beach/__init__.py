@@ -37,6 +37,10 @@ beach_bp.register_blueprint(api_bp, url_prefix='/api')
 from blueprints.beach.routes.reports import reports_bp
 beach_bp.register_blueprint(reports_bp)
 
+# Admin routes (audit logs, system management)
+from blueprints.beach.routes.admin import admin_bp
+beach_bp.register_blueprint(admin_bp)
+
 
 # =============================================================================
 # MAP ROUTES

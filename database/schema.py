@@ -502,13 +502,23 @@ def create_tables(db):
     db.execute('''
         CREATE TABLE audit_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
+            user_id INTEGER REFERENCES users(id),
             action TEXT NOT NULL,
-            entity_type TEXT,
+            entity_type TEXT NOT NULL,
             entity_id INTEGER,
+
+            -- Change tracking (JSON format for structured before/after comparison)
+            changes TEXT,
+
+            -- Legacy fields (kept for backward compatibility)
             old_value TEXT,
             new_value TEXT,
+
+            -- Request context
             ip_address TEXT,
+            user_agent TEXT,
+
+            -- Metadata
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
