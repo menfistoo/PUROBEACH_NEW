@@ -91,7 +91,10 @@
       "Bash(git -C \"C:/Users/catia/programas/PuroBeach/PuroBeach\" diff --name-only HEAD)",
       "Bash(FLASK_RUN_PORT=5001 python:*)",
       "Skill(code-standards)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(del beach_club.db)",
+      "Bash(dir:*)",
+      "Bash(git tag:*)"
     ]
   }
 }

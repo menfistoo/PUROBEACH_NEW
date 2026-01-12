@@ -65,5 +65,8 @@ Thumbs.db
 # Git worktrees
 .worktrees/
 
-# Git worktrees
-.worktrees/
+# Claude Code temporary files
+tmpclaude-*-cwd
+.auto-claude/
+.playwright-mcp/
+NUL
