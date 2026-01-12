@@ -42,6 +42,19 @@ def unassign_furniture_for_date(
     with get_db() as conn:
         cursor = conn.cursor()
 
+        # Check if reservation is locked
+        cursor.execute(
+            "SELECT is_furniture_locked FROM beach_reservations WHERE id = ?",
+            (reservation_id,)
+        )
+        row = cursor.fetchone()
+        if row and row['is_furniture_locked']:
+            return {
+                'success': False,
+                'error': 'locked',
+                'message': 'El mobiliario de esta reserva esta bloqueado'
+            }
+
         unassigned = []
         for furniture_id in furniture_ids:
             cursor.execute("""
