@@ -303,3 +303,71 @@ class TestToggleLockAPI:
         )
         # Should redirect to login or return 401
         assert response.status_code in [302, 401]
+
+
+class TestReassignLockCheck:
+    """Tests for lock checking in reassign furniture endpoint."""
+
+    def test_reassign_blocked_when_locked(self, client, app):
+        """Should block reassign when reservation is locked."""
+        from database import get_db
+
+        with app.app_context():
+            with get_db() as conn:
+                cursor = conn.cursor()
+
+                # Get state ID
+                cursor.execute("SELECT id FROM beach_reservation_states LIMIT 1")
+                state_row = cursor.fetchone()
+                state_id = state_row['id'] if state_row else None
+
+                if not state_id:
+                    pytest.skip("No reservation states available")
+
+                # Create test customer
+                cursor.execute("""
+                    INSERT INTO beach_customers
+                    (first_name, last_name, customer_type, email, phone, created_at)
+                    VALUES ('Test', 'Customer', 'externo', 'test@test.com', '123456789', datetime('now'))
+                """)
+                customer_id = cursor.lastrowid
+
+                # Create locked reservation
+                cursor.execute("""
+                    INSERT INTO beach_reservations
+                    (customer_id, state_id, start_date, end_date, num_people, is_furniture_locked, created_at)
+                    VALUES (?, ?, date('now'), date('now'), 2, 1, datetime('now'))
+                """, (customer_id, state_id))
+                reservation_id = cursor.lastrowid
+
+                # Get or create furniture
+                cursor.execute("SELECT id FROM beach_furniture WHERE active = 1 LIMIT 1")
+                furniture = cursor.fetchone()
+                if not furniture:
+                    cursor.execute("""
+                        INSERT INTO beach_furniture (furniture_name, furniture_type_id, active)
+                        SELECT 'Test Furniture', id, 1 FROM beach_furniture_types LIMIT 1
+                    """)
+                    furniture_id = cursor.lastrowid
+                else:
+                    furniture_id = furniture['id']
+
+                today = cursor.execute("SELECT date('now') as d").fetchone()['d']
+                conn.commit()
+
+            # Login first
+            client.post('/login', data={
+                'username': 'admin',
+                'password': 'admin123'
+            }, follow_redirects=True)
+
+            # Try to reassign
+            response = client.post(
+                f'/beach/api/map/reservations/{reservation_id}/reassign-furniture',
+                json={'furniture_ids': [furniture_id], 'date': today}
+            )
+
+            assert response.status_code == 403
+            data = response.get_json()
+            assert data['success'] is False
+            assert data.get('error') == 'locked'

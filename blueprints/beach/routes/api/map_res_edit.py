@@ -51,6 +51,14 @@ def register_routes(bp: Blueprint) -> None:
         if not reservation:
             return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
 
+        # Check if furniture is locked
+        if reservation.get('is_furniture_locked'):
+            return jsonify({
+                'success': False,
+                'error': 'locked',
+                'message': 'El mobiliario de esta reserva esta bloqueado'
+            }), 403
+
         # Use reservation date if not provided
         if not date_str:
             date_str = reservation.get('reservation_date')
