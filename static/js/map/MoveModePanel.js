@@ -10,6 +10,12 @@ import { formatDateDisplay, showToast } from './utils.js';
  * Renders and manages the side panel showing unassigned reservations
  */
 export class MoveModePanel {
+    // Interaction timing constants
+    static DOUBLE_CLICK_THRESHOLD = 300;  // ms between clicks for double-click
+    static LONG_PRESS_DELAY = 500;        // ms to trigger long-press
+    static MOVE_THRESHOLD = 10;           // px movement to cancel long-press
+    static TOOLTIP_AUTO_DISMISS = 3000;   // ms before mobile tooltip auto-hides
+
     constructor(containerId, moveMode) {
         this.container = document.getElementById(containerId);
         this.moveMode = moveMode;
@@ -462,12 +468,11 @@ export class MoveModePanel {
 
             // Track click timing for double-click detection
             let lastClickTime = 0;
-            const DOUBLE_CLICK_THRESHOLD = 300;
 
             // Click handler: select without expand, double-click expands
             thumb.addEventListener('click', () => {
                 const now = Date.now();
-                if (now - lastClickTime < DOUBLE_CLICK_THRESHOLD) {
+                if (now - lastClickTime < MoveModePanel.DOUBLE_CLICK_THRESHOLD) {
                     // Double-click: expand + select
                     this.container?.classList.remove('collapsed');
                     this.moveMode.selectReservation(resId);
@@ -509,8 +514,6 @@ export class MoveModePanel {
         let longPressTimer = null;
         let touchStartX = 0;
         let touchStartY = 0;
-        const LONG_PRESS_DELAY = 500;
-        const MOVE_THRESHOLD = 10;
 
         thumb.addEventListener('touchstart', (e) => {
             if (e.touches.length !== 1) return;
@@ -525,7 +528,7 @@ export class MoveModePanel {
                     navigator.vibrate(50);
                 }
                 this._showThumbnailTooltip(thumb, reservation, true);
-            }, LONG_PRESS_DELAY);
+            }, MoveModePanel.LONG_PRESS_DELAY);
         }, { passive: true });
 
         thumb.addEventListener('touchmove', (e) => {
@@ -535,7 +538,7 @@ export class MoveModePanel {
             const deltaX = Math.abs(touch.clientX - touchStartX);
             const deltaY = Math.abs(touch.clientY - touchStartY);
 
-            if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
+            if (deltaX > MoveModePanel.MOVE_THRESHOLD || deltaY > MoveModePanel.MOVE_THRESHOLD) {
                 clearTimeout(longPressTimer);
                 longPressTimer = null;
             }
@@ -609,6 +612,7 @@ export class MoveModePanel {
 
         this.thumbnailTooltip.innerHTML = content;
         this.thumbnailTooltip.style.display = 'block';
+        this.thumbnailTooltip.classList.remove('above'); // Reset position modifier
 
         // Position tooltip to the left of the thumbnail
         const thumbRect = thumb.getBoundingClientRect();
@@ -623,20 +627,21 @@ export class MoveModePanel {
             top = window.innerHeight - tooltipRect.height - 10;
         }
         if (left < 10) {
-            // If not enough space on left, position above or below
+            // If not enough space on left, position above the thumbnail
             left = thumbRect.left - tooltipRect.width / 2;
             top = thumbRect.top - tooltipRect.height - 10;
+            this.thumbnailTooltip.classList.add('above'); // Arrow points down
         }
 
         this.thumbnailTooltip.style.left = `${left}px`;
         this.thumbnailTooltip.style.top = `${top}px`;
 
-        // Auto-dismiss on mobile after 3 seconds
+        // Auto-dismiss on mobile
         if (isMobile) {
             this._clearTooltipDismissTimer();
             this.tooltipDismissTimer = setTimeout(() => {
                 this._hideThumbnailTooltip();
-            }, 3000);
+            }, MoveModePanel.TOOLTIP_AUTO_DISMISS);
 
             // Also dismiss on next tap anywhere
             const dismissOnTap = () => {

@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map-temporary.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/waitlist.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/offline.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/move-mode.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/move-mode.css') }}?v=5">
 <style>
     /* =============================================================================
    MOBILE-FIRST MAP PAGE LAYOUT
@@ -1364,8 +1364,8 @@
     import { SearchManager } from '{{ url_for("static", filename="js/map/SearchManager.js") }}';
     import { BlockManager } from '{{ url_for("static", filename="js/map/block-manager.js") }}';
     import { TempFurnitureManager } from '{{ url_for("static", filename="js/map/temp-furniture-manager.js") }}';
-    import { MoveMode } from '{{ url_for("static", filename="js/map/MoveMode.js") }}?v=4';
-    import { MoveModePanel } from '{{ url_for("static", filename="js/map/MoveModePanel.js") }}?v=4';
+    import { MoveMode } from '{{ url_for("static", filename="js/map/MoveMode.js") }}?v=5';
+    import { MoveModePanel } from '{{ url_for("static", filename="js/map/MoveModePanel.js") }}?v=5';
 
     document.addEventListener('DOMContentLoaded', function () {
         // ==========================================================================
