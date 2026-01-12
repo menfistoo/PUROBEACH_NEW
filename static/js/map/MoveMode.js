@@ -33,7 +33,8 @@ export class MoveMode {
             onSelectionChange: [],
             onFurnitureHighlight: [],
             onUndo: [],
-            onError: []
+            onError: [],
+            onLockBlocked: []
         };
     }
 
@@ -257,6 +258,13 @@ export class MoveMode {
 
                 await this.loadReservationToPool(reservationId, initialFurnitureOverride);
                 showToast(`${result.unassigned_count} mobiliario liberado`, 'success');
+            } else if (result.error === 'locked') {
+                // Furniture is locked - trigger shake animation
+                this.emit('onLockBlocked', {
+                    reservationId,
+                    furnitureIds
+                });
+                return result;
             }
 
             return result;
