@@ -1576,25 +1576,9 @@
             map.applyPreferenceHighlights(fullMatchIds, partialMatchIds);
         });
 
-        // Wire up lock blocked event to trigger shake animation
+        // Wire up lock blocked event to show warning toast
         moveMode.on('onLockBlocked', (data) => {
-            const furnitureIds = data.furnitureIds || [];
-
-            // Apply shake animation to each locked furniture element
-            furnitureIds.forEach(furnitureId => {
-                const furnitureEl = document.querySelector(`.furniture-item[data-furniture-id="${furnitureId}"]`);
-                if (furnitureEl) {
-                    // Add shake class
-                    furnitureEl.classList.add('shake');
-
-                    // Remove shake class after animation completes
-                    setTimeout(() => {
-                        furnitureEl.classList.remove('shake');
-                    }, 400); // Match animation duration in CSS
-                }
-            });
-
-            // Show toast message
+            // Show toast message only
             showToast('Mobiliario bloqueado - no se puede mover', 'warning');
         });
 

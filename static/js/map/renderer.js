@@ -385,38 +385,6 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
         group.appendChild(label);
     }
 
-    // Add lock indicator for locked reservations (visible only in move mode)
-    if (!isAvailable && availability && availability.is_furniture_locked) {
-        group.classList.add('locked');
-
-        const lockIndicator = document.createElementNS(SVG_NS, 'g');
-        lockIndicator.setAttribute('class', 'lock-indicator');
-
-        // Lock icon background circle
-        const lockBg = document.createElementNS(SVG_NS, 'circle');
-        lockBg.setAttribute('cx', width - 12);
-        lockBg.setAttribute('cy', '12');
-        lockBg.setAttribute('r', '8');
-        lockBg.setAttribute('fill', '#D4AF37');
-        lockBg.setAttribute('opacity', '0.95');
-        lockIndicator.appendChild(lockBg);
-
-        // Lock icon (using FontAwesome-style path)
-        const lockIcon = document.createElementNS(SVG_NS, 'text');
-        lockIcon.setAttribute('x', width - 12);
-        lockIcon.setAttribute('y', '12');
-        lockIcon.setAttribute('text-anchor', 'middle');
-        lockIcon.setAttribute('dominant-baseline', 'central');
-        lockIcon.setAttribute('font-size', '10');
-        lockIcon.setAttribute('font-family', 'FontAwesome');
-        lockIcon.setAttribute('fill', '#1A3A5C');
-        lockIcon.setAttribute('pointer-events', 'none');
-        lockIcon.textContent = '\uf023'; // FontAwesome lock icon
-        lockIndicator.appendChild(lockIcon);
-
-        group.appendChild(lockIndicator);
-    }
-
     // Event listeners
     group.addEventListener('click', (e) => onFurnitureClick(e, item));
 
