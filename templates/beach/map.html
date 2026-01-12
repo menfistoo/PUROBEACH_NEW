@@ -1364,8 +1364,8 @@
     import { SearchManager } from '{{ url_for("static", filename="js/map/SearchManager.js") }}';
     import { BlockManager } from '{{ url_for("static", filename="js/map/block-manager.js") }}';
     import { TempFurnitureManager } from '{{ url_for("static", filename="js/map/temp-furniture-manager.js") }}';
-    import { MoveMode } from '{{ url_for("static", filename="js/map/MoveMode.js") }}';
-    import { MoveModePanel } from '{{ url_for("static", filename="js/map/MoveModePanel.js") }}';
+    import { MoveMode } from '{{ url_for("static", filename="js/map/MoveMode.js") }}?v=4';
+    import { MoveModePanel } from '{{ url_for("static", filename="js/map/MoveModePanel.js") }}?v=4';
 
     document.addEventListener('DOMContentLoaded', function () {
         // ==========================================================================
@@ -1453,6 +1453,9 @@
                     moveMode.activate(map.getCurrentDate());
                     moveModeBtn.classList.add('active');
                     document.querySelector('.beach-map-container')?.classList.add('move-mode-active');
+
+                    // Show onboarding toast on first use (mobile-focused)
+                    showMoveModeOnboarding();
                 }
             });
         }
@@ -1497,8 +1500,38 @@
                 moveMode.activate(map.getCurrentDate());
                 moveModeBtn?.classList.add('active');
                 document.querySelector('.beach-map-container')?.classList.add('move-mode-active');
+
+                // Show onboarding toast on first use
+                showMoveModeOnboarding();
             }
         });
+
+        /**
+         * Show onboarding toast for move mode on first use
+         * Explains touch gestures for mobile/tablet users
+         */
+        function showMoveModeOnboarding() {
+            const storageKey = 'moveMode_onboarding_shown';
+
+            // Only show once
+            if (localStorage.getItem(storageKey)) {
+                return;
+            }
+
+            // Mark as shown
+            localStorage.setItem(storageKey, 'true');
+
+            // Check if touch device (more likely to need gesture explanation)
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+            const message = isTouchDevice
+                ? 'Toca mobiliario para liberar. Mantén presionado para liberar todo.'
+                : 'Clic para liberar mobiliario. Ctrl+Clic para liberar todo.';
+
+            if (window.PuroBeach && window.PuroBeach.showToast) {
+                window.PuroBeach.showToast(message, 'info', 5000);
+            }
+        }
 
         // Check for unassigned reservations and update warning indicator
         async function checkUnassignedReservations(date) {
@@ -2485,11 +2518,51 @@
         });
 
         touchHandler.onLongPress(async (event) => {
-            const { furnitureId, clientX, clientY } = event;
+            const { furnitureId, clientX, clientY, target } = event;
 
             // Check if furniture is occupied
             const data = map.getData();
             const availability = data.availability[furnitureId];
+
+            // Handle move mode - long-press releases ALL furniture from reservation
+            if (moveMode.isActive()) {
+                if (availability && !availability.available && availability.reservation_id) {
+                    // Add visual feedback during long-press
+                    if (target) {
+                        target.classList.add('long-press-active');
+                        setTimeout(() => target.classList.remove('long-press-active'), 500);
+                    }
+
+                    // Get ALL furniture for this reservation
+                    const allFurnitureForReservation = Object.entries(data.availability)
+                        .filter(([id, av]) => av.reservation_id === availability.reservation_id)
+                        .map(([id, av]) => {
+                            const furnitureItem = data.furniture.find(f => f.id === parseInt(id));
+                            return {
+                                furniture_id: parseInt(id),
+                                number: furnitureItem?.number || av.furniture_number,
+                                capacity: furnitureItem?.capacity || 1
+                            };
+                        });
+
+                    // Release ALL furniture for this reservation
+                    const furnitureIds = allFurnitureForReservation.map(f => f.furniture_id);
+                    const result = await moveMode.unassignFurniture(
+                        availability.reservation_id,
+                        furnitureIds,
+                        false,
+                        allFurnitureForReservation
+                    );
+
+                    if (result.success) {
+                        map.refreshAvailability();
+                        if (window.PuroBeach && window.PuroBeach.showToast) {
+                            window.PuroBeach.showToast(`${furnitureIds.length} mueble(s) liberado(s)`, 'success');
+                        }
+                    }
+                }
+                return; // Exit early - don't open panel in move mode
+            }
 
             if (availability && !availability.available && availability.reservation_id) {
                 // Occupied furniture - open reservation panel directly

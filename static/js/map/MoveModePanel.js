@@ -35,19 +35,28 @@ export class MoveModePanel {
      */
     createPanelStructure() {
         this.container.innerHTML = `
-            <button type="button" class="collapse-toggle" id="moveModeCollapseBtn" title="Colapsar panel">
-                <i class="fas fa-chevron-right"></i>
-            </button>
+            <!-- Collapsed bar - always visible in the 48px strip when collapsed -->
+            <div class="collapsed-bar">
+                <button type="button" class="collapse-toggle" id="moveModeCollapseBtn" title="Colapsar panel">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <div class="collapsed-thumbnails" id="collapsedThumbnails"></div>
+            </div>
             <div class="move-mode-panel">
                 <div class="move-mode-panel-header">
                     <h5>
-                        <i class="fas fa-exchange-alt me-2"></i>
-                        Sin asignar
-                        <span class="badge bg-warning text-dark ms-2" id="moveModePoolCount">0</span>
+                        <i class="fas fa-exchange-alt"></i>
+                        Modo Mover
+                        <span class="badge" id="moveModePoolCount">0</span>
                     </h5>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="moveModeExitBtn" title="Salir del modo mover">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <div class="header-actions">
+                        <button type="button" class="btn collapse-btn" id="moveModeCollapseBtnHeader" title="Colapsar panel" aria-label="Colapsar panel">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button type="button" class="btn" id="moveModeExitBtn" title="Cerrar" aria-label="Cerrar panel">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="move-mode-filters" id="moveModeFilters">
@@ -69,22 +78,28 @@ export class MoveModePanel {
                 <div class="move-mode-panel-body" id="moveModePoolList">
                     <div class="move-mode-empty-state">
                         <i class="fas fa-hand-pointer fa-2x text-muted mb-2"></i>
-                        <p class="text-muted mb-0">Haz clic en mobiliario ocupado para liberarlo</p>
+                        <p class="text-muted mb-0">Toca mobiliario ocupado para liberarlo</p>
+                        <p class="text-muted small mb-0">Mantén presionado para liberar todo</p>
                     </div>
                 </div>
 
+                <!-- Keyboard shortcuts - desktop only -->
+                <div class="move-mode-shortcuts">
+                    <span><kbd>Clic</kbd> 1 item</span>
+                    <span><kbd>Ctrl+Clic</kbd> Todos</span>
+                    <span><kbd>Ctrl+Z</kbd> Deshacer</span>
+                </div>
+
+                <!-- Footer with action buttons -->
                 <div class="move-mode-panel-footer">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="moveModeUndoBtn" disabled>
-                            <i class="fas fa-undo me-1"></i>Deshacer
-                        </button>
-                        <small class="text-muted" id="moveModeUndoCount"></small>
-                    </div>
-                    <div class="move-mode-shortcuts">
-                        <span><kbd>Clic</kbd> 1 item</span>
-                        <span><kbd>Ctrl+Clic</kbd> Todos</span>
-                        <span><kbd>Ctrl+Z</kbd> Deshacer</span>
-                    </div>
+                    <button type="button" class="move-mode-footer-btn btn-exit" id="moveModeExitFooterBtn">
+                        Salir
+                    </button>
+                    <button type="button" class="move-mode-footer-btn btn-undo" id="moveModeUndoBtn" disabled>
+                        <i class="fas fa-undo"></i>
+                        <span>Deshacer</span>
+                        <span class="undo-count" id="moveModeUndoCount"></span>
+                    </button>
                 </div>
 
                 <div class="move-mode-legend" id="moveModeLegend" style="display: none;">
@@ -98,22 +113,37 @@ export class MoveModePanel {
         this.poolCount = document.getElementById('moveModePoolCount');
         this.poolList = document.getElementById('moveModePoolList');
         this.exitBtn = document.getElementById('moveModeExitBtn');
+        this.exitFooterBtn = document.getElementById('moveModeExitFooterBtn');
         this.undoBtn = document.getElementById('moveModeUndoBtn');
         this.undoCount = document.getElementById('moveModeUndoCount');
         this.legend = document.getElementById('moveModeLegend');
         this.legendItems = document.getElementById('moveModeLegendItems');
         this.collapseBtn = document.getElementById('moveModeCollapseBtn');
+        this.collapseBtnHeader = document.getElementById('moveModeCollapseBtnHeader');
+        this.collapsedThumbnails = document.getElementById('collapsedThumbnails');
         this.filterVip = document.getElementById('filterVip');
         this.filterPrefs = document.getElementById('filterPrefs');
         this.filterBtns = document.querySelectorAll('.filter-btn[data-filter="type"]');
+
+        // Swipe gesture state
+        this.swipeState = {
+            startX: 0,
+            currentX: 0,
+            isDragging: false
+        };
     }
 
     /**
      * Setup event listeners
      */
     setupEventListeners() {
-        // Exit button
+        // Exit button (header)
         this.exitBtn?.addEventListener('click', () => {
+            this.moveMode.deactivate();
+        });
+
+        // Exit button (footer)
+        this.exitFooterBtn?.addEventListener('click', () => {
             this.moveMode.deactivate();
         });
 
@@ -122,8 +152,13 @@ export class MoveModePanel {
             this.moveMode.undo();
         });
 
-        // Collapse button
+        // Collapse button (in collapsed bar)
         this.collapseBtn?.addEventListener('click', () => {
+            this.toggleCollapse();
+        });
+
+        // Collapse button (in header - visible when expanded)
+        this.collapseBtnHeader?.addEventListener('click', () => {
             this.toggleCollapse();
         });
 
@@ -149,6 +184,9 @@ export class MoveModePanel {
             this.renderPool(this.moveMode.getPool());
         });
 
+        // Setup swipe-to-close gesture
+        this.setupSwipeGesture();
+
         // MoveMode events
         this.moveMode.on('onPoolUpdate', (data) => this.renderPool(data.pool));
         this.moveMode.on('onSelectionChange', (data) => this.updateSelection(data.reservation));
@@ -156,6 +194,58 @@ export class MoveModePanel {
         this.moveMode.on('onActivate', () => this.show());
         this.moveMode.on('onDeactivate', () => this.hide());
         this.moveMode.on('onUndo', () => this.updateUndoState());
+    }
+
+    /**
+     * Setup swipe-to-close gesture for mobile
+     */
+    setupSwipeGesture() {
+        if (!this.container) return;
+
+        const panel = this.container;
+
+        panel.addEventListener('touchstart', (e) => {
+            // Only initiate from left edge (first 50px)
+            if (e.touches[0].clientX < 50) {
+                this.swipeState.startX = e.touches[0].clientX;
+                this.swipeState.isDragging = true;
+                panel.classList.add('dragging');
+            }
+        }, { passive: true });
+
+        panel.addEventListener('touchmove', (e) => {
+            if (!this.swipeState.isDragging) return;
+            this.swipeState.currentX = e.touches[0].clientX;
+            const deltaX = this.swipeState.currentX - this.swipeState.startX;
+
+            // Only allow swipe right (to close)
+            if (deltaX > 0) {
+                panel.style.transform = `translateX(${deltaX}px)`;
+            }
+        }, { passive: true });
+
+        panel.addEventListener('touchend', () => {
+            if (!this.swipeState.isDragging) return;
+            this.swipeState.isDragging = false;
+            panel.classList.remove('dragging');
+
+            const deltaX = this.swipeState.currentX - this.swipeState.startX;
+            if (deltaX > 100) { // Threshold to close
+                this.moveMode.deactivate();
+            } else {
+                panel.style.transform = '';
+            }
+            this.swipeState.startX = 0;
+            this.swipeState.currentX = 0;
+        });
+
+        panel.addEventListener('touchcancel', () => {
+            this.swipeState.isDragging = false;
+            panel.classList.remove('dragging');
+            panel.style.transform = '';
+            this.swipeState.startX = 0;
+            this.swipeState.currentX = 0;
+        });
     }
 
     /**
@@ -172,6 +262,7 @@ export class MoveModePanel {
     hide() {
         this.container?.classList.remove('visible');
         this.container?.classList.remove('collapsed');
+        this._hideThumbnailTooltip();
     }
 
     /**
@@ -237,6 +328,8 @@ export class MoveModePanel {
                     <p class="text-muted mb-0">Todas las reservas asignadas</p>
                 </div>
             `;
+            // Clear collapsed thumbnails when pool is empty
+            this.renderCollapsedThumbnails(pool);
             return;
         }
 
@@ -247,6 +340,8 @@ export class MoveModePanel {
                     <p class="text-muted mb-0">Sin resultados con estos filtros</p>
                 </div>
             `;
+            // Still show collapsed thumbnails for full pool (unfiltered)
+            this.renderCollapsedThumbnails(pool);
             return;
         }
 
@@ -286,6 +381,330 @@ export class MoveModePanel {
         });
 
         this.updateUndoState();
+
+        // Also update collapsed thumbnails
+        this.renderCollapsedThumbnails(pool);
+    }
+
+    /**
+     * Render mini-cards for collapsed state
+     * @param {Array} pool - Pool reservations
+     */
+    renderCollapsedThumbnails(pool) {
+        if (!this.collapsedThumbnails) return;
+
+        if (pool.length === 0) {
+            this.collapsedThumbnails.innerHTML = '';
+            return;
+        }
+
+        const maxThumbnails = 4;
+        const visiblePool = pool.slice(0, maxThumbnails);
+        const remainingCount = pool.length - maxThumbnails;
+
+        let html = visiblePool.map(res => {
+            const isVip = this._isVip(res);
+            const isSelected = res.reservation_id === this.moveMode.selectedReservationId;
+            const isComplete = res.isComplete || res.assignedCount >= res.totalNeeded;
+            const vipClass = isVip ? 'is-vip' : '';
+            const selectedClass = isSelected ? 'selected' : '';
+            const completeClass = isComplete ? 'is-complete' : '';
+            const vipStar = isVip ? '<i class="fas fa-star vip-star"></i>' : '';
+
+            // Mini progress dots (max 4 dots for space)
+            const totalDots = Math.min(res.totalNeeded, 4);
+            const filledDots = Math.min(res.assignedCount, totalDots);
+            let progressHtml = '';
+            for (let i = 0; i < totalDots; i++) {
+                const filled = i < filledDots ? 'filled' : '';
+                progressHtml += `<span class="mini-dot ${filled}"></span>`;
+            }
+
+            return `
+                <div class="collapsed-thumbnail ${vipClass} ${selectedClass} ${completeClass}"
+                     data-reservation-id="${res.reservation_id}">
+                    ${vipStar}
+                    <span class="person-count">${isComplete ? '✓' : res.num_people}</span>
+                    <div class="mini-progress">${progressHtml}</div>
+                </div>
+            `;
+        }).join('');
+
+        // Add "+N" badge if there are more reservations
+        if (remainingCount > 0) {
+            html += `
+                <div class="collapsed-thumbnail more-badge">
+                    +${remainingCount}
+                </div>
+            `;
+        }
+
+        this.collapsedThumbnails.innerHTML = html;
+
+        // Setup interaction handlers (click, double-click, hover, touch)
+        this._setupThumbnailInteractions(pool);
+    }
+
+    /**
+     * Setup thumbnail interaction handlers (click, double-click, hover, touch)
+     * @private
+     * @param {Array} pool - Pool reservations
+     */
+    _setupThumbnailInteractions(pool) {
+        const thumbnails = this.collapsedThumbnails.querySelectorAll(
+            '.collapsed-thumbnail[data-reservation-id]'
+        );
+
+        thumbnails.forEach(thumb => {
+            const resId = parseInt(thumb.dataset.reservationId);
+            const reservation = pool.find(r => r.reservation_id === resId);
+            if (!reservation) return;
+
+            // Track click timing for double-click detection
+            let lastClickTime = 0;
+            const DOUBLE_CLICK_THRESHOLD = 300;
+
+            // Click handler: select without expand, double-click expands
+            thumb.addEventListener('click', () => {
+                const now = Date.now();
+                if (now - lastClickTime < DOUBLE_CLICK_THRESHOLD) {
+                    // Double-click: expand + select
+                    this.container?.classList.remove('collapsed');
+                    this.moveMode.selectReservation(resId);
+                } else {
+                    // Single click: select only (no expand)
+                    this.moveMode.selectReservation(resId);
+                }
+                lastClickTime = now;
+            });
+
+            // Hover handlers (desktop only)
+            if (window.matchMedia('(hover: hover)').matches) {
+                thumb.addEventListener('mouseenter', () => {
+                    this._showThumbnailTooltip(thumb, reservation);
+                });
+                thumb.addEventListener('mouseleave', () => {
+                    this._hideThumbnailTooltip();
+                });
+            }
+
+            // Touch handlers (mobile)
+            this._setupThumbnailTouchHandlers(thumb, reservation);
+        });
+
+        // "+N" badge just expands panel
+        const moreBadge = this.collapsedThumbnails.querySelector('.more-badge');
+        moreBadge?.addEventListener('click', () => {
+            this.container?.classList.remove('collapsed');
+        });
+    }
+
+    /**
+     * Setup touch handlers for long-press tooltip on mobile
+     * @private
+     * @param {HTMLElement} thumb - Thumbnail element
+     * @param {Object} reservation - Reservation data
+     */
+    _setupThumbnailTouchHandlers(thumb, reservation) {
+        let longPressTimer = null;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        const LONG_PRESS_DELAY = 500;
+        const MOVE_THRESHOLD = 10;
+
+        thumb.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+
+            longPressTimer = setTimeout(() => {
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+                this._showThumbnailTooltip(thumb, reservation, true);
+            }, LONG_PRESS_DELAY);
+        }, { passive: true });
+
+        thumb.addEventListener('touchmove', (e) => {
+            if (!longPressTimer) return;
+
+            const touch = e.touches[0];
+            const deltaX = Math.abs(touch.clientX - touchStartX);
+            const deltaY = Math.abs(touch.clientY - touchStartY);
+
+            if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }, { passive: true });
+
+        thumb.addEventListener('touchend', () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        });
+
+        thumb.addEventListener('touchcancel', () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        });
+    }
+
+    /**
+     * Create the tooltip element if not exists
+     * @private
+     */
+    _createThumbnailTooltip() {
+        if (this.thumbnailTooltip) return;
+
+        this.thumbnailTooltip = document.createElement('div');
+        this.thumbnailTooltip.className = 'collapsed-bar-tooltip';
+        document.body.appendChild(this.thumbnailTooltip);
+    }
+
+    /**
+     * Show tooltip for a thumbnail
+     * @private
+     * @param {HTMLElement} thumb - Thumbnail element
+     * @param {Object} reservation - Reservation data
+     * @param {boolean} isMobile - Whether triggered from mobile long-press
+     */
+    _showThumbnailTooltip(thumb, reservation, isMobile = false) {
+        this._createThumbnailTooltip();
+
+        // Build tooltip content
+        let content = `<div class="tooltip-name">${reservation.customer_name}</div>`;
+
+        if (reservation.room_number) {
+            content += `<div class="tooltip-room">Hab. ${reservation.room_number}</div>`;
+        }
+
+        // Progress info
+        content += `<div class="tooltip-progress">${reservation.assignedCount} de ${reservation.totalNeeded} asignados</div>`;
+
+        // Render preferences (max 6 icons)
+        if (reservation.preferences && reservation.preferences.length > 0) {
+            const maxPrefs = 6;
+            const visiblePrefs = reservation.preferences.slice(0, maxPrefs);
+            const prefIcons = visiblePrefs.map(p => {
+                const icon = this._normalizeIconClass(p.icon);
+                return `<div class="tooltip-pref-icon" title="${p.name}"><i class="${icon}"></i></div>`;
+            }).join('');
+            content += `<div class="tooltip-preferences">${prefIcons}</div>`;
+
+            if (reservation.preferences.length > maxPrefs) {
+                content += `<div class="tooltip-room">+${reservation.preferences.length - maxPrefs} más</div>`;
+            }
+        }
+
+        if (isMobile) {
+            content += `<div class="tooltip-dismiss-hint">Toca para cerrar</div>`;
+        }
+
+        this.thumbnailTooltip.innerHTML = content;
+        this.thumbnailTooltip.style.display = 'block';
+
+        // Position tooltip to the left of the thumbnail
+        const thumbRect = thumb.getBoundingClientRect();
+        const tooltipRect = this.thumbnailTooltip.getBoundingClientRect();
+
+        let left = thumbRect.left - tooltipRect.width - 16; // 16px gap + arrow
+        let top = thumbRect.top + (thumbRect.height / 2) - (tooltipRect.height / 2);
+
+        // Keep within viewport
+        if (top < 10) top = 10;
+        if (top + tooltipRect.height > window.innerHeight - 10) {
+            top = window.innerHeight - tooltipRect.height - 10;
+        }
+        if (left < 10) {
+            // If not enough space on left, position above or below
+            left = thumbRect.left - tooltipRect.width / 2;
+            top = thumbRect.top - tooltipRect.height - 10;
+        }
+
+        this.thumbnailTooltip.style.left = `${left}px`;
+        this.thumbnailTooltip.style.top = `${top}px`;
+
+        // Auto-dismiss on mobile after 3 seconds
+        if (isMobile) {
+            this._clearTooltipDismissTimer();
+            this.tooltipDismissTimer = setTimeout(() => {
+                this._hideThumbnailTooltip();
+            }, 3000);
+
+            // Also dismiss on next tap anywhere
+            const dismissOnTap = () => {
+                this._hideThumbnailTooltip();
+                document.removeEventListener('touchstart', dismissOnTap);
+            };
+            setTimeout(() => {
+                document.addEventListener('touchstart', dismissOnTap, { once: true });
+            }, 100);
+        }
+    }
+
+    /**
+     * Hide the thumbnail tooltip
+     * @private
+     */
+    _hideThumbnailTooltip() {
+        if (this.thumbnailTooltip) {
+            this.thumbnailTooltip.style.display = 'none';
+        }
+        this._clearTooltipDismissTimer();
+    }
+
+    /**
+     * Clear the tooltip auto-dismiss timer
+     * @private
+     */
+    _clearTooltipDismissTimer() {
+        if (this.tooltipDismissTimer) {
+            clearTimeout(this.tooltipDismissTimer);
+            this.tooltipDismissTimer = null;
+        }
+    }
+
+    /**
+     * Normalize icon class to ensure proper FontAwesome prefix
+     * @private
+     * @param {string} icon - Icon class string
+     * @returns {string} Normalized icon class
+     */
+    _normalizeIconClass(icon) {
+        let normalizedIcon = icon || 'fa-heart';
+        if (normalizedIcon &&
+            !normalizedIcon.startsWith('fas ') &&
+            !normalizedIcon.startsWith('far ') &&
+            !normalizedIcon.startsWith('fab ')) {
+            normalizedIcon = 'fas ' + normalizedIcon;
+        }
+        return normalizedIcon;
+    }
+
+    /**
+     * Update selected class on collapsed thumbnails
+     * @private
+     * @param {number|null} selectedId - Selected reservation ID
+     */
+    _updateCollapsedThumbnailSelection(selectedId) {
+        if (!this.collapsedThumbnails) return;
+
+        this.collapsedThumbnails.querySelectorAll('.collapsed-thumbnail[data-reservation-id]')
+            .forEach(thumb => {
+                const resId = parseInt(thumb.dataset.reservationId);
+                if (resId === selectedId) {
+                    thumb.classList.add('selected');
+                } else {
+                    thumb.classList.remove('selected');
+                }
+            });
     }
 
     /**
@@ -429,11 +848,16 @@ export class MoveModePanel {
      * @param {Object|null} reservation - Selected reservation or null
      */
     updateSelection(reservation) {
-        // Re-render to update selection state
+        // Re-render to update selection state (for expanded cards)
         this.renderPool(this.moveMode.getPool());
 
+        // Update collapsed thumbnail selection state directly (faster, no full re-render)
+        this._updateCollapsedThumbnailSelection(reservation?.reservation_id);
+
         // Legend is hidden - furniture highlighting on map shows matches instead
-        this.legend.style.display = 'none';
+        if (this.legend) {
+            this.legend.style.display = 'none';
+        }
     }
 
     /**

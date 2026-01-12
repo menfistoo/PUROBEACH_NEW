@@ -373,10 +373,22 @@ export class MoveMode {
 
             if (existingIndex >= 0) {
                 if (poolEntry.isComplete) {
-                    this.pool.splice(existingIndex, 1);
-                    if (this.selectedReservationId === reservationId) {
-                        this.deselectReservation();
-                    }
+                    // First show the complete state in UI
+                    this.pool[existingIndex] = poolEntry;
+                    this.emit('onPoolUpdate', { pool: this.pool });
+
+                    // Then remove after brief delay for visual feedback
+                    setTimeout(() => {
+                        const currentIndex = this.pool.findIndex(r => r.reservation_id === reservationId);
+                        if (currentIndex >= 0) {
+                            this.pool.splice(currentIndex, 1);
+                            if (this.selectedReservationId === reservationId) {
+                                this.deselectReservation();
+                            }
+                            this.emit('onPoolUpdate', { pool: this.pool });
+                        }
+                    }, 600);
+                    return poolEntry;
                 } else {
                     this.pool[existingIndex] = poolEntry;
                 }
