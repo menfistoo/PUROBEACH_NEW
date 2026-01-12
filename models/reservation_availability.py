@@ -395,7 +395,7 @@ def get_furniture_availability_map(
 
         reservations_query = f'''
             SELECT rf.furniture_id, rf.assignment_date, r.id as reservation_id,
-                   r.ticket_number, r.current_state, r.num_people,
+                   r.ticket_number, r.current_state, r.num_people, r.is_furniture_locked,
                    c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
                    c.first_name, c.room_number, c.customer_type, c.vip_status
             FROM beach_reservation_furniture rf
@@ -433,7 +433,8 @@ def get_furniture_availability_map(
                 'customer_type': row['customer_type'],
                 'vip_status': row['vip_status'],
                 'num_people': row['num_people'],
-                'state': row['current_state']
+                'state': row['current_state'],
+                'is_furniture_locked': row['is_furniture_locked']
             }
 
         # Build availability matrix
@@ -458,7 +459,8 @@ def get_furniture_availability_map(
                         'customer_type': res_info['customer_type'],
                         'vip_status': res_info['vip_status'],
                         'num_people': res_info['num_people'],
-                        'state': res_info['state']
+                        'state': res_info['state'],
+                        'is_furniture_locked': res_info['is_furniture_locked']
                     }
                     summary[date]['occupied'] += 1
                 else:
