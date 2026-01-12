@@ -129,6 +129,7 @@ def register_routes(bp):
                 'furniture': reservation.get('furniture', []),
                 'tags': reservation.get('tags', []),
                 'preferences': reservation.get('preferences'),
+                'is_furniture_locked': reservation.get('is_furniture_locked', 0),
                 # Pricing fields
                 'price': reservation.get('price', 0.0),
                 'final_price': reservation.get('final_price', 0.0),
