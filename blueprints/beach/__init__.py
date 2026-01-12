@@ -209,6 +209,26 @@ def insights_analytics():
 
 
 # =============================================================================
+# REPORTS & ANALYTICS ROUTES (Menu items)
+# =============================================================================
+
+@beach_bp.route('/reports')
+@login_required
+@permission_required('beach.reports.view')
+def reports_dashboard():
+    """Display reports dashboard."""
+    return render_template('beach/insights/dashboard.html')
+
+
+@beach_bp.route('/analytics')
+@login_required
+@permission_required('beach.analytics.view')
+def analytics_dashboard():
+    """Display analytics dashboard."""
+    return render_template('beach/insights/analytics.html')
+
+
+# =============================================================================
 # TEMPLATE CONTEXT PROCESSORS
 # =============================================================================
 
