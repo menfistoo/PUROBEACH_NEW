@@ -1,11 +1,11 @@
 # Checkpoints & Recovery Guide
 
 ## Current Stable Checkpoint
-**Date:** 2026-01-12
-**Tag:** `stable-checkpoint-20260112`
-**Commit:** `1e37068`
-**Branch:** `backup/stable-20260112`
-**Database:** `backups/beach_club_stable_20260112_*.db`
+**Date:** 2026-01-12 (Updated: 22:16)
+**Tag:** `stable-checkpoint-audit-20260112`
+**Commit:** `eee4ee3`
+**Branch:** `backup/audit-stable-20260112`
+**Database:** `backups/beach_club_stable_20260112_221641.db`
 
 ### What's Stable
 ✅ All permissions working correctly
@@ -15,6 +15,10 @@
 ✅ All configuration pages accessible
 ✅ Packages and minimum consumption accessible
 ✅ Menu structure consolidated and clean
+✅ **Comprehensive audit logging system operational**
+✅ **Audit logs for reservations (create, update, state changes, cancel)**
+✅ **Audit logs for customers (create, update preferences)**
+✅ **Admin UI at /beach/admin/audit-logs**
 
 ---
 
@@ -25,10 +29,10 @@ Use this if the database is fine but code changes broke something.
 
 ```bash
 # Revert to tagged version
-git reset --hard stable-checkpoint-20260112
+git reset --hard stable-checkpoint-audit-20260112
 
 # Or revert to backup branch
-git reset --hard backup/stable-20260112
+git reset --hard backup/audit-stable-20260112
 ```
 
 ### Option 2: Revert Everything (Code + Database)
@@ -36,13 +40,10 @@ Use this for complete rollback.
 
 ```bash
 # 1. Revert code
-git reset --hard stable-checkpoint-20260112
+git reset --hard stable-checkpoint-audit-20260112
 
-# 2. Restore database backup (find the exact filename first)
-ls backups/beach_club_stable_20260112*.db
-
-# Copy the backup over current database
-cp backups/beach_club_stable_20260112_XXXXXX.db instance/beach_club.db
+# 2. Restore database backup
+cp backups/beach_club_stable_20260112_221641.db instance/beach_club.db
 
 # 3. Restart server
 # Kill current server, then: python app.py
@@ -162,6 +163,25 @@ git checkout stable-checkpoint-20260112 -- path/to/file.py
 # Add to cron or Task Scheduler
 cd /c/Users/catia/programas/PuroBeach/PuroBeach && cp instance/beach_club.db backups/daily_$(date +%Y%m%d).db
 ```
+
+---
+
+## Previous Checkpoints
+
+### Checkpoint: 2026-01-12 (20:00)
+**Tag:** `stable-checkpoint-20260112`
+**Commit:** `1e37068`
+**Branch:** `backup/stable-20260112`
+**Database:** `backups/beach_club_stable_20260112_211948.db`
+
+**Features:**
+- All permissions working correctly
+- Analytics dashboard functional
+- Waitlist system operational
+- Hotel guests Excel import (535 guests tested)
+- All configuration pages accessible
+- Packages and minimum consumption accessible
+- Menu structure consolidated
 
 ---
 
