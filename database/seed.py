@@ -48,7 +48,6 @@ def seed_database(db):
         # Administración children
         ('admin.users.view', 'Usuarios', 'admin', 1, 11, 'fa-users-gear', '/admin/users', menu_admin_id),
         ('admin.roles.view', 'Roles', 'admin', 1, 12, 'fa-user-shield', '/admin/roles', menu_admin_id),
-        ('admin.audit.view', 'Auditoría', 'admin', 1, 13, 'fa-clipboard-list', '/admin/audit', menu_admin_id),
         ('admin.hotel_guests.view', 'Huéspedes Hotel', 'admin', 1, 14, 'fa-hotel', '/admin/hotel-guests', menu_admin_id),
 
         # Configuración children
