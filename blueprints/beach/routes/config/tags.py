@@ -12,7 +12,7 @@ def register_routes(bp):
 
     @bp.route('/tags')
     @login_required
-    @permission_required('beach.furniture.view')
+    @permission_required('beach.config.furniture.view')
     def tags():
         """List all tags."""
         from models.tag import get_all_tags
@@ -21,7 +21,7 @@ def register_routes(bp):
 
     @bp.route('/tags/create', methods=['GET', 'POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def tags_create():
         """Create new tag."""
         from models.tag import create_tag
@@ -53,7 +53,7 @@ def register_routes(bp):
 
     @bp.route('/tags/<int:tag_id>/edit', methods=['GET', 'POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def tags_edit(tag_id):
         """Edit existing tag."""
         from models.tag import get_tag_by_id, update_tag
@@ -95,7 +95,7 @@ def register_routes(bp):
 
     @bp.route('/tags/<int:tag_id>/delete', methods=['POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def tags_delete(tag_id):
         """Delete tag."""
         from models.tag import delete_tag

@@ -16,7 +16,7 @@ def register_routes(bp):
 
     @bp.route('/furniture-manager')
     @login_required
-    @permission_required('beach.furniture.view')
+    @permission_required('beach.config.furniture.view')
     def furniture_manager():
         """Unified furniture management page with tabs."""
         # Determine which tab is active (default: map-editor)

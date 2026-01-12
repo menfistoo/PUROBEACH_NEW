@@ -13,7 +13,7 @@ def register_routes(bp):
 
     @bp.route('/characteristics')
     @login_required
-    @permission_required('beach.characteristics.view')
+    @permission_required('beach.config.characteristics.view')
     def characteristics():
         """List all characteristics."""
         from models.characteristic import get_all_characteristics
@@ -29,7 +29,7 @@ def register_routes(bp):
 
     @bp.route('/characteristics/create', methods=['GET', 'POST'])
     @login_required
-    @permission_required('beach.characteristics.manage')
+    @permission_required('beach.config.characteristics.manage')
     def characteristics_create():
         """Create new characteristic."""
         from models.characteristic import create_characteristic
@@ -69,7 +69,7 @@ def register_routes(bp):
 
     @bp.route('/characteristics/<int:characteristic_id>/edit', methods=['GET', 'POST'])
     @login_required
-    @permission_required('beach.characteristics.manage')
+    @permission_required('beach.config.characteristics.manage')
     def characteristics_edit(characteristic_id):
         """Edit existing characteristic."""
         from models.characteristic import get_characteristic_by_id, update_characteristic
@@ -120,7 +120,7 @@ def register_routes(bp):
 
     @bp.route('/characteristics/<int:characteristic_id>/delete', methods=['POST'])
     @login_required
-    @permission_required('beach.characteristics.manage')
+    @permission_required('beach.config.characteristics.manage')
     def characteristics_delete(characteristic_id):
         """Delete characteristic (soft delete)."""
         from models.characteristic import delete_characteristic
@@ -138,7 +138,7 @@ def register_routes(bp):
 
     @bp.route('/characteristics/reorder', methods=['POST'])
     @login_required
-    @permission_required('beach.characteristics.manage')
+    @permission_required('beach.config.characteristics.manage')
     def characteristics_reorder():
         """Reorder characteristics via AJAX."""
         from models.characteristic import reorder_characteristics

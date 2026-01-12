@@ -16,7 +16,7 @@ def register_routes(bp):
 
     @bp.route('/furniture')
     @login_required
-    @permission_required('beach.furniture.view')
+    @permission_required('beach.config.furniture.view')
     def furniture():
         """Furniture list - redirect to unified furniture manager."""
         # Preserve filter parameters when redirecting
@@ -28,7 +28,7 @@ def register_routes(bp):
 
     @bp.route('/furniture/create', methods=['GET', 'POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def furniture_create():
         """Create new furniture item(s) with optional duplication."""
         if request.method == 'POST':
@@ -117,7 +117,7 @@ def register_routes(bp):
 
     @bp.route('/furniture/<int:furniture_id>/edit', methods=['GET', 'POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def furniture_edit(furniture_id):
         """Edit existing furniture item or duplicate it."""
         item = get_furniture_by_id(furniture_id)
@@ -228,7 +228,7 @@ def register_routes(bp):
 
     @bp.route('/furniture/<int:furniture_id>/delete', methods=['POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def furniture_delete(furniture_id):
         """Delete furniture item."""
         try:
@@ -247,7 +247,7 @@ def register_routes(bp):
     # API Endpoint for Map Positioning
     @bp.route('/api/furniture/<int:furniture_id>/position', methods=['POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def furniture_update_position(furniture_id):
         """Update furniture position (AJAX endpoint for map drag-drop)."""
         data = request.get_json()

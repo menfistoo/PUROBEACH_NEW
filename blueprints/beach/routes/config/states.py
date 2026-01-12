@@ -13,7 +13,7 @@ def register_routes(bp):
 
     @bp.route('/states')
     @login_required
-    @permission_required('beach.states.view')
+    @permission_required('beach.config.states.view')
     def states():
         """List all reservation states."""
         from models.state import get_all_states
@@ -23,7 +23,7 @@ def register_routes(bp):
 
     @bp.route('/states/create', methods=['GET', 'POST'])
     @login_required
-    @permission_required('beach.states.manage')
+    @permission_required('beach.config.states.manage')
     def states_create():
         """Create new state."""
         from models.state import create_state
@@ -63,7 +63,7 @@ def register_routes(bp):
 
     @bp.route('/states/<int:state_id>/edit', methods=['GET', 'POST'])
     @login_required
-    @permission_required('beach.states.manage')
+    @permission_required('beach.config.states.manage')
     def states_edit(state_id):
         """Edit existing state."""
         from models.state import get_state_by_id, update_state
@@ -113,7 +113,7 @@ def register_routes(bp):
 
     @bp.route('/states/<int:state_id>/delete', methods=['POST'])
     @login_required
-    @permission_required('beach.states.manage')
+    @permission_required('beach.config.states.manage')
     def states_delete(state_id):
         """Delete state (soft delete)."""
         from models.state import delete_state
@@ -133,7 +133,7 @@ def register_routes(bp):
 
     @bp.route('/states/reorder', methods=['POST'])
     @login_required
-    @permission_required('beach.states.manage')
+    @permission_required('beach.config.states.manage')
     def states_reorder():
         """Reorder states via AJAX."""
         from models.state import reorder_states

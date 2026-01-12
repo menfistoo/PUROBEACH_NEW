@@ -13,14 +13,14 @@ def register_routes(bp):
 
     @bp.route('/furniture-types')
     @login_required
-    @permission_required('beach.furniture.view')
+    @permission_required('beach.config.furniture.view')
     def furniture_types():
         """Furniture types - redirect to unified furniture manager."""
         return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-types'))
 
     @bp.route('/furniture-types/create', methods=['GET', 'POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def furniture_types_create():
         """Create new furniture type - redirect to unified page."""
         # Redirect GET to unified page with create mode
@@ -77,7 +77,7 @@ def register_routes(bp):
 
     @bp.route('/furniture-types/<int:type_id>/edit', methods=['GET', 'POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def furniture_types_edit(type_id):
         """Edit existing furniture type - redirect to unified page."""
         from models.furniture_type import get_furniture_type_by_id, update_furniture_type
@@ -142,7 +142,7 @@ def register_routes(bp):
 
     @bp.route('/furniture-types/<int:type_id>/delete', methods=['POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def furniture_types_delete(type_id):
         """Delete furniture type."""
         from models.furniture_type import delete_furniture_type
@@ -162,7 +162,7 @@ def register_routes(bp):
 
     @bp.route('/furniture-types/preview', methods=['POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def furniture_types_preview():
         """Generate SVG preview for furniture type configuration (AJAX)."""
         from models.furniture_type import get_furniture_type_svg
@@ -187,7 +187,7 @@ def register_routes(bp):
 
     @bp.route('/furniture-types/<int:type_id>/next-number')
     @login_required
-    @permission_required('beach.furniture.view')
+    @permission_required('beach.config.furniture.view')
     def furniture_types_next_number(type_id):
         """Get next available number for furniture type (AJAX)."""
         from models.furniture_type import get_next_number_for_type
@@ -205,7 +205,7 @@ def register_routes(bp):
 
     @bp.route('/furniture-types/reorder', methods=['POST'])
     @login_required
-    @permission_required('beach.furniture.manage')
+    @permission_required('beach.config.furniture.manage')
     def furniture_types_reorder():
         """Update furniture types display order (AJAX)."""
         from models.furniture_type import update_furniture_types_order
