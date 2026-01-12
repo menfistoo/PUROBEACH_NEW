@@ -64,3 +64,6 @@ Thumbs.db
 
 # Git worktrees
 .worktrees/
+
+# Git worktrees
+.worktrees/
