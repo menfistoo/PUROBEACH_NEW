@@ -52,7 +52,7 @@ def unassign_furniture_for_date(
             return {
                 'success': False,
                 'error': 'locked',
-                'message': 'El mobiliario de esta reserva esta bloqueado'
+                'message': 'El mobiliario de esta reserva está bloqueado'
             }
 
         unassigned = []
