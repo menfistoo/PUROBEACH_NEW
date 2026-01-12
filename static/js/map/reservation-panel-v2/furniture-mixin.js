@@ -67,6 +67,9 @@ export const FurnitureMixin = (Base) => class extends Base {
         const totalCapacity = displayFurniture.reduce((sum, f) => sum + (f.capacity || 2), 0);
         this.furnitureSummary.textContent =
             `${displayFurniture.length} ${displayFurniture.length === 1 ? 'item' : 'items'} • Capacidad: ${totalCapacity} personas`;
+
+        // Render lock state
+        this.renderLockState(reservation.is_furniture_locked || false);
     }
 
     // =========================================================================
@@ -626,6 +629,117 @@ export const FurnitureMixin = (Base) => class extends Base {
         highlightedElements.forEach(el => {
             el.classList.remove('furniture-editing');
         });
+    }
+
+    // =========================================================================
+    // FURNITURE LOCK
+    // =========================================================================
+
+    /**
+     * Initialize furniture lock toggle
+     */
+    initFurnitureLock() {
+        this.lockBtn = document.getElementById('toggleFurnitureLock');
+        if (this.lockBtn) {
+            this.lockBtn.addEventListener('click', () => this.toggleFurnitureLock());
+        }
+    }
+
+    /**
+     * Render the lock button state
+     * @param {boolean} isLocked - Whether furniture is locked
+     */
+    renderLockState(isLocked) {
+        if (!this.lockBtn) return;
+
+        const icon = this.lockBtn.querySelector('i');
+        if (isLocked) {
+            this.lockBtn.classList.add('locked');
+            this.lockBtn.dataset.locked = 'true';
+            this.lockBtn.title = 'Desbloquear mobiliario';
+            this.lockBtn.setAttribute('aria-label', 'Desbloquear mobiliario');
+            icon.classList.remove('fa-lock-open');
+            icon.classList.add('fa-lock');
+        } else {
+            this.lockBtn.classList.remove('locked');
+            this.lockBtn.dataset.locked = 'false';
+            this.lockBtn.title = 'Bloquear mobiliario';
+            this.lockBtn.setAttribute('aria-label', 'Bloquear mobiliario');
+            icon.classList.remove('fa-lock');
+            icon.classList.add('fa-lock-open');
+        }
+
+        // Disable change furniture buttons when locked
+        const changeFurnitureBtn = document.getElementById('panelChangeFurnitureBtn');
+        const moveModeBtn = document.getElementById('panelMoveModeBtn');
+
+        if (changeFurnitureBtn) {
+            changeFurnitureBtn.disabled = isLocked;
+            changeFurnitureBtn.title = isLocked ? 'Mobiliario bloqueado' : 'Cambiar mobiliario';
+        }
+        if (moveModeBtn) {
+            moveModeBtn.disabled = isLocked;
+            moveModeBtn.title = isLocked ? 'Mobiliario bloqueado' : 'Modo Mover';
+        }
+    }
+
+    /**
+     * Toggle furniture lock via API
+     */
+    async toggleFurnitureLock() {
+        const reservation = this.state.data?.reservation;
+        if (!reservation) return;
+
+        const currentLocked = this.lockBtn.dataset.locked === 'true';
+        const newLocked = !currentLocked;
+
+        // Disable button during request
+        this.lockBtn.disabled = true;
+
+        try {
+            const response = await fetch(
+                `/beach/api/map/reservations/${reservation.id}/toggle-lock`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCSRFToken()
+                    },
+                    body: JSON.stringify({ locked: newLocked })
+                }
+            );
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.renderLockState(result.is_furniture_locked);
+                // Update local state
+                if (this.state.data.reservation) {
+                    this.state.data.reservation.is_furniture_locked = result.is_furniture_locked;
+                }
+                showToast(
+                    result.is_furniture_locked
+                        ? 'Mobiliario bloqueado'
+                        : 'Mobiliario desbloqueado',
+                    'success'
+                );
+            } else {
+                showToast(result.error || 'Error al cambiar bloqueo', 'error');
+            }
+        } catch (error) {
+            console.error('Error toggling lock:', error);
+            showToast('Error al cambiar bloqueo', 'error');
+        } finally {
+            this.lockBtn.disabled = false;
+        }
+    }
+
+    /**
+     * Get CSRF token from meta tag
+     */
+    getCSRFToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.content : '';
     }
 
     // =========================================================================

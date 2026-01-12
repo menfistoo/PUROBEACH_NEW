@@ -285,6 +285,9 @@ export class ReservationPanelBase {
         // Move mode button - enters global move mode from this reservation
         this.moveModeBtn?.addEventListener('click', () => this.enterMoveMode());
 
+        // Furniture lock toggle
+        this.initFurnitureLock();
+
         // Reassignment mode buttons
         this.reassignmentCancelBtn?.addEventListener('click', () => this.exitReassignmentMode(true));
         this.reassignmentSaveBtn?.addEventListener('click', () => this.saveReassignment());
