@@ -1260,6 +1260,6 @@
     40%, 80% { transform: translateX(3px); }
 }
 
-.furniture.shake {
+.furniture-item.shake {
     animation: shake-lock 0.4s ease;
 }
