@@ -1237,3 +1237,29 @@
         box-shadow: 0 2px 16px rgba(193, 68, 79, 0.7);
     }
 }
+
+/* =============================================================================
+   LOCKED FURNITURE INDICATOR (Move Mode)
+   ============================================================================= */
+
+/* Lock indicator hidden by default */
+.furniture .lock-indicator {
+    display: none;
+    pointer-events: none;
+}
+
+/* Show lock indicator only in move mode for locked furniture */
+.move-mode-active .furniture.locked .lock-indicator {
+    display: block;
+}
+
+/* Shake animation for blocked action */
+@keyframes shake-lock {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-3px); }
+    40%, 80% { transform: translateX(3px); }
+}
+
+.furniture.shake {
+    animation: shake-lock 0.4s ease;
+}
