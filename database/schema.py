@@ -375,7 +375,8 @@ def create_tables(db):
             parent_reservation_id INTEGER REFERENCES beach_reservations(id),
             created_by TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_furniture_locked INTEGER DEFAULT 0
         )
     ''')
 
