@@ -1605,3 +1605,55 @@
 .reservation-row:active {
     background-color: rgba(212, 175, 55, 0.15) !important;
 }
+
+/* =============================================================================
+   FURNITURE LOCK TOGGLE
+   ============================================================================= */
+
+.furniture-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+}
+
+.btn-lock {
+    background: transparent;
+    border: none;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+    color: var(--color-medium-gray);
+    transition: all var(--transition-fast);
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-lock:hover {
+    background: rgba(212, 175, 55, 0.1);
+    color: var(--color-primary);
+}
+
+.btn-lock:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.btn-lock.locked {
+    color: var(--color-primary);
+}
+
+.btn-lock:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Disabled state for change furniture button when locked */
+.furniture-change-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.furniture-change-btn:disabled:hover {
+    background: var(--color-light-gray);
+    transform: none;
+}
