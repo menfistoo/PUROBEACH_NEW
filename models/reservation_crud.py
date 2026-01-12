@@ -569,3 +569,66 @@ def create_reservation_with_furniture(
         created_by=created_by
     )
     return reservation_id
+
+
+# =============================================================================
+# FURNITURE LOCK
+# =============================================================================
+
+def toggle_furniture_lock(reservation_id: int, locked: bool) -> dict:
+    """
+    Toggle the furniture lock status for a reservation.
+
+    Args:
+        reservation_id: The reservation ID
+        locked: True to lock, False to unlock
+
+    Returns:
+        Dict with success status and new lock state
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Check reservation exists
+        cursor.execute(
+            "SELECT id FROM beach_reservations WHERE id = ?",
+            (reservation_id,)
+        )
+        if not cursor.fetchone():
+            return {
+                'success': False,
+                'error': 'Reserva no encontrada'
+            }
+
+        # Update lock status
+        cursor.execute(
+            "UPDATE beach_reservations SET is_furniture_locked = ? WHERE id = ?",
+            (1 if locked else 0, reservation_id)
+        )
+        conn.commit()
+
+        return {
+            'success': True,
+            'is_furniture_locked': locked,
+            'reservation_id': reservation_id
+        }
+
+
+def is_furniture_locked(reservation_id: int) -> bool:
+    """
+    Check if a reservation's furniture is locked.
+
+    Args:
+        reservation_id: The reservation ID
+
+    Returns:
+        True if locked, False otherwise
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT is_furniture_locked FROM beach_reservations WHERE id = ?",
+            (reservation_id,)
+        )
+        row = cursor.fetchone()
+        return bool(row and row['is_furniture_locked'])
