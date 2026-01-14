@@ -329,13 +329,17 @@
         isolation: isolate;
         /* Center content using text-align (works with inline-block child) */
         text-align: center;
+        /* Mobile touch scrolling improvements */
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-x pan-y;
     }
 
     .map-canvas {
         /* Inline-block for centering via text-align */
         display: inline-block;
-        /* Allow touch gestures for mobile */
-        touch-action: pan-x pan-y pinch-zoom;
+        /* Allow touch pan only - disable native pinch-zoom to prevent conflict with JS zoom */
+        touch-action: pan-x pan-y;
         /* Reset text-align for content */
         text-align: left;
         /* Margin auto for additional centering support */
