@@ -1370,6 +1370,7 @@
     import { TempFurnitureManager } from '{{ url_for("static", filename="js/map/temp-furniture-manager.js") }}';
     import { MoveMode } from '{{ url_for("static", filename="js/map/MoveMode.js") }}?v=5';
     import { MoveModePanel } from '{{ url_for("static", filename="js/map/MoveModePanel.js") }}?v=5';
+    import { PinchZoomHandler } from '{{ url_for("static", filename="js/map/pinch-zoom.js") }}';
 
     document.addEventListener('DOMContentLoaded', function () {
         // ==========================================================================
@@ -3276,6 +3277,23 @@
         });
 
         map.startAutoRefresh(30000);
+
+        // ==========================================================================
+        // PINCH ZOOM FOR TOUCH DEVICES
+        // ==========================================================================
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            const pinchZoom = new PinchZoomHandler(
+                document.querySelector('.map-canvas-wrapper'),
+                {
+                    minZoom: 0.1,
+                    maxZoom: 3,
+                    getZoom: () => map.getZoom(),
+                    setZoom: (z) => { map.setZoom(z); updateZoomDisplay(); },
+                    getMapWrapper: () => document.querySelector('.map-canvas-wrapper'),
+                    getSvg: () => document.getElementById('beach-map')
+                }
+            );
+        }
 
         // ==========================================================================
         // SELECTION & BOTTOM ACTION BAR
