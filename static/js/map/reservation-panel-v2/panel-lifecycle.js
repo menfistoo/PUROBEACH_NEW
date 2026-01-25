@@ -9,10 +9,7 @@
  * - Error display
  */
 
-import { formatDate, dismissToast } from './utils.js';
-
-// Toast ID for reassignment mode (must match save-mixin.js and furniture-mixin.js)
-const REASSIGNMENT_TOAST_ID = 'reassignment-mode-toast';
+import { formatDate } from './utils.js';
 
 // =============================================================================
 // PANEL LIFECYCLE MIXIN
@@ -104,9 +101,6 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
                 return;
             }
         }
-
-        // Dismiss any persistent reassignment toast
-        dismissToast(REASSIGNMENT_TOAST_ID);
 
         // Reset state
         this.state.isOpen = false;

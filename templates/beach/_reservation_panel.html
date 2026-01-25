@@ -161,57 +161,18 @@
                     </button>
                 </div>
 
-                <!-- Normal View (hidden in reassignment mode) -->
+                <!-- Furniture View -->
                 <div class="furniture-view-mode" id="furnitureViewMode">
                     <div class="furniture-chips" id="panelFurnitureChips">
                         <!-- Furniture chips populated dynamically -->
                     </div>
                     <div class="furniture-action-btns">
-                        <button type="button" class="furniture-change-btn" id="panelChangeFurnitureBtn">
-                            <i class="fas fa-exchange-alt"></i>
-                            <span>Cambiar mobiliario</span>
-                        </button>
                         <button type="button" class="furniture-change-btn move-mode-btn" id="panelMoveModeBtn" title="Reorganizar mobiliario entre reservas">
                             <i class="fas fa-arrows-alt"></i>
                             <span>Modo Mover</span>
                         </button>
                     </div>
                     <div class="furniture-summary" id="furnitureSummary"></div>
-                </div>
-
-                <!-- Reassignment Mode (hidden by default) -->
-                <div class="furniture-reassignment-mode" id="furnitureReassignmentMode" style="display: none;">
-                    <!-- Original furniture (locked, for reference) -->
-                    <div class="reassignment-original">
-                        <span class="reassignment-label">Original:</span>
-                        <div class="reassignment-chips reassignment-original-chips" id="reassignmentOriginalChips">
-                            <!-- Original furniture chips (dimmed) -->
-                        </div>
-                    </div>
-
-                    <!-- New selection (live updated) -->
-                    <div class="reassignment-new">
-                        <span class="reassignment-label">Nueva seleccion:</span>
-                        <div class="reassignment-chips reassignment-new-chips" id="reassignmentNewChips">
-                            <!-- Selected furniture chips (live updated) -->
-                        </div>
-                        <div class="reassignment-counter" id="reassignmentCounter">0 / 2 seleccionados</div>
-                        <div class="reassignment-hint">
-                            <i class="fas fa-hand-pointer"></i>
-                            Toca en el mapa para seleccionar
-                        </div>
-                    </div>
-
-                    <!-- Reassignment actions -->
-                    <div class="reassignment-actions">
-                        <button type="button" class="reassignment-cancel-btn" id="reassignmentCancelBtn">
-                            Cancelar
-                        </button>
-                        <button type="button" class="reassignment-save-btn" id="reassignmentSaveBtn">
-                            <i class="fas fa-check"></i>
-                            Guardar cambios
-                        </button>
-                    </div>
                 </div>
             </section>
 

@@ -28,7 +28,6 @@ export class ReservationPanelBase {
      * @param {Function} options.onClose - Callback when panel is closed
      * @param {Function} options.onSave - Callback when changes are saved
      * @param {Function} options.onStateChange - Callback when reservation state changes
-     * @param {Function} options.onFurnitureReassign - Callback for furniture reassignment
      * @param {Function} options.onCustomerChange - Callback when customer is changed
      */
     constructor(options = {}) {
@@ -41,7 +40,6 @@ export class ReservationPanelBase {
             onClose: null,
             onSave: null,
             onStateChange: null,
-            onFurnitureReassign: null,
             onCustomerChange: null,
             ...options
         };
@@ -53,7 +51,7 @@ export class ReservationPanelBase {
         this.state = {
             isOpen: false,
             isCollapsed: false,
-            mode: 'view', // 'view', 'edit', or 'reassignment'
+            mode: 'view', // 'view' or 'edit'
             reservationId: null,
             currentDate: null,
             data: null,           // Current reservation data
@@ -62,13 +60,6 @@ export class ReservationPanelBase {
             isLoading: false,
             isSubmitting: false,
             numPeopleManuallyEdited: false  // Track if user manually edited num_people
-        };
-
-        // Reassignment state (separate for clarity)
-        this.reassignmentState = {
-            originalFurniture: [],    // Original furniture IDs for reference
-            selectedFurniture: [],    // New selection (furniture IDs)
-            maxAllowed: 2             // Max furniture = num_people
         };
 
         // Preferences editing state
@@ -178,20 +169,11 @@ export class ReservationPanelBase {
         this.stateHistoryContent = document.getElementById('stateHistoryContent');
         this.stateHistoryList = document.getElementById('stateHistoryList');
 
-        // Furniture section - View mode
+        // Furniture section
         this.furnitureViewMode = document.getElementById('furnitureViewMode');
         this.furnitureChipsContainer = document.getElementById('panelFurnitureChips');
-        this.furnitureChangeBtn = document.getElementById('panelChangeFurnitureBtn');
         this.moveModeBtn = document.getElementById('panelMoveModeBtn');
         this.furnitureSummary = document.getElementById('furnitureSummary');
-
-        // Furniture section - Reassignment mode
-        this.furnitureReassignmentMode = document.getElementById('furnitureReassignmentMode');
-        this.reassignmentOriginalChips = document.getElementById('reassignmentOriginalChips');
-        this.reassignmentNewChips = document.getElementById('reassignmentNewChips');
-        this.reassignmentCounter = document.getElementById('reassignmentCounter');
-        this.reassignmentCancelBtn = document.getElementById('reassignmentCancelBtn');
-        this.reassignmentSaveBtn = document.getElementById('reassignmentSaveBtn');
 
         // Details section - View mode
         this.detailsViewMode = document.getElementById('detailsViewMode');
@@ -279,25 +261,16 @@ export class ReservationPanelBase {
         // Customer search input
         this.customerSearchInput?.addEventListener('input', (e) => this.handleCustomerSearch(e));
 
-        // Furniture change button
-        this.furnitureChangeBtn?.addEventListener('click', () => this.enterReassignmentMode());
-
         // Move mode button - enters global move mode from this reservation
         this.moveModeBtn?.addEventListener('click', () => this.enterMoveMode());
 
         // Furniture lock toggle
         this.initFurnitureLock();
 
-        // Reassignment mode buttons
-        this.reassignmentCancelBtn?.addEventListener('click', () => this.exitReassignmentMode(true));
-        this.reassignmentSaveBtn?.addEventListener('click', () => this.saveReassignment());
-
         // Keyboard: Escape to close
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.state.isOpen) {
-                if (this.state.mode === 'reassignment') {
-                    this.exitReassignmentMode(true);
-                } else if (this.state.mode === 'edit') {
+                if (this.state.mode === 'edit') {
                     this.exitEditMode(true);
                 } else {
                     this.close();
@@ -608,43 +581,6 @@ export class ReservationPanelBase {
      */
     handleDateChange(event) {
         console.warn('ReservationPanelBase: handleDateChange() not implemented');
-    }
-
-    /**
-     * Enter reassignment mode
-     * @abstract Should be implemented by furniture mixin
-     */
-    enterReassignmentMode() {
-        console.warn('ReservationPanelBase: enterReassignmentMode() not implemented');
-    }
-
-    /**
-     * Enter reassignment mode for a specific date (used when changing reservation date)
-     * @param {string} targetDate - The date to reassign furniture for
-     * @abstract Should be implemented by furniture mixin
-     */
-    enterReassignmentModeForDate(targetDate) {
-        // For now, fall back to regular reassignment mode
-        // The furniture mixin can override this to handle date-specific behavior
-        console.warn('ReservationPanelBase: enterReassignmentModeForDate() using fallback');
-        this.enterReassignmentMode();
-    }
-
-    /**
-     * Exit reassignment mode
-     * @param {boolean} cancel - Whether to cancel without saving
-     * @abstract Should be implemented by furniture mixin
-     */
-    exitReassignmentMode(cancel = false) {
-        console.warn('ReservationPanelBase: exitReassignmentMode() not implemented');
-    }
-
-    /**
-     * Save furniture reassignment
-     * @abstract Should be implemented by furniture mixin
-     */
-    saveReassignment() {
-        console.warn('ReservationPanelBase: saveReassignment() not implemented');
     }
 
     /**

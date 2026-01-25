@@ -7,10 +7,7 @@
  * Extracted from reservation-panel.js as part of the modular refactoring.
  */
 
-import { showToast, dismissToast } from './utils.js';
-
-// Toast ID for reassignment mode (persistent toast)
-const REASSIGNMENT_TOAST_ID = 'reassignment-mode-toast';
+import { showToast } from './utils.js';
 
 // =============================================================================
 // SAVE MIXIN
@@ -68,17 +65,9 @@ export const SaveMixin = (Base) => class extends Base {
             if (result.all_available) {
                 // All furniture available - change date directly
                 await this._changeDateDirectly(newDate);
-            } else if (result.some_available) {
-                // Some furniture unavailable - trigger reassignment mode
-                // Show persistent toast (duration=0) with ID for later dismissal
-                showToast('El mobiliario no está disponible. Seleccione nuevo mobiliario.', 'warning', 0, REASSIGNMENT_TOAST_ID);
-                // Store new date in state for reassignment
-                this.state.pendingDateChange = newDate;
-                // Enter reassignment mode with new date
-                this.enterReassignmentModeForDate(newDate);
             } else {
-                // No furniture available at all
-                showToast('No hay disponibilidad para esta fecha', 'error');
+                // Some or all furniture unavailable - use move mode to reassign
+                showToast('El mobiliario no está disponible. Usa Modo Mover para cambiar.', 'warning');
                 this.editReservationDate.value = originalDate;
             }
 
