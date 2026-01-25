@@ -188,10 +188,9 @@ export const SaveMixin = (Base) => class extends Base {
 
             // Navigate map to new date and activate move mode
             if (window.moveMode) {
-                // If map has goToDate function, navigate first
-                const mapInstance = document.querySelector('.beach-map-container')?.__beachMap;
-                if (mapInstance && typeof mapInstance.goToDate === 'function') {
-                    await mapInstance.goToDate(newDate);
+                // Navigate map to new date first
+                if (window.beachMap && typeof window.beachMap.goToDate === 'function') {
+                    await window.beachMap.goToDate(newDate);
                 }
 
                 // Activate move mode
