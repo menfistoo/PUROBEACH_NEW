@@ -56,6 +56,7 @@ def unassign_furniture_for_date(
             }
 
         unassigned = []
+        not_found = []
         for furniture_id in furniture_ids:
             cursor.execute("""
                 DELETE FROM beach_reservation_furniture
@@ -66,13 +67,24 @@ def unassign_furniture_for_date(
 
             if cursor.rowcount > 0:
                 unassigned.append(furniture_id)
+            else:
+                not_found.append(furniture_id)
 
         conn.commit()
+
+        # Log warning if some furniture wasn't found (helps debug move mode issues)
+        if not_found:
+            import logging
+            logging.warning(
+                f"[MoveMode] unassign: furniture {not_found} not found for "
+                f"reservation {reservation_id} on {assignment_date}"
+            )
 
         return {
             'success': True,
             'unassigned_count': len(unassigned),
             'furniture_ids': unassigned,
+            'not_found': not_found,  # Include for debugging
             'reservation_id': reservation_id,
             'date': assignment_date
         }

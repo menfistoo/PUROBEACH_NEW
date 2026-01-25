@@ -265,6 +265,15 @@ export class MoveMode {
                     furnitureIds
                 });
                 return result;
+            } else if (result.success && result.unassigned_count === 0) {
+                // Nothing was unassigned - warn user (helps debug move mode issues)
+                console.warn('[MoveMode] unassign returned 0 count:', {
+                    reservationId,
+                    furnitureIds,
+                    date: this.currentDate,
+                    not_found: result.not_found
+                });
+                showToast('Mobiliario no encontrado para esta reserva', 'warning');
             }
 
             return result;
