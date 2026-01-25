@@ -1238,3 +1238,39 @@
     }
 }
 
+/* =============================================================================
+   MOVE MODE BADGE (on toolbar button)
+   ============================================================================= */
+
+.move-mode-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #C1444F;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: badge-pulse 1.5s ease-in-out infinite;
+    box-shadow: 0 2px 4px rgba(193, 68, 79, 0.5);
+}
+
+@keyframes badge-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Ensure toolbar button has relative positioning for badge */
+#btn-move-mode {
+    position: relative;
+}
+

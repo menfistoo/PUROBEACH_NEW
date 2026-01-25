@@ -835,13 +835,8 @@
         <!-- Move Mode Button -->
         <button type="button" class="toolbar-btn" id="btn-move-mode" title="Modo Mover - Reorganizar mobiliario">
             <i class="fas fa-exchange-alt"></i>
+            <span class="move-mode-badge" id="moveModeUnassignedBadge" style="display: none;">!</span>
         </button>
-
-        <!-- Move Mode Pool Warning (red indicator when reservations need assignment) -->
-        <div class="pool-warning-indicator" id="poolWarningIndicator" style="display: none;">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span class="pool-warning-count" id="poolWarningCount">0</span>
-        </div>
 
         <!-- Refresh Button -->
         <button type="button" class="toolbar-btn" id="btn-refresh" title="Actualizar">
@@ -1482,36 +1477,27 @@
             map.clearPreferenceHighlights();
             map.refreshAvailability();
             // Hide pool warning when move mode deactivated
-            document.getElementById('poolWarningIndicator').style.display = 'none';
+            // Hide badge when move mode deactivated (only if pool is empty)
+            updateUnassignedBadge(0);
         });
 
-        // Wire up pool update to refresh map and update warning indicator
-        const poolWarningIndicator = document.getElementById('poolWarningIndicator');
-        const poolWarningCount = document.getElementById('poolWarningCount');
+        // Badge element for unassigned reservations
+        const unassignedBadge = document.getElementById('moveModeUnassignedBadge');
 
+        // Function to update the badge visibility
+        function updateUnassignedBadge(count) {
+            if (unassignedBadge) {
+                unassignedBadge.style.display = count > 0 ? 'flex' : 'none';
+            }
+        }
+
+        // Wire up pool update to refresh map and update warning badge
         moveMode.on('onPoolUpdate', (data) => {
             map.refreshAvailability();
 
-            // Update pool warning indicator
+            // Update badge based on unassigned reservations in pool
             const unassignedCount = (data.pool || []).filter(r => r.assignedCount < r.totalNeeded).length;
-            if (unassignedCount > 0) {
-                poolWarningIndicator.style.display = 'flex';
-                poolWarningCount.textContent = unassignedCount;
-            } else {
-                poolWarningIndicator.style.display = 'none';
-            }
-        });
-
-        // Click on warning indicator opens move mode panel
-        poolWarningIndicator?.addEventListener('click', () => {
-            if (!moveMode.isActive()) {
-                moveMode.activate(map.getCurrentDate());
-                moveModeBtn?.classList.add('active');
-                document.querySelector('.beach-map-container')?.classList.add('move-mode-active');
-
-                // Show onboarding toast on first use
-                showMoveModeOnboarding();
-            }
+            updateUnassignedBadge(unassignedCount);
         });
 
         /**
@@ -1541,7 +1527,7 @@
             }
         }
 
-        // Check for unassigned reservations and update warning indicator
+        // Check for unassigned reservations and update warning badge
         async function checkUnassignedReservations(date) {
             try {
                 const response = await fetch(`/beach/api/move-mode/unassigned?date=${date}`, {
@@ -1550,12 +1536,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     const count = data.reservation_ids?.length || 0;
-                    if (count > 0) {
-                        poolWarningIndicator.style.display = 'flex';
-                        poolWarningCount.textContent = count;
-                    } else {
-                        poolWarningIndicator.style.display = 'none';
-                    }
+                    updateUnassignedBadge(count);
                 }
             } catch (error) {
                 console.error('Error checking unassigned reservations:', error);
