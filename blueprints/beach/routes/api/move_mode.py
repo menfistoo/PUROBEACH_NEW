@@ -275,3 +275,26 @@ def register_routes(bp):
 
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    @bp.route('/move-mode/unassigned-global', methods=['GET'])
+    @login_required
+    @permission_required('beach.map.view')
+    def move_mode_unassigned_global():
+        """
+        Get all reservations with insufficient furniture for the next 7 days.
+
+        Response JSON:
+        {
+            "count": int,
+            "dates": ["YYYY-MM-DD", ...],
+            "first_date": "YYYY-MM-DD" or null,
+            "by_date": {"YYYY-MM-DD": [reservation_ids], ...}
+        }
+        """
+        try:
+            from models.move_mode import get_unassigned_reservations_global
+            result = get_unassigned_reservations_global(days_ahead=7)
+            return jsonify(result)
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500

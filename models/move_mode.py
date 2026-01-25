@@ -282,6 +282,45 @@ def get_reservation_pool_data(
         }
 
 
+def get_unassigned_reservations_global(days_ahead: int = 7) -> Dict[str, Any]:
+    """
+    Get all reservations with insufficient furniture for the next N days.
+
+    Args:
+        days_ahead: Number of days to check from today (default 7)
+
+    Returns:
+        Dict with:
+        - count: Total number of unassigned reservations
+        - dates: List of dates that have unassigned reservations
+        - by_date: Dict mapping date -> list of reservation IDs
+        - first_date: First date with unassigned reservations (for navigation)
+    """
+    from datetime import datetime, timedelta
+
+    today = datetime.now().date()
+    result = {
+        'count': 0,
+        'dates': [],
+        'by_date': {},
+        'first_date': None
+    }
+
+    for i in range(days_ahead):
+        check_date = (today + timedelta(days=i)).strftime('%Y-%m-%d')
+        reservation_ids = get_unassigned_reservations(check_date)
+
+        if reservation_ids:
+            result['dates'].append(check_date)
+            result['by_date'][check_date] = reservation_ids
+            result['count'] += len(reservation_ids)
+
+            if result['first_date'] is None:
+                result['first_date'] = check_date
+
+    return result
+
+
 def get_unassigned_reservations(target_date: str) -> List[int]:
     """
     Get all reservations for a date that have insufficient furniture capacity.

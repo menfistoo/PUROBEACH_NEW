@@ -1473,16 +1473,29 @@
 
         const moveModePanel = new MoveModePanel('moveModePanel', moveMode);
 
+        // Store global unassigned data for tooltip and navigation
+        let globalUnassignedData = null;
+
         // Move mode button handler
         const moveModeBtn = document.getElementById('btn-move-mode');
         if (moveModeBtn) {
-            moveModeBtn.addEventListener('click', () => {
+            moveModeBtn.addEventListener('click', async () => {
                 if (moveMode.isActive()) {
                     moveMode.deactivate();
                     moveModeBtn.classList.remove('active');
                     document.querySelector('.beach-map-container')?.classList.remove('move-mode-active');
                 } else {
-                    moveMode.activate(map.getCurrentDate());
+                    // If there are unassigned reservations, navigate to first problematic date
+                    let targetDate = map.getCurrentDate();
+                    if (globalUnassignedData && globalUnassignedData.first_date) {
+                        targetDate = globalUnassignedData.first_date;
+                        // Navigate map to that date if different from current
+                        if (targetDate !== map.getCurrentDate()) {
+                            await map.goToDate(targetDate);
+                        }
+                    }
+
+                    moveMode.activate(targetDate);
                     moveModeBtn.classList.add('active');
                     document.querySelector('.beach-map-container')?.classList.add('move-mode-active');
 
@@ -1500,18 +1513,31 @@
             document.querySelector('.beach-map-container')?.classList.remove('move-mode-active');
             map.clearPreferenceHighlights();
             map.refreshAvailability();
-            // Hide pool warning when move mode deactivated
-            // Hide badge when move mode deactivated (only if pool is empty)
-            updateUnassignedBadge(0);
+            // Refresh global badge after move mode - assignments may have changed
+            checkUnassignedReservationsGlobal();
         });
 
         // Badge element for unassigned reservations
         const unassignedBadge = document.getElementById('moveModeUnassignedBadge');
 
-        // Function to update the badge visibility
-        function updateUnassignedBadge(count) {
+        // Function to update the badge visibility and tooltip
+        function updateUnassignedBadge(count, data = null) {
             if (unassignedBadge) {
                 unassignedBadge.style.display = count > 0 ? 'flex' : 'none';
+
+                // Update tooltip with dates info
+                if (data && data.dates && data.dates.length > 0) {
+                    const dateLabels = data.dates.slice(0, 3).map(d => {
+                        const date = new Date(d + 'T12:00:00');
+                        return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+                    }).join(', ');
+                    const suffix = data.dates.length > 3 ? ` +${data.dates.length - 3} más` : '';
+                    moveModeBtn.title = `${count} reserva(s) sin asignar (${dateLabels}${suffix})`;
+                } else if (count > 0) {
+                    moveModeBtn.title = `${count} reserva(s) sin asignar`;
+                } else {
+                    moveModeBtn.title = 'Modo Mover - Reorganizar mobiliario';
+                }
             }
         }
 
@@ -1551,26 +1577,24 @@
             }
         }
 
-        // Check for unassigned reservations and update warning badge
-        async function checkUnassignedReservations(date) {
+        // Check for unassigned reservations GLOBALLY (next 7 days) and update warning badge
+        async function checkUnassignedReservationsGlobal() {
             try {
-                const response = await fetch(`/beach/api/move-mode/unassigned?date=${date}`, {
+                const response = await fetch('/beach/api/move-mode/unassigned-global', {
                     headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    const count = data.reservation_ids?.length || 0;
-                    updateUnassignedBadge(count);
+                    globalUnassignedData = data;
+                    updateUnassignedBadge(data.count || 0, data);
                 }
             } catch (error) {
                 console.error('Error checking unassigned reservations:', error);
             }
         }
 
-        // Check on page load
-        checkUnassignedReservations(map.getCurrentDate());
-
-        // Note: checkUnassignedReservations is called from the main onDateChange handler
+        // Check on page load (global - next 7 days)
+        checkUnassignedReservationsGlobal();
 
         // Wire up furniture highlighting for preference matches (tiered)
         moveMode.on('onFurnitureHighlight', (data) => {
@@ -2559,14 +2583,14 @@
             datePicker.value = dateStr;
             updateStats(currentZoneId);
             populateZoneSelector();
-            // Check for unassigned reservations and update badge
-            checkUnassignedReservations(dateStr);
             // Update waitlist badge
             updateWaitlistBadge();
             // Update move mode date if active
             if (moveMode.isActive()) {
                 moveMode.currentDate = dateStr;
             }
+            // Note: Global unassigned badge is NOT refreshed on date change
+            // It only refreshes on page load and after assignments
         });
 
         btnPrevDay.addEventListener('click', async () => {
