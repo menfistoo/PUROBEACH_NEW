@@ -22,7 +22,7 @@ export const SaveMixin = (Base) => class extends Base {
 
     /**
      * Handle reservation date change
-     * Checks availability and either changes the date directly or triggers furniture reassignment
+     * Checks availability and either changes the date directly or shows conflict modal
      *
      * @param {Event} event - Change event from date input
      * @returns {Promise<void>}
@@ -66,15 +66,166 @@ export const SaveMixin = (Base) => class extends Base {
                 // All furniture available - change date directly
                 await this._changeDateDirectly(newDate);
             } else {
-                // Some or all furniture unavailable - use move mode to reassign
-                showToast('El mobiliario no está disponible. Usa Modo Mover para cambiar.', 'warning');
-                this.editReservationDate.value = originalDate;
+                // Furniture unavailable - show conflict modal
+                await this._showDateConflictModal(newDate, originalDate, result);
             }
 
         } catch (error) {
             console.error('Date change error:', error);
             showToast(error.message, 'error');
             this.editReservationDate.value = originalDate;
+        }
+    }
+
+    /**
+     * Show modal when furniture is unavailable on new date
+     * @private
+     * @param {string} newDate - The new date
+     * @param {string} originalDate - The original date to revert to
+     * @param {object} availabilityResult - Result from check-date-availability
+     */
+    async _showDateConflictModal(newDate, originalDate, availabilityResult) {
+        // Get SafeguardModal instance
+        const SafeguardModal = window.SafeguardModal;
+        if (!SafeguardModal) {
+            // Fallback if modal not available
+            showToast('El mobiliario no está disponible. Usa Modo Mover para cambiar.', 'warning');
+            this.editReservationDate.value = originalDate;
+            return;
+        }
+
+        const modal = SafeguardModal.getInstance();
+
+        // Format date for display
+        const formattedDate = new Date(newDate + 'T12:00:00').toLocaleDateString('es-ES', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+        });
+
+        // Build conflict list HTML
+        const conflicts = availabilityResult.conflicts || [];
+        let conflictHtml = '';
+        if (conflicts.length > 0) {
+            const conflictItems = conflicts.map(c => {
+                const furnitureName = c.furniture_number || `#${c.furniture_id}`;
+                const customerName = c.customer_name || 'Otra reserva';
+                return `<span class="blocking-item">${furnitureName}</span>`;
+            }).join(' ');
+            conflictHtml = `
+                <div class="safeguard-detail-box">
+                    <div class="detail-row">
+                        <span class="detail-label">Mobiliario ocupado:</span>
+                    </div>
+                    <div class="blocking-list" style="margin-top: 8px;">
+                        ${conflictItems}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show modal
+        const action = await modal.show({
+            title: 'Mobiliario no disponible',
+            type: 'warning',
+            message: `
+                <p>El mobiliario actual no está disponible para el <strong>${formattedDate}</strong>.</p>
+                ${conflictHtml}
+                <div class="safeguard-note" style="margin-top: 12px;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Puedes continuar sin mobiliario y asignarlo con el <strong>Modo Mover</strong>.</span>
+                </div>
+            `,
+            buttons: [
+                { label: 'Cancelar', action: 'cancel', style: 'secondary' },
+                { label: 'Continuar', action: 'continue', style: 'primary', icon: 'fas fa-arrow-right' }
+            ]
+        });
+
+        if (action === 'continue') {
+            // User wants to continue without furniture
+            await this._changeDateWithoutFurniture(newDate);
+        } else {
+            // User cancelled - revert date input
+            this.editReservationDate.value = originalDate;
+        }
+    }
+
+    /**
+     * Change date and clear furniture, then activate move mode
+     * @private
+     * @param {string} newDate - The new date
+     */
+    async _changeDateWithoutFurniture(newDate) {
+        try {
+            // Call API with clear_furniture flag
+            const response = await fetch(
+                `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    },
+                    body: JSON.stringify({
+                        new_date: newDate,
+                        clear_furniture: true
+                    })
+                }
+            );
+
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || 'Error al cambiar fecha');
+            }
+
+            // Store reservation ID for move mode
+            const reservationId = this.state.reservationId;
+
+            // Close the panel
+            this.close();
+
+            // Navigate map to new date and activate move mode
+            if (window.moveMode) {
+                // If map has goToDate function, navigate first
+                const mapInstance = document.querySelector('.beach-map-container')?.__beachMap;
+                if (mapInstance && typeof mapInstance.goToDate === 'function') {
+                    await mapInstance.goToDate(newDate);
+                }
+
+                // Activate move mode
+                window.moveMode.activate(newDate);
+
+                // Load this reservation into the pool
+                await window.moveMode.loadReservationToPool(reservationId);
+
+                // Update toolbar button state
+                const moveModeBtn = document.getElementById('btn-move-mode');
+                if (moveModeBtn) {
+                    moveModeBtn.classList.add('active');
+                }
+                document.querySelector('.beach-map-container')?.classList.add('move-mode-active');
+
+                // Show success toast
+                const formattedDate = new Date(newDate + 'T12:00:00').toLocaleDateString('es-ES', {
+                    day: 'numeric',
+                    month: 'short'
+                });
+                showToast(`Reserva movida al ${formattedDate} - selecciona mobiliario`, 'info');
+            } else {
+                // Fallback if move mode not available
+                showToast('Reserva movida. Usa Modo Mover para asignar mobiliario.', 'warning');
+            }
+
+            // Notify parent to refresh map
+            if (this.options.onSave) {
+                this.options.onSave(reservationId, { date_changed: true, furniture_cleared: true });
+            }
+
+        } catch (error) {
+            console.error('Date change without furniture error:', error);
+            showToast(error.message || 'Error al cambiar fecha', 'error');
         }
     }
 

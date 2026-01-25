@@ -464,14 +464,17 @@ def register_routes(bp: Blueprint) -> None:
 
         current_date = reservation.get('reservation_date') or reservation.get('start_date')
 
-        # Get current furniture for this reservation
+        # Get current furniture for this reservation with details
         with get_db() as conn:
             cursor = conn.execute('''
-                SELECT furniture_id
-                FROM beach_reservation_furniture
-                WHERE reservation_id = ? AND assignment_date = ?
+                SELECT rf.furniture_id, f.number as furniture_number
+                FROM beach_reservation_furniture rf
+                JOIN beach_furniture f ON rf.furniture_id = f.id
+                WHERE rf.reservation_id = ? AND rf.assignment_date = ?
             ''', (reservation_id, current_date))
-            furniture_ids = [row['furniture_id'] for row in cursor.fetchall()]
+            furniture_rows = cursor.fetchall()
+            furniture_ids = [row['furniture_id'] for row in furniture_rows]
+            furniture_details = {row['furniture_id']: row['furniture_number'] for row in furniture_rows}
 
         if not furniture_ids:
             return jsonify({
@@ -480,6 +483,7 @@ def register_routes(bp: Blueprint) -> None:
                 'some_available': False,
                 'available_furniture': [],
                 'unavailable_furniture': [],
+                'conflicts': [],
                 'error': 'No hay mobiliario asignado'
             })
 
@@ -529,12 +533,22 @@ def register_routes(bp: Blueprint) -> None:
         # 2. None of the same is available but alternatives exist
         some_available = some_same_available or has_alternatives
 
+        # Build conflicts list with furniture numbers for UI display
+        conflicts = [
+            {
+                'furniture_id': fid,
+                'furniture_number': furniture_details.get(fid, f'#{fid}')
+            }
+            for fid in unavailable
+        ]
+
         return jsonify({
             'success': True,
             'all_available': all_available,
             'some_available': some_available,
             'available_furniture': available,
             'unavailable_furniture': unavailable,
+            'conflicts': conflicts,
             'total_furniture': len(furniture_ids),
             'has_alternatives': has_alternatives,
             'needs_reassignment': not all_available and some_available
@@ -550,6 +564,8 @@ def register_routes(bp: Blueprint) -> None:
         Request body:
             new_date: str - YYYY-MM-DD format
             furniture_ids: list (optional) - New furniture IDs if different from current
+            clear_furniture: bool (optional) - If true, clear furniture assignments
+                (used when furniture unavailable and user wants to continue without)
 
         Pre-requisite: Should call check-date-availability first to verify.
 
@@ -563,6 +579,7 @@ def register_routes(bp: Blueprint) -> None:
 
         new_date = data.get('new_date')
         new_furniture_ids = data.get('furniture_ids')
+        clear_furniture = data.get('clear_furniture', False)
 
         if not new_date:
             return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
@@ -587,7 +604,38 @@ def register_routes(bp: Blueprint) -> None:
 
         try:
             with get_db() as conn:
-                # Get current furniture if not provided
+                # If clear_furniture is true, skip availability check and don't assign furniture
+                if clear_furniture:
+                    # Update reservation date
+                    conn.execute('''
+                        UPDATE beach_reservations
+                        SET reservation_date = ?, start_date = ?, end_date = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    ''', (new_date, new_date, new_date, reservation_id))
+
+                    # Delete old furniture assignments
+                    conn.execute('''
+                        DELETE FROM beach_reservation_furniture
+                        WHERE reservation_id = ? AND assignment_date = ?
+                    ''', (reservation_id, current_date))
+
+                    # Update daily states if any
+                    conn.execute('''
+                        UPDATE beach_reservation_daily_states
+                        SET date = ?
+                        WHERE reservation_id = ? AND date = ?
+                    ''', (new_date, reservation_id, current_date))
+
+                    conn.commit()
+
+                    return jsonify({
+                        'success': True,
+                        'cleared_furniture': True,
+                        'new_date': new_date,
+                        'reservation_id': reservation_id
+                    })
+
+                # Normal flow: Get current furniture if not provided
                 if not new_furniture_ids:
                     cursor = conn.execute('''
                         SELECT furniture_id
