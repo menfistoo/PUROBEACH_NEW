@@ -2268,6 +2268,12 @@
             const actionsContainer = document.getElementById('selection-actions');
             if (!actionsContainer) return;
 
+            // Hide the clear button during conflict resolution (it looks like cancel)
+            const clearBtn = document.getElementById('btn-clear-selection');
+            if (clearBtn) {
+                clearBtn.style.display = 'none';
+            }
+
             // Hide the block button during conflict resolution
             const blockBtn = document.getElementById('btn-block-selection');
             if (blockBtn) {
@@ -2284,19 +2290,34 @@
             const capturedSelection = [...map.getSelectedFurniture()];
             const selectedCount = capturedSelection.length;
 
-            // Create "Confirmar Alternativa" button
+            // Create "Cancelar" button (outline style per design system)
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'btn-conflict-cancel';
+            cancelBtn.style.cssText = 'background: transparent; color: #1A3A5C; padding: 10px 16px; border: 2px solid #E8E8E8; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;';
+            cancelBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Volver';
+            cancelBtn.onmouseenter = () => { cancelBtn.style.borderColor = '#D4AF37'; cancelBtn.style.background = 'rgba(212,175,55,0.1)'; };
+            cancelBtn.onmouseleave = () => { cancelBtn.style.borderColor = '#E8E8E8'; cancelBtn.style.background = 'transparent'; };
+            cancelBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                exitConflictResolutionMode();
+            };
+
+            // Create "Confirmar" button (success style per design system)
             const confirmBtn = document.createElement('button');
             confirmBtn.type = 'button';
             confirmBtn.className = 'btn-conflict-confirm';
-            confirmBtn.style.cssText = 'background: #4A7C59; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;';
 
             if (selectedCount !== conflictResolutionContext.requiredCount) {
                 confirmBtn.disabled = true;
                 confirmBtn.innerHTML = `<i class="fas fa-check"></i> Confirmar (${selectedCount}/${conflictResolutionContext.requiredCount})`;
-                confirmBtn.style.background = '#6c757d';
-                confirmBtn.style.cursor = 'not-allowed';
+                confirmBtn.style.cssText = 'background: #9CA3AF; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: not-allowed; display: flex; align-items: center; gap: 6px;';
             } else {
-                confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Alternativa';
+                confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar';
+                confirmBtn.style.cssText = 'background: linear-gradient(135deg, #4A7C59 0%, #3d6b4a 100%); color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(74,124,89,0.3); transition: all 0.2s ease;';
+                confirmBtn.onmouseenter = () => { confirmBtn.style.transform = 'translateY(-1px)'; };
+                confirmBtn.onmouseleave = () => { confirmBtn.style.transform = 'translateY(0)'; };
             }
 
             confirmBtn.onclick = (e) => {
@@ -2305,19 +2326,7 @@
                 confirmAlternativeSelection(capturedSelection);
             };
 
-            // Create "Cancelar" button
-            const cancelBtn = document.createElement('button');
-            cancelBtn.type = 'button';
-            cancelBtn.className = 'btn-conflict-cancel';
-            cancelBtn.style.cssText = 'background: #C1444F; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;';
-            cancelBtn.innerHTML = '<i class="fas fa-times"></i> Cancelar';
-            cancelBtn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                exitConflictResolutionMode();
-            };
-
-            // Add buttons to container
+            // Add buttons to container (cancel first, then confirm)
             actionsContainer.appendChild(cancelBtn);
             actionsContainer.appendChild(confirmBtn);
         }
@@ -2326,6 +2335,12 @@
         function exitConflictResolutionMode() {
             // Clear context
             conflictResolutionContext = null;
+
+            // Restore clear button visibility
+            const clearBtn = document.getElementById('btn-clear-selection');
+            if (clearBtn) {
+                clearBtn.style.display = '';
+            }
 
             // Restore block button visibility
             const blockBtn = document.getElementById('btn-block-selection');
@@ -2400,6 +2415,12 @@
 
             // Clear context - the modal now manages the flow
             conflictResolutionContext = null;
+
+            // Restore clear button visibility
+            const clearBtn = document.getElementById('btn-clear-selection');
+            if (clearBtn) {
+                clearBtn.style.display = '';
+            }
 
             // Restore block button visibility
             const blockBtn = document.getElementById('btn-block-selection');
