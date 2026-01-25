@@ -190,11 +190,11 @@ def create_beach_reservation(
             if customer_row and customer_row['customer_type'] == 'interno':
                 original_room = customer_row['room_number']
 
-            # Insert reservation
+            # Insert reservation (state_id=1 is "Confirmada" by default)
             cursor.execute('''
                 INSERT INTO beach_reservations (
                     customer_id, ticket_number, reservation_date, start_date, end_date,
-                    num_people, time_slot, current_states, current_state,
+                    num_people, time_slot, current_states, current_state, state_id,
                     payment_status, price, final_price, hamaca_included, price_catalog_id, paid,
                     charge_to_room, charge_reference,
                     minimum_consumption_amount, minimum_consumption_policy_id,
@@ -204,7 +204,7 @@ def create_beach_reservation(
                     original_room
                 ) VALUES (
                     ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?,
+                    ?, ?, ?, ?, 1,
                     ?, ?, ?, ?, ?, ?,
                     ?, ?,
                     ?, ?,

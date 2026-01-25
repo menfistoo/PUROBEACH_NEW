@@ -183,7 +183,7 @@ def create_linked_multiday_reservations(
                     cursor.execute('''
                         INSERT INTO beach_reservations (
                             customer_id, ticket_number, reservation_date, start_date, end_date,
-                            num_people, time_slot, current_states, current_state,
+                            num_people, time_slot, current_states, current_state, state_id,
                             payment_status, price, final_price, paid, charge_to_room, charge_reference,
                             hamaca_included, preferences, notes,
                             minimum_consumption_amount, minimum_consumption_policy_id,
@@ -193,7 +193,7 @@ def create_linked_multiday_reservations(
                             original_room
                         ) VALUES (
                             ?, ?, ?, ?, ?,
-                            ?, ?, ?, ?,
+                            ?, ?, ?, ?, 1,
                             ?, ?, ?, ?, ?, ?,
                             ?, ?, ?,
                             ?, ?,
@@ -233,7 +233,7 @@ def create_linked_multiday_reservations(
                     cursor.execute('''
                         INSERT INTO beach_reservations (
                             customer_id, ticket_number, reservation_date, start_date, end_date,
-                            num_people, time_slot, current_states, current_state,
+                            num_people, time_slot, current_states, current_state, state_id,
                             payment_status, price, final_price, paid, charge_to_room, charge_reference,
                             hamaca_included, preferences, notes,
                             minimum_consumption_amount, minimum_consumption_policy_id,
@@ -243,7 +243,7 @@ def create_linked_multiday_reservations(
                             original_room
                         ) VALUES (
                             ?, ?, ?, ?, ?,
-                            ?, ?, ?, ?,
+                            ?, ?, ?, ?, 1,
                             ?, ?, ?, ?, ?, ?,
                             ?, ?, ?,
                             ?, ?,

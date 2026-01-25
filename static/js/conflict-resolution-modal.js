@@ -126,6 +126,17 @@ class ConflictResolutionModal {
             const { date, furnitureIds } = e.detail;
             this.updateDateSelection(date, furnitureIds);
         });
+
+        // Listen for cancellation from map (when user clicks "Cancelar" in selection bar)
+        document.addEventListener('conflictResolution:cancelled', () => {
+            console.log('[ConflictModal] User cancelled from map, restoring modal');
+            // Show the modal again
+            this.modal.classList.remove('minimized');
+            this.modal.classList.add('open');
+            this.modal.style.removeProperty('display');
+            this.modal.style.setProperty('display', 'flex', 'important');
+            this.state.isOpen = true;
+        });
     }
 
     /**

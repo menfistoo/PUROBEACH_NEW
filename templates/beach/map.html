@@ -2263,38 +2263,90 @@
 
         // Update selection bar for conflict resolution mode
         function updateSelectionBarForConflict() {
-            // Find the action button (exclude the clear button)
-            const actionBtn = document.querySelector('#selection-actions button:not(.btn-clear)');
+            if (!conflictResolutionContext) return;
 
-            if (actionBtn && conflictResolutionContext) {
-                actionBtn.innerHTML = '<i class="fas fa-check me-1"></i> Confirmar Alternativa';
-                actionBtn.className = 'btn btn-success';
+            const actionsContainer = document.getElementById('selection-actions');
+            if (!actionsContainer) return;
 
-                // Capture current selection NOW - the button is recreated each time selection changes
-                // so this will always be current. Capturing here prevents race conditions where
-                // the selection might be cleared between button click and handler execution.
-                const capturedSelection = [...map.getSelectedFurniture()];
-                const selectedCount = capturedSelection.length;
-
-                // Override click handler with captured selection
-                actionBtn.onclick = (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    confirmAlternativeSelection(capturedSelection);
-                };
-
-                // Enable/disable based on count
-                if (selectedCount !== conflictResolutionContext.requiredCount) {
-                    actionBtn.disabled = true;
-                    actionBtn.innerHTML += ` (${selectedCount}/${conflictResolutionContext.requiredCount})`;
-                    actionBtn.classList.remove('btn-success');
-                    actionBtn.classList.add('btn-secondary');
-                } else {
-                    actionBtn.disabled = false;
-                    actionBtn.classList.remove('btn-secondary');
-                    actionBtn.classList.add('btn-success');
-                }
+            // Hide the block button during conflict resolution
+            const blockBtn = document.getElementById('btn-block-selection');
+            if (blockBtn) {
+                blockBtn.style.display = 'none';
             }
+
+            // Remove any existing action buttons (reserve, view-reservation, mixed, etc.)
+            const existingActionBtns = actionsContainer.querySelectorAll(
+                '.btn-reserve, .btn-view-reservation, .btn-mixed, .btn-success, .btn-secondary, .btn-conflict-confirm, .btn-conflict-cancel'
+            );
+            existingActionBtns.forEach(btn => btn.remove());
+
+            // Capture current selection NOW - prevents race conditions
+            const capturedSelection = [...map.getSelectedFurniture()];
+            const selectedCount = capturedSelection.length;
+
+            // Create "Confirmar Alternativa" button
+            const confirmBtn = document.createElement('button');
+            confirmBtn.type = 'button';
+            confirmBtn.className = 'btn-conflict-confirm';
+            confirmBtn.style.cssText = 'background: #4A7C59; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;';
+
+            if (selectedCount !== conflictResolutionContext.requiredCount) {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = `<i class="fas fa-check"></i> Confirmar (${selectedCount}/${conflictResolutionContext.requiredCount})`;
+                confirmBtn.style.background = '#6c757d';
+                confirmBtn.style.cursor = 'not-allowed';
+            } else {
+                confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirmar Alternativa';
+            }
+
+            confirmBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                confirmAlternativeSelection(capturedSelection);
+            };
+
+            // Create "Cancelar" button
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'btn-conflict-cancel';
+            cancelBtn.style.cssText = 'background: #C1444F; color: white; padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;';
+            cancelBtn.innerHTML = '<i class="fas fa-times"></i> Cancelar';
+            cancelBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                exitConflictResolutionMode();
+            };
+
+            // Add buttons to container
+            actionsContainer.appendChild(cancelBtn);
+            actionsContainer.appendChild(confirmBtn);
+        }
+
+        // Exit conflict resolution mode and return to modal
+        function exitConflictResolutionMode() {
+            // Clear context
+            conflictResolutionContext = null;
+
+            // Restore block button visibility
+            const blockBtn = document.getElementById('btn-block-selection');
+            if (blockBtn) {
+                blockBtn.style.display = '';
+            }
+
+            // Clear selection
+            map.clearSelection();
+
+            // Hide conflict instruction panel
+            const instructionPanel = document.getElementById('conflictInstructionPanel');
+            if (instructionPanel) {
+                instructionPanel.style.display = 'none';
+            }
+
+            // Update selection bar to restore normal buttons
+            updateSelectionBar();
+
+            // Show the conflict resolution modal again
+            document.dispatchEvent(new CustomEvent('conflictResolution:cancelled'));
         }
 
         // Confirm the alternative furniture selection
@@ -2345,10 +2397,17 @@
             clearConflictHighlights();
             hideConflictInstructions();
             map.clearSelection();
-            updateSelectionBar();
 
             // Clear context - the modal now manages the flow
             conflictResolutionContext = null;
+
+            // Restore block button visibility
+            const blockBtn = document.getElementById('btn-block-selection');
+            if (blockBtn) {
+                blockBtn.style.display = '';
+            }
+
+            updateSelectionBar();
 
             // Brief toast - the modal will show immediately after
             if (window.PuroBeach && window.PuroBeach.showToast) {

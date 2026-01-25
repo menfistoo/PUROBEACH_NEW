@@ -277,6 +277,10 @@ def get_unassigned_reservations(target_date: str) -> List[int]:
     A reservation is considered unassigned if its assigned furniture capacity
     is less than num_people and the reservation state is not availability-releasing.
 
+    For multi-day reservations, each day has its own reservation record with
+    reservation_date set to that specific day. Using reservation_date ensures
+    we only check the correct record for each day (not the parent for all days).
+
     Args:
         target_date: Date to check (YYYY-MM-DD)
 
@@ -286,7 +290,8 @@ def get_unassigned_reservations(target_date: str) -> List[int]:
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Single query that joins state info and filters in one pass
+        # Use reservation_date instead of start/end range to correctly handle
+        # multi-day reservations where parent=day1 and children=subsequent days
         cursor.execute("""
             SELECT
                 r.id as reservation_id,
@@ -297,12 +302,11 @@ def get_unassigned_reservations(target_date: str) -> List[int]:
             LEFT JOIN beach_reservation_furniture rf
                 ON r.id = rf.reservation_id AND rf.assignment_date = ?
             LEFT JOIN beach_furniture f ON rf.furniture_id = f.id
-            WHERE r.start_date <= ?
-              AND r.end_date >= ?
+            WHERE r.reservation_date = ?
               AND (rs.is_availability_releasing IS NULL OR rs.is_availability_releasing = 0)
             GROUP BY r.id
             HAVING assigned_capacity < r.num_people
-        """, (target_date, target_date, target_date))
+        """, (target_date, target_date))
 
         return [row['reservation_id'] for row in cursor.fetchall()]
 
