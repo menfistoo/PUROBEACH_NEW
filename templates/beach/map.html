@@ -65,6 +65,7 @@
         min-height: 44px;
         gap: 8px;
         flex-shrink: 0;
+        overflow: visible;
     }
 
     .toolbar-group {
@@ -86,6 +87,34 @@
         justify-content: center;
         transition: all 0.2s;
         font-size: 14px;
+        position: relative;
+        overflow: visible;
+    }
+
+    /* Badge for unassigned reservations on move mode button */
+    .move-mode-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: #C1444F;
+        color: white;
+        font-size: 9px;
+        font-weight: 700;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: badge-pulse 1.5s ease-in-out infinite;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        z-index: 10;
+        border: 1px solid white;
+    }
+
+    @keyframes badge-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
     }
 
     .toolbar-btn:hover,
@@ -1463,12 +1492,7 @@
             });
         }
 
-        // Update move mode when date changes
-        map.on('onDateChange', (newDate) => {
-            if (moveMode.isActive()) {
-                moveMode.currentDate = newDate;
-            }
-        });
+        // Note: moveMode.currentDate is updated from the main onDateChange handler
 
         // Wire up move mode deactivate to update button state
         moveMode.on('onDeactivate', () => {
@@ -1546,10 +1570,7 @@
         // Check on page load
         checkUnassignedReservations(map.getCurrentDate());
 
-        // Check when date changes
-        map.on('onDateChange', (newDate) => {
-            checkUnassignedReservations(newDate);
-        });
+        // Note: checkUnassignedReservations is called from the main onDateChange handler
 
         // Wire up furniture highlighting for preference matches (tiered)
         moveMode.on('onFurnitureHighlight', (data) => {
@@ -1654,10 +1675,7 @@
         // Listen for waitlist count updates
         window.addEventListener('waitlist:countUpdate', updateWaitlistBadge);
 
-        // Update badge when date changes
-        map.on('onDateChange', () => {
-            updateWaitlistBadge();
-        });
+        // Note: updateWaitlistBadge is called from the main onDateChange handler
 
         // Initial badge update after short delay for map to load
         setTimeout(updateWaitlistBadge, 500);
@@ -2536,10 +2554,19 @@
         }
 
         map.on('onDateChange', function (dateStr) {
+            // Update UI elements
             dateDisplay.textContent = formatDateCompact(dateStr);
             datePicker.value = dateStr;
             updateStats(currentZoneId);
             populateZoneSelector();
+            // Check for unassigned reservations and update badge
+            checkUnassignedReservations(dateStr);
+            // Update waitlist badge
+            updateWaitlistBadge();
+            // Update move mode date if active
+            if (moveMode.isActive()) {
+                moveMode.currentDate = dateStr;
+            }
         });
 
         btnPrevDay.addEventListener('click', async () => {
