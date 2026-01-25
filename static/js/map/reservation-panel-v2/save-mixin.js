@@ -193,11 +193,8 @@ export const SaveMixin = (Base) => class extends Base {
                     await window.beachMap.goToDate(newDate);
                 }
 
-                // Activate move mode
-                window.moveMode.activate(newDate);
-
-                // Load this reservation into the pool
-                await window.moveMode.loadReservationToPool(reservationId);
+                // Activate move mode (this also loads unassigned reservations)
+                await window.moveMode.activate(newDate);
 
                 // Update toolbar button state
                 const moveModeBtn = document.getElementById('btn-move-mode');
