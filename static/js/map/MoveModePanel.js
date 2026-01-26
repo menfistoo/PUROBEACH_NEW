@@ -386,6 +386,19 @@ export class MoveModePanel {
             });
         });
 
+        // Edit button handlers - Issue #8
+        this.poolList.querySelectorAll('.edit-reservation-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const resId = parseInt(btn.dataset.reservationId);
+
+                // Dispatch event to open edit modal
+                document.dispatchEvent(new CustomEvent('moveMode:editReservation', {
+                    detail: { reservationId: resId }
+                }));
+            });
+        });
+
         this.updateUndoState();
 
         // Also update collapsed thumbnails
@@ -800,9 +813,15 @@ export class MoveModePanel {
                 </div>
                 ${notes}
                 ${dayAssignments}
-                <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-2 restore-btn">
-                    <i class="fas fa-undo me-1"></i>Restaurar posición original
-                </button>
+                <div class="expanded-actions mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary edit-reservation-btn"
+                            data-reservation-id="${res.reservation_id}">
+                        <i class="fas fa-edit me-1"></i>Editar
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary restore-btn">
+                        <i class="fas fa-undo me-1"></i>Restaurar
+                    </button>
+                </div>
             </div>
         `;
     }

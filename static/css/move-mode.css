@@ -901,6 +901,28 @@
     color: var(--move-mode-secondary);
 }
 
+/* Expanded card action buttons - Issue #8 */
+.card-expanded .expanded-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.card-expanded .expanded-actions .btn {
+    flex: 1;
+    font-size: 12px;
+    padding: 6px 10px;
+}
+
+.card-expanded .expanded-actions .btn-outline-primary {
+    color: var(--move-mode-primary);
+    border-color: var(--move-mode-primary);
+}
+
+.card-expanded .expanded-actions .btn-outline-primary:hover {
+    background: var(--move-mode-primary);
+    color: var(--move-mode-secondary);
+}
+
 /* =============================================================================
    PREFERENCE LEGEND
    ============================================================================= */

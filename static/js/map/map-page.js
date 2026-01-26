@@ -141,6 +141,22 @@ document.addEventListener('DOMContentLoaded', function () {
         checkUnassignedReservationsGlobal();
     });
 
+    // Handle edit reservation from move mode - Issue #8
+    document.addEventListener('moveMode:editReservation', (e) => {
+        const { reservationId } = e.detail;
+
+        // Open the reservation edit modal
+        // The openReservationPanel function is defined later in this file
+        if (typeof openReservationPanel === 'function') {
+            openReservationPanel(reservationId, 'edit');
+        } else {
+            // Fallback: dispatch to reservation details handler
+            document.dispatchEvent(new CustomEvent('furniture:showReservation', {
+                detail: { reservationId }
+            }));
+        }
+    });
+
     // Badge element for unassigned reservations
     const unassignedBadge = document.getElementById('moveModeUnassignedBadge');
 
