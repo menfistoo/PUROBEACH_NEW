@@ -3,12 +3,12 @@ Minimum consumption policy configuration routes.
 CRUD operations for managing consumption policies.
 """
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, Response, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
 from utils.decorators import permission_required
 
 
-def register_routes(bp):
+def register_routes(bp: Blueprint) -> None:
     """Register minimum consumption routes on the blueprint."""
 
     @bp.route('/minimum-consumption')
@@ -40,9 +40,9 @@ def register_routes(bp):
             zone_id = request.form.get('zone_id')
             priority_order = int(request.form.get('priority_order', 0) or 0)
 
-            # Validate required fields
-            if not policy_name or minimum_amount <= 0:
-                flash('Nombre y monto mínimo son obligatorios', 'error')
+            # Validate required fields (0€ allowed = "included")
+            if not policy_name or minimum_amount < 0:
+                flash('Nombre es obligatorio y monto no puede ser negativo', 'error')
                 return redirect(url_for('beach.beach_config.minimum_consumption_create'))
 
             try:
@@ -104,9 +104,9 @@ def register_routes(bp):
             priority_order = int(request.form.get('priority_order', 0) or 0)
             is_active = 1 if request.form.get('is_active') == '1' else 0
 
-            # Validate required fields
-            if not policy_name or minimum_amount <= 0:
-                flash('Nombre y monto mínimo son obligatorios', 'error')
+            # Validate required fields (0€ allowed = "included")
+            if not policy_name or minimum_amount < 0:
+                flash('Nombre es obligatorio y monto no puede ser negativo', 'error')
                 return redirect(url_for('beach.beach_config.minimum_consumption_edit', policy_id=policy_id))
 
             try:

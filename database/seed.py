@@ -207,26 +207,29 @@ def seed_database(db):
               map_shape, width, height, border_radius, fill_color, stroke_color,
               default_cap, default_rotation, decorative, prefix, display_order, status_colors))
 
-    # 9. Create Sample Furniture Items
+    # 9. Create Standard Furniture: 20 Hamacas in Primera Línea
+    # This is the production standard layout (4 rows x 5 columns)
     primera_linea_id = db.execute('SELECT id FROM beach_zones WHERE name = "Primera Línea"').fetchone()[0]
-    segunda_linea_id = db.execute('SELECT id FROM beach_zones WHERE name = "Segunda Línea"').fetchone()[0]
 
-    furniture_data = [
-        # Hamacas in Primera Línea
-        ('H1', primera_linea_id, 'hamaca', 2, 50, 50, 0, 60, 40, 'primera_linea,cerca_mar'),
-        ('H2', primera_linea_id, 'hamaca', 2, 120, 50, 0, 60, 40, 'primera_linea,cerca_mar'),
-        ('H3', primera_linea_id, 'hamaca', 2, 190, 50, 0, 60, 40, 'primera_linea'),
-        ('H4', primera_linea_id, 'hamaca', 2, 260, 50, 0, 60, 40, 'primera_linea'),
-        # Hamacas in Segunda Línea
-        ('H5', segunda_linea_id, 'hamaca', 2, 50, 150, 0, 60, 40, 'sombra,tranquila'),
-        ('H6', segunda_linea_id, 'hamaca', 2, 120, 150, 0, 60, 40, 'sombra,tranquila'),
-        # Balinesas in Primera Línea
-        ('B1', primera_linea_id, 'balinesa', 4, 350, 50, 0, 80, 60, 'primera_linea,vip'),
-        ('B2', primera_linea_id, 'balinesa', 4, 450, 50, 0, 80, 60, 'primera_linea,vip'),
-        # Balinesas in Segunda Línea
-        ('B3', segunda_linea_id, 'balinesa', 4, 200, 150, 0, 80, 60, 'sombra'),
-        ('B4', segunda_linea_id, 'balinesa', 4, 300, 150, 0, 80, 60, 'sombra'),
-    ]
+    furniture_data = []
+    num = 1
+    for row in range(4):
+        for col in range(5):
+            x = 50 + (col * 100)   # Start at x=50, 100px horizontal spacing
+            y = 50 + (row * 80)    # Start at y=50, 80px vertical spacing
+            furniture_data.append((
+                f'H{num}',         # number
+                primera_linea_id,  # zone_id
+                'hamaca',          # furniture_type
+                2,                 # capacity
+                x,                 # position_x
+                y,                 # position_y
+                0,                 # rotation
+                60,                # width
+                40,                # height
+                'primera_linea'    # features
+            ))
+            num += 1
 
     for number, zone_id, furn_type, capacity, x, y, rotation, width, height, features in furniture_data:
         db.execute('''

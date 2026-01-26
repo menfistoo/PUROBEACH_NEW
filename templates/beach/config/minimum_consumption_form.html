@@ -46,7 +46,8 @@
                                 <label for="minimum_amount" class="form-label">Monto Mínimo (€) <span class="text-danger">*</span></label>
                                 <input type="number" class="form-control" id="minimum_amount" name="minimum_amount"
                                        value="{{ policy.minimum_amount if policy else '' }}"
-                                       required min="0.01" step="0.01" placeholder="50.00">
+                                       required min="0" step="0.01" placeholder="50.00">
+                                <div class="form-text">0€ = Incluido (sin consumo mínimo)</div>
                             </div>
                         </div>
                         <div class="col-md-6">
