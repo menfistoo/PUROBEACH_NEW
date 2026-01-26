@@ -99,16 +99,7 @@ def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
 
             new_states_csv = ', '.join(states_list)
 
-            # Update reservation
-            cursor.execute('''
-                UPDATE beach_reservations
-                SET current_states = ?,
-                    current_state = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            ''', (new_states_csv, state_type, reservation_id))
-
-            # Record in history - get state IDs
+            # Get state IDs for history and state_id sync
             old_state_id = None
             if old_state_name:
                 old_state = get_state_by_name(old_state_name)
@@ -116,6 +107,16 @@ def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
 
             new_state = get_state_by_name(state_type)
             new_state_id = new_state['id'] if new_state else None
+
+            # Update reservation - sync BOTH current_state AND state_id
+            cursor.execute('''
+                UPDATE beach_reservations
+                SET current_states = ?,
+                    current_state = ?,
+                    state_id = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (new_states_csv, state_type, new_state_id, reservation_id))
 
             if new_state_id:
                 cursor.execute('''
@@ -184,16 +185,7 @@ def remove_reservation_state(reservation_id: int, state_type: str, changed_by: s
             # Recalculate current_state by priority
             new_current_state = _get_highest_priority_state(states_list)
 
-            # Update reservation
-            cursor.execute('''
-                UPDATE beach_reservations
-                SET current_states = ?,
-                    current_state = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            ''', (new_states_csv, new_current_state, reservation_id))
-
-            # Record in history - get state IDs
+            # Get state IDs for history and state_id sync
             removed_state = get_state_by_name(state_type)
             removed_state_id = removed_state['id'] if removed_state else None
 
@@ -201,6 +193,16 @@ def remove_reservation_state(reservation_id: int, state_type: str, changed_by: s
             if new_current_state:
                 new_state = get_state_by_name(new_current_state)
                 new_state_id = new_state['id'] if new_state else None
+
+            # Update reservation - sync BOTH current_state AND state_id
+            cursor.execute('''
+                UPDATE beach_reservations
+                SET current_states = ?,
+                    current_state = ?,
+                    state_id = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (new_states_csv, new_current_state, new_state_id, reservation_id))
 
             if removed_state_id:
                 cursor.execute('''
