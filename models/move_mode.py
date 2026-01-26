@@ -109,16 +109,18 @@ def assign_furniture_for_date(
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Check availability first
+        # Check availability first - exclude reservations with availability-releasing states
         placeholders = ','.join('?' * len(furniture_ids))
         cursor.execute(f"""
             SELECT rf.furniture_id, r.id as res_id, c.first_name, c.last_name
             FROM beach_reservation_furniture rf
             JOIN beach_reservations r ON rf.reservation_id = r.id
             JOIN beach_customers c ON r.customer_id = c.id
+            LEFT JOIN beach_reservation_states rs ON r.state_id = rs.id
             WHERE rf.furniture_id IN ({placeholders})
             AND rf.assignment_date = ?
             AND rf.reservation_id != ?
+            AND (rs.is_availability_releasing IS NULL OR rs.is_availability_releasing = 0)
         """, (*furniture_ids, assignment_date, reservation_id))
 
         conflicts = cursor.fetchall()
