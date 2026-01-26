@@ -635,3 +635,97 @@ class TestDateFiltering:
             unassigned_date2 = get_unassigned_reservations(date2)
             assert res_id not in unassigned_date2, \
                 f"Should NOT find reservation on different date. Got: {unassigned_date2}"
+
+    def test_reservation_in_pool_when_partially_unassigned(self, app):
+        """Reservation should appear in pool when partially unassigned and capacity < num_people."""
+        from models.move_mode import (
+            get_unassigned_reservations,
+            unassign_furniture_for_date,
+            get_reservation_pool_data
+        )
+        from database import get_db
+
+        with app.app_context():
+            test_date = '2026-03-03'
+
+            with get_db() as conn:
+                cursor = conn.cursor()
+
+                # Get or create a customer
+                cursor.execute("SELECT id FROM beach_customers LIMIT 1")
+                customer = cursor.fetchone()
+                if not customer:
+                    cursor.execute("""
+                        INSERT INTO beach_customers (first_name, last_name, customer_type, phone)
+                        VALUES ('Partial', 'Assignment', 'externo', '555-PARTIAL')
+                    """)
+                    customer_id = cursor.lastrowid
+                else:
+                    customer_id = customer['id']
+
+                # Get a non-releasing state
+                cursor.execute("""
+                    SELECT id FROM beach_reservation_states
+                    WHERE is_availability_releasing = 0 OR is_availability_releasing IS NULL
+                    LIMIT 1
+                """)
+                state = cursor.fetchone()
+                state_id = state['id'] if state else 1
+
+                # Get two furniture items with their capacities
+                cursor.execute("""
+                    SELECT id, capacity FROM beach_furniture
+                    WHERE active = 1
+                    LIMIT 2
+                """)
+                furniture_rows = cursor.fetchall()
+                if len(furniture_rows) < 2:
+                    pytest.skip("Not enough furniture in test database")
+
+                furn1_id = furniture_rows[0]['id']
+                furn1_capacity = furniture_rows[0]['capacity']
+                furn2_id = furniture_rows[1]['id']
+                furn2_capacity = furniture_rows[1]['capacity']
+                total_capacity = furn1_capacity + furn2_capacity
+
+                # Create reservation that needs FULL capacity of both furniture items
+                cursor.execute("""
+                    INSERT INTO beach_reservations (
+                        customer_id, ticket_number, reservation_date, start_date, end_date,
+                        num_people, state_id
+                    ) VALUES (?, 'PARTIAL-001', ?, ?, ?, ?, ?)
+                """, (customer_id, test_date, test_date, test_date, total_capacity, state_id))
+                res_id = cursor.lastrowid
+
+                # Assign BOTH furniture items (total capacity = num_people)
+                cursor.execute("""
+                    INSERT INTO beach_reservation_furniture (reservation_id, furniture_id, assignment_date)
+                    VALUES (?, ?, ?)
+                """, (res_id, furn1_id, test_date))
+                cursor.execute("""
+                    INSERT INTO beach_reservation_furniture (reservation_id, furniture_id, assignment_date)
+                    VALUES (?, ?, ?)
+                """, (res_id, furn2_id, test_date))
+                conn.commit()
+
+            # Fully assigned - should NOT be in unassigned list
+            unassigned_before = get_unassigned_reservations(test_date)
+            assert res_id not in unassigned_before, \
+                "Fully assigned reservation should not be in unassigned list"
+
+            # Unassign ONE furniture item (now assigned_capacity < num_people)
+            result = unassign_furniture_for_date(res_id, [furn1_id], test_date)
+            assert result['success'] is True, f"Unassign should succeed: {result}"
+
+            # Reservation should now appear in unassigned list
+            # (assigned_capacity = furn2_capacity < num_people = total_capacity)
+            unassigned_after = get_unassigned_reservations(test_date)
+            assert res_id in unassigned_after, \
+                f"Partially unassigned reservation should appear in pool. " \
+                f"Remaining capacity: {furn2_capacity}, needed: {total_capacity}"
+
+            # Verify pool data shows reduced furniture
+            pool_data = get_reservation_pool_data(res_id, test_date)
+            assert 'error' not in pool_data, f"Pool data should be valid: {pool_data}"
+            assert len(pool_data['original_furniture']) == 1, \
+                f"Should have 1 furniture after partial unassign, got {len(pool_data['original_furniture'])}"
