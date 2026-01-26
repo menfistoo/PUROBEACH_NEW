@@ -428,10 +428,16 @@ export class MoveModePanel {
 
             return `
                 <div class="collapsed-thumbnail ${vipClass} ${selectedClass} ${completeClass}"
-                     data-reservation-id="${res.reservation_id}">
+                     data-reservation-id="${res.reservation_id}"
+                     data-customer-name="${res.customer_name || ''}"
+                     data-room="${res.room_number || ''}">
                     ${vipStar}
                     <span class="person-count">${isComplete ? '✓' : res.num_people}</span>
                     <div class="mini-progress">${progressHtml}</div>
+                    ${isSelected ? `<div class="selected-info">
+                        <span class="selected-name">${res.customer_name?.split(' ')[0] || ''}</span>
+                        ${res.room_number ? `<span class="selected-room">${res.room_number}</span>` : ''}
+                    </div>` : ''}
                 </div>
             `;
         }).join('');
