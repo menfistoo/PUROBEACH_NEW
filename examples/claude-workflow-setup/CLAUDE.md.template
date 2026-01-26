@@ -1,0 +1,116 @@
+# [PROJECT_NAME]
+
+## Overview
+[Brief description of your project]
+
+## Tech Stack
+- **Backend:** [e.g., Flask, Django, Node.js]
+- **Database:** [e.g., PostgreSQL, SQLite, MongoDB]
+- **Frontend:** [e.g., React, Vue, Vanilla JS, Jinja2]
+- **Other:** [Additional technologies]
+
+## Project Structure
+
+```
+[project_name]/
+├── app.py                  # Main entry point
+├── config.py               # Configuration
+├── models/                 # Data models
+├── routes/                 # Route handlers
+├── services/               # Business logic
+├── templates/              # HTML templates (if applicable)
+├── static/                 # Static assets
+├── tests/                  # Test files
+└── ...
+```
+
+## Code Conventions
+
+### General
+- **Indentation:** [4 spaces / 2 spaces / tabs]
+- **Type hints:** [Required / Recommended / Optional]
+- **Docstrings:** [Required for public functions / etc.]
+
+### Naming
+- **Functions:** `verb_noun` (e.g., `get_user`, `create_order`)
+- **Variables:** `snake_case`
+- **Classes:** `PascalCase`
+- **Constants:** `UPPER_SNAKE_CASE`
+
+### Code Maintainability
+
+**File Size Limits:**
+- **Target:** 300-500 lines per module
+- **Warning:** >600 lines - consider splitting
+- **Critical:** >800 lines - must refactor
+
+When splitting files, organize by responsibility:
+```
+models/
+├── user.py              # Re-exports for compatibility
+├── user_crud.py         # Create, read, update, delete
+├── user_queries.py      # Listing, filtering
+└── user_utils.py        # Utilities
+```
+
+### Security Checklist
+- [ ] Authentication on protected routes
+- [ ] Authorization checks for sensitive operations
+- [ ] Parameterized database queries
+- [ ] Input validation on user data
+- [ ] No sensitive data in logs
+
+## Quick Commands
+
+```bash
+# Start development server
+[your command here]
+
+# Run tests
+[your command here]
+
+# Run linting
+[your command here]
+```
+
+## Reviews
+
+Use these skills for quality assurance:
+
+- **`/qa`** - Smart router that auto-detects which reviews to run
+- **`/code-standards`** - Check code against these conventions
+- **`/design-review`** - Review UI changes (if applicable)
+- **`/security-review`** - Security-focused review
+- **`/simplify`** - Simplify complex code
+
+## Workflows
+
+### New Feature
+```
+1. superpowers:brainstorming       ← Explore requirements
+2. superpowers:writing-plans       ← Create plan
+3. [Implement]
+4. /qa                             ← Run reviews
+5. superpowers:verification-before-completion
+```
+
+### Bug Fix
+```
+1. superpowers:systematic-debugging ← Find root cause
+2. [Fix]
+3. /qa
+4. Commit
+```
+
+## Maintaining This File
+
+Update CLAUDE.md when:
+- Adding/modifying database schemas
+- Creating new routes or endpoints
+- Changing code conventions
+- Adding new configurations
+- Making architectural changes
+
+---
+
+*Replace all `[placeholders]` with your project's specific values.*
