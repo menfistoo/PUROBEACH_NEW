@@ -1,0 +1,787 @@
+/**
+ * Map Page Styles
+ *
+ * Styles for the interactive beach map page (/beach/map)
+ * Extracted from templates/beach/map.html for maintainability
+ */
+
+/* =============================================================================
+   MOBILE-FIRST MAP PAGE LAYOUT
+   ============================================================================= */
+
+/* Override parent containers for full-height map layout */
+.main-content:has(.map-page) {
+    overflow: hidden;
+    min-height: 0;
+    /* Allow flex shrinking */
+}
+
+/* Full viewport height layout - negate content-wrapper padding */
+.content-wrapper:has(.map-page) {
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+    /* Critical: these ensure the container doesn't grow beyond viewport */
+    min-height: 0;
+    max-height: calc(100vh - 60px);
+    max-height: calc(100dvh - 60px);
+}
+
+.map-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    /* Fill the content-wrapper */
+    overflow: hidden;
+    background: var(--color-background);
+    /* Prevent any content from expanding beyond */
+    max-height: 100%;
+}
+
+/* =============================================================================
+   TOOLBAR - Ultra Compact, Dark
+   ============================================================================= */
+.map-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--color-secondary);
+    color: white;
+    min-height: 44px;
+    gap: 8px;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.toolbar-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 14px;
+    position: relative;
+    overflow: visible;
+}
+
+/* Badge for unassigned reservations on move mode button */
+.move-mode-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #C1444F;
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: badge-pulse 1.5s ease-in-out infinite;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    z-index: 10;
+    border: 1px solid white;
+}
+
+@keyframes badge-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.toolbar-btn:hover,
+.toolbar-btn:active {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.toolbar-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.date-display {
+    font-weight: 600;
+    font-size: 13px;
+    color: white;
+    min-width: 70px;
+    text-align: center;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.date-display:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Gold Zone Selector */
+.zone-selector-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+    border: none;
+    border-radius: 16px;
+    padding: 6px 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(212, 175, 55, 0.4);
+    min-width: 120px;
+    text-align: center;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 26px;
+}
+
+.zone-selector-gold:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.5);
+}
+
+.zone-selector-gold option {
+    background: white;
+    color: #1A3A5C;
+    font-weight: 500;
+    padding: 8px 12px;
+}
+
+/* =============================================================================
+   STATS STRIP - Ultra Compact Horizontal
+   ============================================================================= */
+.stats-strip {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 4px 8px;
+    background: white;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 2px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-item .stat-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-secondary);
+    line-height: 1;
+}
+
+.stat-item .stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    letter-spacing: 0.3px;
+}
+
+.stat-item.stat-available .stat-value {
+    color: var(--color-success);
+}
+
+.stat-item.stat-occupied .stat-value {
+    color: var(--color-warning);
+}
+
+/* =============================================================================
+   CANVAS INFO BAR (Map Editor Style)
+   ============================================================================= */
+.canvas-info-bar {
+    display: flex;
+    align-items: center;
+    padding: 3px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 11px;
+    color: var(--color-text-muted);
+    gap: 6px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.info-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.info-label {
+    color: #6c757d;
+}
+
+.info-value {
+    color: var(--color-secondary);
+    font-weight: 500;
+}
+
+.info-value.highlight {
+    color: var(--color-primary);
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 11px;
+    background: rgba(212, 175, 55, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.info-divider {
+    width: 1px;
+    height: 16px;
+    background: #dee2e6;
+}
+
+.info-spacer {
+    flex: 1;
+}
+
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zoom-level {
+    min-width: 45px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.info-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: all 0.15s;
+    font-size: 11px;
+}
+
+.info-btn:hover {
+    background: var(--color-accent);
+    border-color: var(--color-primary);
+    color: var(--color-secondary);
+}
+
+/* Shortcuts Dropdown */
+.shortcuts-dropdown {
+    width: 320px;
+    font-size: 12px;
+}
+
+.shortcuts-section {
+    margin-bottom: 12px;
+}
+
+.shortcuts-title {
+    font-weight: 600;
+    color: var(--color-secondary);
+    margin-bottom: 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.shortcut-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    color: var(--color-text-muted);
+}
+
+.shortcut-row kbd {
+    background: #f1f3f4;
+    border: 1px solid #dadce0;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-family: inherit;
+    color: var(--color-secondary);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+
+/* Hide info bar on very small screens */
+@media (max-width: 576px) {
+    .canvas-info-bar {
+        display: none;
+    }
+}
+
+/* =============================================================================
+   MAP CANVAS - Full Screen (Map Editor Style)
+   ============================================================================= */
+/* Canvas viewport - matches map editor style */
+.map-canvas-wrapper {
+    flex: 1 1 0%;
+    /* Grow, shrink, but start at 0 (critical for flex containment) */
+    position: relative;
+    overflow: auto;
+    /* Use auto instead of scroll for better behavior */
+    background: #dee2e6;
+    padding: 10px;
+    /* Critical: min-height: 0 allows flex item to shrink below content size */
+    min-height: 0;
+    /* Isolate scrolling to this container */
+    isolation: isolate;
+    /* Center content using text-align (works with inline-block child) */
+    text-align: center;
+    /* Mobile touch scrolling improvements */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-x pan-y;
+}
+
+.map-canvas {
+    /* Inline-block for centering via text-align */
+    display: inline-block;
+    /* Allow touch pan only - disable native pinch-zoom to prevent conflict with JS zoom */
+    touch-action: pan-x pan-y;
+    /* Reset text-align for content */
+    text-align: left;
+    /* Margin auto for additional centering support */
+    margin: 0 auto;
+}
+
+/* SVG container with shadow - like map editor */
+.map-canvas svg {
+    background: #FAFAFA;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    display: block;
+}
+
+/* Hide zone rectangles - zone is shown in toolbar dropdown */
+.map-canvas .zone-group {
+    display: none;
+}
+
+/* Loading State */
+.map-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+}
+
+/* =============================================================================
+   FLOATING ZOOM CONTROLS (FAB Style)
+   ============================================================================= */
+.zoom-fab {
+    position: fixed;
+    /* Fixed so it stays visible always */
+    bottom: 100px;
+    /* Above bottom bar */
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 50;
+}
+
+.fab-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: 18px;
+    color: var(--color-secondary);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fab-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.fab-btn:active {
+    transform: scale(0.95);
+}
+
+/* =============================================================================
+   BOTTOM ACTION BAR (Slides up on selection)
+   ============================================================================= */
+.bottom-action-bar {
+    position: fixed;
+    bottom: 0;
+    left: var(--sidebar-width, 260px);
+    right: 0;
+    background: white;
+    border-top: 2px solid var(--color-primary);
+    padding: 10px 16px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s, left 0.3s ease;
+    z-index: 100;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Adjust footer when sidebar is collapsed */
+html.sidebar-collapsed .bottom-action-bar {
+    left: var(--sidebar-collapsed-width, 70px);
+}
+
+/* On mobile, footer goes full width */
+@media (max-width: 991px) {
+    .bottom-action-bar {
+        left: 0;
+    }
+
+    html.sidebar-collapsed .bottom-action-bar {
+        left: 0;
+    }
+}
+
+.bottom-action-bar.show {
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.selection-summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.selected-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+}
+
+.selection-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    background: var(--color-accent);
+    border: 1.5px solid var(--color-primary);
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-secondary);
+}
+
+.selection-chip .remove-chip {
+    margin-left: 6px;
+    cursor: pointer;
+    opacity: 0.6;
+    font-size: 10px;
+}
+
+.selection-chip .remove-chip:hover {
+    opacity: 1;
+}
+
+.selection-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    background: var(--color-accent);
+    padding: 5px 12px;
+    border-radius: 20px;
+}
+
+.selection-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-clear {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    border: 1.5px solid var(--color-border);
+    background: white;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-clear:hover {
+    border-color: var(--color-error);
+    color: var(--color-error);
+    background: rgba(193, 68, 79, 0.05);
+}
+
+.btn-block {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    border: 1.5px solid #EF4444;
+    background: white;
+    color: #EF4444;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-block:hover {
+    background: #FEE2E2;
+    border-color: #DC2626;
+    color: #DC2626;
+}
+
+.btn-reserve {
+    flex: 0 1 auto;
+    min-width: 140px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+}
+
+.btn-reserve:hover {
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+
+.btn-reserve:active {
+    transform: scale(0.98);
+}
+
+/* =============================================================================
+   FURNITURE STYLING (Map)
+   ============================================================================= */
+.furniture-item {
+    transition: filter 0.2s, transform 0.2s;
+    cursor: pointer;
+}
+
+.furniture-item:active {
+    filter: brightness(0.9);
+}
+
+.furniture-item.selected {
+    filter: drop-shadow(0 0 8px var(--color-primary));
+}
+
+.furniture-item.highlighted {
+    animation: pulseHighlight 1s ease-in-out infinite;
+}
+
+@keyframes pulseHighlight {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 8px var(--color-primary));
+    }
+
+    50% {
+        filter: drop-shadow(0 0 16px var(--color-primary));
+    }
+}
+
+/* Decorative items */
+.decorative-item {
+    pointer-events: none;
+}
+
+/* =============================================================================
+   HIDDEN DATE PICKER
+   ============================================================================= */
+.date-picker-hidden {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+.date-picker-hidden.show {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 1;
+    width: auto;
+    height: auto;
+    pointer-events: auto;
+    z-index: 200;
+    background: white;
+    padding: 8px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* =============================================================================
+   DESKTOP ENHANCEMENTS
+   ============================================================================= */
+@media (min-width: 768px) {
+    .map-toolbar {
+        padding: 12px 24px;
+    }
+
+    .date-display {
+        min-width: 120px;
+        font-size: 15px;
+    }
+
+    .zone-selector-gold {
+        min-width: 180px;
+        font-size: 15px;
+    }
+
+    .zoom-fab {
+        bottom: 120px;
+        right: 24px;
+    }
+
+    /* Bottom bar accounts for sidebar */
+    .bottom-action-bar {
+        left: var(--sidebar-width, 280px);
+    }
+}
+
+
+/* Hover states for desktop */
+@media (hover: hover) {
+    .furniture-item:hover {
+        filter: brightness(1.1);
+    }
+
+    .furniture-item:hover rect,
+    .furniture-item:hover ellipse,
+    .furniture-item:hover circle {
+        stroke-width: 3;
+    }
+}
+
+/* =============================================================================
+   CONTEXT MENU (Keep from original)
+   ============================================================================= */
+.context-menu {
+    position: fixed;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 1050;
+    min-width: 180px;
+    padding: 8px 0;
+    border: 1px solid var(--color-border);
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    color: var(--color-text);
+    font-size: 14px;
+}
+
+.context-menu-item:hover {
+    background: var(--color-accent);
+}
+
+.context-menu-item.danger {
+    color: var(--color-danger);
+}
+
+.context-menu-item.danger:hover {
+    background: #fef2f2;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background: var(--color-border);
+    margin: 6px 0;
+}
+
+.context-menu-header {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* =============================================================================
+   EXISTING RESERVATION HIGHLIGHT
+   Pulsing red border for furniture when viewing existing reservation
+   ============================================================================= */
+.furniture-item.existing-reservation-highlight rect,
+.furniture-item.existing-reservation-highlight circle,
+.furniture-item.existing-reservation-highlight ellipse {
+    stroke: #C1444F !important;
+    stroke-width: 4px !important;
+    animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% {
+        stroke-opacity: 1;
+        stroke-width: 4px;
+    }
+    50% {
+        stroke-opacity: 0.6;
+        stroke-width: 6px;
+    }
+}
+
+.furniture-item.existing-reservation-highlight {
+    filter: drop-shadow(0 0 8px rgba(193, 68, 79, 0.6)) !important;
+}
