@@ -36,6 +36,7 @@ class TouchHandler {
         this.handleTouchMove = this.handleTouchMove.bind(this);
         this.handleTouchEnd = this.handleTouchEnd.bind(this);
         this.handleTouchCancel = this.handleTouchCancel.bind(this);
+        this.handleContextMenu = this.handleContextMenu.bind(this);
 
         // Attach listeners
         this.attachListeners();
@@ -46,6 +47,19 @@ class TouchHandler {
         this.container.addEventListener('touchmove', this.handleTouchMove, { passive: false });
         this.container.addEventListener('touchend', this.handleTouchEnd, { passive: false });
         this.container.addEventListener('touchcancel', this.handleTouchCancel, { passive: false });
+        // Prevent native context menu on touch devices during long-press
+        this.container.addEventListener('contextmenu', this.handleContextMenu);
+    }
+
+    /**
+     * Prevent native context menu when touch is active (long-press handling)
+     */
+    handleContextMenu(event) {
+        // If we're in the middle of a touch interaction, prevent native menu
+        if (this.isTouchActive || this.longPressTimer) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
     }
 
     handleTouchStart(event) {
@@ -201,6 +215,7 @@ class TouchHandler {
         this.container.removeEventListener('touchmove', this.handleTouchMove);
         this.container.removeEventListener('touchend', this.handleTouchEnd);
         this.container.removeEventListener('touchcancel', this.handleTouchCancel);
+        this.container.removeEventListener('contextmenu', this.handleContextMenu);
     }
 }
 

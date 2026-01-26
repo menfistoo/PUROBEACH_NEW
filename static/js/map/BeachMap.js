@@ -148,6 +148,10 @@ export class BeachMap {
         this.handleTempFurnitureMouseDown = this.handleTempFurnitureMouseDown.bind(this);
         this.handleTempFurnitureMouseMove = this.handleTempFurnitureMouseMove.bind(this);
         this.handleTempFurnitureMouseUp = this.handleTempFurnitureMouseUp.bind(this);
+        // Touch handlers for mobile temp furniture drag
+        this.handleTempFurnitureTouchStart = this.handleTempFurnitureTouchStart.bind(this);
+        this.handleTempFurnitureTouchMove = this.handleTempFurnitureTouchMove.bind(this);
+        this.handleTempFurnitureTouchEnd = this.handleTempFurnitureTouchEnd.bind(this);
 
         // Initialize
         this.init();
@@ -291,6 +295,12 @@ export class BeachMap {
         this.svg.addEventListener('mousedown', this.handleTempFurnitureMouseDown);
         document.addEventListener('mousemove', this.handleTempFurnitureMouseMove);
         document.addEventListener('mouseup', this.handleTempFurnitureMouseUp);
+
+        // Touch handlers for mobile temp furniture drag
+        this.svg.addEventListener('touchstart', this.handleTempFurnitureTouchStart, { passive: false });
+        document.addEventListener('touchmove', this.handleTempFurnitureTouchMove, { passive: false });
+        document.addEventListener('touchend', this.handleTempFurnitureTouchEnd, { passive: false });
+        document.addEventListener('touchcancel', this.handleTempFurnitureTouchEnd, { passive: false });
     }
 
     /**
@@ -735,6 +745,114 @@ export class BeachMap {
     }
 
     // =========================================================================
+    // TOUCH HANDLERS FOR MOBILE TEMP FURNITURE DRAG
+    // =========================================================================
+
+    /**
+     * Handle touchstart for temp furniture drag on mobile
+     * @param {TouchEvent} event
+     */
+    handleTempFurnitureTouchStart(event) {
+        // Only handle single touch
+        if (event.touches.length !== 1) return;
+
+        // Check if touching temp furniture
+        const tempFurniture = this.interaction.isTemporaryFurniture(event.target);
+        if (!tempFurniture) return;
+
+        // Store touch info for drag detection
+        this._tempTouchStartTime = Date.now();
+        this._tempTouchStartX = event.touches[0].clientX;
+        this._tempTouchStartY = event.touches[0].clientY;
+        this._tempTouchTarget = tempFurniture;
+        this._tempTouchDragStarted = false;
+
+        // Stop auto-refresh during potential drag
+        this.stopAutoRefresh();
+    }
+
+    /**
+     * Handle touchmove for temp furniture drag on mobile
+     * @param {TouchEvent} event
+     */
+    handleTempFurnitureTouchMove(event) {
+        if (!this._tempTouchTarget || event.touches.length !== 1) return;
+
+        const touch = event.touches[0];
+        const deltaX = Math.abs(touch.clientX - this._tempTouchStartX);
+        const deltaY = Math.abs(touch.clientY - this._tempTouchStartY);
+        const moveThreshold = 10;
+
+        // Start drag if moved enough (before long-press triggers)
+        if (!this._tempTouchDragStarted && (deltaX > moveThreshold || deltaY > moveThreshold)) {
+            // Only start drag if within first 400ms (before long-press at 500ms)
+            const elapsed = Date.now() - this._tempTouchStartTime;
+            if (elapsed < 400) {
+                this._tempTouchDragStarted = true;
+
+                // Create synthetic mousedown event to start drag
+                const syntheticEvent = {
+                    button: 0,
+                    clientX: this._tempTouchStartX,
+                    clientY: this._tempTouchStartY,
+                    target: this._tempTouchTarget.element,
+                    preventDefault: () => {}
+                };
+                this.interaction.handleTempDragStart(syntheticEvent, this._tempTouchTarget);
+
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(30);
+                }
+            }
+        }
+
+        // If drag started, continue dragging
+        if (this._tempTouchDragStarted) {
+            event.preventDefault(); // Prevent scroll while dragging
+
+            const syntheticEvent = {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            };
+            this.interaction.handleTempDrag(syntheticEvent);
+        }
+    }
+
+    /**
+     * Handle touchend/touchcancel for temp furniture drag on mobile
+     * @param {TouchEvent} event
+     */
+    async handleTempFurnitureTouchEnd(event) {
+        if (!this._tempTouchTarget) return;
+
+        if (this._tempTouchDragStarted) {
+            // End the drag
+            const touch = event.changedTouches?.[0];
+            const syntheticEvent = {
+                clientX: touch?.clientX || this._tempTouchStartX,
+                clientY: touch?.clientY || this._tempTouchStartY
+            };
+
+            const wasDrag = await this.interaction.handleTempDragEnd(syntheticEvent);
+
+            if (wasDrag) {
+                this._suppressNextClick = true;
+            }
+        }
+
+        // Restart auto-refresh after drag
+        setTimeout(() => this.startAutoRefresh(), 500);
+
+        // Reset touch state
+        this._tempTouchTarget = null;
+        this._tempTouchDragStarted = false;
+        this._tempTouchStartTime = 0;
+        this._tempTouchStartX = 0;
+        this._tempTouchStartY = 0;
+    }
+
+    // =========================================================================
     // SEARCH HIGHLIGHT & PAN
     // =========================================================================
 
@@ -884,6 +1002,12 @@ export class BeachMap {
         this.svg?.removeEventListener('mousedown', this.handleTempFurnitureMouseDown);
         document.removeEventListener('mousemove', this.handleTempFurnitureMouseMove);
         document.removeEventListener('mouseup', this.handleTempFurnitureMouseUp);
+
+        // Remove touch listeners
+        this.svg?.removeEventListener('touchstart', this.handleTempFurnitureTouchStart);
+        document.removeEventListener('touchmove', this.handleTempFurnitureTouchMove);
+        document.removeEventListener('touchend', this.handleTempFurnitureTouchEnd);
+        document.removeEventListener('touchcancel', this.handleTempFurnitureTouchEnd);
     }
 }
 

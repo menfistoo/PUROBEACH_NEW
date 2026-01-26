@@ -14,6 +14,79 @@ from models.furniture_daily import (
     partial_delete_temp_furniture, get_temp_furniture_date_info
 )
 from models.furniture_type import get_furniture_type_by_code
+from models.zone import get_all_zones
+from models.config import get_map_config
+
+
+def calculate_zone_bounds(zone_id: int) -> dict:
+    """
+    Calculate the visual bounds of a zone on the map.
+    Uses same logic as map_data.py to ensure consistency.
+
+    Args:
+        zone_id: Zone ID to calculate bounds for
+
+    Returns:
+        dict with x, y, width, height or None if zone not found
+    """
+    zones = get_all_zones(active_only=True)
+    map_config = get_map_config()
+
+    zone_padding = map_config['zone_padding']
+    zone_height = map_config['zone_height']
+    map_width = map_config['default_width']
+
+    for idx, zone in enumerate(zones):
+        if zone['id'] == zone_id:
+            return {
+                'x': zone_padding,
+                'y': zone_padding + idx * (zone_height + zone_padding),
+                'width': map_width - 2 * zone_padding,
+                'height': zone_height
+            }
+    return None
+
+
+def ensure_position_in_zone(position_x: float, position_y: float,
+                            zone_id: int, furniture_width: float = 60,
+                            furniture_height: float = 40) -> tuple:
+    """
+    Ensure position is within the zone bounds.
+    If outside, calculate a default position inside the zone.
+
+    Args:
+        position_x: Requested X position
+        position_y: Requested Y position
+        zone_id: Target zone ID
+        furniture_width: Width of furniture item
+        furniture_height: Height of furniture item
+
+    Returns:
+        tuple (x, y) with valid position inside the zone
+    """
+    bounds = calculate_zone_bounds(zone_id)
+    if not bounds:
+        return position_x, position_y
+
+    # Add margin for furniture size
+    margin = 20
+    min_x = bounds['x'] + margin
+    max_x = bounds['x'] + bounds['width'] - furniture_width - margin
+    min_y = bounds['y'] + margin
+    max_y = bounds['y'] + bounds['height'] - furniture_height - margin
+
+    # Check if position is inside zone bounds
+    is_inside = (min_x <= position_x <= max_x and min_y <= position_y <= max_y)
+
+    if is_inside:
+        return position_x, position_y
+
+    # Position is outside zone - calculate a default position
+    # Place it in the center-left area of the zone
+    default_x = min_x + 50
+    default_y = min_y + (bounds['height'] // 2) - (furniture_height // 2)
+
+    return default_x, default_y
 
 
 def register_routes(bp):
@@ -84,14 +157,26 @@ def register_routes(bp):
         # Get rotation (0 = horizontal, 90 = vertical)
         rotation = int(data.get('rotation', 0))
 
+        # Get requested position
+        requested_x = float(data.get('position_x', 100))
+        requested_y = float(data.get('position_y', 100))
+
+        # Ensure position is within the zone bounds
+        # This fixes the bug where changing zone in dropdown doesn't update position
+        position_x, position_y = ensure_position_in_zone(
+            requested_x, requested_y,
+            int(data['zone_id']),
+            default_width, default_height
+        )
+
         try:
             furniture_id = create_temporary_furniture(
                 zone_id=int(data['zone_id']),
                 furniture_type=furniture_type_code,
                 number=number,
                 capacity=int(data['capacity']),
-                position_x=float(data.get('position_x', 100)),
-                position_y=float(data.get('position_y', 100)),
+                position_x=position_x,
+                position_y=position_y,
                 start_date=start_date,
                 end_date=end_date,
                 width=default_width,

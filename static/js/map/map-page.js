@@ -1173,15 +1173,21 @@ document.addEventListener('DOMContentLoaded', function () {
             return; // Exit early - don't open panel in move mode
         }
 
-        if (availability && !availability.available && availability.reservation_id) {
-            // Occupied furniture - open reservation panel directly
-            openReservationPanel(availability.reservation_id, 'view');
-        } else {
-            // Available furniture - select it and open quick reservation
-            map.clearSelection();
-            map.selectFurniture(furnitureId, true);
-            updateSelectionBar();
-            openNewReservationPanel();
+        // Outside move mode: Show context menu (Block/Unblock/Temporary)
+        // Get furniture item from map data (reuse 'data' from above)
+        const furnitureItem = data.furniture?.find(f => f.id === furnitureId);
+
+        if (furnitureItem) {
+            // Create a synthetic event with the touch coordinates for positioning
+            const syntheticEvent = {
+                preventDefault: () => {},
+                stopPropagation: () => {},
+                clientX: clientX,
+                clientY: clientY
+            };
+
+            // Use BeachMap's context menu (Block/Unblock/Delete Temporary)
+            map.handleFurnitureContextMenu(syntheticEvent, furnitureItem);
         }
     });
 

@@ -32,7 +32,7 @@
     opacity: 0;
     visibility: hidden;
     transform: scale(0.95);
-    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    transition: opacity 0.1s ease, transform 0.1s ease, visibility 0s;
     overflow: hidden;
 }
 
