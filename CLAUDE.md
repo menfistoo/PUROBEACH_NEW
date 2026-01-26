@@ -223,7 +223,9 @@ Weighted scoring: **40% contiguity + 35% preferences + 25% capacity**
 3. Check for security issues if touching auth/data
 
 ### Reviews
-- **Code Review:** `/review` or see `code-review/README.md`
+- **QA Router:** `/qa` - Auto-detects changed files and runs appropriate reviews
+- **Code Simplifier:** `/simplify` - Simplifies complex code
+- **Code Standards:** `/code-standards` - Check CLAUDE.md compliance
 - **Security Review:** `/security-review` for auth/data changes
 - **Design Review:** `/design-review` for reviewing UI changes
 - **Frontend Design:** `/frontend-design` for creating/editing UI (MUST use before any UI work)
@@ -278,58 +280,71 @@ REASON: New waitlist feature
 
 ## Design System
 
-**CRITICAL:** Before creating or editing ANY UI elements (templates, CSS, JavaScript UI code), run `/frontend-design` to load the complete design guidelines into context.
+**CRITICAL:** Before creating or editing ANY UI elements, run `/frontend-design` to load design guidelines.
 
-**IMPORTANT:** When implementing any UI/frontend work, read `DESIGN_SYSTEM.md` for:
-- Color palette (Primary: #D4AF37, Secondary: #1A3A5C, Accent: #F5E6D3)
-- Typography (Inter font, type scale)
-- Component styles (buttons, cards, forms, tables, modals)
-- Beach map specific styles (furniture, zones, states)
+**Reference:** See `DESIGN_SYSTEM.md` for complete specifications:
+- Color palette, typography, spacing
+- Component patterns (buttons, cards, forms, tables, modals)
+- Beach map styles (furniture states, zones)
+- Reservation state colors
 - CSS variables and Bootstrap 5 integration
-
-### Quick Color Reference
-```
-Primary Gold:     #D4AF37
-Deep Ocean:       #1A3A5C
-Warm Sand:        #F5E6D3
-Success:          #4A7C59
-Error:            #C1444F
-Warning:          #E5A33D
-```
-
-### Key Design Rules
-1. **Buttons:** Gold gradient for primary, white with gold border for secondary
-2. **Cards:** White background, 12px border-radius, subtle shadow
-3. **Tables:** Sand header (#F5E6D3), gold bottom border
-4. **Navigation:** Dark sidebar (#1A3A5C) with gold active states
-5. **States:** Use reservation state colors consistently (see DESIGN_SYSTEM.md)
 
 ---
 
-## Issue Management
+## GitHub Issues (Proactive)
 
-**CRITICAL: Always read `Documentation/puro beach club/Issues/_WORKFLOW.md` when working with issues.**
+**CRITICAL: Proactively use GitHub Issues to track bugs, features, and ideas WITHOUT waiting for user commands.**
 
-### Workflow
-```
-PENDING → IN PROGRESS → PENDING USER REVIEW → DONE
-                ↑                │
-                └────────────────┘ (if rejected)
-```
-
-### Quick Actions
-| User Says | Action |
+### When to Create Issues Automatically
+| Situation | Action |
 |-----------|--------|
-| Reports issue | Create file in `Issues/PENDING/` |
-| "Work on X" | Move to `IN PROGRESS/`, fix it |
-| "OK" / "Approved" | Move to `DONE/` |
-| "Not fixed" | Move back to `IN PROGRESS/` |
+| User mentions a bug while testing | Create issue with `bug` label |
+| User describes a feature idea | Create issue with `feature,planning` labels |
+| I discover a bug while working | Create issue with `bug` label |
+| User says "we should add X later" | Create issue with `planning` label |
+| Task is deferred for later | Create issue to track it |
+
+### Labels
+| Label | Color | Use For |
+|-------|-------|---------|
+| `bug` | red | Something broken |
+| `feature` | #1A3A5C | New functionality |
+| `enhancement` | cyan | Improvements to existing |
+| `planning` | #D4AF37 | Future ideas, not urgent |
+| `map` | #4A7C59 | Live map related |
+| `reservations` | #6B8E23 | Reservations system |
+| `customers` | #708090 | Customer management |
+| `pricing` | #E5A33D | Pricing and payments |
+| `priority:high` | #C1444F | Urgent |
+| `priority:low` | #F5E6D3 | Nice to have |
+
+### Commands
+```bash
+# Create issue
+gh issue create -t "Title" -b "Description" -l "label1,label2"
+
+# List issues
+gh issue list
+gh issue list -l "planning"    # By label
+gh issue list -s closed        # Closed issues
+
+# View/close
+gh issue view 123
+gh issue close 123
+```
+
+### Commit Integration
+- `Fixes #123` in commit message → auto-closes issue
+- `Relates to #123` → links without closing
+
+### Web Access
+https://github.com/menfistoo/PUROBEACH_NEW/issues
 
 ---
 
 ## Extended Documentation
 
-- **Issue Workflow:** `Documentation/puro beach club/Issues/_WORKFLOW.md`
+- **GitHub Issues:** https://github.com/menfistoo/PUROBEACH_NEW/issues
 - **Design System:** `DESIGN_SYSTEM.md` (colors, typography, components)
 - **Development Plan:** `docs/DEVELOPMENT_PLAN.md` (living document)
 - **Code Review Standards:** `code-review/README.md`
