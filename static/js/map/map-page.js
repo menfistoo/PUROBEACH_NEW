@@ -141,12 +141,16 @@ document.addEventListener('DOMContentLoaded', function () {
         checkUnassignedReservationsGlobal();
     });
 
-    // Handle edit reservation from move mode - Issue #8
+    // Handle edit reservation from move mode - Issue #8, #14
     document.addEventListener('moveMode:editReservation', (e) => {
         const { reservationId } = e.detail;
 
+        // Exit move mode first to avoid panel overlap - Issue #14
+        if (moveMode.isActive()) {
+            moveMode.deactivate();
+        }
+
         // Open the reservation edit modal
-        // The openReservationPanel function is defined later in this file
         if (typeof openReservationPanel === 'function') {
             openReservationPanel(reservationId, 'edit');
         } else {
