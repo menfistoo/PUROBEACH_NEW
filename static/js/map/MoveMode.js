@@ -137,6 +137,31 @@ export class MoveMode {
     }
 
     /**
+     * Change the current date and refresh the pool
+     * Called when user navigates to a different date while in move mode
+     * @param {string} newDate - New date in YYYY-MM-DD format
+     */
+    async setDate(newDate) {
+        if (!this.active || this.currentDate === newDate) return;
+
+        console.log('[MoveMode] Date changed from', this.currentDate, 'to', newDate);
+
+        // Update date
+        this.currentDate = newDate;
+
+        // Clear pool and selection (reservations from old date don't apply)
+        this.pool = [];
+        this.selectedReservationId = null;
+        this.undoStack = []; // Undo actions are date-specific
+
+        // Notify UI to clear
+        this.emit('onPoolUpdate', { pool: this.pool });
+
+        // Load unassigned reservations for the new date
+        await this.loadUnassignedReservations();
+    }
+
+    /**
      * Deactivate move mode
      * @returns {boolean} True if deactivated, false if pool not empty
      */

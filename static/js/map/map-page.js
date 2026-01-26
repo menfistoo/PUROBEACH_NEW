@@ -145,9 +145,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('moveMode:editReservation', (e) => {
         const { reservationId } = e.detail;
 
-        // Exit move mode first to avoid panel overlap - Issue #14
+        // Force exit move mode to avoid panel overlap - Issue #14
+        // Use forceDeactivate() to skip the "assign all reservations" check
         if (moveMode.isActive()) {
-            moveMode.deactivate();
+            moveMode.forceDeactivate();
         }
 
         // Open the reservation edit modal
@@ -241,6 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (response.ok) {
                 const data = await response.json();
                 globalUnassignedData = data;
+                console.log('[MoveMode] Global unassigned check:', data.count, 'reservations', data.dates);
                 updateUnassignedBadge(data.count || 0, data);
             }
         } catch (error) {
@@ -1246,9 +1248,9 @@ document.addEventListener('DOMContentLoaded', function () {
         populateZoneSelector();
         // Update waitlist badge
         updateWaitlistBadge();
-        // Update move mode date if active
+        // Update move mode date if active - refresh pool for new date
         if (moveMode.isActive()) {
-            moveMode.currentDate = dateStr;
+            moveMode.setDate(dateStr);
         }
         // Note: Global unassigned badge is NOT refreshed on date change
         // It only refreshes on page load and after assignments
