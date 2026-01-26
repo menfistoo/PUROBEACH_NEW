@@ -577,3 +577,61 @@ class TestMoveModeAPI:
         assert response.status_code == 200
         data = response.get_json()
         assert 'furniture' in data
+
+
+class TestDateFiltering:
+    """Tests for date-specific filtering in move mode."""
+
+    def test_get_unassigned_only_returns_reservations_for_target_date(self, app):
+        """Unassigned query should only return reservations for the specific date."""
+        from models.move_mode import get_unassigned_reservations
+        from database import get_db
+
+        with app.app_context():
+            date1 = '2026-03-01'
+            date2 = '2026-03-02'
+
+            with get_db() as conn:
+                cursor = conn.cursor()
+
+                # Get or create a customer
+                cursor.execute("SELECT id FROM beach_customers LIMIT 1")
+                customer = cursor.fetchone()
+                if not customer:
+                    cursor.execute("""
+                        INSERT INTO beach_customers (first_name, last_name, customer_type, phone)
+                        VALUES ('DateFilter', 'Test', 'externo', '555-DATE')
+                    """)
+                    customer_id = cursor.lastrowid
+                else:
+                    customer_id = customer['id']
+
+                # Get a non-releasing state
+                cursor.execute("""
+                    SELECT id FROM beach_reservation_states
+                    WHERE is_availability_releasing = 0 OR is_availability_releasing IS NULL
+                    LIMIT 1
+                """)
+                state = cursor.fetchone()
+                state_id = state['id'] if state else 1
+
+                # Create reservation for date1 only
+                # num_people=2 but no furniture assigned = unassigned
+                cursor.execute("""
+                    INSERT INTO beach_reservations (
+                        customer_id, ticket_number, reservation_date, start_date, end_date,
+                        num_people, state_id
+                    ) VALUES (?, 'DATE-001', ?, ?, ?, 2, ?)
+                """, (customer_id, date1, date1, date1, state_id))
+                res_id = cursor.lastrowid
+                conn.commit()
+
+            # Check date1 - should find the reservation (no furniture = unassigned)
+            unassigned_date1 = get_unassigned_reservations(date1)
+            assert res_id in unassigned_date1, \
+                f"Should find unassigned reservation on its date. Got: {unassigned_date1}"
+
+            # Check date2 - should NOT find the reservation
+            unassigned_date2 = get_unassigned_reservations(date2)
+            assert res_id not in unassigned_date2, \
+                f"Should NOT find reservation on different date. Got: {unassigned_date2}"
