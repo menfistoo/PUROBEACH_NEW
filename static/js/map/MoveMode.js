@@ -364,12 +364,16 @@ export class MoveMode {
      * @returns {Array} Initial furniture to use
      */
     _resolveInitialFurniture(existingIndex, initialFurnitureOverride, apiFurniture) {
-        if (existingIndex >= 0 && this.pool[existingIndex].initialFurniture) {
+        // Check existing pool entry has non-empty initialFurniture
+        // Note: empty array [] is truthy, so we must check .length
+        if (existingIndex >= 0 && this.pool[existingIndex].initialFurniture?.length > 0) {
             return this.pool[existingIndex].initialFurniture;
         }
+        // Use override if provided (from caller who knows the original state)
         if (initialFurnitureOverride && initialFurnitureOverride.length > 0) {
             return initialFurnitureOverride;
         }
+        // Fallback to current API furniture
         return apiFurniture || [];
     }
 
