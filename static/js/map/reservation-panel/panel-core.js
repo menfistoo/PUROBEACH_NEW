@@ -376,9 +376,6 @@ class NewReservationPanel {
                     phone: phone,
                     email: entry.email || ''
                 });
-
-                // Update charge_to_room visibility for external
-                this.customerHandler.updateChargeToRoomVisibility('externo', false);
             } else {
                 // Internal customer (hotel guest) without customer_id
                 // Display as pending customer info
@@ -394,9 +391,6 @@ class NewReservationPanel {
 
                 // Show in display (but don't set customer_id since it doesn't exist yet)
                 this.customerHandler.showCustomerDisplay(tempCustomer);
-
-                // Update charge_to_room visibility
-                this.customerHandler.updateChargeToRoomVisibility('interno', true);
             }
         }
 
@@ -444,9 +438,6 @@ class NewReservationPanel {
         this.customerHandler.hideGuestSelector();
         this.customerHandler.state.selectedGuest = null;
         this.customerHandler.state.selectedCustomer = null;
-
-        // Hide charge_to_room on form reset
-        this.customerHandler.updateChargeToRoomVisibility(null, false);
 
         // Reset inputs
         if (this.notesInput) this.notesInput.value = '';

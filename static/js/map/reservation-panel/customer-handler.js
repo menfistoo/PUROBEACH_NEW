@@ -185,9 +185,6 @@ class CustomerHandler {
         // Hide guest selector (external customers don't have room guests)
         this.hideGuestSelector();
 
-        // External customers can't charge to room
-        this.updateChargeToRoomVisibility('externo', false);
-
         // Set num_people from the form if provided (only if not manually edited)
         const numPeopleInput = document.getElementById('newPanelNumPeople');
         if (customer.num_people && numPeopleInput && !this.panel.numPeopleManuallyEdited) {
@@ -209,10 +206,6 @@ class CustomerHandler {
 
         // Show customer display with details
         this.showCustomerDisplay(customer);
-
-        // Update charge_to_room visibility based on customer type
-        const isInterno = customer.customer_type === 'interno';
-        this.updateChargeToRoomVisibility(customer.customer_type, isInterno);
 
         // Clear current preferences first
         this.panel.clearPreferences();
@@ -514,9 +507,6 @@ class CustomerHandler {
         // Hide guest selector
         this.hideGuestSelector();
 
-        // Hide charge_to_room when no customer selected
-        this.updateChargeToRoomVisibility(null, false);
-
         // Clear notes
         const notesInput = document.getElementById('newPanelNotes');
         if (notesInput) notesInput.value = '';
@@ -529,33 +519,6 @@ class CustomerHandler {
     }
 
     /**
-     * Update charge_to_room visibility based on customer type
-     */
-    updateChargeToRoomVisibility(customerType, isHotelGuest = false) {
-        const chargeToRoomWrapper = document.getElementById('newPanelChargeToRoomWrapper');
-        const chargeToRoomCheckbox = document.getElementById('newPanelChargeToRoom');
-
-        if (!chargeToRoomWrapper) return;
-
-        // Show charge_to_room only for internal customers (hotel guests)
-        const canChargeToRoom = customerType === 'interno' || isHotelGuest;
-
-        if (canChargeToRoom) {
-            chargeToRoomWrapper.style.display = 'block';
-            // Default to checked for hotel guests
-            if (chargeToRoomCheckbox && isHotelGuest) {
-                chargeToRoomCheckbox.checked = true;
-            }
-        } else {
-            chargeToRoomWrapper.style.display = 'none';
-            // Ensure unchecked when hidden
-            if (chargeToRoomCheckbox) {
-                chargeToRoomCheckbox.checked = false;
-            }
-        }
-    }
-
-    /**
      * Handle hotel guest selection - fetch room guests and populate selector
      */
     async handleHotelGuestSelect(guest) {
@@ -565,9 +528,6 @@ class CustomerHandler {
 
         // Show customer display with guest details
         this.showCustomerDisplay(guest);
-
-        // Show charge_to_room option for hotel guests
-        this.updateChargeToRoomVisibility('interno', true);
 
         // Hotel guests don't have preferences yet, clear them
         this.panel.clearPreferences();
