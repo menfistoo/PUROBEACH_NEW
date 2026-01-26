@@ -157,6 +157,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Handle return to conflict from move mode - Issue #7
+    document.addEventListener('moveMode:returnToConflict', (e) => {
+        const conflictContext = e.detail;
+
+        if (conflictContext) {
+            // Re-dispatch the cancelled event to restore the conflict modal
+            // The ConflictResolutionModal listens for this event and restores itself
+            document.dispatchEvent(new CustomEvent('conflictResolution:cancelled'));
+        }
+    });
+
     // Badge element for unassigned reservations
     const unassignedBadge = document.getElementById('moveModeUnassignedBadge');
 

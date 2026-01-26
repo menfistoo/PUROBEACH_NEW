@@ -24,6 +24,7 @@ export class MoveMode {
         this.pool = [];  // Reservations in the pool
         this.selectedReservationId = null;
         this.undoStack = [];
+        this.triggeredByConflict = null;  // Store conflict context if activated from conflict
 
         // Event callbacks (arrays to support multiple listeners)
         this.callbacks = {
@@ -71,8 +72,9 @@ export class MoveMode {
     /**
      * Activate move mode
      * @param {string} date - Current date in YYYY-MM-DD format
+     * @param {Object} conflictContext - Optional conflict context if triggered by conflict resolution
      */
-    async activate(date) {
+    async activate(date, conflictContext = null) {
         if (this.active) return;
 
         this.active = true;
@@ -80,8 +82,9 @@ export class MoveMode {
         this.pool = [];
         this.selectedReservationId = null;
         this.undoStack = [];
+        this.triggeredByConflict = conflictContext;
 
-        this.emit('onActivate', { date });
+        this.emit('onActivate', { date, conflictContext });
         showToast('Modo Mover activado', 'info');
 
         // Load any reservations that already need furniture assignments
@@ -130,6 +133,7 @@ export class MoveMode {
         this.pool = [];
         this.selectedReservationId = null;
         this.undoStack = [];
+        this.triggeredByConflict = null;
     }
 
     /**
@@ -165,6 +169,24 @@ export class MoveMode {
     forceDeactivate() {
         this._resetState();
         this.emit('onDeactivate', { forced: true });
+    }
+
+    /**
+     * Cancel move mode and return to conflict resolution if applicable
+     * @returns {Object} Result with conflictContext if was triggered by conflict
+     */
+    cancelToConflict() {
+        const conflictContext = this.triggeredByConflict;
+
+        // Reset state
+        this._resetState();
+        this.emit('onDeactivate', {
+            forced: true,
+            returnToConflict: !!conflictContext,
+            conflictContext
+        });
+
+        return { conflictContext };
     }
 
     /**

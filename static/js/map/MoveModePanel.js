@@ -369,6 +369,18 @@ export class MoveModePanel {
                 const resId = parseInt(card.dataset.reservationId);
                 const res = this.moveMode.pool.find(r => r.reservation_id === resId);
 
+                // If triggered by conflict, cancel and return to conflict view - Issue #7
+                if (this.moveMode.triggeredByConflict) {
+                    const result = this.moveMode.cancelToConflict();
+                    if (result.conflictContext) {
+                        document.dispatchEvent(new CustomEvent('moveMode:returnToConflict', {
+                            detail: result.conflictContext
+                        }));
+                    }
+                    return;
+                }
+
+                // Normal restore: assign back to original furniture
                 // Use initialFurniture (what it had when first entering pool)
                 if (!res || !res.initialFurniture?.length) {
                     showToast('No hay posición original para restaurar', 'warning');
@@ -805,6 +817,14 @@ export class MoveModePanel {
             ? this.renderDayAssignments(res)
             : '';
 
+        // Dynamic button text based on conflict context - Issue #7
+        const restoreButtonText = this.moveMode.triggeredByConflict
+            ? 'Cancelar y volver'
+            : 'Restaurar';
+        const restoreButtonIcon = this.moveMode.triggeredByConflict
+            ? 'fa-arrow-left'
+            : 'fa-undo';
+
         return `
             <div class="card-expanded">
                 <div class="preferences-section">
@@ -819,7 +839,7 @@ export class MoveModePanel {
                         <i class="fas fa-edit me-1"></i>Editar
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-secondary restore-btn">
-                        <i class="fas fa-undo me-1"></i>Restaurar
+                        <i class="fas ${restoreButtonIcon} me-1"></i>${restoreButtonText}
                     </button>
                 </div>
             </div>
