@@ -275,6 +275,17 @@
     color: var(--color-secondary);
 }
 
+/* Customer name as clickable link */
+.reservation-panel .customer-name-link {
+    text-decoration: none;
+    transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.reservation-panel .customer-name-link:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
 .reservation-panel .customer-room-badge {
     display: inline-flex;
     align-items: center;

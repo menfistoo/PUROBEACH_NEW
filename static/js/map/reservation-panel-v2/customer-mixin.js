@@ -69,6 +69,8 @@ export const CustomerMixin = (Base) => class extends Base {
     _renderNoCustomer() {
         if (this.customerName) {
             this.customerName.textContent = 'Cliente no encontrado';
+            this.customerName.href = '#';
+            this.customerName.removeAttribute('title');
         }
         if (this.customerRoomBadge) {
             this.customerRoomBadge.style.display = 'none';
@@ -85,7 +87,7 @@ export const CustomerMixin = (Base) => class extends Base {
     }
 
     /**
-     * Render customer name
+     * Render customer name as clickable link to customer details
      * @private
      * @param {Object} customer - Customer data
      */
@@ -95,6 +97,15 @@ export const CustomerMixin = (Base) => class extends Base {
         this.customerName.textContent = customer.full_name ||
             `${customer.first_name || ''} ${customer.last_name || ''}`.trim() ||
             'Sin nombre';
+
+        // Set link to customer details page
+        if (customer.id) {
+            this.customerName.href = `/beach/customers/${customer.id}`;
+            this.customerName.title = 'Ver detalles del cliente';
+        } else {
+            this.customerName.href = '#';
+            this.customerName.removeAttribute('title');
+        }
     }
 
     /**
