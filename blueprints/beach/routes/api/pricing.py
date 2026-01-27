@@ -2,13 +2,14 @@
 Pricing API endpoints for real-time pricing calculations.
 """
 
-from flask import request, jsonify
+from flask import request, jsonify, Response
 from flask_login import login_required
 from datetime import datetime
 from blueprints.beach.services.pricing_service import (
     get_eligible_packages,
     calculate_reservation_pricing
 )
+from models.pricing import get_all_minimum_consumption_policies
 
 
 def register_routes(bp):
@@ -150,7 +151,8 @@ def register_routes(bp):
                 reservation_date=reservation_date,
                 num_people=data["num_people"],
                 package_id=data.get("package_id"),
-                customer_source=data.get("customer_source", "customer")
+                customer_source=data.get("customer_source", "customer"),
+                minimum_consumption_policy_id=data.get("minimum_consumption_policy_id")
             )
 
             return jsonify({
@@ -163,6 +165,42 @@ def register_routes(bp):
                 "success": False,
                 "error": str(e)
             }), 400
+        except Exception as e:
+            return jsonify({
+                "success": False,
+                "error": str(e)
+            }), 500
+
+    @bp.route('/pricing/minimum-consumption-policies', methods=['GET'])
+    @login_required
+    def list_minimum_consumption_policies() -> Response:
+        """
+        Get active minimum consumption policies, optionally filtered by customer type.
+
+        Query params:
+            customer_type (optional): 'interno' or 'externo' - filters to matching + universal policies
+
+        Response JSON:
+        {
+            "success": true,
+            "policies": [...]
+        }
+        """
+        try:
+            customer_type = request.args.get('customer_type')
+            policies = get_all_minimum_consumption_policies(active_only=True)
+
+            # Filter by customer type if provided
+            if customer_type in ('interno', 'externo'):
+                policies = [
+                    p for p in policies
+                    if p.get('customer_type') == customer_type or p.get('customer_type') is None
+                ]
+
+            return jsonify({
+                "success": True,
+                "policies": policies
+            })
         except Exception as e:
             return jsonify({
                 "success": False,

@@ -29,8 +29,12 @@ def create_test_reservation_with_furniture(cursor, assignment_date: str):
     else:
         customer_id = customer['id']
 
-    # Get a state
-    cursor.execute("SELECT id FROM beach_reservation_states LIMIT 1")
+    # Get a non-releasing state (so furniture is properly considered "occupied")
+    cursor.execute("""
+        SELECT id FROM beach_reservation_states
+        WHERE is_availability_releasing = 0 OR is_availability_releasing IS NULL
+        LIMIT 1
+    """)
     state = cursor.fetchone()
     state_id = state['id'] if state else 1
 

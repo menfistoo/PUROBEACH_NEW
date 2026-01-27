@@ -7,7 +7,7 @@
             </div>
             <div>
                 <h5 class="mb-0">Paso 3: Precio y Pago</h5>
-                <small class="opacity-75">Selecciona paquete o consumo minimo</small>
+                <small class="opacity-75">Selecciona paquete o consumo mínimo</small>
             </div>
         </div>
     </div>
@@ -28,11 +28,25 @@
             </small>
         </div>
 
-        <!-- Minimum Consumption Display -->
-        <div class="minimum-consumption-display mb-4">
+        <!-- Minimum Consumption Selection -->
+        <div class="minimum-consumption-selection mb-4">
+            <h6 class="section-title">
+                <i class="fas fa-receipt text-primary me-2"></i>Consumo Mínimo
+            </h6>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Consumo Minimo</label>
+                    <label for="minConsumptionPolicySelect" class="form-label">Política de Consumo</label>
+                    <select id="minConsumptionPolicySelect" class="form-select">
+                        <option value="auto">Automático (según tipo cliente/mobiliario)</option>
+                        <!-- Populated via AJAX -->
+                    </select>
+                    <small class="text-muted mt-1 d-block">
+                        <i class="fas fa-info-circle"></i>
+                        Selecciona una política o usa la detección automática
+                    </small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Importe Consumo Mínimo</label>
                     <div class="pricing-display-box">
                         <div class="amount-large">
                             €<span id="minConsumptionAmount">0.00</span>

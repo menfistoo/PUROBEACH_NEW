@@ -8,6 +8,7 @@
     // State management
     let currentPricing = null;
     let availablePackages = [];
+    let availablePolicies = [];
 
     // DOM element references (initialized on DOM ready)
     let elements = {};
@@ -21,6 +22,9 @@
 
         // Attach event listeners
         attachEventListeners();
+
+        // Load minimum consumption policies
+        loadMinConsumptionPolicies();
 
         // Initial load if form has data
         if (elements.customerSelect && elements.customerSelect.value) {
@@ -40,6 +44,7 @@
             dateInput: document.getElementById('dateInput') || document.getElementById('reservationDate'),
             numPeopleInput: document.getElementById('numPeople'),
             packageSelect: document.getElementById('packageSelect'),
+            minConsumptionPolicySelect: document.getElementById('minConsumptionPolicySelect'),
             finalPriceInput: document.getElementById('finalPrice'),
             paidCheckbox: document.getElementById('paid'),
             paymentTicketInput: document.getElementById('payment_ticket_number'),
@@ -99,6 +104,11 @@
             elements.packageSelect.addEventListener('change', calculatePricing);
         }
 
+        // Minimum consumption policy selection change → recalculate
+        if (elements.minConsumptionPolicySelect) {
+            elements.minConsumptionPolicySelect.addEventListener('change', calculatePricing);
+        }
+
         // Paid checkbox → validate ticket requirement
         if (elements.paidCheckbox) {
             elements.paidCheckbox.addEventListener('change', validatePaymentTicket);
@@ -108,6 +118,66 @@
         if (elements.paymentTicketInput) {
             elements.paymentTicketInput.addEventListener('blur', validatePaymentTicket);
         }
+    }
+
+    /**
+     * Load minimum consumption policies for dropdown
+     */
+    async function loadMinConsumptionPolicies() {
+        if (!elements.minConsumptionPolicySelect) return;
+
+        try {
+            const response = await fetch('/beach/api/pricing/minimum-consumption-policies');
+            const data = await response.json();
+
+            if (data.success) {
+                availablePolicies = data.policies;
+                updateMinConsumptionPolicyDropdown(data.policies);
+            } else {
+                console.error('Error loading min consumption policies:', data.error);
+            }
+        } catch (error) {
+            console.error('Error loading min consumption policies:', error);
+        }
+    }
+
+    /**
+     * Update minimum consumption policy dropdown
+     */
+    function updateMinConsumptionPolicyDropdown(policies) {
+        if (!elements.minConsumptionPolicySelect) return;
+
+        const currentSelection = elements.minConsumptionPolicySelect.value;
+
+        // Reset dropdown with auto option
+        elements.minConsumptionPolicySelect.innerHTML = '<option value="auto">Automático (según tipo cliente/mobiliario)</option>';
+
+        policies.forEach(policy => {
+            const option = document.createElement('option');
+            option.value = policy.id;
+
+            // Build display text
+            let displayText = policy.policy_name;
+            if (policy.minimum_amount > 0) {
+                const amountStr = policy.calculation_type === 'per_person'
+                    ? `${policy.minimum_amount.toFixed(2)}€/persona`
+                    : `${policy.minimum_amount.toFixed(2)}€`;
+                displayText += ` - ${amountStr}`;
+            } else {
+                displayText += ' - Sin minimo';
+            }
+
+            option.textContent = displayText;
+            option.dataset.amount = policy.minimum_amount;
+            option.dataset.calculationType = policy.calculation_type;
+
+            // Restore previous selection if valid
+            if (currentSelection && parseInt(currentSelection) === policy.id) {
+                option.selected = true;
+            }
+
+            elements.minConsumptionPolicySelect.appendChild(option);
+        });
     }
 
     /**
@@ -199,6 +269,9 @@
         const reservationDate = elements.dateInput ? elements.dateInput.value : null;
         const numPeople = elements.numPeopleInput ? parseInt(elements.numPeopleInput.value) || 1 : 1;
         const packageId = elements.packageSelect ? elements.packageSelect.value : null;
+        const minConsumptionPolicyId = elements.minConsumptionPolicySelect
+            ? elements.minConsumptionPolicySelect.value
+            : 'auto';
 
         // Validation
         if (!customerId || furnitureIds.length === 0 || !reservationDate) {
@@ -207,18 +280,25 @@
         }
 
         try {
+            const requestBody = {
+                customer_id: parseInt(customerId),
+                furniture_ids: furnitureIds,
+                reservation_date: reservationDate,
+                num_people: numPeople,
+                package_id: packageId ? parseInt(packageId) : null
+            };
+
+            // Add manual policy selection if not auto
+            if (minConsumptionPolicyId && minConsumptionPolicyId !== 'auto') {
+                requestBody.minimum_consumption_policy_id = parseInt(minConsumptionPolicyId);
+            }
+
             const response = await fetch('/beach/api/pricing/calculate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    customer_id: parseInt(customerId),
-                    furniture_ids: furnitureIds,
-                    reservation_date: reservationDate,
-                    num_people: numPeople,
-                    package_id: packageId ? parseInt(packageId) : null
-                })
+                body: JSON.stringify(requestBody)
             });
 
             const data = await response.json();

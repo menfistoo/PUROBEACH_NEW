@@ -101,6 +101,7 @@ export const PricingMixin = (Base) => class extends Base {
      * - Sets current price in input
      * - Clears override and calculated displays
      * - Fetches available packages for the reservation
+     * - Fetches minimum consumption policies
      * - Stores calculated price for reference
      */
     async enterPricingEditMode() {
@@ -112,6 +113,7 @@ export const PricingMixin = (Base) => class extends Base {
         // Reset pricing state
         this.pricingEditState.isModified = false;
         this.pricingEditState.selectedPackageId = reservation.package_id || null;
+        this.pricingEditState.selectedPolicyId = reservation.minimum_consumption_policy_id || null;
 
         // Set current price in input (API returns final_price)
         const currentPrice = reservation.final_price || reservation.total_price || reservation.price || 0;
@@ -135,8 +137,11 @@ export const PricingMixin = (Base) => class extends Base {
             this.panelPriceResetBtn.style.display = 'none';
         }
 
-        // Fetch available packages for this reservation
-        await this.fetchAvailablePackages();
+        // Fetch available packages and policies
+        await Promise.all([
+            this.fetchAvailablePackages(),
+            this.fetchMinConsumptionPolicies()
+        ]);
 
         // Store calculated price for reference
         this.pricingEditState.calculatedPrice = currentPrice;
@@ -157,6 +162,78 @@ export const PricingMixin = (Base) => class extends Base {
         const reservation = this.state.data?.reservation;
         if (reservation) {
             this.renderPricingSection(reservation);
+        }
+    }
+
+    // =========================================================================
+    // MINIMUM CONSUMPTION POLICY MANAGEMENT
+    // =========================================================================
+
+    /**
+     * Fetch minimum consumption policies for dropdown (filtered by customer type)
+     */
+    async fetchMinConsumptionPolicies() {
+        try {
+            // Get customer type to filter policies
+            const customer = this.state.data?.customer;
+            const customerType = customer?.customer_type || 'externo';
+
+            const url = new URL(`${window.location.origin}${this.options.apiBaseUrl}/pricing/minimum-consumption-policies`);
+            url.searchParams.set('customer_type', customerType);
+
+            const response = await fetch(url, {
+                headers: {
+                    'X-CSRFToken': this.csrfToken
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.pricingEditState.availablePolicies = result.policies || [];
+                this.updateMinConsumptionPolicySelector();
+            }
+        } catch (error) {
+            console.error('[Pricing] Error fetching min consumption policies:', error);
+        }
+    }
+
+    /**
+     * Update minimum consumption policy selector UI
+     */
+    updateMinConsumptionPolicySelector() {
+        if (!this.panelMinConsumptionSelect) return;
+
+        const policies = this.pricingEditState.availablePolicies;
+        const currentPolicyId = this.pricingEditState.selectedPolicyId;
+
+        // Clear and rebuild options
+        this.panelMinConsumptionSelect.innerHTML = '<option value="auto">Automático</option>';
+
+        policies.forEach(policy => {
+            const option = document.createElement('option');
+            option.value = policy.id;
+
+            // Build display text
+            let displayText = policy.policy_name;
+            if (policy.minimum_amount > 0) {
+                const amountStr = policy.calculation_type === 'per_person'
+                    ? `${policy.minimum_amount.toFixed(2)}€/pers`
+                    : `${policy.minimum_amount.toFixed(2)}€`;
+                displayText += ` - ${amountStr}`;
+            } else {
+                displayText += ' - Sin minimo';
+            }
+
+            option.textContent = displayText;
+            this.panelMinConsumptionSelect.appendChild(option);
+        });
+
+        // Select current policy if any
+        if (currentPolicyId) {
+            this.panelMinConsumptionSelect.value = currentPolicyId.toString();
+        } else {
+            this.panelMinConsumptionSelect.value = 'auto';
         }
     }
 
@@ -313,6 +390,12 @@ export const PricingMixin = (Base) => class extends Base {
             const packageId = this.panelSelectedPackageId?.value;
             if (packageId) {
                 requestBody.package_id = parseInt(packageId);
+            }
+
+            // Add minimum consumption policy if manually selected
+            const policyId = this.pricingEditState.selectedPolicyId;
+            if (policyId) {
+                requestBody.minimum_consumption_policy_id = policyId;
             }
 
             const response = await fetch(`${this.options.apiBaseUrl}/pricing/calculate`, {

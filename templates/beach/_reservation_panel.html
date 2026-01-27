@@ -245,11 +245,20 @@
                             Calculando precio...
                         </div>
                         <div class="pricing-content" id="panelPricingContent">
+                            <!-- Minimum Consumption Policy Selector -->
+                            <div class="pricing-policy-selector mb-2" id="panelMinConsumptionSelector">
+                                <label class="detail-label" for="panelMinConsumptionSelect">Consumo minimo:</label>
+                                <select class="form-select pricing-select" id="panelMinConsumptionSelect">
+                                    <option value="auto">Automático</option>
+                                    <!-- Policy options populated dynamically -->
+                                </select>
+                            </div>
+
                             <!-- Package Selection Dropdown -->
                             <div class="pricing-type-selector" id="panelPricingTypeSelector" style="display: none;">
-                                <label class="detail-label" for="panelPricingTypeSelect">Tipo de precio:</label>
+                                <label class="detail-label" for="panelPricingTypeSelect">Paquete:</label>
                                 <select class="form-select pricing-select" id="panelPricingTypeSelect">
-                                    <option value="">Consumo minimo</option>
+                                    <option value="">Sin paquete</option>
                                     <!-- Package options populated dynamically -->
                                 </select>
                             </div>

@@ -1,8 +1,101 @@
+{# Macro for package table rows #}
+{% macro package_row(pkg) %}
+<tr class="{% if not pkg.active %}table-secondary{% endif %}">
+    <td>
+        <strong>{{ pkg.package_name }}</strong>
+        {% if pkg.package_description %}
+        <br><small class="text-muted">{{ pkg.package_description[:60] }}{% if pkg.package_description|length > 60 %}...{% endif %}</small>
+        {% endif %}
+    </td>
+    <td class="text-end">
+        <strong>{{ "%.2f"|format(pkg.base_price) }} €</strong>
+        {% if pkg.price_type == 'per_person' %}
+        <small class="text-muted">/pers</small>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        {{ pkg.min_people }}-{{ pkg.max_people }}
+        <small class="text-muted">({{ pkg.standard_people }})</small>
+    </td>
+    <td class="text-center">
+        <small class="text-muted">{{ pkg.zone_name or 'Todas' }}</small>
+    </td>
+    <td class="text-center">
+        {% if pkg.active %}
+        <span class="badge bg-success">Activo</span>
+        {% else %}
+        <span class="badge bg-secondary">Inactivo</span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        <a href="{{ url_for('beach.beach_config.packages_edit', package_id=pkg.id) }}"
+           class="btn btn-sm btn-outline-primary" title="Editar">
+            <i class="fa-solid fa-edit"></i>
+        </a>
+        <form method="POST" action="{{ url_for('beach.beach_config.packages_delete', package_id=pkg.id) }}"
+              class="d-inline" onsubmit="return confirm('¿Eliminar paquete {{ pkg.package_name }}?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </form>
+    </td>
+</tr>
+{% endmacro %}
+
+{# Macro for package section #}
+{% macro package_section(title, icon, badge_class, packages_list, customer_type_param, show_inactive) %}
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">
+            <i class="{{ icon }} me-2"></i>{{ title }}
+            <span class="badge {{ badge_class }} ms-2">{{ packages_list|length }}</span>
+        </h6>
+        <a href="{{ url_for('beach.beach_config.packages_create', customer_type=customer_type_param) }}"
+           class="btn btn-sm btn-outline-primary">
+            <i class="fa-solid fa-plus"></i> Añadir
+        </a>
+    </div>
+    {% if packages_list %}
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th class="text-end" style="width: 120px;">Precio</th>
+                        <th class="text-center" style="width: 100px;">Personas</th>
+                        <th class="text-center" style="width: 100px;">Zona</th>
+                        <th class="text-center" style="width: 80px;">Estado</th>
+                        <th class="text-center" style="width: 100px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pkg in packages_list %}
+                    {{ package_row(pkg) }}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card-body text-center py-4">
+        <p class="text-muted mb-0 small">Sin paquetes configurados</p>
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# Group packages by customer type #}
+{% set interno_packages = packages|selectattr('customer_type', 'equalto', 'interno')|list %}
+{% set externo_packages = packages|selectattr('customer_type', 'equalto', 'externo')|list %}
+{% set universal_packages = packages|rejectattr('customer_type')|list + packages|selectattr('customer_type', 'equalto', 'both')|list %}
+
 <div class="p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h5 class="mb-1"><i class="fa-solid fa-box"></i> Paquetes</h5>
-            <p class="text-muted small mb-0">Gestionar paquetes y ofertas especiales</p>
+            <p class="text-muted small mb-0">Paquetes y ofertas especiales por tipo de cliente</p>
         </div>
         <div class="d-flex gap-2">
             {% if show_inactive_packages %}
@@ -14,119 +107,50 @@
                 <i class="fa-solid fa-eye"></i> Ver Inactivos
             </a>
             {% endif %}
-            <a href="{{ url_for('beach.beach_config.packages_create') }}" class="btn btn-primary">
-                <i class="fa-solid fa-plus"></i> Nuevo Paquete
-            </a>
         </div>
     </div>
 
-    {% if packages %}
-    <div class="card">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th class="text-end">Precio Base</th>
-                            <th class="text-center">Tipo</th>
-                            <th class="text-center">Personas</th>
-                            <th class="text-center">Cliente</th>
-                            <th class="text-center">Zona</th>
-                            <th class="text-center" style="width: 80px;">Uso</th>
-                            <th class="text-center" style="width: 80px;">Estado</th>
-                            <th class="text-center" style="width: 120px;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for pkg in packages %}
-                        <tr class="{% if not pkg.active %}table-secondary{% endif %}">
-                            <td>
-                                <strong>{{ pkg.package_name }}</strong>
-                                {% if pkg.package_description %}
-                                <br><small class="text-muted">{{ pkg.package_description[:60] }}{% if pkg.package_description|length > 60 %}...{% endif %}</small>
-                                {% endif %}
-                            </td>
-                            <td class="text-end">
-                                <strong>{{ "%.2f"|format(pkg.base_price) }} €</strong>
-                            </td>
-                            <td class="text-center">
-                                {% if pkg.price_type == 'per_package' %}
-                                <span class="badge bg-info">Por Paquete</span>
-                                {% else %}
-                                <span class="badge bg-primary">Por Persona</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {{ pkg.min_people }}-{{ pkg.max_people }}
-                                <small class="text-muted">({{ pkg.standard_people }})</small>
-                            </td>
-                            <td class="text-center">
-                                {% if pkg.customer_type == 'interno' %}
-                                <span class="badge bg-success">Interno</span>
-                                {% elif pkg.customer_type == 'externo' %}
-                                <span class="badge bg-warning">Externo</span>
-                                {% elif pkg.customer_type == 'both' %}
-                                <span class="badge bg-secondary">Ambos</span>
-                                {% else %}
-                                <span class="text-muted">Todos</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <small class="text-muted">{{ pkg.zone_name or 'Todas' }}</small>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-secondary">{{ pkg.usage_count or 0 }}</span>
-                            </td>
-                            <td class="text-center">
-                                {% if pkg.active %}
-                                <span class="badge bg-success">Activo</span>
-                                {% else %}
-                                <span class="badge bg-secondary">Inactivo</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <a href="{{ url_for('beach.beach_config.packages_edit', package_id=pkg.id) }}"
-                                   class="btn btn-sm btn-outline-primary" title="Editar">
-                                    <i class="fa-solid fa-edit"></i>
-                                </a>
-                                <form method="POST" action="{{ url_for('beach.beach_config.packages_delete', package_id=pkg.id) }}"
-                                      class="d-inline" onsubmit="return confirm('¿Eliminar paquete {{ pkg.package_name }}?')">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% else %}
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="fa-solid fa-box fa-3x text-muted mb-3"></i>
-            <p class="text-muted">No hay paquetes configurados</p>
-            <a href="{{ url_for('beach.beach_config.packages_create') }}" class="btn btn-primary">
-                <i class="fa-solid fa-plus"></i> Crear primer paquete
-            </a>
-        </div>
-    </div>
-    {% endif %}
+    <!-- Internos (Hotel Guests) -->
+    {{ package_section(
+        'Huéspedes (Internos)',
+        'fa-solid fa-hotel',
+        'bg-success',
+        interno_packages,
+        'interno',
+        show_inactive_packages
+    ) }}
 
+    <!-- Externos (Visitors) -->
+    {{ package_section(
+        'Visitantes (Externos)',
+        'fa-solid fa-user',
+        'bg-warning text-dark',
+        externo_packages,
+        'externo',
+        show_inactive_packages
+    ) }}
+
+    <!-- Universal (Both/All) -->
+    {{ package_section(
+        'Universales (Todos)',
+        'fa-solid fa-globe',
+        'bg-secondary',
+        universal_packages,
+        'both',
+        show_inactive_packages
+    ) }}
+
+    <!-- Info Card -->
     <div class="card mt-3">
         <div class="card-header">
-            <h6 class="card-title mb-0"><i class="fa-solid fa-info-circle"></i> Información sobre Paquetes</h6>
+            <h6 class="card-title mb-0"><i class="fa-solid fa-info-circle"></i> Cómo funciona</h6>
         </div>
         <div class="card-body">
-            <p class="mb-2 small">Los paquetes permiten agrupar servicios con precios especiales:</p>
             <ul class="mb-0 small">
-                <li><strong>Precio por Paquete:</strong> Precio fijo independiente del número de personas</li>
-                <li><strong>Precio por Persona:</strong> Precio que se multiplica por el número de personas</li>
-                <li><strong>Rango de Personas:</strong> Mínimo, estándar (recomendado) y máximo permitido</li>
+                <li><strong>Huéspedes:</strong> Paquetes exclusivos para clientes internos (huéspedes del hotel)</li>
+                <li><strong>Visitantes:</strong> Paquetes para clientes externos</li>
+                <li><strong>Universales:</strong> Paquetes disponibles para todos los clientes</li>
+                <li><strong>Prioridad:</strong> Los paquetes específicos tienen preferencia sobre los universales</li>
             </ul>
         </div>
     </div>
