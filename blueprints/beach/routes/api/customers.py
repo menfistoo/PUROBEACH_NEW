@@ -9,7 +9,7 @@ from utils.audit import log_create, log_update
 from models.customer import (
     find_duplicates, get_customer_by_id, get_customer_preferences,
     create_customer, set_customer_preferences, search_customers_unified,
-    create_customer_from_hotel_guest
+    create_customer_from_hotel_guest, get_customers_filtered
 )
 from models.characteristic import get_all_characteristics
 from models.reservation import sync_preferences_to_customer
@@ -24,6 +24,43 @@ def register_routes(bp):
     # ============================================================================
     # CUSTOMER API ROUTES
     # ============================================================================
+
+    @bp.route('/customers/list')
+    @login_required
+    @permission_required('beach.customers.view')
+    def customers_list():
+        """Get filtered customers list for auto-filter (AJAX endpoint)."""
+        search = request.args.get('search', '')
+        customer_type = request.args.get('type', '')
+        vip_only = request.args.get('vip', '') == '1'
+
+        result = get_customers_filtered(
+            search=search if search else None,
+            customer_type=customer_type if customer_type else None,
+            vip_only=vip_only
+        )
+
+        # Format customers for JSON response
+        customers = []
+        for c in result['customers']:
+            customers.append({
+                'id': c['id'],
+                'first_name': c['first_name'],
+                'last_name': c.get('last_name', ''),
+                'customer_type': c['customer_type'],
+                'phone': c.get('phone'),
+                'email': c.get('email'),
+                'room_number': c.get('room_number'),
+                'vip_status': c.get('vip_status', 0),
+                'reservation_count': c.get('reservation_count', 0)
+            })
+
+        return jsonify({
+            'success': True,
+            'customers': customers,
+            'total': result['total'],
+            'count': len(customers)
+        })
 
     @bp.route('/customers/search')
     @login_required

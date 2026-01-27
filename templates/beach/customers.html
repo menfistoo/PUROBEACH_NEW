@@ -76,14 +76,20 @@
 <!-- Filters -->
 <div class="card mb-3">
     <div class="card-body">
-        <form method="GET" action="{{ url_for('beach.customers') }}" class="row g-3">
-            <div class="col-md-4">
-                <input type="text" name="search" class="form-control"
-                       placeholder="Buscar por nombre, teléfono, email o habitación"
-                       value="{{ search }}">
+        <form id="customerFilterForm" method="GET" action="{{ url_for('beach.customers') }}" class="row g-3">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" name="search" id="searchInput" class="form-control"
+                           placeholder="Buscar por nombre, teléfono, email o habitación"
+                           value="{{ search }}">
+                    <span class="input-group-text d-none" id="searchSpinner">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    </span>
+                </div>
             </div>
             <div class="col-md-3">
-                <select name="type" class="form-select">
+                <select name="type" id="typeFilter" class="form-select">
                     <option value="">Todos los tipos</option>
                     <option value="interno" {% if type_filter == 'interno' %}selected{% endif %}>
                         Interno (Huésped)
@@ -100,17 +106,19 @@
                     <label class="form-check-label" for="vipFilter">Solo VIP</label>
                 </div>
             </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-secondary w-100">
-                    <i class="fas fa-search"></i> Filtrar
-                </button>
+            <div class="col-md-1">
+                <noscript>
+                    <button type="submit" class="btn btn-secondary w-100">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </noscript>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Results count -->
-<div class="mb-3 text-muted">
+<div class="mb-3 text-muted" id="resultsCount">
     <small>Mostrando {{ customers|length }} de {{ total }} clientes</small>
 </div>
 
@@ -129,7 +137,7 @@
                     <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="customerTableBody">
                 {% for customer in customers %}
                 <tr>
                     <td>
@@ -215,4 +223,261 @@
         </table>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * CustomerListAutoFilter - Auto-filtering for customer list page
+ * Text inputs: 300ms debounce
+ * Select/checkbox: immediate filter
+ */
+(function() {
+    'use strict';
+
+    const DEBOUNCE_DELAY = 300;
+    const API_URL = '/beach/api/customers/list';
+
+    // DOM elements
+    const searchInput = document.getElementById('searchInput');
+    const typeFilter = document.getElementById('typeFilter');
+    const vipFilter = document.getElementById('vipFilter');
+    const searchSpinner = document.getElementById('searchSpinner');
+    const resultsCount = document.getElementById('resultsCount');
+    const tableBody = document.getElementById('customerTableBody');
+    const form = document.getElementById('customerFilterForm');
+
+    let debounceTimer = null;
+    let currentRequest = null;
+
+    /**
+     * Show loading indicator
+     */
+    function showLoading() {
+        searchSpinner.classList.remove('d-none');
+        tableBody.style.opacity = '0.5';
+    }
+
+    /**
+     * Hide loading indicator
+     */
+    function hideLoading() {
+        searchSpinner.classList.add('d-none');
+        tableBody.style.opacity = '1';
+    }
+
+    /**
+     * Get current filter values
+     */
+    function getFilterValues() {
+        return {
+            search: searchInput.value.trim(),
+            type: typeFilter.value,
+            vip: vipFilter.checked ? '1' : ''
+        };
+    }
+
+    /**
+     * Build URL with query parameters
+     */
+    function buildUrl(filters) {
+        const params = new URLSearchParams();
+        if (filters.search) params.set('search', filters.search);
+        if (filters.type) params.set('type', filters.type);
+        if (filters.vip) params.set('vip', filters.vip);
+        return `${API_URL}?${params.toString()}`;
+    }
+
+    /**
+     * Update browser URL without page reload
+     */
+    function updateBrowserUrl(filters) {
+        const params = new URLSearchParams();
+        if (filters.search) params.set('search', filters.search);
+        if (filters.type) params.set('type', filters.type);
+        if (filters.vip) params.set('vip', filters.vip);
+        const newUrl = params.toString() ? `?${params.toString()}` : window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+    }
+
+    /**
+     * Render customer row HTML
+     */
+    function renderCustomerRow(customer) {
+        const fullName = `${customer.first_name} ${customer.last_name || ''}`.trim();
+        const detailUrl = `/beach/customers/${customer.id}`;
+        const editUrl = `/beach/customers/${customer.id}/edit`;
+        const deleteUrl = `/beach/customers/${customer.id}/delete`;
+
+        // Type badge
+        const typeBadge = customer.customer_type === 'interno'
+            ? '<span class="badge bg-info"><i class="fas fa-hotel"></i> Interno</span>'
+            : '<span class="badge bg-success"><i class="fas fa-user"></i> Externo</span>';
+
+        // Contact info
+        let contactHtml = '';
+        if (customer.phone) {
+            contactHtml += `<div><i class="fas fa-phone text-muted me-1"></i> ${escapeHtml(customer.phone)}</div>`;
+        }
+        if (customer.email) {
+            contactHtml += `<div><i class="fas fa-envelope text-muted me-1"></i> ${escapeHtml(customer.email)}</div>`;
+        }
+
+        // Room number
+        const roomHtml = customer.room_number
+            ? `<span class="badge bg-secondary"><i class="fas fa-door-open"></i> ${escapeHtml(customer.room_number)}</span>`
+            : '<span class="text-muted">-</span>';
+
+        // VIP badge
+        const vipHtml = customer.vip_status
+            ? '<span class="badge bg-warning text-dark"><i class="fas fa-star"></i> VIP</span>'
+            : '';
+
+        // CSRF token for delete form
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        return `
+            <tr>
+                <td>
+                    <a href="${detailUrl}" class="text-decoration-none">
+                        <strong>${escapeHtml(fullName)}</strong>
+                    </a>
+                </td>
+                <td>${typeBadge}</td>
+                <td>${contactHtml || '<span class="text-muted">-</span>'}</td>
+                <td>${roomHtml}</td>
+                <td>${vipHtml}</td>
+                <td><span class="badge bg-secondary">${customer.reservation_count || 0}</span></td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="${detailUrl}" class="btn btn-outline-primary" title="Ver detalle">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="${editUrl}" class="btn btn-outline-secondary" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <form method="POST" action="${deleteUrl}" class="d-inline"
+                              onsubmit="return confirm('¿Está seguro de eliminar este cliente?')">
+                            <input type="hidden" name="csrf_token" value="${csrfToken}">
+                            <button type="submit" class="btn btn-outline-danger" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Render empty state
+     */
+    function renderEmptyState(hasFilters) {
+        const filterHint = hasFilters ? '<br><small>Pruebe con otros filtros</small>' : '';
+        return `
+            <tr>
+                <td colspan="7" class="text-center text-muted py-5">
+                    <i class="fas fa-users fa-3x mb-3 d-block opacity-50"></i>
+                    No se encontraron clientes
+                    ${filterHint}
+                </td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * Perform the filter request
+     */
+    async function performFilter() {
+        const filters = getFilterValues();
+
+        // Abort previous request if still pending
+        if (currentRequest) {
+            currentRequest.abort();
+        }
+
+        showLoading();
+        const controller = new AbortController();
+        currentRequest = controller;
+
+        try {
+            const response = await fetch(buildUrl(filters), {
+                signal: controller.signal
+            });
+
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor');
+            }
+
+            const data = await response.json();
+
+            // Update results count
+            resultsCount.innerHTML = `<small>Mostrando ${data.count} de ${data.total} clientes</small>`;
+
+            // Update table body
+            if (data.customers.length === 0) {
+                const hasFilters = filters.search || filters.type || filters.vip;
+                tableBody.innerHTML = renderEmptyState(hasFilters);
+            } else {
+                tableBody.innerHTML = data.customers.map(renderCustomerRow).join('');
+            }
+
+            // Update browser URL
+            updateBrowserUrl(filters);
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                // Request was aborted, ignore
+                return;
+            }
+            console.error('Error filtering customers:', error);
+        } finally {
+            hideLoading();
+            currentRequest = null;
+        }
+    }
+
+    /**
+     * Handle text input with debounce
+     */
+    function handleTextInput() {
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+        }
+        debounceTimer = setTimeout(performFilter, DEBOUNCE_DELAY);
+    }
+
+    /**
+     * Handle select/checkbox change (immediate)
+     */
+    function handleImmediateChange() {
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+        }
+        performFilter();
+    }
+
+    // Event listeners
+    searchInput.addEventListener('input', handleTextInput);
+    typeFilter.addEventListener('change', handleImmediateChange);
+    vipFilter.addEventListener('change', handleImmediateChange);
+
+    // Prevent form submission (use AJAX instead)
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        performFilter();
+    });
+
+})();
+</script>
 {% endblock %}

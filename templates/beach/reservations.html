@@ -81,6 +81,38 @@
     margin-bottom: 0;
 }
 
+/* Search loading indicator */
+.search-loading-indicator {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-primary, #D4AF37);
+}
+
+/* Table loading overlay */
+.table-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.table-loading-overlay i {
+    font-size: 2rem;
+    color: var(--color-primary, #D4AF37);
+}
+
+.reservations-table {
+    position: relative;
+}
+
 .reservations-table thead th {
     background: var(--color-accent, #F5E6D3);
     color: var(--color-secondary, #1A3A5C);
@@ -537,19 +569,19 @@
 
 <!-- Filter Bar -->
 <div class="filter-bar">
-    <form method="GET" action="{{ url_for('beach.reservations') }}">
+    <form id="filter-form" method="GET" action="{{ url_for('beach.reservations') }}">
         <div class="row g-2">
             <div class="col-md-2 col-6">
                 <label class="form-label">Desde</label>
-                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                <input type="date" name="date_from" id="filter-date-from" class="form-control filter-immediate" value="{{ date_from }}">
             </div>
             <div class="col-md-2 col-6">
                 <label class="form-label">Hasta</label>
-                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                <input type="date" name="date_to" id="filter-date-to" class="form-control filter-immediate" value="{{ date_to }}">
             </div>
             <div class="col-md-2 col-6">
                 <label class="form-label">Estado</label>
-                <select name="state" class="form-select">
+                <select name="state" id="filter-state" class="form-select filter-immediate">
                     <option value="">Todos</option>
                     {% for state in states %}
                     <option value="{{ state.name }}" {% if state_filter == state.name %}selected{% endif %}>
@@ -560,7 +592,7 @@
             </div>
             <div class="col-md-2 col-6">
                 <label class="form-label">Tipo</label>
-                <select name="type" class="form-select">
+                <select name="type" id="filter-type" class="form-select filter-immediate">
                     <option value="">Todos</option>
                     <option value="interno" {% if type_filter == 'interno' %}selected{% endif %}>Interno</option>
                     <option value="externo" {% if type_filter == 'externo' %}selected{% endif %}>Externo</option>
@@ -568,43 +600,47 @@
             </div>
             <div class="col-md-2 col-6">
                 <label class="form-label">Buscar</label>
-                <input type="text" name="search" class="form-control"
-                       placeholder="Cliente, ticket..." value="{{ search }}">
+                <div class="position-relative">
+                    <input type="text" name="search" id="filter-search" class="form-control filter-debounced"
+                           placeholder="Cliente, ticket..." value="{{ search }}">
+                    <span class="search-loading-indicator" id="search-loading" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </div>
             </div>
             <div class="col-md-2 col-6 d-flex align-items-end gap-2">
-                <button type="submit" class="btn btn-secondary flex-grow-1">
-                    <i class="fas fa-search"></i>
+                <button type="button" id="clear-filters-btn" class="btn btn-outline-secondary flex-grow-1"
+                        title="Limpiar filtros" style="display: none;">
+                    <i class="fas fa-times me-1"></i>Limpiar
                 </button>
-                {% if search or state_filter or type_filter or (date_to and date_to != date_from) %}
-                <a href="{{ url_for('beach.reservations') }}" class="btn btn-outline-secondary" title="Limpiar filtros">
-                    <i class="fas fa-times"></i>
-                </a>
-                {% endif %}
             </div>
         </div>
     </form>
 </div>
 
 <!-- Results Info -->
-<div class="results-info">
-    <span>
+<div class="results-info" id="results-info">
+    <span id="results-count">
         {% if reservations %}
         Mostrando {{ reservations|length }} de {{ total }} reservas
         {% else %}
         Sin resultados
         {% endif %}
     </span>
-    {% if stats %}
-    <span>
+    <span id="results-stats">
+        {% if stats %}
         <span class="badge bg-success">{{ stats.confirmadas or 0 }} confirmadas</span>
         <span class="badge bg-info">{{ stats.interno or 0 }} internos</span>
         <span class="badge bg-warning text-dark">{{ stats.externo or 0 }} externos</span>
+        {% endif %}
     </span>
-    {% endif %}
 </div>
 
 <!-- Reservations Table -->
-<div class="reservations-table">
+<div class="reservations-table" id="reservations-table-container">
+    <div class="table-loading-overlay" id="table-loading" style="display: none;">
+        <i class="fas fa-spinner fa-spin"></i>
+    </div>
     <div class="table-responsive">
         <table class="table mb-0">
             <thead>
@@ -619,7 +655,7 @@
                     <th style="width: 100px;">Acciones</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="reservations-tbody">
                 {% for res in reservations %}
                 <tr data-reservation-id="{{ res.id }}">
                     <td>
@@ -910,6 +946,14 @@ let quickEditModal = null;
 let deleteModal = null;
 let currentReservation = null;
 
+// Auto-filter state
+let filterTimeout = null;
+const DEBOUNCE_DELAY = 300;
+let isFiltering = false;
+
+// Store states data for rendering
+const statesData = {{ states | tojson | safe }};
+
 document.addEventListener('DOMContentLoaded', function() {
     quickEditModal = new bootstrap.Modal(document.getElementById('quickEditModal'));
     deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
@@ -939,7 +983,302 @@ document.addEventListener('DOMContentLoaded', function() {
             updatePaidLabel();
         }
     });
+
+    // Initialize auto-filtering
+    initAutoFilter();
 });
+
+// =============================================================================
+// AUTO-FILTER FUNCTIONALITY
+// =============================================================================
+
+function initAutoFilter() {
+    // Immediate filters (select, date)
+    document.querySelectorAll('.filter-immediate').forEach(el => {
+        el.addEventListener('change', () => triggerFilter());
+    });
+
+    // Debounced filters (text input)
+    document.querySelectorAll('.filter-debounced').forEach(el => {
+        el.addEventListener('input', () => triggerFilterDebounced());
+    });
+
+    // Clear filters button
+    const clearBtn = document.getElementById('clear-filters-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearFilters);
+    }
+
+    // Update clear button visibility on load
+    updateClearButtonVisibility();
+
+    // Prevent form submission (we use AJAX now)
+    document.getElementById('filter-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        triggerFilter();
+    });
+}
+
+function triggerFilterDebounced() {
+    // Show loading indicator on search input
+    document.getElementById('search-loading').style.display = 'block';
+
+    if (filterTimeout) {
+        clearTimeout(filterTimeout);
+    }
+    filterTimeout = setTimeout(() => {
+        triggerFilter();
+    }, DEBOUNCE_DELAY);
+}
+
+function triggerFilter() {
+    if (isFiltering) return;
+
+    const params = new URLSearchParams();
+
+    const dateFrom = document.getElementById('filter-date-from').value;
+    const dateTo = document.getElementById('filter-date-to').value;
+    const state = document.getElementById('filter-state').value;
+    const type = document.getElementById('filter-type').value;
+    const search = document.getElementById('filter-search').value;
+
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+    if (state) params.set('state', state);
+    if (type) params.set('type', type);
+    if (search) params.set('search', search);
+
+    // Update URL without reload (for bookmarking/sharing)
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+
+    // Fetch filtered results
+    fetchFilteredResults(params);
+    updateClearButtonVisibility();
+}
+
+async function fetchFilteredResults(params) {
+    isFiltering = true;
+    showTableLoading(true);
+
+    try {
+        const response = await fetch(`/beach/api/reservations/list?${params.toString()}`);
+        if (!response.ok) throw new Error('Error al filtrar');
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Error de API');
+
+        renderResults(data);
+        updateResultsInfo(data);
+        updateExportLink(params);
+
+    } catch (error) {
+        console.error('Filter error:', error);
+        showToast('Error al filtrar reservas', 'error');
+    } finally {
+        isFiltering = false;
+        showTableLoading(false);
+        document.getElementById('search-loading').style.display = 'none';
+    }
+}
+
+function showTableLoading(show) {
+    const overlay = document.getElementById('table-loading');
+    if (overlay) {
+        overlay.style.display = show ? 'flex' : 'none';
+    }
+}
+
+function renderResults(data) {
+    const tbody = document.getElementById('reservations-tbody');
+    if (!tbody) return;
+
+    if (!data.reservations || data.reservations.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="empty-state">
+                    <i class="fas fa-calendar-xmark d-block"></i>
+                    <p class="mb-1">No se encontraron reservas</p>
+                    <small>Pruebe con otros filtros</small>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    let html = '';
+    for (const res of data.reservations) {
+        const ticketNumber = res.ticket_number || `#${res.id}`;
+        const customerName = escapeHtml(res.customer_name || '');
+        const customerType = res.customer_type || '';
+        const roomNumber = res.room_number || '-';
+        const reservationDate = res.reservation_date || res.start_date || '';
+        const numPeople = res.num_people || 0;
+        const currentState = res.current_state || 'Sin estado';
+        const displayColor = res.display_color || '#6C757D';
+        const finalPrice = (res.final_price || 0).toFixed(2);
+        const paid = res.paid;
+        const furnitureNames = res.furniture_names || '';
+        const roomChanged = res.room_changed;
+        const originalRoom = res.original_room || '';
+
+        // Build furniture badges
+        let furnitureBadges = '';
+        if (furnitureNames) {
+            const items = furnitureNames.split(',').map(f => f.trim());
+            const displayItems = items.slice(0, 3);
+            furnitureBadges = displayItems.map(f =>
+                `<span class="furniture-badge">${escapeHtml(f)}</span>`
+            ).join('');
+            if (items.length > 3) {
+                furnitureBadges += `<span class="furniture-badge">+${items.length - 3}</span>`;
+            }
+        } else {
+            furnitureBadges = '<span class="text-muted">-</span>';
+        }
+
+        // Room change indicator
+        let roomChangeIndicator = '';
+        if (roomChanged) {
+            roomChangeIndicator = `
+                <i class="fas fa-right-left text-warning ms-1"
+                   data-bs-toggle="tooltip"
+                   title="Cambio de hab. ${escapeHtml(originalRoom)}"></i>
+            `;
+        }
+
+        html += `
+            <tr data-reservation-id="${res.id}">
+                <td>
+                    <strong class="text-primary">${escapeHtml(ticketNumber)}</strong>
+                </td>
+                <td>
+                    <div class="customer-cell">
+                        <span class="customer-name">${customerName}</span>
+                        <span class="customer-type">
+                            ${customerType === 'interno'
+                                ? `<i class="fas fa-hotel"></i>Hab. ${escapeHtml(roomNumber)}${roomChangeIndicator}`
+                                : '<i class="fas fa-user"></i>Externo'
+                            }
+                        </span>
+                    </div>
+                </td>
+                <td>${escapeHtml(reservationDate)}</td>
+                <td>
+                    <div class="furniture-list">
+                        ${furnitureBadges}
+                    </div>
+                </td>
+                <td>
+                    <span class="badge bg-secondary">${numPeople}</span>
+                </td>
+                <td>
+                    <span class="state-badge" style="background-color: ${displayColor}20; color: ${displayColor}; border-color: ${displayColor};">
+                        ${escapeHtml(currentState)}
+                    </span>
+                </td>
+                <td>
+                    <span class="price-cell ${!paid ? 'unpaid' : ''}">
+                        €${finalPrice}
+                        ${!paid ? '<i class="fas fa-clock ms-1" title="Pendiente de pago" style="font-size: 11px;"></i>' : ''}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button"
+                                class="btn btn-outline-primary"
+                                onclick="openQuickEdit(${res.id})"
+                                title="Editar rápido">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button type="button"
+                                class="btn btn-outline-danger"
+                                onclick="confirmDelete(${res.id}, '${escapeHtml(ticketNumber)}')"
+                                title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    tbody.innerHTML = html;
+
+    // Reinitialize tooltips
+    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(el => new bootstrap.Tooltip(el));
+}
+
+function updateResultsInfo(data) {
+    const countEl = document.getElementById('results-count');
+    const statsEl = document.getElementById('results-stats');
+
+    if (countEl) {
+        if (data.reservations && data.reservations.length > 0) {
+            countEl.textContent = `Mostrando ${data.reservations.length} de ${data.total} reservas`;
+        } else {
+            countEl.textContent = 'Sin resultados';
+        }
+    }
+
+    if (statsEl && data.stats) {
+        statsEl.innerHTML = `
+            <span class="badge bg-success">${data.stats.confirmadas || 0} confirmadas</span>
+            <span class="badge bg-info">${data.stats.interno || 0} internos</span>
+            <span class="badge bg-warning text-dark">${data.stats.externo || 0} externos</span>
+        `;
+    }
+}
+
+function updateExportLink(params) {
+    const exportLink = document.querySelector('a[href*="reservations_export"]');
+    if (exportLink) {
+        exportLink.href = `{{ url_for('beach.reservations_export') }}?${params.toString()}`;
+    }
+}
+
+function updateClearButtonVisibility() {
+    const dateFrom = document.getElementById('filter-date-from').value;
+    const dateTo = document.getElementById('filter-date-to').value;
+    const state = document.getElementById('filter-state').value;
+    const type = document.getElementById('filter-type').value;
+    const search = document.getElementById('filter-search').value;
+
+    const hasFilters = state || type || search || (dateTo && dateTo !== dateFrom);
+    const clearBtn = document.getElementById('clear-filters-btn');
+    if (clearBtn) {
+        clearBtn.style.display = hasFilters ? 'block' : 'none';
+    }
+}
+
+function clearFilters() {
+    // Reset to today's date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('filter-date-from').value = today;
+    document.getElementById('filter-date-to').value = '';
+    document.getElementById('filter-state').value = '';
+    document.getElementById('filter-type').value = '';
+    document.getElementById('filter-search').value = '';
+
+    triggerFilter();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Show toast notification (uses main.js if available)
+function showToast(message, type = 'info') {
+    if (window.showToast) {
+        window.showToast(message, type);
+    } else {
+        console.log(`[${type}] ${message}`);
+    }
+}
 
 function formatDate(dateStr) {
     if (!dateStr) return '-';

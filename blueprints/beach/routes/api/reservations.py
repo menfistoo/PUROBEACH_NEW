@@ -587,3 +587,45 @@ def register_routes(bp):
             return jsonify(result)
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    # ============================================================================
+    # RESERVATIONS LIST API (for auto-filtering)
+    # ============================================================================
+
+    @bp.route('/reservations/list')
+    @login_required
+    @permission_required('beach.reservations.view')
+    def reservations_list():
+        """Get filtered reservations list as JSON (for auto-filtering)."""
+        from models.reservation import get_reservations_filtered, get_reservation_stats
+
+        date_from = request.args.get('date_from', '')
+        date_to = request.args.get('date_to', '')
+        customer_type = request.args.get('type', '')
+        state = request.args.get('state', '')
+        search = request.args.get('search', '')
+        page = request.args.get('page', 1, type=int)
+
+        # Default to today if no date_from provided
+        if not date_from:
+            date_from = date.today().strftime('%Y-%m-%d')
+
+        result = get_reservations_filtered(
+            date_from=date_from if date_from else None,
+            date_to=date_to if date_to else None,
+            customer_type=customer_type if customer_type else None,
+            state=state if state else None,
+            search=search if search else None,
+            page=page
+        )
+
+        stats = get_reservation_stats(date_from, date_to if date_to else date_from)
+
+        return jsonify({
+            'success': True,
+            'reservations': result['items'],
+            'total': result['total'],
+            'page': result['page'],
+            'pages': result['pages'],
+            'stats': stats
+        })
