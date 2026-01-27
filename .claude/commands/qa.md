@@ -48,10 +48,12 @@ Based on your analysis, run the appropriate reviews:
 
 | Change Type | Action |
 |-------------|--------|
-| Any Python files | Run `/code-standards` |
-| Templates/CSS/JS | Run `/design-review` |
-| Auth/permissions/API | Run `/security-review` |
+| **Always** | Run `/code-standards` (includes file size monitoring) |
+| Templates/CSS/JS | Also run `/design-review` |
+| Auth/permissions/API | Also run `/security-review` |
 | Complex code (>100 lines in one file) | Consider `/simplify` |
+
+**Note:** `/code-standards` always runs to catch monolithic files early.
 
 ### Phase 3: Execute Reviews
 
@@ -93,12 +95,11 @@ After all reviews and tests complete, provide:
 
 | Files Changed | Reviews to Run |
 |---------------|----------------|
-| Only Python backend | `/code-standards` |
-| Only templates/CSS/JS | `/design-review` |
-| Python + templates | `/code-standards` + `/design-review` |
-| Auth/permissions/login | `/security-review` (always include) |
-| >200 lines in one file | Add `/simplify` suggestion |
-| Database migrations | `/code-standards` + `/security-review` |
+| Any changes | `/code-standards` (always - monitors file sizes) |
+| Templates/CSS/JS | + `/design-review` |
+| Auth/permissions/login | + `/security-review` |
+| >200 lines in one file | + `/simplify` suggestion |
+| Database migrations | + `/security-review` |
 
 ## Example Output Format
 
@@ -134,8 +135,8 @@ None
 
 1. First, analyze the changed files from the context above
 2. Categorize them by type (backend, frontend, security-sensitive)
-3. Determine which reviews are needed based on the decision matrix
-4. Run each required review using the Skill tool
+3. **Always run `/code-standards`** (monitors file sizes across codebase)
+4. Run additional reviews based on the decision matrix
 5. If Python files changed, run the test suite with pytest
 6. Synthesize all results into a unified report
 7. Provide a clear verdict and action items
