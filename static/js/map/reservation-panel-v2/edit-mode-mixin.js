@@ -102,7 +102,9 @@ export const EditModeMixin = (Base) => class extends Base {
             notes: this.editNotes?.value,
             price: this.panelFinalPriceInput?.value,
             payment_ticket_number: this.editPaymentTicket?.value,
-            payment_method: this.editPaymentMethod?.value
+            payment_method: this.editPaymentMethod?.value,
+            minimum_consumption_policy_id: data.reservation?.minimum_consumption_policy_id || null,
+            package_id: data.reservation?.package_id || null
         };
 
         // Enter customer edit mode (shows guest dropdown for interno, search for externo)

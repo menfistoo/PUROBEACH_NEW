@@ -340,10 +340,20 @@ export const SaveMixin = (Base) => class extends Base {
             }
 
             // Also include package_id if changed
-            const selectedPackageId = this.panelSelectedPackageId?.value;
-            if (selectedPackageId) {
-                updates.package_id = parseInt(selectedPackageId);
+            const selectedPackageId = this.pricingEditState?.selectedPackageId;
+            const originalPackageId = this.state.originalData?.package_id;
+            if (selectedPackageId !== originalPackageId) {
+                updates.package_id = selectedPackageId || null;
+                hasChanges = true;
             }
+        }
+
+        // Minimum consumption policy
+        const selectedPolicyId = this.pricingEditState?.selectedPolicyId;
+        const originalPolicyId = this.state.originalData?.minimum_consumption_policy_id;
+        if (selectedPolicyId !== originalPolicyId) {
+            updates.minimum_consumption_policy_id = selectedPolicyId || null;
+            hasChanges = true;
         }
 
         // Payment ticket number
