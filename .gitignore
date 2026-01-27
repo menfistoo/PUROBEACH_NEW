@@ -65,6 +65,9 @@ Thumbs.db
 # Git worktrees
 .worktrees/
 
+# Wiki (separate git repo)
+wiki/
+
 # Claude Code temporary files
 tmpclaude-*-cwd
 .auto-claude/
