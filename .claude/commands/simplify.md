@@ -14,7 +14,7 @@ GIT STATUS:
 
 FILES MODIFIED:
 ```
-!`git diff --name-only origin/HEAD... 2>/dev/null || echo "No branch changes - will analyze specified files"`
+!`git diff --name-only origin/HEAD... 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null || git diff --name-only HEAD 2>/dev/null || echo "No branch changes - will analyze specified files"`
 ```
 
 ## Simplification Principles

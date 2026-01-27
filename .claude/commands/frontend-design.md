@@ -1,5 +1,5 @@
 ---
-allowed-tools: Grep, Read, Edit, Write, Glob, Bash, TodoWrite
+allowed-tools: Grep, Read, Edit, Write, Glob, Bash, Task
 description: Guidelines for creating or modifying UI components following the Beach Club design system (project)
 ---
 

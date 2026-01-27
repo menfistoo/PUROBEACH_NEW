@@ -14,7 +14,7 @@ GIT STATUS:
 FILES MODIFIED:
 
 ```
-!`git diff --name-only origin/HEAD...`
+!`git diff --name-only origin/HEAD... 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null || git diff --name-only HEAD 2>/dev/null || echo "No changes detected"`
 ```
 
 COMMITS:
@@ -26,7 +26,7 @@ COMMITS:
 DIFF CONTENT:
 
 ```
-!`git diff --merge-base origin/HEAD`
+!`git diff --merge-base origin/HEAD 2>/dev/null || git diff HEAD~1 2>/dev/null || git diff HEAD 2>/dev/null || echo "No diff available"`
 ```
 
 Review the complete diff above. This contains all code changes in the PR.

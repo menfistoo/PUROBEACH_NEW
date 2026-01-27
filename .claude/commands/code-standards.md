@@ -1,5 +1,5 @@
 ---
-allowed-tools: Grep, Read, Edit, Write, Bash, Glob, TodoWrite
+allowed-tools: Grep, Read, Edit, Write, Bash, Glob, Task
 description: Review code for CLAUDE.md standards compliance and propose refactoring
 ---
 
@@ -14,7 +14,7 @@ GIT STATUS:
 
 FILES MODIFIED (if any):
 ```
-!`git diff --name-only origin/HEAD... 2>/dev/null || echo "No changes from origin"`
+!`git diff --name-only origin/HEAD... 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null || git diff --name-only HEAD 2>/dev/null || echo "No changes from origin"`
 ```
 
 ## Your Review Scope
