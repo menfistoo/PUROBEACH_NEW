@@ -24,6 +24,7 @@ export const SelectionMixin = (Base) => class extends Base {
         item.typeInfo = this.furnitureTypes[item.furniture_type] || {};
 
         this.selectedItems.add(item.id);
+        this.selectedItem = item;  // Set for single-item property access
         const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
         if (group) group.classList.add('selected');
 
@@ -53,6 +54,12 @@ export const SelectionMixin = (Base) => class extends Base {
         const group = this.furnitureLayer.querySelector(`[data-id="${itemId}"]`);
         if (group) group.classList.remove('selected');
 
+        // Update selectedItem if the deselected item was the current one
+        if (this.selectedItem && this.selectedItem.id === itemId) {
+            const remaining = this.getSelectedItems();
+            this.selectedItem = remaining.length > 0 ? remaining[0] : null;
+        }
+
         this.updateSelectionUI();
         this.emit('multiSelectionChanged', this.getSelectedItems());
     }
@@ -62,6 +69,7 @@ export const SelectionMixin = (Base) => class extends Base {
      */
     deselectAll() {
         this.selectedItems.clear();
+        this.selectedItem = null;  // Clear single-item reference
         this.furnitureLayer?.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
         this.updateSelectionUI();
         this.emit('selectionChanged', null);

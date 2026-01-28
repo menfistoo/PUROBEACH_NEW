@@ -1008,12 +1008,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load available features
     let availableFeatures = [];
+    let featuresLoaded = false;
     async function loadFeatures() {
+        if (featuresLoaded) return;
         try {
             const response = await fetch('/beach/config/map-editor/features');
             const result = await response.json();
             if (result.success) {
                 availableFeatures = result.features;
+                featuresLoaded = true;
             }
         } catch (e) {
             console.warn('Could not load features:', e);
@@ -1022,18 +1025,40 @@ document.addEventListener('DOMContentLoaded', function() {
     loadFeatures();
 
     // Render features in properties panel
-    function renderFeatures(selectedFeatures) {
+    async function renderFeatures(selectedFeatures) {
         const container = document.getElementById('prop-features');
         if (!container) return;
 
-        const features = selectedFeatures ? (typeof selectedFeatures === 'string' ? JSON.parse(selectedFeatures) : selectedFeatures) : [];
+        // Ensure features are loaded before rendering
+        if (!featuresLoaded) {
+            await loadFeatures();
+        }
 
-        container.innerHTML = availableFeatures.map(f => {
+        // Parse features - handle both JSON array and comma-separated string formats
+        let features = [];
+        if (selectedFeatures) {
+            if (Array.isArray(selectedFeatures)) {
+                features = selectedFeatures;
+            } else if (typeof selectedFeatures === 'string') {
+                // Try JSON first, fallback to comma-separated
+                try {
+                    const parsed = JSON.parse(selectedFeatures);
+                    features = Array.isArray(parsed) ? parsed : [selectedFeatures];
+                } catch {
+                    // Not JSON - treat as comma-separated string
+                    features = selectedFeatures.split(',').map(f => f.trim()).filter(f => f);
+                }
+            }
+        }
+
+        const html = availableFeatures.map(f => {
             const isActive = features.includes(f.code);
             return `<span class="feature-tag ${isActive ? 'active' : ''}" data-code="${f.code}">
                 <i class="fas ${f.icon}"></i>${f.name}
             </span>`;
         }).join('');
+
+        container.innerHTML = html;
 
         // Add click handlers
         container.querySelectorAll('.feature-tag').forEach(tag => {
@@ -1041,9 +1066,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!editor.selectedItem) return;
 
                 const code = this.dataset.code;
-                let currentFeatures = editor.selectedItem.features ?
-                    (typeof editor.selectedItem.features === 'string' ?
-                        JSON.parse(editor.selectedItem.features) : editor.selectedItem.features) : [];
+
+                // Parse current features - handle both JSON array and comma-separated string
+                let currentFeatures = [];
+                const rawFeatures = editor.selectedItem.features;
+                if (rawFeatures) {
+                    if (Array.isArray(rawFeatures)) {
+                        currentFeatures = [...rawFeatures];
+                    } else if (typeof rawFeatures === 'string') {
+                        try {
+                            const parsed = JSON.parse(rawFeatures);
+                            currentFeatures = Array.isArray(parsed) ? [...parsed] : [rawFeatures];
+                        } catch {
+                            currentFeatures = rawFeatures.split(',').map(f => f.trim()).filter(f => f);
+                        }
+                    }
+                }
 
                 if (currentFeatures.includes(code)) {
                     currentFeatures = currentFeatures.filter(f => f !== code);

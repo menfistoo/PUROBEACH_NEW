@@ -494,7 +494,20 @@ document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('prop-features');
             if (!container) return;
 
-            const features = selectedFeatures ? (typeof selectedFeatures === 'string' ? JSON.parse(selectedFeatures) : selectedFeatures) : [];
+            // Parse features - handle both JSON array and comma-separated string formats
+            let features = [];
+            if (selectedFeatures) {
+                if (Array.isArray(selectedFeatures)) {
+                    features = selectedFeatures;
+                } else if (typeof selectedFeatures === 'string') {
+                    try {
+                        const parsed = JSON.parse(selectedFeatures);
+                        features = Array.isArray(parsed) ? parsed : [selectedFeatures];
+                    } catch {
+                        features = selectedFeatures.split(',').map(f => f.trim()).filter(f => f);
+                    }
+                }
+            }
 
             container.innerHTML = availableFeatures.map(f => {
                 const isActive = features.includes(f.code);
@@ -510,9 +523,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     const selectedItem = selectedItems[0];
                     const code = this.dataset.code;
-                    let currentFeatures = selectedItem.features ?
-                        (typeof selectedItem.features === 'string' ?
-                            JSON.parse(selectedItem.features) : selectedItem.features) : [];
+
+                    // Parse current features - handle both JSON array and comma-separated string
+                    let currentFeatures = [];
+                    const rawFeatures = selectedItem.features;
+                    if (rawFeatures) {
+                        if (Array.isArray(rawFeatures)) {
+                            currentFeatures = [...rawFeatures];
+                        } else if (typeof rawFeatures === 'string') {
+                            try {
+                                const parsed = JSON.parse(rawFeatures);
+                                currentFeatures = Array.isArray(parsed) ? [...parsed] : [rawFeatures];
+                            } catch {
+                                currentFeatures = rawFeatures.split(',').map(f => f.trim()).filter(f => f);
+                            }
+                        }
+                    }
 
                     if (currentFeatures.includes(code)) {
                         currentFeatures = currentFeatures.filter(f => f !== code);
