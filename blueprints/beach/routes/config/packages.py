@@ -84,11 +84,18 @@ def register_routes(bp):
         # Load zones and furniture types for dropdowns
         zones = get_all_zones()
         furniture_types = get_all_furniture_types()
+
+        # Get prefill customer type from URL parameter
+        prefill_customer_type = request.args.get('customer_type', '')
+        if prefill_customer_type not in ('interno', 'externo', 'both'):
+            prefill_customer_type = None
+
         return render_template('beach/config/package_form.html',
                              package=None,
                              mode='create',
                              zones=zones,
-                             furniture_types=furniture_types)
+                             furniture_types=furniture_types,
+                             prefill_customer_type=prefill_customer_type)
 
     @bp.route('/packages/<int:package_id>/edit', methods=['GET', 'POST'])
     @login_required

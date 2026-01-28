@@ -14,7 +14,10 @@ from models.package import (
     get_active_packages_for_date,
     get_package_by_id
 )
-from models.pricing import get_applicable_minimum_consumption_policy
+from models.pricing import (
+    get_applicable_minimum_consumption_policy,
+    get_minimum_consumption_policy_by_id
+)
 from models.furniture import get_furniture_by_id
 from models.customer import get_customer_by_id
 from models.hotel_guest import get_hotel_guest_by_id
@@ -217,13 +220,49 @@ def get_applicable_minimum_consumption(
     return None
 
 
+def get_minimum_consumption_by_policy_id(
+    policy_id: int,
+    num_people: int
+) -> Optional[Dict[str, Any]]:
+    """
+    Get minimum consumption details for a specific policy ID.
+
+    Args:
+        policy_id: Minimum consumption policy ID
+        num_people: Number of people (for per_person calculation)
+
+    Returns:
+        dict with policy details and calculated amount, or None
+    """
+    policy = get_minimum_consumption_policy_by_id(policy_id)
+    if not policy or not policy.get('is_active'):
+        return None
+
+    # Calculate amount based on calculation_type
+    if policy["calculation_type"] == "per_person":
+        amount = policy["minimum_amount"] * num_people
+        breakdown = f"Consumo minimo: €{amount:.2f} ({policy['minimum_amount']:.2f}€ × {num_people} personas)"
+    else:  # per_reservation
+        amount = policy["minimum_amount"]
+        breakdown = f"Consumo minimo: €{amount:.2f} (fijo por reserva)"
+
+    return {
+        "policy_id": policy["id"],
+        "policy_name": policy["policy_name"],
+        "amount": amount,
+        "breakdown": breakdown,
+        "policy_description": policy.get("policy_description", "")
+    }
+
+
 def calculate_reservation_pricing(
     customer_id: int,
     furniture_ids: List[int],
     reservation_date: Date,
     num_people: int,
     package_id: Optional[int] = None,
-    customer_source: str = "customer"
+    customer_source: str = "customer",
+    minimum_consumption_policy_id: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Main pricing orchestrator. Calculates complete pricing for a reservation.
@@ -241,6 +280,7 @@ def calculate_reservation_pricing(
         num_people: Number of people
         package_id: Optional selected package ID
         customer_source: Source of customer ("customer" or "hotel_guest")
+        minimum_consumption_policy_id: Optional manually selected policy ID (overrides auto-detection)
 
     Returns:
         dict with complete pricing information:
@@ -303,11 +343,18 @@ def calculate_reservation_pricing(
             return result
 
     # No package selected, check for minimum consumption
-    min_consumption = get_applicable_minimum_consumption(
-        furniture_ids=furniture_ids,
-        customer_type=customer_type,
-        num_people=num_people
-    )
+    # Use manual policy selection if provided, otherwise auto-detect
+    if minimum_consumption_policy_id:
+        min_consumption = get_minimum_consumption_by_policy_id(
+            policy_id=minimum_consumption_policy_id,
+            num_people=num_people
+        )
+    else:
+        min_consumption = get_applicable_minimum_consumption(
+            furniture_ids=furniture_ids,
+            customer_type=customer_type,
+            num_people=num_people
+        )
 
     if min_consumption:
         result.update({

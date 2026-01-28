@@ -58,21 +58,23 @@ def get_minimum_consumption_policy_by_id(policy_id: int) -> dict:
         return dict(row) if row else None
 
 
-def get_minimum_consumption_policy_by_name(name: str) -> dict:
+def get_minimum_consumption_policy_by_name(name: str, active_only: bool = True) -> dict:
     """
     Get minimum consumption policy by name.
 
     Args:
         name: Policy name
+        active_only: If True, only search active policies (default True)
 
     Returns:
         Policy dictionary or None
     """
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT * FROM beach_minimum_consumption_policies WHERE policy_name = ?
-        ''', (name,))
+        query = 'SELECT * FROM beach_minimum_consumption_policies WHERE policy_name = ?'
+        if active_only:
+            query += ' AND is_active = 1'
+        cursor.execute(query, (name,))
         row = cursor.fetchone()
         return dict(row) if row else None
 
@@ -157,8 +159,8 @@ def create_minimum_consumption_policy(
     if not policy_name or not policy_name.strip():
         raise ValueError("Policy name is required")
 
-    if minimum_amount <= 0:
-        raise ValueError("Minimum amount must be greater than 0")
+    if minimum_amount < 0:
+        raise ValueError("Minimum amount cannot be negative")
 
     # Validate calculation_type
     calculation_type = kwargs.get('calculation_type', 'per_reservation')
@@ -227,8 +229,8 @@ def update_minimum_consumption_policy(policy_id: int, **kwargs) -> bool:
         if existing and existing['id'] != policy_id:
             raise ValueError(f"Policy with name '{name}' already exists")
 
-    if 'minimum_amount' in kwargs and kwargs['minimum_amount'] <= 0:
-        raise ValueError("Minimum amount must be greater than 0")
+    if 'minimum_amount' in kwargs and kwargs['minimum_amount'] < 0:
+        raise ValueError("Minimum amount cannot be negative")
 
     if 'calculation_type' in kwargs:
         ct = kwargs['calculation_type']

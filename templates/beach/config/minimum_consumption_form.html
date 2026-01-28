@@ -87,15 +87,16 @@
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="customer_type" class="form-label">Tipo de Cliente</label>
+                                {% set selected_customer_type = policy.customer_type if policy else prefill_customer_type %}
                                 <select class="form-select" id="customer_type" name="customer_type">
-                                    <option value="" {% if not policy or not policy.customer_type %}selected{% endif %}>
-                                        Todos
+                                    <option value="" {% if not selected_customer_type %}selected{% endif %}>
+                                        Todos (Universal)
                                     </option>
-                                    <option value="interno" {% if policy and policy.customer_type == 'interno' %}selected{% endif %}>
-                                        Solo Internos
+                                    <option value="interno" {% if selected_customer_type == 'interno' %}selected{% endif %}>
+                                        Huéspedes (Internos)
                                     </option>
-                                    <option value="externo" {% if policy and policy.customer_type == 'externo' %}selected{% endif %}>
-                                        Solo Externos
+                                    <option value="externo" {% if selected_customer_type == 'externo' %}selected{% endif %}>
+                                        Visitantes (Externos)
                                     </option>
                                 </select>
                             </div>

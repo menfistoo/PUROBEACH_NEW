@@ -75,7 +75,9 @@ export class ReservationPanelBase {
             originalPrice: 0,         // Original price from reservation
             calculatedPrice: 0,       // System-calculated price
             availablePackages: [],    // Available packages from API
+            availablePolicies: [],    // Available min consumption policies
             selectedPackageId: null,  // Currently selected package
+            selectedPolicyId: null,   // Currently selected min consumption policy ('auto' or ID)
             isModified: false         // Whether user manually modified price
         };
 
@@ -195,6 +197,8 @@ export class ReservationPanelBase {
         // Pricing section - Edit mode
         this.pricingEditMode = document.getElementById('pricingEditMode');
         this.panelPricingDisplay = document.getElementById('panelPricingDisplay');
+        this.panelMinConsumptionSelector = document.getElementById('panelMinConsumptionSelector');
+        this.panelMinConsumptionSelect = document.getElementById('panelMinConsumptionSelect');
         this.panelPricingTypeSelector = document.getElementById('panelPricingTypeSelector');
         this.panelPricingTypeSelect = document.getElementById('panelPricingTypeSelect');
         this.panelFinalPriceInput = document.getElementById('panelFinalPriceInput');
@@ -337,6 +341,14 @@ export class ReservationPanelBase {
             const selectedValue = this.panelPricingTypeSelect.value;
             this.panelSelectedPackageId.value = selectedValue;
             this.pricingEditState.selectedPackageId = selectedValue ? parseInt(selectedValue) : null;
+            this.calculateAndUpdatePricing();
+            this.markDirty();
+        });
+
+        // Minimum consumption policy selector change
+        this.panelMinConsumptionSelect?.addEventListener('change', () => {
+            const selectedValue = this.panelMinConsumptionSelect.value;
+            this.pricingEditState.selectedPolicyId = selectedValue === 'auto' ? null : parseInt(selectedValue);
             this.calculateAndUpdatePricing();
             this.markDirty();
         });

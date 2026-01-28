@@ -99,18 +99,19 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="customer_type" class="form-label">Tipo de Cliente</label>
+                                {% set selected_customer_type = package.customer_type if package else prefill_customer_type %}
                                 <select class="form-select" id="customer_type" name="customer_type">
-                                    <option value="" {% if not package or not package.customer_type %}selected{% endif %}>
+                                    <option value="" {% if not selected_customer_type %}selected{% endif %}>
                                         Todos
                                     </option>
-                                    <option value="interno" {% if package and package.customer_type == 'interno' %}selected{% endif %}>
-                                        Solo Internos
+                                    <option value="interno" {% if selected_customer_type == 'interno' %}selected{% endif %}>
+                                        Solo Internos (Huéspedes)
                                     </option>
-                                    <option value="externo" {% if package and package.customer_type == 'externo' %}selected{% endif %}>
-                                        Solo Externos
+                                    <option value="externo" {% if selected_customer_type == 'externo' %}selected{% endif %}>
+                                        Solo Externos (Visitantes)
                                     </option>
-                                    <option value="both" {% if package and package.customer_type == 'both' %}selected{% endif %}>
-                                        Ambos
+                                    <option value="both" {% if selected_customer_type == 'both' %}selected{% endif %}>
+                                        Ambos (Universal)
                                     </option>
                                 </select>
                             </div>
