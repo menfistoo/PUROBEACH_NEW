@@ -95,6 +95,9 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
     close() {
         if (!this.state.isOpen) return;
 
+        // Remove furniture highlights from map
+        this.unhighlightReservationFurniture();
+
         // Check for unsaved changes
         if (this.state.mode === 'edit' && this.state.isDirty) {
             if (!confirm('Tienes cambios sin guardar. ¿Seguro que quieres cerrar?')) {
@@ -217,6 +220,7 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
 
             this.state.data = result;
             this.renderContent(result);
+            this.highlightReservationFurniture();
             this.showLoading(false);
 
         } catch (error) {

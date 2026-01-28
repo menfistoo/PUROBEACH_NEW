@@ -124,33 +124,41 @@ export const FurnitureMixin = (Base) => class extends Base {
     // =========================================================================
 
     /**
-     * Highlight reservation's furniture on the map with editing style
-     * Adds 'furniture-editing' class to furniture elements
+     * Highlight reservation's furniture on the map with gold pulsing glow
+     * Adds 'highlighted' class to furniture elements for the current date
      */
     highlightReservationFurniture() {
+        // Clear any previous highlights first
+        this.unhighlightReservationFurniture();
+
         if (!this.state.data?.furniture) return;
 
-        // Get furniture IDs for this reservation
-        const furnitureIds = this.state.data.furniture.map(f => f.id || f.furniture_id);
+        const currentDate = this.state.currentDate;
 
-        // Find and highlight each furniture element on the map
-        furnitureIds.forEach(id => {
+        // Filter furniture for current date
+        const todayFurniture = this.state.data.furniture.filter(f => {
+            const assignDate = parseDateToYMD(f.assignment_date);
+            return assignDate === currentDate;
+        });
+
+        // Highlight each furniture element on the map
+        todayFurniture.forEach(f => {
+            const id = f.id || f.furniture_id;
             const furnitureEl = document.querySelector(`[data-furniture-id="${id}"]`);
             if (furnitureEl) {
-                furnitureEl.classList.add('furniture-editing');
+                furnitureEl.classList.add('highlighted');
             }
         });
     }
 
     /**
      * Remove highlight from reservation's furniture
-     * Removes 'furniture-editing' class from all furniture elements
+     * Removes 'highlighted' class from all furniture elements
      */
     unhighlightReservationFurniture() {
-        // Remove highlight from all furniture elements
-        const highlightedElements = document.querySelectorAll('.furniture-editing');
+        const highlightedElements = document.querySelectorAll('.furniture-item.highlighted');
         highlightedElements.forEach(el => {
-            el.classList.remove('furniture-editing');
+            el.classList.remove('highlighted');
         });
     }
 
