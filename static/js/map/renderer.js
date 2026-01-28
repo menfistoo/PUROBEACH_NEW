@@ -385,6 +385,20 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
         group.appendChild(label);
     }
 
+    // Lock icon for locked furniture (top-right corner)
+    if (availability && availability.is_furniture_locked) {
+        const lockIcon = document.createElementNS(SVG_NS, 'text');
+        lockIcon.setAttribute('x', width - 8);
+        lockIcon.setAttribute('y', 12);
+        lockIcon.setAttribute('text-anchor', 'middle');
+        lockIcon.setAttribute('dominant-baseline', 'middle');
+        lockIcon.setAttribute('font-size', '10');
+        lockIcon.setAttribute('pointer-events', 'none');
+        lockIcon.setAttribute('class', 'furniture-lock-icon');
+        lockIcon.textContent = '🔒';
+        group.appendChild(lockIcon);
+    }
+
     // Event listeners
     group.addEventListener('click', (e) => onFurnitureClick(e, item));
 
