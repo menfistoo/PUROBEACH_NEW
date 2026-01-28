@@ -15,6 +15,8 @@ import { MarqueeMixin } from './marquee.js';
 import { OperationsMixin } from './operations.js';
 import { DragDropMixin } from './drag-drop.js';
 import { PersistenceMixin } from './persistence.js';
+import { parseFeatures, toggleFeature } from './feature-utils.js';
+import * as EditorUI from './editor-ui-bindings.js';
 
 /**
  * Compose all mixins into the final MapEditor class
@@ -43,3 +45,7 @@ export { MapEditor };
 
 // Also expose on window for legacy compatibility (non-module scripts)
 window.MapEditor = MapEditor;
+
+// Expose shared utilities on window for inline <script> usage
+window.MapEditorUtils = { parseFeatures, toggleFeature };
+window.MapEditorUI = EditorUI;
