@@ -221,7 +221,7 @@ function createDecorativeElement(item, data, colors, svg) {
  * @param {Object} tooltipManager - Tooltip manager instance
  * @param {Function} onFurnitureContextMenu - Right-click context menu handler
  */
-export function renderFurniture(layer, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu, highlightedFurniture = new Set()) {
+export function renderFurniture(layer, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu, highlightedFurniture = new Set(), hoveredReservationFurniture = new Set()) {
     layer.innerHTML = '';
 
     if (!data.furniture) return;
@@ -232,15 +232,96 @@ export function renderFurniture(layer, data, selectedFurniture, colors, onFurnit
     });
 
     reservableFurniture.forEach(item => {
-        const group = createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu, highlightedFurniture);
+        const group = createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu, highlightedFurniture, hoveredReservationFurniture);
         layer.appendChild(group);
     });
 }
 
 /**
+ * Apply gold highlight to all furniture sharing the same reservation on hover.
+ * Mutates hoveredReservationFurniture Set and applies DOM styling directly.
+ */
+function applyReservationHoverHighlight(furnitureId, data, hoveredSet, selectedSet, highlightedSet) {
+    const availability = data.availability[furnitureId];
+    if (!availability || !availability.reservation_id) return;
+
+    const reservationId = availability.reservation_id;
+
+    // Find all furniture with the same reservation
+    const siblingIds = [];
+    for (const [id, avail] of Object.entries(data.availability)) {
+        if (avail.reservation_id === reservationId) {
+            siblingIds.push(Number(id));
+        }
+    }
+
+    // Update the shared Set (survives re-renders)
+    siblingIds.forEach(id => hoveredSet.add(id));
+
+    // Apply DOM styling directly (instant, no re-render)
+    siblingIds.forEach(id => {
+        if (selectedSet.has(id) || highlightedSet.has(id)) return;
+        const el = document.querySelector(`[data-furniture-id="${id}"]`);
+        if (!el) return;
+        el.classList.add('reservation-glow');
+        el.setAttribute('filter', 'url(#reservation-highlight-glow)');
+        const shape = el.querySelector('rect, circle, ellipse');
+        if (shape) {
+            shape.setAttribute('stroke', '#D4AF37');
+            shape.setAttribute('stroke-width', '4');
+        }
+    });
+}
+
+/**
+ * Compute the correct stroke color for an occupied furniture item.
+ * Used to restore stroke after hover highlight is removed.
+ */
+function getOccupiedStrokeColor(furnitureId, data, colors) {
+    const availability = data.availability[furnitureId];
+    const state = availability ? availability.state : null;
+
+    if (state && data.state_colors[state]) {
+        return darkenColor(data.state_colors[state], 30);
+    }
+
+    const item = data.furniture.find(f => f.id === furnitureId);
+    if (item) {
+        const typeConfig = data.furniture_types[item.furniture_type] || {};
+        return typeConfig.stroke_color || '#654321';
+    }
+
+    return '#654321';
+}
+
+/**
+ * Clear hover highlight from all furniture in the hovered Set.
+ * Preserves panel highlights (highlightedFurniture).
+ * Computes correct stroke color from data instead of relying on stored state.
+ */
+function clearReservationHoverHighlight(hoveredSet, highlightedSet, data, colors) {
+    if (hoveredSet.size === 0) return;
+
+    hoveredSet.forEach(id => {
+        if (highlightedSet.has(id)) return;
+        const el = document.querySelector(`[data-furniture-id="${id}"]`);
+        if (!el) return;
+        el.classList.remove('reservation-glow');
+        el.removeAttribute('filter');
+        const shape = el.querySelector('rect, circle, ellipse');
+        if (shape) {
+            shape.setAttribute('stroke', getOccupiedStrokeColor(id, data, colors));
+            shape.setAttribute('stroke-width', '2');
+        }
+    });
+
+    hoveredSet.clear();
+}
+
+/**
  * Create a single furniture element
  */
-function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu, highlightedFurniture = new Set()) {
+function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu, highlightedFurniture = new Set(), hoveredReservationFurniture = new Set()) {
     const group = document.createElementNS(SVG_NS, 'g');
     group.setAttribute('class', 'furniture-item');
     group.setAttribute('data-furniture-id', item.id);
@@ -301,8 +382,10 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
         group.setAttribute('filter', 'url(#selected-glow)');
     }
 
-    // Check if highlighted (reservation panel open) — gold stroke
-    if (highlightedFurniture.has(item.id) && !selectedFurniture.has(item.id)) {
+    // Check if highlighted (reservation panel or hover) — gold stroke
+    const isHighlighted = (highlightedFurniture.has(item.id) || hoveredReservationFurniture.has(item.id))
+        && !selectedFurniture.has(item.id);
+    if (isHighlighted) {
         strokeColor = '#D4AF37';
         group.classList.add('reservation-glow');
         group.setAttribute('filter', 'url(#reservation-highlight-glow)');
@@ -312,7 +395,7 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
     const width = item.width || typeConfig.default_width || 60;
     const height = item.height || typeConfig.default_height || 40;
     const shape = createShape(typeConfig.map_shape || 'rounded_rect', width, height, fillColor, strokeColor);
-    if (highlightedFurniture.has(item.id)) {
+    if (isHighlighted) {
         shape.setAttribute('stroke-width', '4');
     }
     group.appendChild(shape);
@@ -426,15 +509,21 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
         group.addEventListener('contextmenu', (e) => onFurnitureContextMenu(e, item));
     }
 
-    // Hover handlers for tooltip
+    // Hover handlers for tooltip and reservation highlight
     if (blockInfo) {
         // Show block info on hover
         group.addEventListener('mouseenter', (e) => tooltipManager.showBlock(e, blockInfo, item.number));
         group.addEventListener('mouseleave', () => tooltipManager.hide());
         group.addEventListener('mousemove', (e) => tooltipManager.move(e));
     } else if (!isAvailable && availability && availability.customer_name) {
-        group.addEventListener('mouseenter', (e) => tooltipManager.show(e, availability));
-        group.addEventListener('mouseleave', () => tooltipManager.hide());
+        group.addEventListener('mouseenter', (e) => {
+            tooltipManager.show(e, availability);
+            applyReservationHoverHighlight(item.id, data, hoveredReservationFurniture, selectedFurniture, highlightedFurniture);
+        });
+        group.addEventListener('mouseleave', () => {
+            tooltipManager.hide();
+            clearReservationHoverHighlight(hoveredReservationFurniture, highlightedFurniture, data, colors);
+        });
         group.addEventListener('mousemove', (e) => tooltipManager.move(e));
     }
 

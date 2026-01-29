@@ -61,6 +61,9 @@ export class BeachMap {
         // Highlighted furniture (reservation panel)
         this.highlightedFurniture = new Set();
 
+        // Hovered reservation furniture (hover on map)
+        this.hoveredReservationFurniture = new Set();
+
         // Initialize managers
         this.selection = new SelectionManager();
         this.navigation = new NavigationManager({
@@ -409,7 +412,8 @@ export class BeachMap {
             this.handleFurnitureClick,
             this.tooltipManager,
             this.handleFurnitureContextMenu,
-            this.highlightedFurniture
+            this.highlightedFurniture,
+            this.hoveredReservationFurniture
         );
         updateLegend(this.data, this.colors);
 
