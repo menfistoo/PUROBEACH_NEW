@@ -746,6 +746,17 @@ document.addEventListener('DOMContentLoaded', function () {
         updateSelectionBarForConflict();
     }
 
+    // Listen for reservation highlight events from panel
+    document.addEventListener('reservation:highlightFurniture', (e) => {
+        const { furnitureIds } = e.detail;
+        if (furnitureIds && furnitureIds.length > 0) {
+            map.setHighlightedFurniture(furnitureIds);
+        }
+    });
+    document.addEventListener('reservation:clearHighlight', () => {
+        map.clearHighlightedFurniture();
+    });
+
     // Listen for request to open existing reservation (from safeguard duplicate check)
     document.addEventListener('reservation:openExisting', async (e) => {
         const { reservationId } = e.detail;

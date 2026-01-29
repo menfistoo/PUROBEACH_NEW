@@ -149,8 +149,8 @@ export const EditModeMixin = (Base) => class extends Base {
             this.editIcon.className = 'fas fa-pen';
         }
 
-        // Remove furniture highlight from map
-        this.unhighlightReservationFurniture();
+        // Re-highlight furniture on the map (stays visible in view mode)
+        this.highlightReservationFurniture();
 
         // Show view fields, hide edit fields for details section
         if (this.detailsViewMode) this.detailsViewMode.style.display = 'grid';

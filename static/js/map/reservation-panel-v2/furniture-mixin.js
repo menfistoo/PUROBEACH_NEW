@@ -128,38 +128,29 @@ export const FurnitureMixin = (Base) => class extends Base {
      * Adds 'highlighted' class to furniture elements for the current date
      */
     highlightReservationFurniture() {
-        // Clear any previous highlights first
-        this.unhighlightReservationFurniture();
-
-        if (!this.state.data?.furniture) return;
+        const furniture = this.state.data?.reservation?.furniture;
+        if (!furniture || furniture.length === 0) return;
 
         const currentDate = this.state.currentDate;
 
         // Filter furniture for current date
-        const todayFurniture = this.state.data.furniture.filter(f => {
+        const todayFurniture = furniture.filter(f => {
             const assignDate = parseDateToYMD(f.assignment_date);
             return assignDate === currentDate;
         });
 
-        // Highlight each furniture element on the map
-        todayFurniture.forEach(f => {
-            const id = f.id || f.furniture_id;
-            const furnitureEl = document.querySelector(`[data-furniture-id="${id}"]`);
-            if (furnitureEl) {
-                furnitureEl.classList.add('highlighted');
-            }
-        });
+        // Dispatch event so the map can highlight during its render cycle
+        const furnitureIds = todayFurniture.map(f => f.furniture_id || f.id);
+        document.dispatchEvent(new CustomEvent('reservation:highlightFurniture', {
+            detail: { furnitureIds }
+        }));
     }
 
     /**
      * Remove highlight from reservation's furniture
-     * Removes 'highlighted' class from all furniture elements
      */
     unhighlightReservationFurniture() {
-        const highlightedElements = document.querySelectorAll('.furniture-item.highlighted');
-        highlightedElements.forEach(el => {
-            el.classList.remove('highlighted');
-        });
+        document.dispatchEvent(new CustomEvent('reservation:clearHighlight'));
     }
 
     // =========================================================================

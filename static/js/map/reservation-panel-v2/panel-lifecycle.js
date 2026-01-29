@@ -87,6 +87,9 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
         } else {
             this.exitEditMode(false);
         }
+
+        // Highlight reservation furniture on the map (after mode is applied)
+        this.highlightReservationFurniture();
     }
 
     /**
@@ -220,7 +223,6 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
 
             this.state.data = result;
             this.renderContent(result);
-            this.highlightReservationFurniture();
             this.showLoading(false);
 
         } catch (error) {

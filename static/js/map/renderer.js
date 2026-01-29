@@ -34,6 +34,15 @@ export function createSVG(container, colors) {
                 <feMergeNode in="SourceGraphic"/>
             </feMerge>
         </filter>
+        <filter id="reservation-highlight-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feColorMatrix type="matrix" values="0 0 0 0 0.83  0 0 0 0 0.69  0 0 0 0 0.22  0 0 0 1 0" result="gold"/>
+            <feGaussianBlur in="gold" stdDeviation="6" result="glow"/>
+            <feMerge>
+                <feMergeNode in="glow"/>
+                <feMergeNode in="glow"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
         <pattern id="zone-pattern" patternUnits="userSpaceOnUse" width="20" height="20">
             <rect width="20" height="20" fill="rgba(245, 230, 211, 0.3)"/>
             <circle cx="10" cy="10" r="1" fill="rgba(212, 175, 55, 0.2)"/>
@@ -212,7 +221,7 @@ function createDecorativeElement(item, data, colors, svg) {
  * @param {Object} tooltipManager - Tooltip manager instance
  * @param {Function} onFurnitureContextMenu - Right-click context menu handler
  */
-export function renderFurniture(layer, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu) {
+export function renderFurniture(layer, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu, highlightedFurniture = new Set()) {
     layer.innerHTML = '';
 
     if (!data.furniture) return;
@@ -223,7 +232,7 @@ export function renderFurniture(layer, data, selectedFurniture, colors, onFurnit
     });
 
     reservableFurniture.forEach(item => {
-        const group = createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu);
+        const group = createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu, highlightedFurniture);
         layer.appendChild(group);
     });
 }
@@ -231,7 +240,7 @@ export function renderFurniture(layer, data, selectedFurniture, colors, onFurnit
 /**
  * Create a single furniture element
  */
-function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu) {
+function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitureClick, tooltipManager, onFurnitureContextMenu, highlightedFurniture = new Set()) {
     const group = document.createElementNS(SVG_NS, 'g');
     group.setAttribute('class', 'furniture-item');
     group.setAttribute('data-furniture-id', item.id);
@@ -292,10 +301,20 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
         group.setAttribute('filter', 'url(#selected-glow)');
     }
 
+    // Check if highlighted (reservation panel open) — gold stroke
+    if (highlightedFurniture.has(item.id) && !selectedFurniture.has(item.id)) {
+        strokeColor = '#D4AF37';
+        group.classList.add('reservation-glow');
+        group.setAttribute('filter', 'url(#reservation-highlight-glow)');
+    }
+
     // Create shape
     const width = item.width || typeConfig.default_width || 60;
     const height = item.height || typeConfig.default_height || 40;
     const shape = createShape(typeConfig.map_shape || 'rounded_rect', width, height, fillColor, strokeColor);
+    if (highlightedFurniture.has(item.id)) {
+        shape.setAttribute('stroke-width', '4');
+    }
     group.appendChild(shape);
 
     // Add stripes overlay for blocked furniture

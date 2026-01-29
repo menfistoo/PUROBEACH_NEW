@@ -58,6 +58,9 @@ export class BeachMap {
         this.furnitureLayer = null;
         this.selectionLayer = null;
 
+        // Highlighted furniture (reservation panel)
+        this.highlightedFurniture = new Set();
+
         // Initialize managers
         this.selection = new SelectionManager();
         this.navigation = new NavigationManager({
@@ -405,7 +408,8 @@ export class BeachMap {
             this.colors,
             this.handleFurnitureClick,
             this.tooltipManager,
-            this.handleFurnitureContextMenu
+            this.handleFurnitureContextMenu,
+            this.highlightedFurniture
         );
         updateLegend(this.data, this.colors);
 
@@ -959,6 +963,24 @@ export class BeachMap {
         this.furnitureLayer.querySelectorAll('.preference-match-partial').forEach(el => {
             el.classList.remove('preference-match-partial');
         });
+    }
+
+    /**
+     * Set furniture IDs to highlight for a reservation (survives re-renders)
+     * @param {number[]} ids - Furniture IDs to highlight
+     */
+    setHighlightedFurniture(ids) {
+        this.highlightedFurniture = new Set(ids);
+        this.render();
+    }
+
+    /**
+     * Clear reservation furniture highlights
+     */
+    clearHighlightedFurniture() {
+        if (this.highlightedFurniture.size === 0) return;
+        this.highlightedFurniture = new Set();
+        this.render();
     }
 
     // =========================================================================
