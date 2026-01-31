@@ -53,21 +53,22 @@
 
         <form id="permissionsForm">
             {% for group in matrix.groups %}
+            {% set group_index = loop.index %}
             <div class="card mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center"
-                     data-bs-toggle="collapse" data-bs-target="#group-{{ loop.index }}"
+                     data-bs-toggle="collapse" data-bs-target="#group-{{ group_index }}"
                      role="button" style="cursor: pointer;">
                     <h6 class="mb-0">
                         <i class="fas fa-folder-open"></i> {{ group.label }}
                     </h6>
                     {% if can_edit %}
                     <button type="button" class="btn btn-sm btn-outline-secondary btn-select-all"
-                            data-group="{{ loop.index }}" onclick="event.stopPropagation();">
+                            data-group="{{ group_index }}" onclick="event.stopPropagation();">
                         Seleccionar todos
                     </button>
                     {% endif %}
                 </div>
-                <div class="collapse show" id="group-{{ loop.index }}">
+                <div class="collapse show" id="group-{{ group_index }}">
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-sm table-hover mb-0">
@@ -78,7 +79,7 @@
                                         <th class="text-center" style="min-width: 90px;">
                                             {% if can_edit %}
                                             <a href="#" class="text-decoration-none btn-select-column"
-                                               data-group="{{ loop.parent.loop.index }}" data-action="{{ action_key }}"
+                                               data-group="{{ group_index }}" data-action="{{ action_key }}"
                                                title="Seleccionar/deseleccionar columna">
                                                 {{ matrix.action_labels[action_key] }}
                                             </a>
@@ -99,7 +100,7 @@
                                             {% set perm = feature.actions[action_key] %}
                                             <input type="checkbox" class="form-check-input perm-checkbox"
                                                    name="permission_ids" value="{{ perm.id }}"
-                                                   data-group="{{ loop.parent.loop.parent.loop.index }}"
+                                                   data-group="{{ group_index }}"
                                                    data-action="{{ action_key }}"
                                                    {% if perm.assigned %}checked{% endif %}
                                                    {% if not can_edit %}disabled{% endif %}
