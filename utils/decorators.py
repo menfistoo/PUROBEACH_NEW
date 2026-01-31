@@ -28,6 +28,10 @@ def permission_required(permission_code: str):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            # Admin role bypasses all permission checks
+            if hasattr(current_user, 'role_name') and current_user.role_name == 'admin':
+                return func(*args, **kwargs)
+
             # Check if user has permission
             if not hasattr(g, 'user_permissions'):
                 # Load permissions if not cached

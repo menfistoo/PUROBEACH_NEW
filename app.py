@@ -198,49 +198,21 @@ def register_cli_commands(app):
     @app.cli.command('run-migrations')
     def run_migrations_command():
         """Run all pending database migrations."""
-        from database import (
-            migrate_furniture_types_v2,
-            migrate_reservations_v2,
-            migrate_status_history_v2,
-            migrate_hotel_guests_multi_guest,
-            migrate_hotel_guests_booking_reference,
-            migrate_customers_language_phone,
-            migrate_add_sentada_state,
-            migrate_customers_extended_stats,
-            migrate_add_furniture_types_menu,
-            migrate_reservation_states_configurable,
-            migrate_add_map_edit_permission,
-        )
+        from database.migrations import run_all_migrations
 
         click.echo('Running migrations...')
-        failed_count = 0
         with app.app_context():
-            migrations = [
-                ('furniture_types_v2', migrate_furniture_types_v2),
-                ('reservations_v2', migrate_reservations_v2),
-                ('status_history_v2', migrate_status_history_v2),
-                ('hotel_guests_multi_guest', migrate_hotel_guests_multi_guest),
-                ('hotel_guests_booking_reference', migrate_hotel_guests_booking_reference),
-                ('customers_language_phone', migrate_customers_language_phone),
-                ('add_sentada_state', migrate_add_sentada_state),
-                ('customers_extended_stats', migrate_customers_extended_stats),
-                ('add_furniture_types_menu', migrate_add_furniture_types_menu),
-                ('reservation_states_configurable', migrate_reservation_states_configurable),
-                ('add_map_edit_permission', migrate_add_map_edit_permission),
-            ]
+            result = run_all_migrations()
 
-            for name, func in migrations:
-                try:
-                    func()
-                    app.logger.info(f'Migration {name} completed')
-                except Exception as e:
-                    failed_count += 1
-                    app.logger.error(f'Migration {name} failed: {e}')
-                    click.echo(f'  Migration {name} failed: {e}', err=True)
+            for name, success, status in result['results']:
+                if success:
+                    app.logger.info(f'Migration {name}: {status}')
+                else:
+                    app.logger.error(f'Migration {name} failed: {status}')
 
-        if failed_count > 0:
-            app.logger.warning(f'Migrations completed with {failed_count} failures')
-            click.echo(f'Migrations complete with {failed_count} failures!', err=True)
+        if result['failed'] > 0:
+            app.logger.warning(f"Migrations completed with {result['failed']} failures")
+            click.echo(f"Migrations complete with {result['failed']} failures!", err=True)
         else:
             app.logger.info('All migrations completed successfully')
             click.echo('Migrations complete!')

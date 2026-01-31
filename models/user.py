@@ -27,6 +27,7 @@ class User:
         self.full_name = user_dict['full_name']
         self.role_id = user_dict['role_id']
         self.active = user_dict['active']
+        self.role_name = user_dict.get('role_name')
         self.theme_preference = user_dict.get('theme_preference', 'light')
         self.created_at = user_dict['created_at']
         self.last_login = user_dict.get('last_login')
