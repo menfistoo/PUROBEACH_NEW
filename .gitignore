@@ -33,6 +33,7 @@ instance/
 # Environment variables
 .env
 .env.local
+.env.production
 
 # IDEs
 .vscode/
