@@ -52,6 +52,7 @@ from .waitlist import (
 )
 from .add_insights_permissions import migrate_add_insights_permissions
 from .temp_furniture_date_range import migrate_temp_furniture_date_range
+from .fix_reports_menu import migrate_fix_reports_menu
 
 
 # Ordered list of all migrations
@@ -117,6 +118,9 @@ MIGRATIONS = [
 
     # Phase 14: Temporary furniture date ranges
     ('temp_furniture_date_range', migrate_temp_furniture_date_range),
+
+    # Phase 15: Fix reports menu item
+    ('fix_reports_menu', migrate_fix_reports_menu),
 ]
 
 
@@ -208,4 +212,5 @@ __all__ = [
     'migrate_reservations_original_room',
     'migrate_add_insights_permissions',
     'migrate_temp_furniture_date_range',
+    'migrate_fix_reports_menu',
 ]

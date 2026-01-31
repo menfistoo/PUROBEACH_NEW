@@ -64,7 +64,7 @@ def seed_database(db):
         ('beach.customers.view', 'Clientes', 'operations', 1, 33, 'fa-address-book', '/beach/customers', menu_operations_id),
 
         # Informes children
-        ('beach.reports.view', 'Reportes', 'reports', 1, 41, 'fa-file-lines', '/beach/reports', menu_reports_id),
+        ('beach.reports.view', 'Conciliación de Pagos', 'reports', 1, 41, 'fa-file-lines', '/beach/reports/payment-reconciliation', menu_reports_id),
         ('beach.analytics.view', 'Analytics', 'reports', 1, 42, 'fa-chart-pie', '/beach/analytics', menu_reports_id),
     ]
 
