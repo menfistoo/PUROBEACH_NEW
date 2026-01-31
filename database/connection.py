@@ -5,7 +5,7 @@ Handles connection pooling, initialization, and teardown.
 
 import sqlite3
 import os
-from flask import g
+from flask import g, current_app
 
 
 def get_db():
@@ -16,7 +16,7 @@ def get_db():
         sqlite3.Connection: Database connection object
     """
     if 'db' not in g:
-        db_path = os.environ.get('DATABASE_PATH', 'instance/beach_club.db')
+        db_path = current_app.config.get('DATABASE_PATH', 'instance/beach_club.db')
         g.db = sqlite3.connect(
             db_path,
             detect_types=sqlite3.PARSE_DECLTYPES

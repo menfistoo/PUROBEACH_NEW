@@ -52,6 +52,9 @@ def create_app(config_name=None):
     # Register error handlers
     register_error_handlers(app)
 
+    # Register security headers
+    register_security_headers(app)
+
     # Register CLI commands
     register_cli_commands(app)
 
@@ -76,6 +79,9 @@ def initialize_extensions(app):
     login_manager.init_app(app)
     # Initialize CSRF Protection
     csrf.init_app(app)
+    # Initialize rate limiter
+    from extensions import limiter
+    limiter.init_app(app)
 
 
 def register_blueprints(app):
@@ -125,6 +131,30 @@ def register_error_handlers(app):
     def forbidden_error(error):
         """Handle 403 errors."""
         return render_template('errors/403.html'), 403
+
+    @app.errorhandler(400)
+    def bad_request_error(error):
+        """Handle 400 errors."""
+        return render_template('errors/400.html'), 400
+
+    @app.errorhandler(405)
+    def method_not_allowed_error(error):
+        """Handle 405 errors."""
+        return render_template('errors/405.html'), 405
+
+
+def register_security_headers(app):
+    """Register security headers for all responses (non-debug mode only)."""
+
+    @app.after_request
+    def set_security_headers(response):
+        """Add baseline security headers to every response."""
+        if not app.debug:
+            response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['X-XSS-Protection'] = '1; mode=block'
+            response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        return response
 
 
 def register_cli_commands(app):
@@ -355,4 +385,4 @@ if __name__ == '__main__':
     # host='0.0.0.0' allows access from other devices on the network
     # Port can be set via PORT environment variable (default: 5000)
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=app.config['DEBUG'])

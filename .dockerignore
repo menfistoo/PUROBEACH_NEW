@@ -1,0 +1,54 @@
+# Version control
+.git
+.gitignore
+
+# Worktrees and auto-claude
+.worktrees/
+.auto-claude/
+
+# Claude and editor config
+.claude/
+.vscode/
+.idea/
+
+# Tests and documentation
+tests/
+docs/
+code-review/
+security-review/
+design-review/
+
+# Database files (mounted as volume)
+*.db
+*.db-wal
+*.db-shm
+instance/
+
+# Logs (mounted as volume)
+logs/
+*.log
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.pytest_cache/
+
+# Environment files
+.env
+.env.*
+!.env.production.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Markdown docs (except CLAUDE.md for reference)
+BEACH_CLUB_NEW_PROJECT_PROMPT.md
+DESIGN_SYSTEM.md

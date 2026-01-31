@@ -8,23 +8,43 @@ from flask_login import login_required
 
 from models.zone import get_all_zones
 from models.furniture import get_all_furniture
+from extensions import limiter
 
 api_bp = Blueprint('api', __name__)
+
+
+# Apply default rate limit to all API endpoints
+limiter.limit("60 per minute")(api_bp)
 
 
 @api_bp.route('/health')
 def health_check():
     """
-    Health check endpoint (no authentication required).
+    Health check endpoint with database probe (no authentication required).
 
     Returns:
-        JSON with status and version
+        JSON with status, version, and database connectivity.
+        Returns 503 if database is unreachable.
     """
+    from database import get_db
+    import sqlite3
+
+    db_status = 'ok'
+    http_status = 200
+
+    try:
+        db = get_db()
+        db.execute('SELECT 1')
+    except (sqlite3.Error, Exception):
+        db_status = 'unreachable'
+        http_status = 503
+
     return jsonify({
-        'status': 'ok',
+        'status': 'ok' if http_status == 200 else 'degraded',
         'version': '1.0.0',
-        'app': 'PuroBeach Beach Club Management System'
-    })
+        'app': 'PuroBeach Beach Club Management System',
+        'database': db_status
+    }), http_status
 
 
 @api_bp.route('/zones')

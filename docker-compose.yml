@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # Flask application (Gunicorn)
+  app:
+    build: .
+    container_name: purobeach-app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - FLASK_ENV=production
+    volumes:
+      - db-data:/app/instance
+      - uploads:/app/static/uploads
+      - logs:/app/logs
+      - static-shared:/app/static-shared
+    networks:
+      - internal
+    depends_on: []
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: purobeach-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - static-shared:/app/static-shared:ro
+      - certbot-conf:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    networks:
+      - internal
+    depends_on:
+      - app
+
+  # Certbot for SSL certificate management
+  certbot:
+    image: certbot/certbot
+    container_name: purobeach-certbot
+    restart: unless-stopped
+    volumes:
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    # Auto-renew every 12 hours
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done'
+
+volumes:
+  db-data:
+    driver: local
+  uploads:
+    driver: local
+  logs:
+    driver: local
+  static-shared:
+    driver: local
+  certbot-conf:
+    driver: local
+  certbot-www:
+    driver: local
+
+networks:
+  internal:
+    driver: bridge

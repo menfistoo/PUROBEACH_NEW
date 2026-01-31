@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% set page_title = "Método No Permitido" %}
+
+{% block title %}Método No Permitido - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center align-items-center" style="min-height: 60vh;">
+        <div class="col-md-6 text-center">
+            <i class="fas fa-ban fa-5x text-muted mb-4"></i>
+            <h1 class="display-1">405</h1>
+            <h3>Método No Permitido</h3>
+            <p class="text-muted mb-4">
+                El método de solicitud no es compatible con este recurso.
+            </p>
+            <div class="d-flex gap-2 justify-content-center">
+                <a href="{{ url_for('beach.map') }}" class="btn btn-primary">
+                    <i class="fas fa-home"></i> Ir al Inicio
+                </a>
+                <a href="javascript:history.back()" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

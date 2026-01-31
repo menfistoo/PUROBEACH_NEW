@@ -5,12 +5,21 @@ Extensions are initialized here and then initialized with the app in app.py.
 
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Initialize Flask-Login
 login_manager = LoginManager()
 
 # Initialize CSRF Protection
 csrf = CSRFProtect()
+
+# Initialize rate limiter (disabled during testing via app config)
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[],
+    storage_uri="memory://",
+)
 
 # Configure Login Manager
 login_manager.login_view = 'auth.login'

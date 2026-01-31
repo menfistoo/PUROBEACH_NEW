@@ -11,11 +11,13 @@ from blueprints.auth.forms import LoginForm, ProfileForm, ChangePasswordForm
 from models.user import get_user_by_username, update_last_login, update_user, update_password, check_password
 from utils.messages import MESSAGES
 from utils.permissions import cache_user_permissions
+from extensions import limiter
 
 auth_bp = Blueprint('auth', __name__, template_folder='../../templates/auth')
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def login():
     """
     Login route with form handling.

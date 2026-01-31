@@ -396,12 +396,14 @@
                 </button>
             </form>
 
+            {% if config.DEBUG %}
             <div class="login-hint-box">
                 <small>
                     <i class="fas fa-info-circle"></i>
                     Credenciales por defecto: <strong>admin / admin123</strong>
                 </small>
             </div>
+            {% endif %}
 
             <div class="login-footer-text">
                 <span>PuroBeach</span> &copy; 2025 — Sistema de Gestión

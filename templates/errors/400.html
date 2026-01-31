@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% set page_title = "Solicitud Incorrecta" %}
+
+{% block title %}Solicitud Incorrecta - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center align-items-center" style="min-height: 60vh;">
+        <div class="col-md-6 text-center">
+            <i class="fas fa-exclamation-triangle fa-5x text-muted mb-4"></i>
+            <h1 class="display-1">400</h1>
+            <h3>Solicitud Incorrecta</h3>
+            <p class="text-muted mb-4">
+                La solicitud no pudo ser procesada. Por favor, verifique los datos enviados.
+            </p>
+            <div class="d-flex gap-2 justify-content-center">
+                <a href="{{ url_for('beach.map') }}" class="btn btn-primary">
+                    <i class="fas fa-home"></i> Ir al Inicio
+                </a>
+                <a href="javascript:history.back()" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

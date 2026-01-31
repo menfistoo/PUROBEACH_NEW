@@ -22,7 +22,7 @@ class Config:
 
     # Security settings
     WTF_CSRF_ENABLED = True
-    WTF_CSRF_TIME_LIMIT = None  # CSRF token doesn't expire
+    WTF_CSRF_TIME_LIMIT = 3600  # CSRF token expires after 1 hour
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
@@ -68,6 +68,9 @@ class ProductionConfig(Config):
     if len(SECRET_KEY) < 32:
         raise ValueError("SECRET_KEY must be at least 32 characters in production")
 
+    # HTTPS preference for URL generation
+    PREFERRED_URL_SCHEME = 'https'
+
     # Ensure DATABASE_PATH is explicitly set (not using default)
     DATABASE_PATH = os.environ.get('DATABASE_PATH')
     if not DATABASE_PATH:
@@ -80,7 +83,8 @@ class TestConfig(Config):
     TESTING = True
     DEBUG = True
     WTF_CSRF_ENABLED = False  # Disable CSRF for tests
-    DATABASE_PATH = ':memory:'  # In-memory database for tests
+    RATELIMIT_ENABLED = False  # Disable rate limiting for tests
+    DATABASE_PATH = os.environ.get('DATABASE_PATH', ':memory:')
     SECRET_KEY = 'test-secret-key'
 
 
