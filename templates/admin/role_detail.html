@@ -1,59 +1,185 @@
 {% extends "base.html" %}
 
-{% block title %}Detalles de Rol - PuroBeach{% endblock %}
+{% block title %}{{ role.display_name }} - Permisos - PuroBeach{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <h2>
-        <i class="fas fa-user-shield"></i> {{ role.display_name }}
-        {% if role.is_system %}
-        <span class="badge bg-warning">Sistema</span>
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h2>
+            <i class="fas fa-user-shield"></i> {{ role.display_name }}
+            {% if role.is_system %}
+            <span class="badge bg-warning text-dark">Sistema</span>
+            {% else %}
+            <span class="badge bg-secondary">Personalizado</span>
+            {% endif %}
+        </h2>
+        <p class="text-muted">{{ role.description or 'Sin descripción' }}</p>
+    </div>
+    <div>
+        <a href="{{ url_for('admin.roles') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+        {% if role.name != 'admin' %}
+        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editRoleModal">
+            <i class="fas fa-edit"></i> Editar Rol
+        </button>
         {% endif %}
-    </h2>
-    <p class="text-muted">{{ role.description or 'Sin descripción' }}</p>
-    <a href="{{ url_for('admin.roles') }}" class="btn btn-secondary btn-sm">
-        <i class="fas fa-arrow-left"></i> Volver a Roles
-    </a>
-</div>
-
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-key"></i> Permisos Asignados ({{ role_permissions|length }})</h5>
-            </div>
-            <div class="card-body">
-                {% if role_permissions %}
-                <div class="row">
-                    {% for module, perms in permissions_by_module.items() %}
-                    <div class="col-md-6 mb-3">
-                        <h6 class="text-primary">
-                            <i class="fas fa-folder"></i> Módulo: {{ module.capitalize() }}
-                        </h6>
-                        <ul class="list-group list-group-flush">
-                            {% for perm in perms %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ perm.name }}
-                                <small class="text-muted">{{ perm.code }}</small>
-                                {% if perm.code in assigned_codes %}
-                                <span class="badge bg-success">Asignado</span>
-                                {% endif %}
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p class="text-muted">Este rol no tiene permisos asignados</p>
-                {% endif %}
-            </div>
-        </div>
     </div>
 </div>
 
-<div class="alert alert-info mt-3">
-    <i class="fas fa-info-circle"></i>
-    <strong>Fase 2:</strong> La edición de permisos se implementará en la siguiente fase del proyecto.
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-permissions" type="button" role="tab">
+            <i class="fas fa-key"></i> Permisos
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-history" type="button" role="tab" id="history-tab">
+            <i class="fas fa-clock-rotate-left"></i> Historial
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- Permissions Tab -->
+    <div class="tab-pane fade show active" id="tab-permissions" role="tabpanel">
+        {% if role.name == 'admin' %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            El rol <strong>Administrador</strong> tiene todos los permisos automáticamente.
+        </div>
+        {% endif %}
+
+        <form id="permissionsForm">
+            {% for group in matrix.groups %}
+            {% set group_index = loop.index %}
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center"
+                     data-bs-toggle="collapse" data-bs-target="#group-{{ group_index }}"
+                     role="button" style="cursor: pointer;">
+                    <h6 class="mb-0">
+                        <i class="fas fa-folder-open"></i> {{ group.label }}
+                    </h6>
+                    {% if can_edit %}
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-select-all"
+                            data-group="{{ group_index }}" onclick="event.stopPropagation();">
+                        Seleccionar todos
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="collapse show" id="group-{{ group_index }}">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 160px;">Funcionalidad</th>
+                                        {% for action_key in matrix.action_order %}
+                                        <th class="text-center" style="min-width: 90px;">
+                                            {% if can_edit %}
+                                            <a href="#" class="text-decoration-none btn-select-column"
+                                               data-group="{{ group_index }}" data-action="{{ action_key }}"
+                                               title="Seleccionar/deseleccionar columna">
+                                                {{ matrix.action_labels[action_key] }}
+                                            </a>
+                                            {% else %}
+                                            {{ matrix.action_labels[action_key] }}
+                                            {% endif %}
+                                        </th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for feature_key, feature in group.features.items() %}
+                                    <tr>
+                                        <td><strong>{{ feature.label }}</strong></td>
+                                        {% for action_key in matrix.action_order %}
+                                        <td class="text-center">
+                                            {% if action_key in feature.actions %}
+                                            {% set perm = feature.actions[action_key] %}
+                                            <input type="checkbox" class="form-check-input perm-checkbox"
+                                                   name="permission_ids" value="{{ perm.id }}"
+                                                   data-group="{{ group_index }}"
+                                                   data-action="{{ action_key }}"
+                                                   {% if perm.assigned %}checked{% endif %}
+                                                   {% if not can_edit %}disabled{% endif %}
+                                                   title="{{ perm.code }}">
+                                            {% endif %}
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if can_edit %}
+            <div class="d-flex justify-content-end mt-3">
+                <button type="button" id="savePermissions" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save"></i> Guardar Permisos
+                </button>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- History Tab -->
+    <div class="tab-pane fade" id="tab-history" role="tabpanel">
+        <div id="auditLogContainer">
+            <div class="text-center text-muted p-4">
+                <i class="fas fa-spinner fa-spin"></i> Cargando historial...
+            </div>
+        </div>
+        <div id="auditLogPagination" class="d-flex justify-content-center mt-3"></div>
+    </div>
 </div>
+
+<!-- Edit Role Modal -->
+{% if role.name != 'admin' %}
+<div class="modal fade" id="editRoleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.role_edit', role_id=role.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit"></i> Editar Rol</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre interno</label>
+                        <input type="text" class="form-control" value="{{ role.name }}" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_display_name" class="form-label">Nombre visible <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_display_name" name="display_name"
+                               required minlength="2" maxlength="50" value="{{ role.display_name }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_description" class="form-label">Descripción</label>
+                        <input type="text" class="form-control" id="edit_description" name="description"
+                               maxlength="200" value="{{ role.description or '' }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin/role-permissions.js') }}"></script>
+<script>
+    initRolePermissions({{ role.id }}, {{ can_edit|tojson }});
+</script>
 {% endblock %}

@@ -5,9 +5,14 @@
 {% block title %}Gestión de Roles - PuroBeach{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <h2><i class="fas fa-user-shield"></i> Gestión de Roles</h2>
-    <p class="text-muted">Administración de roles y permisos del sistema</p>
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h2><i class="fas fa-user-shield"></i> Gestión de Roles</h2>
+        <p class="text-muted">Administración de roles y permisos del sistema</p>
+    </div>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+        <i class="fas fa-plus"></i> Crear Rol
+    </button>
 </div>
 
 <div class="card">
@@ -19,7 +24,7 @@
                     <th>Descripción</th>
                     <th>Permisos</th>
                     <th>Usuarios</th>
-                    <th>Sistema</th>
+                    <th>Tipo</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -39,15 +44,35 @@
                     </td>
                     <td>
                         {% if role.is_system %}
-                        <span class="badge bg-warning">Sistema</span>
+                        <span class="badge bg-warning text-dark">Sistema</span>
                         {% else %}
                         <span class="badge bg-secondary">Personalizado</span>
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{{ url_for('admin.role_detail', role_id=role.id) }}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-eye"></i> Ver Detalles
-                        </a>
+                        {% if role.name == 'admin' %}
+                            <a href="{{ url_for('admin.role_detail', role_id=role.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i> Ver
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('admin.role_detail', role_id=role.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            {% if not role.is_system %}
+                                {% if role.user_count == 0 %}
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal" data-bs-target="#deleteRoleModal"
+                                        data-role-id="{{ role.id }}" data-role-name="{{ role.display_name }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-danger" disabled
+                                        title="Este rol tiene usuarios asignados">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
@@ -60,8 +85,105 @@
     </div>
 </div>
 
-<div class="alert alert-info mt-3">
-    <i class="fas fa-info-circle"></i>
-    <strong>Nota:</strong> La gestión avanzada de permisos se habilitará en la Fase 2.
+<!-- Create Role Modal -->
+<div class="modal fade" id="createRoleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('admin.role_create') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle"></i> Crear Nuevo Rol</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="display_name" class="form-label">Nombre visible <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="display_name" name="display_name"
+                               required minlength="2" maxlength="50" placeholder="Ej: Recepción">
+                    </div>
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nombre interno <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               required pattern="[a-z0-9_-]{3,30}" placeholder="Ej: recepcion">
+                        <div class="form-text">Solo letras minúsculas, números, guiones y guiones bajos (3-30 caracteres)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descripción</label>
+                        <input type="text" class="form-control" id="description" name="description"
+                               maxlength="200" placeholder="Descripción del rol">
+                    </div>
+                    <div class="mb-3">
+                        <label for="clone_from" class="form-label">Basado en</label>
+                        <select class="form-select" id="clone_from" name="clone_from">
+                            <option value="">-- Ninguno (sin permisos) --</option>
+                            {% for role in roles %}
+                                {% if role.name != 'admin' %}
+                                <option value="{{ role.id }}">{{ role.display_name }} ({{ role.permission_count }} permisos)</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Rol</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+<!-- Delete Role Confirmation Modal -->
+<div class="modal fade" id="deleteRoleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" id="deleteRoleForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle text-danger"></i> Eliminar Rol</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro de eliminar el rol <strong id="deleteRoleName"></strong>?</p>
+                    <p class="text-muted">Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-generate slug from display name
+document.getElementById('display_name').addEventListener('input', function() {
+    const nameInput = document.getElementById('name');
+    if (!nameInput.dataset.manual) {
+        nameInput.value = this.value
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_|_$/g, '')
+            .substring(0, 30);
+    }
+});
+
+// Mark name as manually edited
+document.getElementById('name').addEventListener('input', function() {
+    this.dataset.manual = 'true';
+});
+
+// Delete modal - set role data
+document.getElementById('deleteRoleModal').addEventListener('show.bs.modal', function(event) {
+    const button = event.relatedTarget;
+    const roleId = button.getAttribute('data-role-id');
+    const roleName = button.getAttribute('data-role-name');
+    document.getElementById('deleteRoleName').textContent = roleName;
+    document.getElementById('deleteRoleForm').action = '/admin/roles/' + roleId + '/delete';
+});
+</script>
 {% endblock %}

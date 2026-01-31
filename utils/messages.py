@@ -51,6 +51,19 @@ MESSAGES = {
     'invalid_file_type': 'Tipo de archivo no permitido',
     'file_too_large': 'El archivo es demasiado grande',
 
+    # Role management
+    'role_created': 'Rol creado exitosamente',
+    'role_updated': 'Rol actualizado correctamente',
+    'role_deleted': 'Rol eliminado',
+    'role_permissions_updated': 'Permisos actualizados correctamente',
+    'role_name_exists': 'Ya existe un rol con ese nombre',
+    'role_has_users': 'No se puede eliminar un rol con usuarios asignados',
+    'role_is_system': 'No se puede eliminar un rol de sistema',
+    'role_is_admin': 'Los permisos del rol Administrador no se pueden modificar',
+    'role_not_found': 'Rol no encontrado',
+    'invalid_role_name': 'El nombre interno solo puede contener letras minúsculas, números, guiones y guiones bajos (3-30 caracteres)',
+    'invalid_display_name': 'El nombre visible debe tener al menos 2 caracteres',
+
     # Validation messages
     'field_required': 'Este campo es requerido',
     'invalid_value': 'Valor inválido',
