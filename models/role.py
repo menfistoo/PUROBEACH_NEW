@@ -220,3 +220,80 @@ def has_users(role_id: int) -> bool:
 
         row = cursor.fetchone()
         return row['count'] > 0
+
+
+def bulk_set_permissions(role_id: int, permission_ids: list) -> dict:
+    """
+    Replace all permissions for a role with the given set.
+
+    Args:
+        role_id: Role ID
+        permission_ids: List of permission IDs to assign
+
+    Returns:
+        Dict with 'added' and 'removed' lists of permission dicts
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+        conn.execute('BEGIN IMMEDIATE')
+
+        # Get current permissions
+        cursor.execute('''
+            SELECT p.id, p.code, p.name
+            FROM permissions p
+            JOIN role_permissions rp ON p.id = rp.permission_id
+            WHERE rp.role_id = ?
+        ''', (role_id,))
+        current = {row['id']: dict(row) for row in cursor.fetchall()}
+
+        current_ids = set(current.keys())
+        new_ids = set(permission_ids)
+
+        to_add = new_ids - current_ids
+        to_remove = current_ids - new_ids
+
+        # Remove revoked permissions
+        if to_remove:
+            placeholders = ','.join('?' * len(to_remove))
+            cursor.execute(f'''
+                DELETE FROM role_permissions
+                WHERE role_id = ? AND permission_id IN ({placeholders})
+            ''', [role_id] + list(to_remove))
+
+        # Add new permissions
+        for perm_id in to_add:
+            cursor.execute('''
+                INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+                VALUES (?, ?)
+            ''', (role_id, perm_id))
+
+        # Get details of added permissions for audit
+        added_details = []
+        if to_add:
+            placeholders = ','.join('?' * len(to_add))
+            cursor.execute(f'SELECT id, code, name FROM permissions WHERE id IN ({placeholders})',
+                          list(to_add))
+            added_details = [dict(row) for row in cursor.fetchall()]
+
+        removed_details = [current[pid] for pid in to_remove]
+
+        conn.commit()
+
+        return {'added': added_details, 'removed': removed_details}
+
+
+def delete_role(role_id: int) -> bool:
+    """
+    Delete a custom role.
+
+    Args:
+        role_id: Role ID to delete
+
+    Returns:
+        True if deleted successfully
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM roles WHERE id = ? AND is_system = 0', (role_id,))
+        conn.commit()
+        return cursor.rowcount > 0
