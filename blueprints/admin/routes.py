@@ -3,6 +3,7 @@ Admin routes for user and role management.
 Provides CRUD operations for users and roles (Phase 1: basic functionality).
 """
 
+import json
 import os
 import time
 import tempfile
@@ -14,12 +15,18 @@ from utils.decorators import permission_required
 from utils.messages import MESSAGES
 from models.user import (get_all_users, get_user_by_id, create_user, update_user,
                           delete_user, get_user_by_username, get_user_by_email)
-from models.role import get_all_roles, get_role_by_id, get_role_permissions
+from models.role import (get_all_roles, get_role_by_id, get_role_permissions,
+                          bulk_set_permissions, update_role, delete_role)
 from models.permission import get_all_permissions
 from models.hotel_guest import (get_all_hotel_guests, get_hotel_guest_by_id,
                                   get_guest_count, get_distinct_rooms, delete_hotel_guest)
 from blueprints.admin.services import (validate_user_creation, can_delete_user,
                                          import_hotel_guests_from_excel, validate_excel_file)
+from blueprints.admin.services.role_service import (
+    validate_role_name, create_custom_role, can_delete_role,
+    can_edit_permissions, get_permissions_matrix, log_permission_change,
+    get_role_audit_log
+)
 
 admin_bp = Blueprint('admin', __name__, template_folder='../../templates/admin')
 
@@ -213,33 +220,155 @@ def roles():
 @login_required
 @permission_required('admin.roles.manage')
 def role_detail(role_id):
-    """View role details and permissions."""
+    """View role details and permission matrix."""
     role = get_role_by_id(role_id)
     if not role:
         flash('Rol no encontrado', 'error')
         return redirect(url_for('admin.roles'))
 
-    # Get role permissions
-    role_permissions = get_role_permissions(role_id)
+    can_edit, _ = can_edit_permissions(role_id)
+    matrix = get_permissions_matrix(role_id)
+    all_roles = get_all_roles()
 
-    # Get all permissions for potential assignment (Phase 2)
-    all_permissions = get_all_permissions()
+    return render_template('role_detail.html',
+                           role=role,
+                           matrix=matrix,
+                           can_edit=can_edit,
+                           all_roles=all_roles)
 
-    # Group permissions by module
-    permissions_by_module = {}
-    for perm in all_permissions:
-        module = perm['module']
-        if module not in permissions_by_module:
-            permissions_by_module[module] = []
-        permissions_by_module[module].append(perm)
 
-    # Mark assigned permissions
-    assigned_codes = {p['code'] for p in role_permissions}
+@admin_bp.route('/roles/create', methods=['GET', 'POST'])
+@login_required
+@permission_required('admin.roles.manage')
+def role_create():
+    """Create a new custom role."""
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        display_name = request.form.get('display_name', '').strip()
+        description = request.form.get('description', '').strip()
+        clone_from = request.form.get('clone_from', '')
 
-    return render_template('role_detail.html', role=role,
-                           role_permissions=role_permissions,
-                           permissions_by_module=permissions_by_module,
-                           assigned_codes=assigned_codes)
+        clone_from_id = int(clone_from) if clone_from else None
+
+        result = create_custom_role(name, display_name, description, clone_from_id)
+
+        if result['success']:
+            # Log creation
+            log_details = {'name': name, 'display_name': display_name}
+            if clone_from_id:
+                source_role = get_role_by_id(clone_from_id)
+                log_details['cloned_from'] = source_role['name'] if source_role else str(clone_from_id)
+            log_permission_change(current_user.id, result['role_id'], 'role_created', log_details)
+
+            flash(MESSAGES['role_created'], 'success')
+            return redirect(url_for('admin.role_detail', role_id=result['role_id']))
+        else:
+            error_msg = MESSAGES.get(result['error'], result['error'])
+            flash(error_msg, 'error')
+            return redirect(url_for('admin.roles'))
+
+    # GET: redirect to roles list (creation is via modal)
+    return redirect(url_for('admin.roles'))
+
+
+@admin_bp.route('/roles/<int:role_id>/edit', methods=['POST'])
+@login_required
+@permission_required('admin.roles.manage')
+def role_edit(role_id):
+    """Edit role display name and description."""
+    role = get_role_by_id(role_id)
+    if not role:
+        flash(MESSAGES['role_not_found'], 'error')
+        return redirect(url_for('admin.roles'))
+
+    display_name = request.form.get('display_name', '').strip()
+    description = request.form.get('description', '').strip()
+
+    if not display_name or len(display_name) < 2:
+        flash('El nombre visible debe tener al menos 2 caracteres', 'error')
+        return redirect(url_for('admin.role_detail', role_id=role_id))
+
+    changes = {}
+    if display_name != role['display_name']:
+        changes['display_name'] = [role['display_name'], display_name]
+    if description != (role['description'] or ''):
+        changes['description'] = [role['description'] or '', description]
+
+    if changes:
+        update_role(role_id, display_name=display_name, description=description or None)
+        log_permission_change(current_user.id, role_id, 'role_updated', {'changes': changes})
+        flash(MESSAGES['role_updated'], 'success')
+    else:
+        flash('No se realizaron cambios', 'warning')
+
+    return redirect(url_for('admin.role_detail', role_id=role_id))
+
+
+@admin_bp.route('/roles/<int:role_id>/delete', methods=['POST'])
+@login_required
+@permission_required('admin.roles.manage')
+def role_delete(role_id):
+    """Delete a custom role."""
+    can_del, error_key = can_delete_role(role_id)
+    if not can_del:
+        flash(MESSAGES.get(error_key, error_key), 'error')
+        return redirect(url_for('admin.roles'))
+
+    role = get_role_by_id(role_id)
+    deleted = delete_role(role_id)
+
+    if deleted:
+        log_permission_change(current_user.id, role_id, 'role_deleted',
+                            {'name': role['name'], 'display_name': role['display_name']})
+        flash(MESSAGES['role_deleted'], 'success')
+    else:
+        flash('Error al eliminar rol', 'error')
+
+    return redirect(url_for('admin.roles'))
+
+
+# ==================== Role Permission API (AJAX) ====================
+
+@admin_bp.route('/api/roles/<int:role_id>/permissions', methods=['POST'])
+@login_required
+@permission_required('admin.roles.manage')
+def api_role_permissions_save(role_id):
+    """Save role permissions (AJAX)."""
+    can_edit, error_key = can_edit_permissions(role_id)
+    if not can_edit:
+        return jsonify({'success': False, 'error': MESSAGES.get(error_key, error_key)}), 403
+
+    data = request.get_json()
+    if not data or 'permission_ids' not in data:
+        return jsonify({'success': False, 'error': 'Datos inválidos'}), 400
+
+    permission_ids = [int(pid) for pid in data['permission_ids']]
+
+    result = bulk_set_permissions(role_id, permission_ids)
+
+    # Log if changes were made
+    if result['added'] or result['removed']:
+        log_permission_change(current_user.id, role_id, 'permissions_updated', {
+            'added': result['added'],
+            'removed': result['removed']
+        })
+
+    return jsonify({
+        'success': True,
+        'added': len(result['added']),
+        'removed': len(result['removed'])
+    })
+
+
+@admin_bp.route('/api/roles/<int:role_id>/audit-log')
+@login_required
+@permission_required('admin.roles.manage')
+def api_role_audit_log(role_id):
+    """Get role audit log (AJAX)."""
+    page = request.args.get('page', 1, type=int)
+    audit = get_role_audit_log(role_id, page=page)
+
+    return jsonify(audit)
 
 
 # ==================== Hotel Guests Routes ====================
