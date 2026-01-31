@@ -257,6 +257,31 @@ class TestRoleRoutes:
         body = response.data.decode('utf-8')
         assert 'existe' in body.lower() or 'error' in body.lower()
 
+    def test_edit_role(self, app, client):
+        """POST /admin/roles/<id>/edit updates display_name and description."""
+        login_admin(client, app)
+
+        # Create a custom role to edit
+        with app.app_context():
+            from blueprints.admin.services.role_service import create_custom_role
+            result = create_custom_role('edit-test-role', 'Edit Test')
+            role_id = result['role_id']
+
+        response = client.post(f'/admin/roles/{role_id}/edit', data={
+            'display_name': 'Updated Name',
+            'description': 'Updated description'
+        }, follow_redirects=True)
+        assert response.status_code == 200
+        body = response.data.decode('utf-8')
+        assert 'actualizado' in body.lower() or 'success' in body.lower()
+
+        # Verify the change persisted
+        with app.app_context():
+            from models.role import get_role_by_id
+            role = get_role_by_id(role_id)
+            assert role['display_name'] == 'Updated Name'
+            assert role['description'] == 'Updated description'
+
     def test_delete_system_role_fails(self, app, client, staff_role_id):
         """POST delete on system role shows error."""
         login_admin(client, app)

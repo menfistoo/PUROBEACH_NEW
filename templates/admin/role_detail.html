@@ -19,7 +19,7 @@
         <a href="{{ url_for('admin.roles') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left"></i> Volver
         </a>
-        {% if not role.is_system or role.name != 'admin' %}
+        {% if role.name != 'admin' %}
         <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editRoleModal">
             <i class="fas fa-edit"></i> Editar Rol
         </button>
@@ -74,7 +74,7 @@
                             <table class="table table-sm table-hover mb-0">
                                 <thead>
                                     <tr>
-                                        <th style="min-width: 160px;">Feature</th>
+                                        <th style="min-width: 160px;">Funcionalidad</th>
                                         {% for action_key in matrix.action_order %}
                                         <th class="text-center" style="min-width: 90px;">
                                             {% if can_edit %}
@@ -140,7 +140,7 @@
 </div>
 
 <!-- Edit Role Modal -->
-{% if not role.is_system or role.name != 'admin' %}
+{% if role.name != 'admin' %}
 <div class="modal fade" id="editRoleModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">

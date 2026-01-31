@@ -248,7 +248,10 @@ def role_create():
         description = request.form.get('description', '').strip()
         clone_from = request.form.get('clone_from', '')
 
-        clone_from_id = int(clone_from) if clone_from else None
+        try:
+            clone_from_id = int(clone_from) if clone_from else None
+        except (ValueError, TypeError):
+            clone_from_id = None
 
         result = create_custom_role(name, display_name, description, clone_from_id)
 
@@ -368,7 +371,7 @@ def api_role_permissions_save(role_id):
 @permission_required('admin.roles.manage')
 def api_role_audit_log(role_id):
     """Get role audit log (AJAX)."""
-    page = request.args.get('page', 1, type=int)
+    page = max(1, request.args.get('page', 1, type=int))
     audit = get_role_audit_log(role_id, page=page)
 
     return jsonify(audit)

@@ -6,6 +6,12 @@
 let roleId = null;
 let canEdit = false;
 
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 function initRolePermissions(id, editable) {
     roleId = id;
     canEdit = editable;
@@ -157,11 +163,11 @@ async function loadAuditLog(page) {
             const date = new Date(entry.created_at).toLocaleString('es-ES', {
                 day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
             });
-            const user = entry.full_name || entry.username || 'Sistema';
+            const user = escapeHtml(entry.full_name || entry.username || 'Sistema');
             const summary = formatAuditSummary(entry);
 
             html += `<tr>`;
-            html += `<td><small>${date}</small></td>`;
+            html += `<td><small>${escapeHtml(date)}</small></td>`;
             html += `<td>${user}</td>`;
             html += `<td>${summary}</td>`;
             html += `<td>`;
@@ -176,12 +182,12 @@ async function loadAuditLog(page) {
                 const changes = entry.changes;
                 if (changes.added && changes.added.length > 0) {
                     changes.added.forEach(p => {
-                        html += `<div class="text-success"><i class="fas fa-check"></i> Añadido: ${p.name} <small class="text-muted">(${p.code})</small></div>`;
+                        html += `<div class="text-success"><i class="fas fa-check"></i> Añadido: ${escapeHtml(p.name)} <small class="text-muted">(${escapeHtml(p.code)})</small></div>`;
                     });
                 }
                 if (changes.removed && changes.removed.length > 0) {
                     changes.removed.forEach(p => {
-                        html += `<div class="text-danger"><i class="fas fa-times"></i> Quitado: ${p.name} <small class="text-muted">(${p.code})</small></div>`;
+                        html += `<div class="text-danger"><i class="fas fa-times"></i> Quitado: ${escapeHtml(p.name)} <small class="text-muted">(${escapeHtml(p.code)})</small></div>`;
                     });
                 }
                 html += `</td></tr>`;
@@ -220,7 +226,7 @@ function formatAuditSummary(entry) {
     switch (entry.action) {
         case 'role_created': {
             const clone = entry.changes?.cloned_from;
-            return 'Rol creado' + (clone ? ` (basado en ${clone})` : '');
+            return 'Rol creado' + (clone ? ` (basado en ${escapeHtml(clone)})` : '');
         }
         case 'role_updated': {
             const changes = entry.changes?.changes || {};
@@ -228,7 +234,7 @@ function formatAuditSummary(entry) {
                 const labels = { display_name: 'nombre', description: 'descripción' };
                 return labels[f] || f;
             });
-            return `Rol editado: ${fields.join(', ')}`;
+            return `Rol editado: ${escapeHtml(fields.join(', '))}`;
         }
         case 'role_deleted':
             return 'Rol eliminado';
