@@ -99,7 +99,6 @@ function initSaveButton() {
 }
 
 function showToast(message, type) {
-    const container = document.querySelector('.main-content');
     const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
     const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
 
@@ -110,8 +109,10 @@ function showToast(message, type) {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
 
-    const content = container.querySelector('.container-fluid') || container;
-    content.insertBefore(alert, content.firstChild);
+    const contentWrapper = document.querySelector('.content-wrapper');
+    if (contentWrapper) {
+        contentWrapper.insertBefore(alert, contentWrapper.firstChild);
+    }
 
     setTimeout(() => alert.remove(), 5000);
 }

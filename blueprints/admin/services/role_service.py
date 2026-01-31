@@ -52,7 +52,7 @@ def create_custom_role(name: str, display_name: str, description: str = None,
         return {'success': False, 'error': error}
 
     if not display_name or len(display_name.strip()) < 2:
-        return {'success': False, 'error': 'El nombre visible debe tener al menos 2 caracteres'}
+        return {'success': False, 'error': 'invalid_display_name'}
 
     role_id = create_role(name, display_name.strip(), description)
 

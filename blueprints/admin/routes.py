@@ -342,7 +342,10 @@ def api_role_permissions_save(role_id):
     if not data or 'permission_ids' not in data:
         return jsonify({'success': False, 'error': 'Datos inválidos'}), 400
 
-    permission_ids = [int(pid) for pid in data['permission_ids']]
+    try:
+        permission_ids = [int(pid) for pid in data['permission_ids']]
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'Datos inválidos'}), 400
 
     result = bulk_set_permissions(role_id, permission_ids)
 
