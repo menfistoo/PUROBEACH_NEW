@@ -7,9 +7,9 @@ services:
     env_file:
       - .env.production
     environment:
-      - FLASK_ENV=production
+      - FLASK_ENV=${FLASK_ENV:-production}
     ports:
-      - "8000:8000"  # Direct access (remove in production behind Nginx)
+      - "${APP_PORT:-8000}:8000"  # Direct access (remove in production behind Nginx)
     volumes:
       - db-data:/app/instance
       - uploads:/app/static/uploads

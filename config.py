@@ -49,6 +49,7 @@ class DevelopmentConfig(Config):
     DEBUG = True
     TESTING = False
     TEMPLATES_AUTO_RELOAD = True
+    SESSION_COOKIE_SECURE = False  # Explicitly False for dev (no HTTPS)
 
 
 class ProductionConfig(Config):
