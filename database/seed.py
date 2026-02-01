@@ -49,23 +49,27 @@ def seed_database(db):
         ('admin.users.view', 'Usuarios', 'admin', 1, 11, 'fa-users-gear', '/admin/users', menu_admin_id),
         ('admin.roles.view', 'Roles', 'admin', 1, 12, 'fa-user-shield', '/admin/roles', menu_admin_id),
         ('admin.hotel_guests.view', 'Huéspedes Hotel', 'admin', 1, 14, 'fa-hotel', '/admin/hotel-guests', menu_admin_id),
+        ('admin.audit.view', 'Registro de Auditoría', 'admin', 1, 15, 'fa-clipboard-list', '/admin/audit', menu_admin_id),
 
-        # Configuración children
-        # Note: zones.view is now a non-menu permission (integrated into furniture-manager)
-        ('beach.furniture_types.view', 'Tipos de Mobiliario', 'config', 1, 22, 'fa-shapes', '/beach/config/furniture-types', menu_config_id),
-        ('beach.furniture.view', 'Gestor de Mobiliario', 'config', 1, 23, 'fa-couch', '/beach/config/furniture-manager', menu_config_id),
-        ('beach.pricing.view', 'Precios', 'config', 1, 24, 'fa-tags', '/beach/config/pricing', menu_config_id),
-        ('beach.states.view', 'Estados', 'config', 1, 25, 'fa-toggle-on', '/beach/config/states', menu_config_id),
-        ('beach.characteristics.view', 'Caracteristicas', 'config', 1, 26, 'fa-list-check', '/beach/config/characteristics', menu_config_id),
+        # Configuración children (codes match route @permission_required)
+        ('beach.config.furniture.view', 'Mobiliario', 'config', 1, 22, 'fa-couch', '/beach/config/furniture-manager', menu_config_id),
+        ('beach.config.pricing.view', 'Precios', 'config', 1, 24, 'fa-tags', '/beach/config/pricing', menu_config_id),
+        ('beach.config.states.view', 'Estados', 'config', 1, 25, 'fa-toggle-on', '/beach/config/states', menu_config_id),
+        ('beach.config.characteristics.view', 'Caracteristicas', 'config', 1, 26, 'fa-list-check', '/beach/config/characteristics', menu_config_id),
+        ('beach.config.packages.view', 'Paquetes', 'config', 1, 27, 'fa-box-open', '/beach/config/packages', menu_config_id),
+        ('beach.config.minimum_consumption.view', 'Consumo Mínimo', 'config', 1, 28, 'fa-receipt', '/beach/config/minimum-consumption', menu_config_id),
+        ('beach.config.map_editor.view', 'Editor de Mapa', 'config', 1, 29, 'fa-map-pin', '/beach/config/map-editor', menu_config_id),
 
         # Operaciones children
         ('beach.map.view', 'Mapa', 'operations', 1, 31, 'fa-map', '/beach/map', menu_operations_id),
         ('beach.reservations.view', 'Reservas', 'operations', 1, 32, 'fa-calendar-check', '/beach/reservations', menu_operations_id),
         ('beach.customers.view', 'Clientes', 'operations', 1, 33, 'fa-address-book', '/beach/customers', menu_operations_id),
+        ('beach.waitlist.view', 'Lista de Espera', 'operations', 1, 34, 'fa-clock', '/beach/waitlist', menu_operations_id),
 
         # Informes children
-        ('beach.reports.view', 'Conciliación de Pagos', 'reports', 1, 41, 'fa-file-lines', '/beach/reports/payment-reconciliation', menu_reports_id),
+        ('beach.reports.payment_reconciliation', 'Conciliación de Pagos', 'reports', 1, 41, 'fa-file-lines', '/beach/reports/payment-reconciliation', menu_reports_id),
         ('beach.analytics.view', 'Analytics', 'reports', 1, 42, 'fa-chart-pie', '/beach/analytics', menu_reports_id),
+        ('beach.insights.view', 'Insights', 'reports', 1, 43, 'fa-lightbulb', '/beach/insights', menu_reports_id),
     ]
 
     for code, name, module, is_menu, menu_order, menu_icon, menu_url, parent_id in child_permissions:
@@ -76,27 +80,51 @@ def seed_database(db):
 
     # 4. Create non-menu action permissions
     action_permissions = [
+        # Admin actions
         ('admin.users.manage', 'Gestionar Usuarios', 'admin'),
         ('admin.roles.manage', 'Gestionar Roles', 'admin'),
         ('admin.hotel_guests.import', 'Importar Huéspedes', 'admin'),
         ('admin.hotel_guests.export', 'Exportar Huéspedes', 'admin'),
+
+        # Map actions
         ('beach.map.interact', 'Interactuar con Mapa', 'operations'),
         ('beach.map.edit', 'Editar Posiciones Mapa', 'operations'),
+
+        # Reservation actions
         ('beach.reservations.create', 'Crear Reservas', 'operations'),
         ('beach.reservations.edit', 'Editar Reservas', 'operations'),
         ('beach.reservations.delete', 'Eliminar Reservas', 'operations'),
         ('beach.reservations.change_state', 'Cambiar Estado Reservas', 'operations'),
+
+        # Customer actions
         ('beach.customers.create', 'Crear Clientes', 'operations'),
         ('beach.customers.edit', 'Editar Clientes', 'operations'),
         ('beach.customers.merge', 'Fusionar Clientes', 'operations'),
-        ('beach.zones.view', 'Ver Zonas', 'config'),  # Non-menu, integrated into furniture-manager
+
+        # Config actions (codes match route @permission_required)
+        ('beach.zones.view', 'Ver Zonas', 'config'),
         ('beach.zones.manage', 'Gestionar Zonas', 'config'),
-        ('beach.furniture_types.manage', 'Gestionar Tipos Mobiliario', 'config'),
-        ('beach.furniture.manage', 'Gestionar Mobiliario', 'config'),
-        ('beach.pricing.manage', 'Gestionar Precios', 'config'),
-        ('beach.states.manage', 'Gestionar Estados', 'config'),
-        ('beach.characteristics.manage', 'Gestionar Caracteristicas', 'config'),
+        ('beach.config.furniture.manage', 'Gestionar Mobiliario', 'config'),
+        ('beach.config.pricing.manage', 'Gestionar Precios', 'config'),
+        ('beach.config.states.manage', 'Gestionar Estados', 'config'),
+        ('beach.config.characteristics.manage', 'Gestionar Caracteristicas', 'config'),
+        ('beach.config.packages.manage', 'Gestionar Paquetes', 'config'),
+        ('beach.config.minimum_consumption.manage', 'Gestionar Consumo Mínimo', 'config'),
+        ('beach.config.map_editor.edit', 'Editar Mapa', 'config'),
         ('beach.config.manage', 'Gestionar Configuración', 'config'),
+
+        # Furniture special actions
+        ('beach.furniture.block', 'Bloquear Mobiliario', 'operations'),
+        ('beach.furniture.temporary', 'Mobiliario Temporal', 'operations'),
+
+        # Waitlist actions
+        ('beach.waitlist.create', 'Crear Lista de Espera', 'operations'),
+        ('beach.waitlist.manage', 'Gestionar Lista de Espera', 'operations'),
+
+        # Insights actions
+        ('beach.insights.analytics', 'Analytics Avanzados', 'reports'),
+
+        # Reports & API
         ('beach.reports.export', 'Exportar Datos', 'reports'),
         ('api.access', 'Acceso API', 'api'),
         ('api.admin', 'Administración API', 'api'),

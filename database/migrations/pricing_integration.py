@@ -31,19 +31,27 @@ def migrate_add_pricing_fields() -> bool:
         cursor = conn.cursor()
 
         try:
-            print("Adding package_id column...")
-            # Add package_id column
-            cursor.execute("""
-                ALTER TABLE beach_reservations
-                ADD COLUMN package_id INTEGER REFERENCES beach_packages(id)
-            """)
+            # Check existing columns
+            cursor.execute('PRAGMA table_info(beach_reservations)')
+            existing_columns = {row[1] for row in cursor.fetchall()}
 
-            print("Adding payment_ticket_number column...")
-            # Add payment_ticket_number column
-            cursor.execute("""
-                ALTER TABLE beach_reservations
-                ADD COLUMN payment_ticket_number TEXT
-            """)
+            if 'package_id' not in existing_columns:
+                print("Adding package_id column...")
+                cursor.execute("""
+                    ALTER TABLE beach_reservations
+                    ADD COLUMN package_id INTEGER REFERENCES beach_packages(id)
+                """)
+            else:
+                print("package_id column already exists, skipping.")
+
+            if 'payment_ticket_number' not in existing_columns:
+                print("Adding payment_ticket_number column...")
+                cursor.execute("""
+                    ALTER TABLE beach_reservations
+                    ADD COLUMN payment_ticket_number TEXT
+                """)
+            else:
+                print("payment_ticket_number column already exists, skipping.")
 
             print("Creating indexes...")
             # Create index on package_id for faster lookups

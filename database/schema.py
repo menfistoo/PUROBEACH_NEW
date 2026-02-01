@@ -183,7 +183,9 @@ def create_tables(db):
             features TEXT,
             fill_color TEXT DEFAULT NULL,
             active INTEGER DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            temp_start_date DATE,
+            temp_end_date DATE
         )
     ''')
 
@@ -234,6 +236,7 @@ def create_tables(db):
             notes TEXT,
             source_file TEXT,
             is_main_guest INTEGER DEFAULT 0,
+            booking_reference TEXT,
             imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(room_number, arrival_date, guest_name)
@@ -376,7 +379,42 @@ def create_tables(db):
             created_by TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            is_furniture_locked INTEGER DEFAULT 0
+            is_furniture_locked INTEGER DEFAULT 0,
+
+            -- Migration columns (ticket & scheduling)
+            ticket_number TEXT,
+            reservation_date DATE,
+            time_slot TEXT DEFAULT 'all_day',
+            current_states TEXT DEFAULT '',
+            current_state TEXT DEFAULT 'Confirmada',
+
+            -- Pricing & payment
+            payment_status TEXT DEFAULT 'NO',
+            price REAL DEFAULT 0.0,
+            final_price REAL DEFAULT 0.0,
+            hamaca_included INTEGER DEFAULT 1,
+            price_catalog_id INTEGER,
+            paid INTEGER DEFAULT 0,
+            charge_to_room INTEGER DEFAULT 0,
+            charge_reference TEXT DEFAULT '',
+            minimum_consumption_amount REAL DEFAULT 0.0,
+            minimum_consumption_policy_id INTEGER,
+            consumption_charged_to_pms INTEGER DEFAULT 0,
+            consumption_charged_at TIMESTAMP,
+            consumption_charged_by TEXT,
+
+            -- Check-in/out tracking
+            check_in_date DATE,
+            check_out_date DATE,
+
+            -- Reservation type & package
+            reservation_type TEXT DEFAULT 'normal',
+            package_id INTEGER REFERENCES beach_packages(id),
+            payment_ticket_number TEXT,
+            payment_method TEXT,
+
+            -- Room change tracking
+            original_room TEXT
         )
     ''')
 
@@ -560,6 +598,9 @@ def create_indexes(db):
     db.execute('CREATE INDEX idx_reservations_dates ON beach_reservations(start_date, end_date)')
     db.execute('CREATE INDEX idx_reservations_customer ON beach_reservations(customer_id)')
     db.execute('CREATE INDEX idx_reservations_state ON beach_reservations(state_id)')
+    db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_reservations_ticket ON beach_reservations(ticket_number)')
+    db.execute('CREATE INDEX IF NOT EXISTS idx_reservations_date ON beach_reservations(reservation_date)')
+    db.execute('CREATE INDEX IF NOT EXISTS idx_reservations_payment_ticket ON beach_reservations(payment_ticket_number) WHERE payment_ticket_number IS NOT NULL')
 
     # Reservation furniture indexes
     db.execute('CREATE INDEX idx_res_furniture_date ON beach_reservation_furniture(assignment_date, furniture_id)')
