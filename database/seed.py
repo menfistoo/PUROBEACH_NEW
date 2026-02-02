@@ -55,7 +55,7 @@ def seed_database(db):
         ('beach.config.furniture.view', 'Mobiliario', 'config', 1, 22, 'fa-couch', '/beach/config/furniture-manager', menu_config_id),
         ('beach.config.pricing.view', 'Precios', 'config', 1, 24, 'fa-tags', '/beach/config/pricing', menu_config_id),
         ('beach.config.states.view', 'Estados', 'config', 1, 25, 'fa-toggle-on', '/beach/config/states', menu_config_id),
-        ('beach.config.characteristics.view', 'Caracteristicas', 'config', 1, 26, 'fa-list-check', '/beach/config/characteristics', menu_config_id),
+        ('beach.config.characteristics.view', 'Etiquetas y Características', 'config', 1, 26, 'fa-list-check', '/beach/config/tags-characteristics', menu_config_id),
         ('beach.config.packages.view', 'Paquetes', 'config', 0, 27, 'fa-box-open', '/beach/config/packages', menu_config_id),
         ('beach.config.minimum_consumption.view', 'Consumo Mínimo', 'config', 0, 28, 'fa-receipt', '/beach/config/minimum-consumption', menu_config_id),
         ('beach.config.map_editor.view', 'Editor de Mapa', 'config', 0, 29, 'fa-map-pin', '/beach/config/map-editor', menu_config_id),

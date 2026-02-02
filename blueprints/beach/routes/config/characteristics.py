@@ -15,17 +15,12 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.config.characteristics.view')
     def characteristics():
-        """List all characteristics."""
-        from models.characteristic import get_all_characteristics
-
-        show_inactive = request.args.get('show_inactive') == '1'
-        all_chars = get_all_characteristics(active_only=not show_inactive)
-
-        return render_template(
-            'beach/config/characteristics.html',
-            characteristics=all_chars,
-            show_inactive=show_inactive
-        )
+        """Redirect to unified page (characteristics tab)."""
+        show_inactive = request.args.get('show_inactive')
+        params = {'tab': 'characteristics'}
+        if show_inactive:
+            params['show_inactive'] = show_inactive
+        return redirect(url_for('beach.beach_config.tags_characteristics', **params), code=301)
 
     @bp.route('/characteristics/create', methods=['GET', 'POST'])
     @login_required
@@ -54,7 +49,7 @@ def register_routes(bp):
                     color=color
                 )
                 flash('Caracteristica creada correctamente', 'success')
-                return redirect(url_for('beach.beach_config.characteristics'))
+                return redirect(url_for('beach.beach_config.tags_characteristics', tab='characteristics'))
 
             except ValueError as e:
                 current_app.logger.error(f'Error: {e}', exc_info=True)
@@ -79,7 +74,7 @@ def register_routes(bp):
         char = get_characteristic_by_id(characteristic_id)
         if not char:
             flash('Caracteristica no encontrada', 'error')
-            return redirect(url_for('beach.beach_config.characteristics'))
+            return redirect(url_for('beach.beach_config.tags_characteristics', tab='characteristics'))
 
         if request.method == 'POST':
             name = request.form.get('name', '').strip()
@@ -109,7 +104,7 @@ def register_routes(bp):
                     flash('Caracteristica actualizada correctamente', 'success')
                 else:
                     flash('No se realizaron cambios', 'warning')
-                return redirect(url_for('beach.beach_config.characteristics'))
+                return redirect(url_for('beach.beach_config.tags_characteristics', tab='characteristics'))
 
             except Exception as e:
                 current_app.logger.error(f'Error: {e}', exc_info=True)
@@ -138,7 +133,7 @@ def register_routes(bp):
             current_app.logger.error(f'Error: {e}', exc_info=True)
             flash('Error al eliminar. Contacte al administrador.', 'error')
 
-        return redirect(url_for('beach.beach_config.characteristics'))
+        return redirect(url_for('beach.beach_config.tags_characteristics', tab='characteristics'))
 
     @bp.route('/characteristics/reorder', methods=['POST'])
     @login_required

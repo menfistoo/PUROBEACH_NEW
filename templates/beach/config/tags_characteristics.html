@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% set page_title = "Etiquetas y Características" %}
+
+{% block title %}Etiquetas y Características - PuroBeach{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Tab Navigation */
+.config-tabs {
+    border-bottom: 2px solid var(--color-accent, #F5E6D3);
+    margin-bottom: 0;
+    background: #fff;
+    padding: 0 1rem;
+}
+
+.config-tabs .nav-link {
+    color: var(--color-secondary, #1A3A5C);
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    padding: 0.875rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    margin-bottom: -2px;
+}
+
+.config-tabs .nav-link:hover {
+    color: var(--color-primary, #D4AF37);
+    border-bottom-color: rgba(212, 175, 55, 0.3);
+    background: transparent;
+}
+
+.config-tabs .nav-link.active {
+    color: var(--color-primary, #D4AF37);
+    background: transparent;
+    border-bottom-color: var(--color-primary, #D4AF37);
+}
+
+.config-tabs .nav-link i {
+    margin-right: 0.5rem;
+}
+
+.tab-content {
+    background: #f8f9fa;
+}
+
+.tab-pane {
+    min-height: 500px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fas fa-tags me-2"></i>Etiquetas y Características</h4>
+</div>
+
+<!-- Tab Navigation -->
+<ul class="nav nav-tabs config-tabs" id="tagsCharTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'tags' %}active{% endif %}"
+                id="tags-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#tags-pane"
+                type="button" role="tab"
+                aria-controls="tags-pane"
+                aria-selected="{{ 'true' if active_tab == 'tags' else 'false' }}">
+            <i class="fas fa-tags"></i> Etiquetas
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'characteristics' %}active{% endif %}"
+                id="characteristics-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#characteristics-pane"
+                type="button" role="tab"
+                aria-controls="characteristics-pane"
+                aria-selected="{{ 'true' if active_tab == 'characteristics' else 'false' }}">
+            <i class="fas fa-list-check"></i> Características
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="tagsCharTabContent">
+    <!-- Tags Tab -->
+    <div class="tab-pane fade {% if active_tab == 'tags' %}show active{% endif %}"
+         id="tags-pane" role="tabpanel" aria-labelledby="tags-tab">
+        {% include 'beach/config/_tags_tab.html' %}
+    </div>
+
+    <!-- Characteristics Tab -->
+    <div class="tab-pane fade {% if active_tab == 'characteristics' %}show active{% endif %}"
+         id="characteristics-pane" role="tabpanel" aria-labelledby="characteristics-tab">
+        {% include 'beach/config/_characteristics_tab.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update URL when tab changes for bookmarking
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+            const targetId = event.target.dataset.bsTarget.replace('#', '').replace('-pane', '');
+            const url = new URL(window.location);
+            url.searchParams.set('tab', targetId);
+            // Remove show_inactive when switching to tags tab
+            if (targetId === 'tags') {
+                url.searchParams.delete('show_inactive');
+            }
+            window.history.replaceState({}, '', url);
+        });
+    });
+
+    // Sortable for characteristics
+    const tbody = document.getElementById('sortable-characteristics');
+    if (tbody) {
+        new Sortable(tbody, {
+            handle: '.drag-handle',
+            animation: 150,
+            onEnd: function() {
+                const order = Array.from(tbody.querySelectorAll('tr'))
+                    .map(row => parseInt(row.dataset.id));
+
+                fetch('{{ url_for("beach.beach_config.characteristics_reorder") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ order: order })
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
