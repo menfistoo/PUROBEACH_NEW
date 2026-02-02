@@ -957,6 +957,13 @@ def main():
         zone_ids = create_zones(conn)
         create_furniture_types(conn)
         create_pool_club_furniture(conn, zone_ids['Pool Club'])
+        # Ensure admin password matches expected demo password
+        from werkzeug.security import generate_password_hash
+        admin_hash = generate_password_hash('PuroAdmin2026!')
+        conn.execute('UPDATE users SET password_hash = ? WHERE username = ?', (admin_hash, 'admin'))
+        conn.commit()
+        print("🔑 Admin password updated to: PuroAdmin2026!")
+
         create_pricing_data(conn)
         client_ids = create_demo_clients(conn)
         create_demo_reservations(conn, client_ids)
