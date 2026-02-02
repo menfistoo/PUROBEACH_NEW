@@ -213,9 +213,16 @@ export function bindToolbarControls(editor) {
 
     // Delete selected
     el('btn-delete-selected')?.addEventListener('click', function () {
-        if (confirm('¿Eliminar el elemento seleccionado?')) {
-            editor.deleteSelected();
-        }
+        PuroBeach.confirmAction({
+            title: 'Confirmar eliminación',
+            message: '¿Eliminar el elemento seleccionado?',
+            confirmText: 'Eliminar',
+            confirmClass: 'btn-danger',
+            iconClass: 'fa-trash-alt',
+            onConfirm: function() {
+                editor.deleteSelected();
+            }
+        });
     });
 }
 

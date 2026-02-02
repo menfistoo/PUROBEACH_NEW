@@ -1265,3 +1265,96 @@ html.sidebar-collapsed .nav-child.active i {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--color-dark-gray);
 }
+
+/* ==================== Confirmation Modal ==================== */
+.confirm-modal {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.confirm-modal-header {
+    background: linear-gradient(135deg, var(--color-off-white) 0%, var(--color-warm-sand) 100%);
+    border-bottom: 1px solid var(--color-border);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.confirm-modal-header .modal-title {
+    font-weight: 600;
+    color: var(--color-near-black);
+    font-size: 1.1rem;
+    margin: 0;
+    flex: 1;
+}
+
+.confirm-modal-header .btn-close {
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.confirm-modal-header .btn-close:hover {
+    opacity: 1;
+}
+
+.confirm-modal-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.confirm-modal-body {
+    padding: 1.5rem;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.confirm-modal-body p {
+    margin-bottom: 0;
+}
+
+.confirm-modal-footer {
+    background: var(--color-off-white);
+    border-top: 1px solid var(--color-border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.confirm-modal-footer .btn {
+    min-width: 110px;
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.confirm-modal-footer .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.confirm-modal-footer .btn-outline-secondary {
+    color: var(--color-text-secondary);
+    border-color: var(--color-border);
+}
+
+.confirm-modal-footer .btn-outline-secondary:hover {
+    background: var(--color-light-gray);
+    color: var(--color-text);
+    border-color: var(--color-medium-gray);
+}
+
+/* Modal backdrop styling */
+#confirmActionModal .modal-dialog {
+    max-width: 440px;
+}
+
+#confirmActionModal.fade .modal-dialog {
+    transition: transform 0.2s ease-out;
+}

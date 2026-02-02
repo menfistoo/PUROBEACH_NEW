@@ -30,7 +30,11 @@
         </a>
         {% endif %}
         <form method="POST" action="{{ url_for('beach.customers_delete', customer_id=customer.id) }}"
-              class="d-inline" onsubmit="return confirm('¿Está seguro de eliminar este cliente?')">
+              class="d-inline"
+              data-confirm="¿Está seguro de eliminar este cliente?"
+              data-confirm-title="Confirmar eliminación"
+              data-confirm-btn-text="Eliminar"
+              data-confirm-icon="fa-trash-alt">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-outline-danger">
                 <i class="fas fa-trash"></i> Eliminar

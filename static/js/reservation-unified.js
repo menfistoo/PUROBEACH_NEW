@@ -300,12 +300,17 @@ class ReservationUnified {
         });
     }
 
-    navigateToMapForFurniture() {
+    async navigateToMapForFurniture() {
         // Check for unsaved changes first
         if (Object.keys(this.pendingChanges).length > 0) {
-            if (!confirm('Hay cambios sin guardar. ¿Desea continuar sin guardarlos?')) {
-                return;
-            }
+            const confirmed = await PuroBeach.confirmAction({
+                title: 'Cambios sin guardar',
+                message: 'Hay cambios sin guardar. ¿Desea continuar sin guardarlos?',
+                confirmText: 'Continuar',
+                confirmClass: 'btn-warning',
+                iconClass: 'fa-exclamation-triangle'
+            });
+            if (!confirmed) return;
         }
 
         // Build return URL

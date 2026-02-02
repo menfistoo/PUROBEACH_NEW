@@ -13,7 +13,7 @@
 | Phase | Status | Items | Done |
 |-------|--------|-------|------|
 | Phase 1 - Critical | COMPLETED | 6 | 6/6 |
-| Phase 2 - High | PENDING | 5 | 0/5 |
+| Phase 2 - High | COMPLETED | 5 | 5/5 |
 | Phase 3 - Polish | PENDING | 4 | 0/4 |
 | Phase 4 - Nice to Have | PENDING | 6 | 0/6 |
 
@@ -71,35 +71,35 @@
 
 ## Phase 2 - HIGH (Polished demo)
 
-### 2.1 [ ] Implement basic Excel export for reservations
+### 2.1 [x] Implement basic Excel export for reservations
 - **Priority:** HIGH
 - **Files:** `blueprints/beach/routes/reports/`, models
 - **Symptom:** Export functionality referenced in UI but not implemented (stubs only)
 - **Fix:** Implement basic Excel export using openpyxl (already in requirements)
 - **Demo impact:** Cannot export any data
 
-### 2.2 [ ] Add state transition validation
+### 2.2 [x] Add state transition validation
 - **Priority:** HIGH
 - **Files:** `models/reservation_state.py`
 - **Symptom:** No validation prevents invalid transitions (e.g., Completada -> Pendiente)
 - **Fix:** Define valid transition matrix and enforce
 - **Demo impact:** Reservations in impossible states
 
-### 2.3 [ ] Consistent API response format
+### 2.3 [x] Consistent API response format
 - **Priority:** MEDIUM
 - **Files:** All API routes
 - **Symptom:** Some return `{success, error}`, others `{error}`, others `{data, status}`
 - **Fix:** Standardize all responses to `{success: bool, data?: any, error?: string}`
 - **Demo impact:** Frontend error handling unreliable
 
-### 2.4 [ ] Add loading states on buttons
+### 2.4 [x] Add loading states on buttons
 - **Priority:** MEDIUM
 - **Files:** JS files, templates
 - **Symptom:** No visual feedback when operations are in progress
 - **Fix:** Disable button + spinner while AJAX calls run
 - **Demo impact:** Users click multiple times, duplicate operations
 
-### 2.5 [ ] Hide canvas info bar on mobile
+### 2.5 [x] Hide canvas info bar on mobile
 - **Priority:** MEDIUM
 - **Files:** `static/css/map-page.css`, `templates/beach/map.html`
 - **Symptom:** Canvas info bar takes 30% of mobile screen

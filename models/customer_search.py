@@ -5,6 +5,7 @@ Handles unified search, hotel guest integration, and customer merging.
 
 import unicodedata
 from database import get_db
+from utils.validators import normalize_phone
 from .customer_crud import get_customer_by_id, set_customer_preferences
 
 
@@ -80,6 +81,8 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
 
         # Build SQL LIKE patterns for pre-filtering (improves performance)
         like_patterns = [f'%{word}%' for word in search_words]
+        # Also build normalized phone patterns for phone-like queries
+        normalized_phone_patterns = [f'%{normalize_phone(word)}%' if normalize_phone(word) else f'%{word}%' for word in search_words]
 
         # Search beach_customers with SQL pre-filtering
         customer_query = '''
@@ -90,14 +93,15 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
         params = []
 
         # Add SQL-level filtering for each word
-        for pattern in like_patterns:
+        for pattern, phone_pattern in zip(like_patterns, normalized_phone_patterns):
             customer_query += '''
                 AND (LOWER(c.first_name || ' ' || COALESCE(c.last_name, '')) LIKE ?
                      OR LOWER(c.email) LIKE ?
                      OR c.phone LIKE ?
+                     OR c.phone LIKE ?
                      OR c.room_number LIKE ?)
             '''
-            params.extend([pattern, pattern, pattern, pattern])
+            params.extend([pattern, pattern, pattern, phone_pattern, pattern])
 
         if customer_type:
             customer_query += ' AND c.customer_type = ?'
@@ -303,7 +307,7 @@ def create_customer_from_hotel_guest(hotel_guest_id: int, additional_data: dict 
 
         # Use additional data if provided, otherwise use hotel guest data
         email = additional_data.get('email') or guest.get('email')
-        phone = additional_data.get('phone') or guest.get('phone')
+        phone = normalize_phone(additional_data.get('phone') or guest.get('phone'))
         country_code = additional_data.get('country_code', '+34')
         notes = additional_data.get('notes') or f"Huesped hotel (llegada: {guest.get('arrival_date')}, salida: {guest.get('departure_date')})"
 

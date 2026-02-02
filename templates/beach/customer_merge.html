@@ -33,7 +33,12 @@
                     </p>
                 </div>
 
-                <form method="POST" onsubmit="return confirm('¿Está seguro de fusionar estos clientes? Esta acción no se puede deshacer.')">
+                <form method="POST"
+                      data-confirm="¿Está seguro de fusionar estos clientes? Esta acción no se puede deshacer."
+                      data-confirm-title="Confirmar fusión"
+                      data-confirm-btn-text="Fusionar"
+                      data-confirm-btn-class="btn-warning"
+                      data-confirm-icon="fa-compress-arrows-alt">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row">
                         <!-- Source Customer (to be deleted) -->

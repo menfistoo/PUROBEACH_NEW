@@ -133,7 +133,10 @@
                             </a>
                             <form method="POST" action="{{ url_for('admin.hotel_guest_delete', guest_id=guest.id) }}"
                                   class="d-inline"
-                                  onsubmit="return confirm('¿Está seguro de eliminar este registro?')">
+                                  data-confirm="¿Está seguro de eliminar este registro?"
+                                  data-confirm-title="Confirmar eliminación"
+                                  data-confirm-btn-text="Eliminar"
+                                  data-confirm-icon="fa-trash-alt">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-outline-danger" title="Eliminar">
                                     <i class="fa-solid fa-trash"></i>
@@ -144,10 +147,20 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-4">
-                        <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
-                        No se encontraron huéspedes.
-                        <a href="{{ url_for('admin.hotel_guests_import') }}">Importar desde Excel</a>
+                    <td colspan="8" class="text-center py-5">
+                        <i class="fa-solid fa-hotel fa-3x text-muted mb-3 d-block opacity-50"></i>
+                        <h5 class="text-muted">No se encontraron hu&eacute;spedes</h5>
+                        {% if search or room_filter %}
+                        <p class="text-muted mb-3">Pruebe con otros filtros de b&uacute;squeda</p>
+                        <a href="{{ url_for('admin.hotel_guests') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times me-1"></i>Limpiar filtros
+                        </a>
+                        {% else %}
+                        <p class="text-muted mb-3">Importe los datos de hu&eacute;spedes desde el sistema del hotel</p>
+                        <a href="{{ url_for('admin.hotel_guests_import') }}" class="btn btn-primary btn-sm">
+                            <i class="fa-solid fa-file-import me-1"></i>Importar Excel
+                        </a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

@@ -33,7 +33,11 @@
             <i class="fa-solid fa-edit"></i>
         </a>
         <form method="POST" action="{{ url_for('beach.beach_config.packages_delete', package_id=pkg.id) }}"
-              class="d-inline" onsubmit="return confirm('¿Eliminar paquete {{ pkg.package_name }}?')">
+              class="d-inline"
+              data-confirm="¿Eliminar paquete {{ pkg.package_name }}?"
+              data-confirm-title="Confirmar eliminación"
+              data-confirm-btn-text="Eliminar"
+              data-confirm-icon="fa-trash-alt">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
                 <i class="fa-solid fa-trash"></i>
@@ -80,7 +84,12 @@
     </div>
     {% else %}
     <div class="card-body text-center py-4">
-        <p class="text-muted mb-0 small">Sin paquetes configurados</p>
+        <i class="fa-solid fa-box-open fa-2x text-muted mb-2 d-block opacity-50"></i>
+        <p class="text-muted mb-2 small">Sin paquetes configurados para esta categor&iacute;a</p>
+        <a href="{{ url_for('beach.beach_config.packages_create', customer_type=customer_type_param) }}"
+           class="btn btn-outline-primary btn-sm">
+            <i class="fa-solid fa-plus me-1"></i>Crear paquete
+        </a>
     </div>
     {% endif %}
 </div>

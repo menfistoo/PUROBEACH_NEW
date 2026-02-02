@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize sidebar collapse functionality
     initializeSidebarCollapse();
 
+    // Initialize confirmation modal for forms with data-confirm attribute
+    initializeConfirmForms();
+
     console.log('PuroBeach initialized successfully');
 });
 
@@ -131,13 +134,181 @@ function dismissToast(toastId) {
     }
 }
 
+// =============================================================================
+// CONFIRMATION MODAL SYSTEM
+// =============================================================================
+
 /**
- * Confirm dialog for delete actions
- * @param {string} message - Confirmation message
- * @returns {boolean} - User confirmation
+ * Show a professional confirmation modal (replaces native confirm() dialogs).
+ *
+ * @param {object} options - Configuration options
+ * @param {string} [options.title='¿Está seguro?'] - Modal title
+ * @param {string} [options.message='Esta acción no se puede deshacer.'] - Modal body message (supports HTML)
+ * @param {string} [options.confirmText='Confirmar'] - Text for the confirm button
+ * @param {string} [options.cancelText='Cancelar'] - Text for the cancel button
+ * @param {string} [options.confirmClass='btn-danger'] - CSS class for the confirm button
+ * @param {string} [options.iconClass='fa-exclamation-triangle'] - FontAwesome icon class
+ * @param {string} [options.iconColor=''] - CSS color override for the icon (defaults to match confirmClass)
+ * @param {Function} [options.onConfirm] - Callback executed when user confirms
+ * @param {Function} [options.onCancel] - Callback executed when user cancels
+ * @returns {Promise<boolean>} - Resolves true if confirmed, false if cancelled
  */
-function confirmDelete(message = '¿Está seguro de eliminar este registro?') {
-    return confirm(message);
+function confirmAction(options = {}) {
+    const defaults = {
+        title: '¿Está seguro?',
+        message: 'Esta acción no se puede deshacer.',
+        confirmText: 'Confirmar',
+        cancelText: 'Cancelar',
+        confirmClass: 'btn-danger',
+        iconClass: 'fa-exclamation-triangle',
+        iconColor: '',
+        onConfirm: null,
+        onCancel: null
+    };
+
+    const config = { ...defaults, ...options };
+
+    return new Promise((resolve) => {
+        const modalEl = document.getElementById('confirmActionModal');
+        if (!modalEl) {
+            // Fallback to native confirm if modal is not in the DOM
+            const result = confirm(config.message);
+            if (result && config.onConfirm) config.onConfirm();
+            if (!result && config.onCancel) config.onCancel();
+            resolve(result);
+            return;
+        }
+
+        // Set modal content
+        const titleEl = document.getElementById('confirmActionModalLabel');
+        const messageEl = document.getElementById('confirmActionMessage');
+        const confirmBtn = document.getElementById('confirmActionConfirmBtn');
+        const cancelBtn = document.getElementById('confirmActionCancelBtn');
+        const iconContainer = document.getElementById('confirmActionIcon');
+
+        titleEl.textContent = config.title;
+        messageEl.innerHTML = config.message;
+
+        // Update confirm button
+        confirmBtn.className = 'btn ' + config.confirmClass;
+        confirmBtn.innerHTML = '<i class="fas fa-check"></i> ' + config.confirmText;
+
+        // Update cancel button
+        cancelBtn.innerHTML = '<i class="fas fa-times"></i> ' + config.cancelText;
+
+        // Update icon
+        const iconColorMap = {
+            'btn-danger': 'var(--color-error, #C1444F)',
+            'btn-warning': 'var(--color-warning, #E5A33D)',
+            'btn-primary': 'var(--color-primary, #D4AF37)',
+            'btn-outline-danger': 'var(--color-error, #C1444F)',
+            'btn-outline-warning': 'var(--color-warning, #E5A33D)'
+        };
+        const iconColor = config.iconColor || iconColorMap[config.confirmClass] || 'var(--color-warning, #E5A33D)';
+        iconContainer.innerHTML = '<i class="fas ' + config.iconClass + '"></i>';
+        iconContainer.style.color = iconColor;
+
+        // Track whether we already resolved (prevent double-fire)
+        let resolved = false;
+
+        function cleanup() {
+            confirmBtn.removeEventListener('click', handleConfirm);
+            modalEl.removeEventListener('hidden.bs.modal', handleDismiss);
+        }
+
+        function handleConfirm() {
+            if (resolved) return;
+            resolved = true;
+            cleanup();
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            if (config.onConfirm) config.onConfirm();
+            resolve(true);
+        }
+
+        function handleDismiss() {
+            if (resolved) return;
+            resolved = true;
+            cleanup();
+            if (config.onCancel) config.onCancel();
+            resolve(false);
+        }
+
+        confirmBtn.addEventListener('click', handleConfirm);
+        modalEl.addEventListener('hidden.bs.modal', handleDismiss);
+
+        // Show the modal
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    });
+}
+
+/**
+ * Confirm dialog for delete actions (backward-compatible wrapper).
+ * Now returns a Promise instead of a boolean, but supports both
+ * callback and await patterns.
+ *
+ * @param {string} message - Confirmation message
+ * @param {Function} [onConfirm] - Optional callback on confirm
+ * @returns {Promise<boolean>} - Resolves true if confirmed
+ */
+function confirmDelete(message = '¿Está seguro de eliminar este registro?', onConfirm = null) {
+    return confirmAction({
+        title: 'Confirmar eliminación',
+        message: message,
+        confirmText: 'Eliminar',
+        confirmClass: 'btn-danger',
+        iconClass: 'fa-trash-alt',
+        onConfirm: onConfirm
+    });
+}
+
+/**
+ * Initialize data-confirm attribute handling on forms.
+ * Forms with data-confirm="message" will show the confirmation modal
+ * instead of using native confirm() dialogs.
+ *
+ * Supported data attributes:
+ *   data-confirm="message"           - The confirmation message (required)
+ *   data-confirm-title="title"       - Custom title (optional)
+ *   data-confirm-btn-text="text"     - Confirm button text (optional)
+ *   data-confirm-btn-class="class"   - Confirm button CSS class (optional)
+ *   data-confirm-icon="icon"         - FontAwesome icon class (optional)
+ */
+function initializeConfirmForms() {
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        const confirmMessage = form.getAttribute('data-confirm');
+
+        // Only intercept forms with data-confirm attribute
+        if (!confirmMessage) return;
+
+        // Check if this submission was already confirmed
+        if (form._pbConfirmed) {
+            form._pbConfirmed = false;
+            return; // Let it proceed
+        }
+
+        // Prevent the form from submitting
+        e.preventDefault();
+
+        const title = form.getAttribute('data-confirm-title') || '¿Está seguro?';
+        const btnText = form.getAttribute('data-confirm-btn-text') || 'Confirmar';
+        const btnClass = form.getAttribute('data-confirm-btn-class') || 'btn-danger';
+        const iconClass = form.getAttribute('data-confirm-icon') || 'fa-exclamation-triangle';
+
+        confirmAction({
+            title: title,
+            message: confirmMessage,
+            confirmText: btnText,
+            confirmClass: btnClass,
+            iconClass: iconClass,
+            onConfirm: function() {
+                form._pbConfirmed = true;
+                form.submit();
+            }
+        });
+    });
 }
 
 /**
@@ -456,6 +627,7 @@ function setButtonLoading(button, loading, loadingText) {
 window.PuroBeach = {
     showToast,
     dismissToast,
+    confirmAction,
     confirmDelete,
     formatDate,
     formatDateTime,

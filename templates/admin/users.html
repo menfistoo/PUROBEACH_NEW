@@ -82,7 +82,10 @@
                             </a>
                             {% if user.username != 'admin' and user.id != current_user.id %}
                             <form method="POST" action="{{ url_for('admin.users_delete', user_id=user.id) }}" class="d-inline"
-                                  onsubmit="return confirm('¿Está seguro de eliminar este usuario?')">
+                                  data-confirm="¿Está seguro de eliminar este usuario?"
+                                  data-confirm-title="Confirmar eliminación"
+                                  data-confirm-btn-text="Eliminar"
+                                  data-confirm-icon="fa-trash-alt">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-outline-danger" title="Eliminar">
                                     <i class="fas fa-trash"></i>
@@ -94,7 +97,21 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7" class="text-center text-muted">No se encontraron usuarios</td>
+                    <td colspan="7" class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3 d-block opacity-50"></i>
+                        <h5 class="text-muted">No se encontraron usuarios</h5>
+                        {% if search or role_filter or active_filter %}
+                        <p class="text-muted mb-3">Pruebe con otros filtros de b&uacute;squeda</p>
+                        <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times me-1"></i>Limpiar filtros
+                        </a>
+                        {% else %}
+                        <p class="text-muted mb-3">Comience creando el primer usuario del sistema</p>
+                        <a href="{{ url_for('admin.users_create') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Crear Usuario
+                        </a>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

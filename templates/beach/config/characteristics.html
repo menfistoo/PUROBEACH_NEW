@@ -88,7 +88,10 @@
                             <form method="POST"
                                   action="{{ url_for('beach.beach_config.characteristics_delete', characteristic_id=char.id) }}"
                                   class="d-inline"
-                                  onsubmit="return confirm('Eliminar caracteristica {{ char.name }}?')">
+                                  data-confirm="¿Eliminar característica {{ char.name }}?"
+                                  data-confirm-title="Confirmar eliminación"
+                                  data-confirm-btn-text="Eliminar"
+                                  data-confirm-icon="fa-trash-alt">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
                                     <i class="fa-solid fa-trash"></i>

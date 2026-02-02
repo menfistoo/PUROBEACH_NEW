@@ -131,12 +131,19 @@ export const EditModeMixin = (Base) => class extends Base {
      *
      * @param {boolean} discard - Whether to discard changes (prompts confirmation if dirty)
      */
-    exitEditMode(discard = false) {
+    async exitEditMode(discard = false) {
         // Check for unsaved changes if discarding
         if (discard && this.state.isDirty) {
-            if (!confirm('Tienes cambios sin guardar. ¿Descartar cambios?')) {
-                return;
-            }
+            const confirmed = await (window.PuroBeach
+                ? window.PuroBeach.confirmAction({
+                    title: 'Cambios sin guardar',
+                    message: 'Tienes cambios sin guardar. ¿Descartar cambios?',
+                    confirmText: 'Descartar',
+                    confirmClass: 'btn-warning',
+                    iconClass: 'fa-exclamation-triangle'
+                })
+                : Promise.resolve(confirm('Tienes cambios sin guardar. ¿Descartar cambios?')));
+            if (!confirmed) return;
         }
 
         this.state.mode = 'view';

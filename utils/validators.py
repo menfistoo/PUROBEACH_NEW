@@ -7,6 +7,48 @@ import re
 from datetime import datetime
 
 
+def normalize_phone(phone: str) -> str:
+    """
+    Normalize a phone number for consistent storage and deduplication.
+    Strips all formatting characters and removes Spanish country code prefix.
+
+    Examples:
+        '+34 666-123-456' -> '666123456'
+        '(666) 123 456'   -> '666123456'
+        '00 34 666123456' -> '666123456'
+        '0034666123456'   -> '666123456'
+        '+34666123456'    -> '666123456'
+        '666123456'       -> '666123456'
+        None              -> None
+        ''                -> ''
+
+    Args:
+        phone: Raw phone number string
+
+    Returns:
+        Normalized phone string with only digits (country code stripped),
+        or None/empty if input is None/empty
+    """
+    if phone is None:
+        return None
+    if not phone:
+        return ''
+
+    # Strip all non-digit characters
+    digits = re.sub(r'\D', '', phone)
+
+    if not digits:
+        return ''
+
+    # Remove Spanish country code prefix: 0034 or 34
+    if digits.startswith('0034'):
+        digits = digits[4:]
+    elif digits.startswith('34') and len(digits) > 9:
+        digits = digits[2:]
+
+    return digits
+
+
 def validate_email(email: str) -> bool:
     """
     Validate email format.

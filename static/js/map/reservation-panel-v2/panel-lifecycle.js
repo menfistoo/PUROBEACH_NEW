@@ -95,7 +95,7 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
     /**
      * Close the panel
      */
-    close() {
+    async close() {
         if (!this.state.isOpen) return;
 
         // Remove furniture highlights from map
@@ -103,9 +103,16 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
 
         // Check for unsaved changes
         if (this.state.mode === 'edit' && this.state.isDirty) {
-            if (!confirm('Tienes cambios sin guardar. ¿Seguro que quieres cerrar?')) {
-                return;
-            }
+            const confirmed = await (window.PuroBeach
+                ? window.PuroBeach.confirmAction({
+                    title: 'Cambios sin guardar',
+                    message: 'Tienes cambios sin guardar. ¿Seguro que quieres cerrar?',
+                    confirmText: 'Cerrar',
+                    confirmClass: 'btn-warning',
+                    iconClass: 'fa-exclamation-triangle'
+                })
+                : Promise.resolve(confirm('Tienes cambios sin guardar. ¿Seguro que quieres cerrar?')));
+            if (!confirmed) return;
         }
 
         // Reset state

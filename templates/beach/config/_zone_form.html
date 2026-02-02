@@ -129,8 +129,15 @@ document.getElementById('zone_color')?.addEventListener('input', function() {
 // Delete zone handler
 document.getElementById('btn-delete-zone')?.addEventListener('click', function() {
     const zoneName = this.dataset.zoneName;
-    if (confirm('¿Eliminar zona ' + zoneName + '?')) {
-        document.getElementById('delete-zone-form').submit();
-    }
+    PuroBeach.confirmAction({
+        title: 'Confirmar eliminación',
+        message: '¿Eliminar zona ' + zoneName + '?',
+        confirmText: 'Eliminar',
+        confirmClass: 'btn-danger',
+        iconClass: 'fa-trash-alt',
+        onConfirm: function() {
+            document.getElementById('delete-zone-form').submit();
+        }
+    });
 });
 </script>

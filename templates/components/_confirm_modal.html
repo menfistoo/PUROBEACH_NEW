@@ -1,0 +1,25 @@
+<!-- Reusable Confirmation Modal -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content confirm-modal">
+            <div class="modal-header confirm-modal-header">
+                <div class="confirm-modal-icon" id="confirmActionIcon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h5 class="modal-title" id="confirmActionModalLabel">¿Está seguro?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body confirm-modal-body" id="confirmActionBody">
+                <p id="confirmActionMessage">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer confirm-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="confirmActionCancelBtn">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmActionConfirmBtn">
+                    <i class="fas fa-check"></i> Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

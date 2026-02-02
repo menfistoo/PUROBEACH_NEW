@@ -2267,32 +2267,48 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 break;
             case 'cancel-reservation':
-                if (contextReservationId && confirm('Cancelar esta reserva?')) {
-                    try {
-                        const response = await fetch(`/beach/api/reservations/${contextReservationId}/toggle-state`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                            },
-                            body: JSON.stringify({ state: 'Cancelada', action: 'set' })
-                        });
-                        const data = await response.json();
-                        if (data.success) {
-                            await map.refreshAvailability();
-                            updateStats(currentZoneId);
-                        } else {
-                            alert(data.error || 'Error al cancelar');
+                if (contextReservationId) {
+                    const confirmed = await PuroBeach.confirmAction({
+                        title: 'Cancelar reserva',
+                        message: '¿Cancelar esta reserva?',
+                        confirmText: 'Cancelar reserva',
+                        confirmClass: 'btn-warning',
+                        iconClass: 'fa-ban'
+                    });
+                    if (confirmed) {
+                        try {
+                            const response = await fetch(`/beach/api/reservations/${contextReservationId}/toggle-state`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                                },
+                                body: JSON.stringify({ state: 'Cancelada', action: 'set' })
+                            });
+                            const data = await response.json();
+                            if (data.success) {
+                                await map.refreshAvailability();
+                                updateStats(currentZoneId);
+                            } else {
+                                alert(data.error || 'Error al cancelar');
+                            }
+                        } catch (error) {
+                            console.error('Error canceling:', error);
                         }
-                    } catch (error) {
-                        console.error('Error canceling:', error);
                     }
                 }
                 break;
             case 'block':
                 if (contextFurnitureId) {
                     const today = map.getCurrentDate();
-                    if (confirm(`Bloquear mobiliario para ${formatDateCompact(today)}?`)) {
+                    const blockConfirmed = await PuroBeach.confirmAction({
+                        title: 'Bloquear mobiliario',
+                        message: `¿Bloquear mobiliario para ${formatDateCompact(today)}?`,
+                        confirmText: 'Bloquear',
+                        confirmClass: 'btn-warning',
+                        iconClass: 'fa-lock'
+                    });
+                    if (blockConfirmed) {
                         try {
                             const response = await fetch(`/beach/api/map/furniture/${contextFurnitureId}/block`, {
                                 method: 'POST',

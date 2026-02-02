@@ -4,6 +4,7 @@ Handles create, read, update, delete, and preferences/tags management.
 """
 
 from database import get_db
+from utils.validators import normalize_phone
 
 
 # =============================================================================
@@ -71,15 +72,20 @@ def search_customers(query: str, customer_type: str = None) -> list:
     Returns:
         List of matching customer dicts
     """
+    # Also try normalized phone for phone-like queries
+    normalized_query = normalize_phone(query)
+
     with get_db() as conn:
         cursor = conn.cursor()
 
         search_query = '''
             SELECT * FROM beach_customers
-            WHERE (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ? OR room_number LIKE ?)
+            WHERE (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ? OR room_number LIKE ?
+                   OR phone LIKE ?)
         '''
 
         params = [f'%{query}%'] * 5
+        params.append(f'%{normalized_query}%' if normalized_query else f'%{query}%')
 
         if customer_type:
             search_query += ' AND customer_type = ?'
@@ -115,6 +121,9 @@ def create_customer(customer_type: str, first_name: str, last_name: str = None, 
     if customer_type == 'interno' and not kwargs.get('room_number'):
         raise ValueError('El número de habitación es requerido para clientes internos')
 
+    # Normalize phone before storing
+    phone = normalize_phone(kwargs.get('phone'))
+
     with get_db() as conn:
         cursor = conn.cursor()
 
@@ -123,7 +132,7 @@ def create_customer(customer_type: str, first_name: str, last_name: str = None, 
             (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status, language, country_code)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (customer_type, first_name, last_name,
-              kwargs.get('email'), kwargs.get('phone'), kwargs.get('room_number'),
+              kwargs.get('email'), phone, kwargs.get('room_number'),
               kwargs.get('notes'), kwargs.get('vip_status', 0),
               kwargs.get('language'), kwargs.get('country_code', '+34')))
 
@@ -145,6 +154,11 @@ def update_customer(customer_id: int, **kwargs) -> bool:
     allowed_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number',
                       'notes', 'vip_status', 'total_visits', 'total_spent', 'last_visit',
                       'language', 'country_code', 'no_shows', 'cancellations', 'total_reservations']
+
+    # Normalize phone before updating
+    if 'phone' in kwargs:
+        kwargs['phone'] = normalize_phone(kwargs['phone'])
+
     updates = []
     values = []
 
@@ -252,6 +266,7 @@ def delete_customer(customer_id: int) -> bool:
 def find_duplicates(phone: str, customer_type: str, room_number: str = None) -> list:
     """
     Find potential duplicate customers.
+    Normalizes the phone input before comparing.
 
     Args:
         phone: Phone number to check
@@ -261,6 +276,9 @@ def find_duplicates(phone: str, customer_type: str, room_number: str = None) -> 
     Returns:
         List of potential duplicate customer dicts
     """
+    # Normalize search phone for consistent comparison
+    normalized = normalize_phone(phone) if phone else phone
+
     with get_db() as conn:
         cursor = conn.cursor()
 
@@ -270,13 +288,13 @@ def find_duplicates(phone: str, customer_type: str, room_number: str = None) -> 
                 WHERE customer_type = 'interno'
                   AND (phone = ? OR room_number = ?)
                 ORDER BY created_at DESC
-            ''', (phone, room_number))
+            ''', (normalized, room_number))
         else:
             cursor.execute('''
                 SELECT * FROM beach_customers
                 WHERE customer_type = 'externo' AND phone = ?
                 ORDER BY created_at DESC
-            ''', (phone,))
+            ''', (normalized,))
 
         rows = cursor.fetchall()
         return [dict(row) for row in rows]

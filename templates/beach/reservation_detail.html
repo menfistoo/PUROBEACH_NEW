@@ -35,7 +35,11 @@
             <form method="POST"
                   action="{{ url_for('beach.reservations_cancel', reservation_id=reservation.id) }}"
                   class="d-inline"
-                  onsubmit="return confirm('¿Está seguro de cancelar esta reserva?')">
+                  data-confirm="¿Está seguro de cancelar esta reserva?"
+                  data-confirm-title="Cancelar reserva"
+                  data-confirm-btn-text="Cancelar reserva"
+                  data-confirm-btn-class="btn-warning"
+                  data-confirm-icon="fa-ban">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-outline-warning">
                     <i class="fas fa-ban"></i> Cancelar
@@ -44,7 +48,10 @@
             <form method="POST"
                   action="{{ url_for('beach.reservations_delete', reservation_id=reservation.id) }}"
                   class="d-inline"
-                  onsubmit="return confirm('¿Está seguro de eliminar esta reserva permanentemente?')">
+                  data-confirm="¿Está seguro de eliminar esta reserva permanentemente? Esta acción no se puede deshacer."
+                  data-confirm-title="Confirmar eliminación"
+                  data-confirm-btn-text="Eliminar"
+                  data-confirm-icon="fa-trash-alt">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-outline-danger">
                     <i class="fas fa-trash"></i> Eliminar

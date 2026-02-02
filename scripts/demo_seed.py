@@ -24,6 +24,8 @@ import json
 # Add the app directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from utils.validators import normalize_phone
+
 def get_db_connection():
     """Get database connection."""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -541,16 +543,18 @@ def create_demo_clients(conn):
     # Insert all clients
     client_ids = {}
     for client in clients_data:
+        # Normalize phone before storing in beach_customers
+        normalized_phone = normalize_phone(client['phone'])
         cursor.execute('''
-            INSERT INTO beach_customers 
-            (customer_type, first_name, last_name, email, phone, room_number, language, notes, 
+            INSERT INTO beach_customers
+            (customer_type, first_name, last_name, email, phone, room_number, language, notes,
              vip_status, total_visits, total_spent, last_visit, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            client['customer_type'], client['first_name'], client['last_name'], 
-            client['email'], client['phone'], client['room_number'], client['language'], 
-            client['notes'], client['vip_status'], client['total_visits'], 
-            client['total_spent'], client['last_visit'], 
+            client['customer_type'], client['first_name'], client['last_name'],
+            client['email'], normalized_phone, client['room_number'], client['language'],
+            client['notes'], client['vip_status'], client['total_visits'],
+            client['total_spent'], client['last_visit'],
             datetime.now(), datetime.now()
         ))
         

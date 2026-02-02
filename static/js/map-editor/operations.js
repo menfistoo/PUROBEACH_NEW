@@ -62,7 +62,17 @@ export const OperationsMixin = (Base) => class extends Base {
             ? '¿Eliminar el elemento seleccionado?'
             : `¿Eliminar ${count} elementos seleccionados?`;
 
-        if (!confirm(confirmMsg)) return;
+        const confirmed = await (window.PuroBeach
+            ? window.PuroBeach.confirmAction({
+                title: 'Confirmar eliminación',
+                message: confirmMsg,
+                confirmText: 'Eliminar',
+                confirmClass: 'btn-danger',
+                iconClass: 'fa-trash-alt'
+            })
+            : Promise.resolve(confirm(confirmMsg)));
+
+        if (!confirmed) return;
 
         try {
             const ids = selectedItems.map(item => item.id);

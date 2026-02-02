@@ -205,7 +205,10 @@
                             <form method="POST"
                                   action="{{ url_for('beach.customers_delete', customer_id=customer.id) }}"
                                   class="d-inline"
-                                  onsubmit="return confirm('¿Está seguro de eliminar este cliente?')">
+                                  data-confirm="¿Está seguro de eliminar este cliente?"
+                                  data-confirm-title="Confirmar eliminación"
+                                  data-confirm-btn-text="Eliminar"
+                                  data-confirm-icon="fa-trash-alt">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-outline-danger" title="Eliminar">
                                     <i class="fas fa-trash"></i>
@@ -216,11 +219,19 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-5">
-                        <i class="fas fa-users fa-3x mb-3 d-block opacity-50"></i>
-                        No se encontraron clientes
+                    <td colspan="7" class="text-center py-5">
+                        <i class="fas fa-address-book fa-3x text-muted mb-3 d-block opacity-50"></i>
+                        <h5 class="text-muted">No se encontraron clientes</h5>
                         {% if search or type_filter or vip_filter %}
-                        <br><small>Pruebe con otros filtros</small>
+                        <p class="text-muted mb-3">Pruebe con otros filtros de b&uacute;squeda</p>
+                        <a href="{{ url_for('beach.customers') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times me-1"></i>Limpiar filtros
+                        </a>
+                        {% else %}
+                        <p class="text-muted mb-3">Comience registrando el primer cliente del beach club</p>
+                        <a href="{{ url_for('beach.customers_create') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Nuevo Cliente
+                        </a>
                         {% endif %}
                     </td>
                 </tr>
@@ -363,7 +374,10 @@
                             <i class="fas fa-edit"></i>
                         </a>
                         <form method="POST" action="${deleteUrl}" class="d-inline"
-                              onsubmit="return confirm('¿Está seguro de eliminar este cliente?')">
+                              data-confirm="¿Está seguro de eliminar este cliente?"
+                              data-confirm-title="Confirmar eliminación"
+                              data-confirm-btn-text="Eliminar"
+                              data-confirm-icon="fa-trash-alt">
                             <input type="hidden" name="csrf_token" value="${csrfToken}">
                             <button type="submit" class="btn btn-outline-danger" title="Eliminar">
                                 <i class="fas fa-trash"></i>
@@ -379,13 +393,21 @@
      * Render empty state
      */
     function renderEmptyState(hasFilters) {
-        const filterHint = hasFilters ? '<br><small>Pruebe con otros filtros</small>' : '';
+        const filterContent = hasFilters
+            ? `<p class="text-muted mb-3">Pruebe con otros filtros de b&uacute;squeda</p>
+               <a href="{{ url_for('beach.customers') }}" class="btn btn-outline-secondary btn-sm">
+                   <i class="fas fa-times me-1"></i>Limpiar filtros
+               </a>`
+            : `<p class="text-muted mb-3">Comience registrando el primer cliente del beach club</p>
+               <a href="{{ url_for('beach.customers_create') }}" class="btn btn-primary btn-sm">
+                   <i class="fas fa-plus me-1"></i>Nuevo Cliente
+               </a>`;
         return `
             <tr>
-                <td colspan="7" class="text-center text-muted py-5">
-                    <i class="fas fa-users fa-3x mb-3 d-block opacity-50"></i>
-                    No se encontraron clientes
-                    ${filterHint}
+                <td colspan="7" class="text-center py-5">
+                    <i class="fas fa-address-book fa-3x text-muted mb-3 d-block opacity-50"></i>
+                    <h5 class="text-muted">No se encontraron clientes</h5>
+                    ${filterContent}
                 </td>
             </tr>
         `;

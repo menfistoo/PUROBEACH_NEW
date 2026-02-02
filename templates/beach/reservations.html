@@ -1094,12 +1094,24 @@ function renderResults(data) {
     if (!tbody) return;
 
     if (!data.reservations || data.reservations.length === 0) {
+        const hasFilters = document.getElementById('filter-state').value
+            || document.getElementById('filter-type').value
+            || document.getElementById('filter-search').value;
+        const ctaHtml = hasFilters
+            ? `<p class="mb-1">No se encontraron reservas</p>
+               <small class="d-block mb-2">Pruebe con otros filtros</small>
+               <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
+                   <i class="fas fa-times me-1"></i>Limpiar filtros
+               </button>`
+            : `<p class="mb-1">No hay reservas para esta fecha</p>
+               <a href="{{ url_for('beach.map') }}" class="btn btn-primary btn-sm mt-2">
+                   <i class="fas fa-plus me-1"></i>Crear en el Mapa
+               </a>`;
         tbody.innerHTML = `
             <tr>
                 <td colspan="8" class="empty-state">
                     <i class="fas fa-calendar-xmark d-block"></i>
-                    <p class="mb-1">No se encontraron reservas</p>
-                    <small>Pruebe con otros filtros</small>
+                    ${ctaHtml}
                 </td>
             </tr>
         `;

@@ -4,6 +4,7 @@ Tests for input validation utilities.
 
 import pytest
 from utils.validators import (
+    normalize_phone,
     validate_email,
     validate_phone,
     validate_date_range,
@@ -12,6 +13,73 @@ from utils.validators import (
     validate_date_format,
     sanitize_input
 )
+
+
+class TestNormalizePhone:
+    """Tests for phone number normalization."""
+
+    def test_none_returns_none(self):
+        """Test that None input returns None."""
+        assert normalize_phone(None) is None
+
+    def test_empty_returns_empty(self):
+        """Test that empty string returns empty string."""
+        assert normalize_phone('') == ''
+
+    def test_strips_spaces(self):
+        """Test that spaces are removed."""
+        assert normalize_phone('666 123 456') == '666123456'
+
+    def test_strips_dashes(self):
+        """Test that dashes are removed."""
+        assert normalize_phone('666-123-456') == '666123456'
+
+    def test_strips_parentheses(self):
+        """Test that parentheses are removed."""
+        assert normalize_phone('(666) 123 456') == '666123456'
+
+    def test_strips_dots(self):
+        """Test that dots are removed."""
+        assert normalize_phone('666.123.456') == '666123456'
+
+    def test_removes_plus_34_prefix(self):
+        """Test removal of +34 country code."""
+        assert normalize_phone('+34 666-123-456') == '666123456'
+        assert normalize_phone('+34666123456') == '666123456'
+
+    def test_removes_0034_prefix(self):
+        """Test removal of 0034 country code."""
+        assert normalize_phone('0034666123456') == '666123456'
+        assert normalize_phone('00 34 666123456') == '666123456'
+
+    def test_removes_34_prefix_when_longer_than_9_digits(self):
+        """Test removal of 34 prefix when total digits > 9."""
+        assert normalize_phone('34666123456') == '666123456'
+
+    def test_keeps_34_prefix_when_9_or_fewer_digits(self):
+        """Test that 34 is NOT stripped when total is 9 digits or fewer (not a country code)."""
+        # '345678901' is 9 digits, starts with 34 but is not a country code prefix
+        assert normalize_phone('345678901') == '345678901'
+
+    def test_plain_number_unchanged(self):
+        """Test that a plain digit-only number is returned as-is."""
+        assert normalize_phone('666123456') == '666123456'
+
+    def test_international_format_with_spaces(self):
+        """Test full international format with mixed separators."""
+        assert normalize_phone('+34 666 123 456') == '666123456'
+
+    def test_whitespace_only_returns_empty(self):
+        """Test that whitespace-only input returns empty string."""
+        assert normalize_phone('   ') == ''
+
+    def test_non_digit_only_returns_empty(self):
+        """Test that input with no digits returns empty string."""
+        assert normalize_phone('abc') == ''
+
+    def test_mixed_separators(self):
+        """Test phone with mixed separator characters."""
+        assert normalize_phone('+34-(666) 123.456') == '666123456'
 
 
 class TestValidateEmail:

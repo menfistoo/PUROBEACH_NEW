@@ -4,6 +4,7 @@ Handles filtering, statistics, and detailed customer information.
 """
 
 from database import get_db
+from utils.validators import normalize_phone
 from .customer_crud import get_customer_by_id, get_customer_preferences, get_customer_tags
 
 
@@ -45,15 +46,19 @@ def get_customers_filtered(
         count_params = []
 
         if search:
+            # Also try normalized phone for phone-like queries
+            normalized_search = normalize_phone(search)
             search_clause = ''' AND (
                 c.first_name LIKE ? OR c.last_name LIKE ? OR
                 c.email LIKE ? OR c.phone LIKE ? OR c.room_number LIKE ?
+                OR c.phone LIKE ?
             )'''
             base_query += search_clause
             count_query += search_clause
             search_term = f'%{search}%'
-            params.extend([search_term] * 5)
-            count_params.extend([search_term] * 5)
+            normalized_term = f'%{normalized_search}%' if normalized_search else search_term
+            params.extend([search_term] * 5 + [normalized_term])
+            count_params.extend([search_term] * 5 + [normalized_term])
 
         if customer_type:
             base_query += ' AND c.customer_type = ?'
@@ -200,8 +205,11 @@ def find_potential_duplicates_for_customer(customer_id: int) -> list:
         conditions = []
 
         if customer.get('phone'):
-            conditions.append('c.phone = ?')
-            params.append(customer['phone'])
+            # Phone is already stored normalized, compare directly
+            normalized = normalize_phone(customer['phone'])
+            if normalized:
+                conditions.append('c.phone = ?')
+                params.append(normalized)
 
         if customer.get('email'):
             conditions.append('c.email = ?')
