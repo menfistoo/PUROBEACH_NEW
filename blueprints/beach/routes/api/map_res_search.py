@@ -4,11 +4,12 @@ Customer search with furniture lookup for the map.
 All-reservations endpoint for enhanced search with filters.
 """
 
-from flask import request, jsonify
+from flask import request
 from flask_login import login_required
 from datetime import date
 
 from utils.decorators import permission_required
+from utils.api_response import api_success, api_error
 from models.customer import search_customers_unified
 from database import get_db
 
@@ -110,13 +111,12 @@ def register_routes(bp):
                 'furniture_ids': furniture_ids
             })
 
-        return jsonify({
-            'success': True,
-            'date': date_str,
-            'reservations': reservations,
-            'states': states,
-            'total': len(reservations)
-        })
+        return api_success(
+            date=date_str,
+            reservations=reservations,
+            states=states,
+            total=len(reservations)
+        )
 
     @bp.route('/map/search-customer')
     @login_required
@@ -136,7 +136,7 @@ def register_routes(bp):
         date_str = request.args.get('date', date.today().strftime('%Y-%m-%d'))
 
         if len(query) < 2:
-            return jsonify({'customers': [], 'furniture_ids': []})
+            return api_success(customers=[], furniture_ids=[])
 
         # Search customers
         customers = search_customers_unified(query, limit=10)
@@ -146,16 +146,16 @@ def register_routes(bp):
 
         if not customer_ids:
             # Return customers without furniture matches
-            return jsonify({
-                'customers': [{
+            return api_success(
+                customers=[{
                     'id': c.get('id'),
                     'name': c.get('guest_name') or f"{c.get('first_name', '')} {c.get('last_name', '')}".strip(),
                     'room_number': c.get('room_number'),
                     'customer_type': c.get('customer_type', 'interno'),
                     'source': c.get('source', 'customer')
                 } for c in customers],
-                'furniture_ids': []
-            })
+                furniture_ids=[]
+            )
 
         # Find furniture reserved by these customers for the date
         # Note: beach_reservation_daily_states has columns: date, state_id (not state_date, state_name)
@@ -198,9 +198,8 @@ def register_routes(bp):
             }
             formatted_customers.append(customer_data)
 
-        return jsonify({
-            'success': True,
-            'date': date_str,
-            'customers': formatted_customers,
-            'furniture_ids': furniture_ids
-        })
+        return api_success(
+            date=date_str,
+            customers=formatted_customers,
+            furniture_ids=furniture_ids
+        )

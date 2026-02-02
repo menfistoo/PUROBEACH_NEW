@@ -121,6 +121,15 @@ def customers_merge(customer_id):
     return customers_merge_view(customer_id)
 
 
+@beach_bp.route('/customers/export')
+@login_required
+@permission_required('beach.reports.export')
+def customers_export():
+    """Export customers to Excel."""
+    from blueprints.beach.routes.reports.exports import export_customers_handler
+    return export_customers_handler()
+
+
 # =============================================================================
 # RESERVATION ROUTES (delegated to reservations module)
 # =============================================================================
@@ -186,7 +195,7 @@ def reservations_cancel(reservation_id):
 
 @beach_bp.route('/reservations/export')
 @login_required
-@permission_required('beach.reservations.view')
+@permission_required('beach.reports.export')
 def reservations_export():
     """Export reservations to Excel."""
     return reservations_export_view()

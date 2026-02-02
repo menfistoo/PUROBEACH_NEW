@@ -3,11 +3,12 @@ Map daily positions API routes.
 Endpoints for daily position overrides (furniture moved for specific dates).
 """
 
-from flask import current_app, request, jsonify
+from flask import current_app, request
 from flask_login import login_required, current_user
 from datetime import date
 
 from utils.decorators import permission_required
+from utils.api_response import api_success, api_error
 from models.furniture import get_furniture_by_id
 from models.furniture_daily import (
     set_daily_position, get_daily_position, clear_daily_position,
@@ -36,22 +37,22 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         date_str = data.get('date')
         x = data.get('x')
         y = data.get('y')
 
         if not date_str:
-            return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
+            return api_error('Fecha requerida')
 
         if x is None or y is None:
-            return jsonify({'success': False, 'error': 'Posicion X e Y requeridas'}), 400
+            return api_error('Posicion X e Y requeridas')
 
         # Check furniture exists
         furniture = get_furniture_by_id(furniture_id)
         if not furniture:
-            return jsonify({'success': False, 'error': 'Mobiliario no encontrado'}), 404
+            return api_error('Mobiliario no encontrado', 404)
 
         try:
             position_id = set_daily_position(
@@ -62,15 +63,14 @@ def register_routes(bp):
                 created_by=current_user.username if current_user else 'system'
             )
 
-            return jsonify({
-                'success': True,
-                'position_id': position_id,
-                'message': f'Posicion diaria guardada para {furniture["number"]}'
-            })
+            return api_success(
+                message=f'Posicion diaria guardada para {furniture["number"]}',
+                position_id=position_id
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/map/furniture/<int:furniture_id>/daily-position', methods=['DELETE'])
     @login_required
@@ -88,25 +88,21 @@ def register_routes(bp):
         date_str = request.args.get('date')
 
         if not date_str:
-            return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
+            return api_error('Fecha requerida')
 
         # Check furniture exists
         furniture = get_furniture_by_id(furniture_id)
         if not furniture:
-            return jsonify({'success': False, 'error': 'Mobiliario no encontrado'}), 404
+            return api_error('Mobiliario no encontrado', 404)
 
         cleared = clear_daily_position(furniture_id, date_str)
 
         if cleared:
-            return jsonify({
-                'success': True,
-                'message': f'Posicion de {furniture["number"]} restaurada a default'
-            })
+            return api_success(
+                message=f'Posicion de {furniture["number"]} restaurada a default'
+            )
         else:
-            return jsonify({
-                'success': False,
-                'error': 'No habia posicion diaria para esta fecha'
-            }), 404
+            return api_error('No habia posicion diaria para esta fecha', 404)
 
     @bp.route('/map/daily-positions')
     @login_required
@@ -125,9 +121,8 @@ def register_routes(bp):
 
         positions = get_daily_positions_for_date(date_str)
 
-        return jsonify({
-            'success': True,
-            'date': date_str,
-            'positions': positions,
-            'count': len(positions)
-        })
+        return api_success(
+            date=date_str,
+            positions=positions,
+            count=len(positions)
+        )

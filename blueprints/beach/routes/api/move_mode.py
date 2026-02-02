@@ -11,6 +11,7 @@ Handles furniture reassignment operations during move mode:
 from flask import current_app, jsonify, request
 from flask_login import login_required
 from utils.decorators import permission_required
+from utils.api_response import api_error
 from models.move_mode import (
     unassign_furniture_for_date,
     assign_furniture_for_date,
@@ -169,14 +170,14 @@ def register_routes(bp):
             target_date = request.args.get('date')
 
             if not reservation_id:
-                return jsonify({'error': 'reservation_id es requerido'}), 400
+                return api_error('reservation_id es requerido', 400)
             if not target_date:
-                return jsonify({'error': 'date es requerido'}), 400
+                return api_error('date es requerido', 400)
 
             result = get_reservation_pool_data(reservation_id, target_date)
 
             if 'error' in result:
-                return jsonify(result), 404
+                return jsonify({'success': False, **result}), 404
 
             # Auto-sync customer preferences if reservation has none
             if not result.get('preferences') and result.get('customer_id'):
@@ -192,11 +193,11 @@ def register_routes(bp):
                     # Reload pool data with synced preferences
                     result = get_reservation_pool_data(reservation_id, target_date)
 
-            return jsonify(result)
+            return jsonify({'success': True, **result})
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/move-mode/preferences-match', methods=['GET'])
     @login_required
@@ -232,7 +233,7 @@ def register_routes(bp):
             zone_id = request.args.get('zone_id', type=int)
 
             if not target_date:
-                return jsonify({'error': 'date es requerido'}), 400
+                return api_error('date es requerido', 400)
 
             preference_codes = [p.strip() for p in preferences_str.split(',') if p.strip()]
 
@@ -242,11 +243,11 @@ def register_routes(bp):
                 zone_id=zone_id
             )
 
-            return jsonify(result)
+            return jsonify({'success': True, **result})
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/move-mode/unassigned', methods=['GET'])
     @login_required
@@ -268,18 +269,19 @@ def register_routes(bp):
             target_date = request.args.get('date')
 
             if not target_date:
-                return jsonify({'error': 'date es requerido'}), 400
+                return api_error('date es requerido', 400)
 
             reservation_ids = get_unassigned_reservations(target_date)
 
             return jsonify({
+                'success': True,
                 'reservation_ids': reservation_ids,
                 'date': target_date
             })
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/move-mode/unassigned-global', methods=['GET'])
     @login_required
@@ -299,8 +301,8 @@ def register_routes(bp):
         try:
             from models.move_mode import get_unassigned_reservations_global
             result = get_unassigned_reservations_global(days_ahead=7)
-            return jsonify(result)
+            return jsonify({'success': True, **result})
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)

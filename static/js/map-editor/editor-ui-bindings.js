@@ -98,10 +98,13 @@ export function bindZoneControls(editor, options = {}) {
     });
 
     el('btn-save-zone-settings')?.addEventListener('click', async function () {
+        const saveBtn = this;
         const zoneId = zoneSelector.value;
         const width = el('zone-canvas-width').value;
         const height = el('zone-canvas-height').value;
         const bgColor = el('zone-bg-color').value;
+
+        if (window.PuroBeach) window.PuroBeach.setButtonLoading(saveBtn, true, 'Guardando...');
 
         try {
             const response = await fetch(`/beach/config/map-editor/zone/${zoneId}/settings`, {
@@ -133,6 +136,8 @@ export function bindZoneControls(editor, options = {}) {
         } catch (error) {
             console.error('Error saving zone settings:', error);
             if (window.PuroBeach) window.PuroBeach.showToast('Error al guardar', 'error');
+        } finally {
+            if (window.PuroBeach) window.PuroBeach.setButtonLoading(saveBtn, false);
         }
     });
 }

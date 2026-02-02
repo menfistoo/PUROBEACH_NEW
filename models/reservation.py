@@ -22,6 +22,12 @@ from .reservation_state import (
     # State queries
     get_reservation_states,
     get_active_releasing_states,
+    # State transition validation
+    InvalidStateTransitionError,
+    VALID_TRANSITIONS,
+    validate_state_transition,
+    get_valid_transitions,
+    get_allowed_transitions,
     # State transitions
     add_reservation_state,
     remove_reservation_state,
@@ -73,6 +79,8 @@ from .reservation_queries import (
     get_reservation_furniture,
     get_reservations_by_furniture,
     get_customer_reservation_history,
+    # Export
+    get_reservations_for_export,
 )
 
 # Bulk availability operations (Phase 6B)
@@ -111,6 +119,13 @@ from .reservation_suggestions import (
 __all__ = [
     # Constants
     'RESERVATION_STATE_DISPLAY_PRIORITY',
+
+    # State transition validation
+    'InvalidStateTransitionError',
+    'VALID_TRANSITIONS',
+    'validate_state_transition',
+    'get_valid_transitions',
+    'get_allowed_transitions',
 
     # State management
     'get_reservation_states',
@@ -155,6 +170,9 @@ __all__ = [
     'get_reservation_furniture',
     'get_reservations_by_furniture',
     'get_customer_reservation_history',
+
+    # Export
+    'get_reservations_for_export',
 
     # Bulk availability (Phase 6B)
     'check_furniture_availability_bulk',

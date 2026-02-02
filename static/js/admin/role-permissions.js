@@ -73,8 +73,7 @@ function initSaveButton() {
         const checkboxes = document.querySelectorAll('.perm-checkbox:checked');
         const permissionIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        window.PuroBeach.setButtonLoading(btn, true, 'Guardando...');
 
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -98,8 +97,7 @@ function initSaveButton() {
         } catch (err) {
             showToast('Error de conexión al guardar permisos', 'error');
         } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save"></i> Guardar Permisos';
+            window.PuroBeach.setButtonLoading(btn, false);
         }
     });
 }

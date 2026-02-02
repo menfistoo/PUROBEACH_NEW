@@ -3,11 +3,12 @@ Map data API routes.
 Endpoints for retrieving map data and availability information.
 """
 
-from flask import current_app, request, jsonify
+from flask import current_app, request, jsonify  # jsonify kept for health_check
 from flask_login import login_required
 from datetime import date
 
 from utils.decorators import permission_required
+from utils.api_response import api_success, api_error
 from models.zone import get_all_zones
 from models.furniture import get_all_furniture
 from models.furniture_type import get_all_furniture_types
@@ -90,25 +91,24 @@ def register_routes(bp):
         # Calculate total map height based on zones
         total_height = zone_padding + len(zones) * (zone_height + zone_padding)
 
-        return jsonify({
-            'success': True,
-            'date': date_str,
-            'zones': zones,
-            'zone_bounds': zone_bounds,
-            'furniture': furniture,
-            'furniture_types': furniture_types_map,
-            'states': states,
-            'state_colors': state_colors,
-            'availability': furniture_availability,
-            'blocks': blocks_map,  # Furniture blocks for the date
-            'block_types': BLOCK_TYPES,  # Block type definitions
-            'summary': availability.get('summary', {}).get(date_str, {}),
-            'map_dimensions': {
+        return api_success(
+            date=date_str,
+            zones=zones,
+            zone_bounds=zone_bounds,
+            furniture=furniture,
+            furniture_types=furniture_types_map,
+            states=states,
+            state_colors=state_colors,
+            availability=furniture_availability,
+            blocks=blocks_map,
+            block_types=BLOCK_TYPES,
+            summary=availability.get('summary', {}).get(date_str, {}),
+            map_dimensions={
                 'width': map_width,
                 'height': max(min_height, total_height)
             },
-            'map_config': map_config  # Send config to frontend
-        })
+            map_config=map_config
+        )
 
     @bp.route('/map/availability')
     @login_required
@@ -135,15 +135,14 @@ def register_routes(bp):
                 zone_id=zone_id
             )
 
-            return jsonify({
-                'success': True,
-                'date_from': date_from,
-                'date_to': date_to,
+            return api_success(
+                date_from=date_from,
+                date_to=date_to,
                 **availability
-            })
+            )
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/health')
     def health_check():

@@ -170,9 +170,8 @@ export class BlockManager {
 
         // Disable button while processing
         const confirmBtn = document.getElementById('confirm-block-btn');
-        if (confirmBtn) {
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Bloqueando...';
+        if (window.PuroBeach) {
+            window.PuroBeach.setButtonLoading(confirmBtn, true, 'Bloqueando...');
         }
 
         try {
@@ -206,10 +205,8 @@ export class BlockManager {
             console.error('Block error:', error);
             showToast('Error al bloquear mobiliario', 'error');
         } finally {
-            // Re-enable button
-            if (confirmBtn) {
-                confirmBtn.disabled = false;
-                confirmBtn.innerHTML = '<i class="fas fa-ban me-1"></i>Bloquear';
+            if (window.PuroBeach) {
+                window.PuroBeach.setButtonLoading(confirmBtn, false);
             }
         }
     }
@@ -319,9 +316,8 @@ export class BlockManager {
 
         // Disable button while processing
         const confirmBtn = document.getElementById('confirm-unblock-btn');
-        if (confirmBtn) {
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Desbloqueando...';
+        if (window.PuroBeach) {
+            window.PuroBeach.setButtonLoading(confirmBtn, true, 'Desbloqueando...');
         }
 
         try {
@@ -365,10 +361,8 @@ export class BlockManager {
             console.error('Unblock error:', error);
             showToast('Error al desbloquear mobiliario', 'error');
         } finally {
-            // Re-enable button
-            if (confirmBtn) {
-                confirmBtn.disabled = false;
-                confirmBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Desbloquear';
+            if (window.PuroBeach) {
+                window.PuroBeach.setButtonLoading(confirmBtn, false);
             }
         }
     }

@@ -4,6 +4,8 @@ Handles state transitions, history, and color calculations.
 
 State properties are now fully configurable via the database.
 Use models/state.py for state CRUD operations and property lookups.
+
+State transition validation enforces valid workflow flows.
 """
 
 from database import get_db
@@ -13,6 +15,96 @@ from models.state import (
     get_state_by_name,
     get_incident_states,
 )
+
+
+# =============================================================================
+# STATE TRANSITION VALIDATION
+# =============================================================================
+
+class InvalidStateTransitionError(Exception):
+    """Raised when an invalid state transition is attempted."""
+    pass
+
+
+# Valid state transitions matrix.
+# Key: current state name -> Value: set of allowed target state names.
+# None key represents initial state (new reservation with no prior state).
+# Terminal states (Completada, Liberada) have no outgoing transitions.
+# Cancelada and No-Show can reopen to Confirmada for corrections.
+VALID_TRANSITIONS = {
+    None: {'Confirmada', 'Cancelada'},
+    '': {'Confirmada', 'Cancelada'},
+    'Confirmada': {'Sentada', 'Cancelada', 'No-Show'},
+    'Sentada': {'Completada', 'Cancelada', 'Liberada'},
+    'Completada': set(),  # Terminal state
+    'Cancelada': {'Confirmada'},  # Allow reopen
+    'No-Show': {'Confirmada'},  # Allow reopen
+    'Liberada': set(),  # Terminal state
+}
+
+
+def get_valid_transitions() -> dict:
+    """
+    Get the valid transitions matrix.
+
+    Returns a copy so callers cannot modify the module-level constant.
+
+    Returns:
+        dict: {current_state_name: set of allowed target state names}
+    """
+    return {k: set(v) for k, v in VALID_TRANSITIONS.items()}
+
+
+def get_allowed_transitions(current_state: str) -> set:
+    """
+    Get allowed target states for a given current state.
+
+    Args:
+        current_state: Current state name (or None/empty for new reservations)
+
+    Returns:
+        set: Allowed target state names, empty set if state is terminal
+    """
+    return set(VALID_TRANSITIONS.get(current_state, set()))
+
+
+def validate_state_transition(current_state: str, new_state: str, bypass_validation: bool = False) -> None:
+    """
+    Validate that a state transition is allowed.
+
+    Args:
+        current_state: Current state name (or None/empty for new reservations)
+        new_state: Target state name
+        bypass_validation: If True, skip validation (for admin override)
+
+    Raises:
+        InvalidStateTransitionError: If transition is not allowed
+    """
+    if bypass_validation:
+        return
+
+    # Normalize empty/None current state
+    normalized_current = current_state if current_state else None
+
+    allowed = VALID_TRANSITIONS.get(normalized_current)
+
+    # If current state is not in the matrix at all, allow any transition
+    # (handles custom/user-created states that aren't in the matrix)
+    if allowed is None:
+        return
+
+    if new_state not in allowed:
+        current_display = current_state or 'Sin estado'
+        if not allowed:
+            raise InvalidStateTransitionError(
+                f'No se puede cambiar de "{current_display}" a "{new_state}". '
+                f'"{current_display}" es un estado terminal sin transiciones permitidas.'
+            )
+        allowed_list = ', '.join(sorted(allowed))
+        raise InvalidStateTransitionError(
+            f'No se puede cambiar de "{current_display}" a "{new_state}". '
+            f'Transiciones permitidas desde "{current_display}": {allowed_list}'
+        )
 
 
 # =============================================================================
@@ -57,25 +149,31 @@ def get_active_releasing_states() -> list:
 # STATE TRANSITIONS
 # =============================================================================
 
-def add_reservation_state(reservation_id: int, state_type: str, changed_by: str, notes: str = '') -> bool:
+def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
+                          notes: str = '', bypass_validation: bool = False) -> bool:
     """
     Add state to reservation (accumulative CSV).
 
     Behavior:
-    1. Adds to current_states CSV
-    2. Updates current_state to new state
-    3. Records in history
-    4. If No-Show: creates automatic incident
-    5. Updates customer statistics
+    1. Validates state transition
+    2. Adds to current_states CSV
+    3. Updates current_state to new state
+    4. Records in history
+    5. If No-Show: creates automatic incident
+    6. Updates customer statistics
 
     Args:
         reservation_id: Reservation ID
         state_type: State name to add
         changed_by: Username making change
         notes: Optional notes
+        bypass_validation: If True, skip transition validation (admin override)
 
     Returns:
         bool: Success status
+
+    Raises:
+        InvalidStateTransitionError: If transition is not allowed
     """
     with get_db() as conn:
         cursor = conn.cursor()
@@ -91,6 +189,9 @@ def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
             customer_id = row['customer_id']
             current_states = row['current_states'] or ''
             old_state_name = row['current_state']
+
+            # Validate state transition
+            validate_state_transition(old_state_name, state_type, bypass_validation)
 
             # Add to CSV (avoid duplicates)
             states_list = [s.strip() for s in current_states.split(',') if s.strip()]
@@ -223,7 +324,8 @@ def remove_reservation_state(reservation_id: int, state_type: str, changed_by: s
             raise
 
 
-def change_reservation_state(reservation_id: int, new_state: str, changed_by: str, reason: str = '') -> bool:
+def change_reservation_state(reservation_id: int, new_state: str, changed_by: str,
+                             reason: str = '', bypass_validation: bool = False) -> bool:
     """
     Change reservation state (replaces current state).
     For single-state changes, use add_reservation_state for multi-state.
@@ -233,9 +335,13 @@ def change_reservation_state(reservation_id: int, new_state: str, changed_by: st
         new_state: New state name
         changed_by: Username
         reason: Change reason
+        bypass_validation: If True, skip transition validation (admin override)
 
     Returns:
         bool: Success status
+
+    Raises:
+        InvalidStateTransitionError: If transition is not allowed
     """
     with get_db() as conn:
         cursor = conn.cursor()
@@ -250,6 +356,9 @@ def change_reservation_state(reservation_id: int, new_state: str, changed_by: st
 
             old_state = row['current_state']
             customer_id = row['customer_id']
+
+            # Validate state transition
+            validate_state_transition(old_state, new_state, bypass_validation)
 
             # Update to new state
             cursor.execute('''
@@ -289,9 +398,11 @@ def change_reservation_state(reservation_id: int, new_state: str, changed_by: st
             raise
 
 
-def cancel_beach_reservation(reservation_id: int, cancelled_by: str, notes: str = '') -> bool:
+def cancel_beach_reservation(reservation_id: int, cancelled_by: str, notes: str = '',
+                              bypass_validation: bool = False) -> bool:
     """Shortcut to add 'Cancelada' state."""
-    return add_reservation_state(reservation_id, 'Cancelada', cancelled_by, notes)
+    return add_reservation_state(reservation_id, 'Cancelada', cancelled_by, notes,
+                                  bypass_validation=bypass_validation)
 
 
 # =============================================================================

@@ -363,9 +363,8 @@ class ReservationUnified {
         }
 
         const saveBtn = document.getElementById('saveAllBtn');
-        if (saveBtn) {
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        if (window.PuroBeach) {
+            window.PuroBeach.setButtonLoading(saveBtn, true, 'Guardando...');
         }
 
         try {
@@ -392,9 +391,8 @@ class ReservationUnified {
             console.error('Error saving changes:', err);
             this.showToast('Error de conexión', 'error');
         } finally {
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+            if (window.PuroBeach) {
+                window.PuroBeach.setButtonLoading(saveBtn, false);
             }
         }
     }

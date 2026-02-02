@@ -8,6 +8,7 @@ from flask_login import login_required, current_user
 
 from utils.decorators import permission_required
 from utils.audit import log_create
+from utils.api_response import api_success, api_error
 from utils.validators import (
     validate_positive_integer, validate_integer_list,
     validate_date_list, validate_furniture_by_date,
@@ -51,7 +52,7 @@ def register_routes(bp):
             data = request.get_json()
 
             if not data:
-                return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+                return api_error('Datos requeridos', 400)
 
             # ---- Input validation ----
 
@@ -60,7 +61,7 @@ def register_routes(bp):
                 data.get('customer_id'), 'customer_id'
             )
             if not valid:
-                return jsonify({'success': False, 'error': err}), 400
+                return api_error(err, 400)
 
             furniture_ids = data.get('furniture_ids', [])
             furniture_by_date = data.get('furniture_by_date')  # Per-day furniture selections
@@ -73,17 +74,17 @@ def register_routes(bp):
 
             # Validate dates: required, valid YYYY-MM-DD format
             if not dates:
-                return jsonify({'success': False, 'error': 'El campo fecha es obligatorio'}), 400
+                return api_error('El campo fecha es obligatorio', 400)
             valid, dates, err = validate_date_list(dates, 'fechas')
             if not valid:
-                return jsonify({'success': False, 'error': err}), 400
+                return api_error(err, 400)
 
             # Validate start <= end when multiple dates
             if len(dates) > 1:
                 sorted_dates = sorted(dates)
                 valid, err = validate_start_end_dates(sorted_dates[0], sorted_dates[-1])
                 if not valid:
-                    return jsonify({'success': False, 'error': err}), 400
+                    return api_error(err, 400)
 
             # Validate furniture_ids or furniture_by_date: at least one required
             if furniture_by_date:
@@ -91,22 +92,22 @@ def register_routes(bp):
                     furniture_by_date, 'furniture_by_date'
                 )
                 if not valid:
-                    return jsonify({'success': False, 'error': err}), 400
+                    return api_error(err, 400)
             elif furniture_ids:
                 valid, furniture_ids, err = validate_integer_list(
                     furniture_ids, 'furniture_ids'
                 )
                 if not valid:
-                    return jsonify({'success': False, 'error': err}), 400
+                    return api_error(err, 400)
             else:
-                return jsonify({'success': False, 'error': 'Mobiliario requerido'}), 400
+                return api_error('Mobiliario requerido', 400)
 
             # Validate num_people: optional, but must be positive integer if provided
             num_people = data.get('num_people')
             if num_people is not None:
                 valid, num_people, err = validate_positive_integer(num_people, 'num_people')
                 if not valid:
-                    return jsonify({'success': False, 'error': err}), 400
+                    return api_error(err, 400)
 
             time_slot = data.get('time_slot', 'all_day')
             preferences = data.get('preferences', [])
@@ -148,7 +149,7 @@ def register_routes(bp):
             # Check customer exists
             customer = get_customer_by_id(customer_id)
             if not customer:
-                return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
+                return api_error('Cliente no encontrado', 404)
 
             # Check furniture availability
             if furniture_by_date:
@@ -167,12 +168,11 @@ def register_routes(bp):
                         all_unavailable.extend(availability.get('unavailable', []))
 
                 if not all_available:
-                    return jsonify({
-                        'success': False,
-                        'error': 'Mobiliario no disponible para algunas fechas',
-                        'unavailable': all_unavailable,
-                        'availability_matrix': {}
-                    }), 409
+                    return api_error(
+                        'Mobiliario no disponible para algunas fechas', 409,
+                        unavailable=all_unavailable,
+                        availability_matrix={}
+                    )
 
                 # Collect all furniture IDs for capacity calculation
                 all_furniture_ids = set()
@@ -190,12 +190,11 @@ def register_routes(bp):
 
                 if not availability.get('all_available'):
                     # Return detailed conflict information for the frontend
-                    return jsonify({
-                        'success': False,
-                        'error': 'Mobiliario no disponible para algunas fechas',
-                        'unavailable': availability.get('unavailable', []),
-                        'availability_matrix': availability.get('availability_matrix', {})
-                    }), 409
+                    return api_error(
+                        'Mobiliario no disponible para algunas fechas', 409,
+                        unavailable=availability.get('unavailable', []),
+                        availability_matrix=availability.get('availability_matrix', {})
+                    )
 
             # Calculate num_people from furniture capacity if not provided
             if not num_people:
@@ -295,10 +294,9 @@ def register_routes(bp):
                         response_data['warning'] = pricing_warning
                     return jsonify(response_data)
                 else:
-                    return jsonify({
-                        'success': False,
-                        'error': result.get('error', 'Error al crear reserva multi-dia')
-                    }), 400
+                    return api_error(
+                        result.get('error', 'Error al crear reserva multi-dia'), 400
+                    )
 
             # Single-day reservation
             else:
@@ -349,7 +347,7 @@ def register_routes(bp):
 
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
+            return api_error('Solicitud inválida', 400)
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)

@@ -3,10 +3,11 @@ Map reservation edit API routes - Furniture operations.
 Furniture reassignment and lock toggle.
 """
 
-from flask import current_app, request, jsonify, Response, Blueprint
+from flask import current_app, request, Response, Blueprint
 from flask_login import login_required
 
 from utils.decorators import permission_required
+from utils.api_response import api_success, api_error
 from models.furniture import get_all_furniture
 from models.reservation import (
     check_furniture_availability_bulk,
@@ -36,27 +37,26 @@ def register_routes(bp: Blueprint) -> None:
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         furniture_ids = data.get('furniture_ids', [])
         date_str = data.get('date')
 
         # Validation
         if not furniture_ids or not isinstance(furniture_ids, list):
-            return jsonify({'success': False, 'error': 'Mobiliario requerido'}), 400
+            return api_error('Mobiliario requerido')
 
         # Get existing reservation
         reservation = get_beach_reservation_by_id(reservation_id)
         if not reservation:
-            return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
 
         # Check if furniture is locked
         if reservation.get('is_furniture_locked'):
-            return jsonify({
-                'success': False,
-                'error': 'locked',
-                'message': 'El mobiliario de esta reserva esta bloqueado'
-            }), 403
+            return api_error(
+                'locked', 403,
+                message='El mobiliario de esta reserva esta bloqueado'
+            )
 
         # Use reservation date if not provided
         if not date_str:
@@ -86,11 +86,11 @@ def register_routes(bp: Blueprint) -> None:
                 unavailable = availability.get('unavailable', [])
                 if unavailable:
                     conflict_ids = list(set(item['furniture_id'] for item in unavailable))
-                    return jsonify({
-                        'success': False,
-                        'error': 'Algunos mobiliarios no estan disponibles',
-                        'conflicts': conflict_ids
-                    }), 409
+                    return api_error(
+                        'Algunos mobiliarios no estan disponibles',
+                        409,
+                        conflicts=conflict_ids
+                    )
 
         # Get furniture capacities and validate against num_people
         furniture_list = get_all_furniture(active_only=True)
@@ -107,12 +107,12 @@ def register_routes(bp: Blueprint) -> None:
 
         # CRITICAL: Block if capacity is smaller than num_people
         if total_capacity < num_people:
-            return jsonify({
-                'success': False,
-                'error': f'Capacidad insuficiente: {total_capacity} personas vs {num_people} requeridas',
-                'total_capacity': total_capacity,
-                'num_people': num_people
-            }), 400
+            return api_error(
+                f'Capacidad insuficiente: {total_capacity} personas vs {num_people} requeridas',
+                400,
+                total_capacity=total_capacity,
+                num_people=num_people
+            )
 
         # Warn if capacity is larger than num_people (but allow the operation)
         if total_capacity > num_people:
@@ -146,25 +146,19 @@ def register_routes(bp: Blueprint) -> None:
                 for fid in furniture_ids
             ]
 
-            response_data = {
-                'success': True,
-                'reservation_id': reservation_id,
-                'date': date_str,
-                'furniture': updated_furniture,
-                'total_capacity': total_capacity,
-                'num_people': num_people,
-                'message': 'Mobiliario actualizado exitosamente'
-            }
-
-            # Add warning if capacity is larger
-            if capacity_warning:
-                response_data['warning'] = capacity_warning
-
-            return jsonify(response_data)
+            return api_success(
+                message='Mobiliario actualizado exitosamente',
+                warning=capacity_warning,
+                reservation_id=reservation_id,
+                date=date_str,
+                furniture=updated_furniture,
+                total_capacity=total_capacity,
+                num_people=num_people
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error al actualizar mobiliario'}), 500
+            return api_error('Error al actualizar mobiliario', 500)
 
     @bp.route('/map/reservations/<int:reservation_id>/toggle-lock', methods=['PATCH'])
     @login_required
@@ -182,10 +176,7 @@ def register_routes(bp: Blueprint) -> None:
         data = request.get_json()
 
         if data is None or 'locked' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Campo "locked" requerido'
-            }), 400
+            return api_error('Campo "locked" requerido')
 
         locked = bool(data['locked'])
 
@@ -193,6 +184,10 @@ def register_routes(bp: Blueprint) -> None:
         result = toggle_furniture_lock(reservation_id, locked)
 
         if not result['success']:
-            return jsonify(result), 404
+            return api_error(result.get('error', 'Error desconocido'), 404)
 
-        return jsonify(result)
+        return api_success(
+            message=result.get('message'),
+            reservation_id=result.get('reservation_id'),
+            is_furniture_locked=result.get('is_furniture_locked')
+        )

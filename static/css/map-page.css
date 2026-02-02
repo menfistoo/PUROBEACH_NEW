@@ -326,10 +326,162 @@
     box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
 }
 
-/* Hide info bar on very small screens */
-@media (max-width: 576px) {
+/* =============================================================================
+   RESPONSIVE: TABLET & MOBILE OPTIMIZATIONS
+   Maximize map canvas space on smaller screens
+   ============================================================================= */
+
+/* --- Tablets (up to 991.98px): Simplify info bar, show only zoom controls --- */
+@media (max-width: 991.98px) {
+    /* Hide non-essential info bar items: canvas dimensions, cursor, furniture count */
+    .canvas-info-bar .info-detail {
+        display: none;
+    }
+
+    /* Hide spacer since detail items are gone - zoom controls align left */
+    .canvas-info-bar .info-spacer {
+        display: none;
+    }
+
+    /* Hide keyboard shortcuts (not useful on touch devices) */
+    .canvas-info-bar .info-shortcuts,
+    .canvas-info-bar .info-shortcuts-divider {
+        display: none;
+    }
+
+    /* Compact the info bar padding since fewer items */
+    .canvas-info-bar {
+        padding: 2px 12px;
+        justify-content: center;
+    }
+
+    /* Compact stats strip for tablets */
+    .stats-strip {
+        gap: 8px;
+        padding: 3px 8px;
+    }
+
+    .stat-item .stat-value {
+        font-size: 13px;
+    }
+
+    .stat-item .stat-label {
+        font-size: 9px;
+    }
+
+    /* Toolbar: allow wrapping and reduce padding */
+    .map-toolbar {
+        flex-wrap: wrap;
+        padding: 6px 8px;
+        min-height: auto;
+        gap: 6px;
+    }
+
+    /* Hide filter dropdowns on tablets (available via search) */
+    .map-filter-dropdowns {
+        display: none;
+    }
+}
+
+/* --- Small tablets & phones (up to 768px): Hide info bar completely --- */
+@media (max-width: 768px) {
+    /* Info bar is completely hidden - FAB zoom buttons are sufficient */
     .canvas-info-bar {
         display: none;
+    }
+
+    /* Stats strip: ultra-compact single line */
+    .stats-strip {
+        gap: 6px;
+        padding: 2px 6px;
+    }
+
+    .stat-item {
+        padding: 1px 4px;
+    }
+
+    .stat-item .stat-value {
+        font-size: 12px;
+    }
+
+    /* Reduce map canvas padding to maximize space */
+    .map-canvas-wrapper {
+        padding: 4px;
+    }
+
+    /* Ensure FAB zoom buttons are clearly visible */
+    .zoom-fab {
+        bottom: 80px;
+        right: 12px;
+    }
+
+    .fab-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 16px;
+    }
+}
+
+/* --- Phones (up to 576px): Minimal chrome, maximum map --- */
+@media (max-width: 576px) {
+    /* Hide stats strip completely on small phones for max map space */
+    .stats-strip {
+        display: none;
+    }
+
+    /* Toolbar: tighter spacing */
+    .map-toolbar {
+        padding: 4px 6px;
+        gap: 4px;
+    }
+
+    /* Smaller toolbar buttons */
+    .toolbar-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+
+    /* Smaller date display */
+    .date-display {
+        font-size: 12px;
+        min-width: 60px;
+        padding: 4px 6px;
+    }
+
+    /* Smaller zone selector */
+    .zone-selector-gold {
+        min-width: 90px;
+        font-size: 11px;
+        padding: 4px 22px 4px 10px;
+    }
+
+    /* Reduce map canvas padding */
+    .map-canvas-wrapper {
+        padding: 2px;
+    }
+
+    /* Tighter FAB position */
+    .zoom-fab {
+        bottom: 70px;
+        right: 8px;
+        gap: 6px;
+    }
+
+    .fab-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 14px;
+    }
+
+    /* Sync button: hide text, show only icon */
+    .sync-button span {
+        display: none;
+    }
+
+    .sync-button {
+        min-width: auto;
+        padding: 4px 8px;
     }
 }
 

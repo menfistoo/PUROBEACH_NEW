@@ -3,11 +3,12 @@ Map furniture API routes.
 Endpoints for furniture positioning and details.
 """
 
-from flask import current_app, request, jsonify
+from flask import current_app, request
 from flask_login import login_required
 from datetime import date
 
 from utils.decorators import permission_required
+from utils.api_response import api_success, api_error
 from models.furniture import (
     get_furniture_by_id, update_furniture_position,
     batch_update_furniture_positions, setup_initial_furniture_positions,
@@ -39,24 +40,24 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         x = data.get('x')
         y = data.get('y')
         rotation = data.get('rotation')
 
         if x is None or y is None:
-            return jsonify({'success': False, 'error': 'Posicion X e Y requeridas'}), 400
+            return api_error('Posicion X e Y requeridas')
 
         try:
             result = update_furniture_position(furniture_id, x, y, rotation)
             if result:
-                return jsonify({'success': True, 'furniture_id': furniture_id})
+                return api_success(furniture_id=furniture_id)
             else:
-                return jsonify({'success': False, 'error': 'Mobiliario no encontrado'}), 404
+                return api_error('Mobiliario no encontrado', 404)
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/map/furniture/batch-position', methods=['PUT'])
     @login_required
@@ -74,23 +75,19 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data or 'updates' not in data:
-            return jsonify({'success': False, 'error': 'Lista de actualizaciones requerida'}), 400
+            return api_error('Lista de actualizaciones requerida')
 
         updates = data['updates']
 
         if not isinstance(updates, list):
-            return jsonify({'success': False, 'error': 'updates debe ser una lista'}), 400
+            return api_error('updates debe ser una lista')
 
         try:
             count = batch_update_furniture_positions(updates)
-            return jsonify({
-                'success': True,
-                'updated': count,
-                'total': len(updates)
-            })
+            return api_success(updated=count, total=len(updates))
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/map/auto-position', methods=['POST'])
     @login_required
@@ -105,14 +102,10 @@ def register_routes(bp):
         """
         try:
             result = setup_initial_furniture_positions()
-            return jsonify({
-                'success': True,
-                'zones': result['zones'],
-                'total': result['total']
-            })
+            return api_success(zones=result['zones'], total=result['total'])
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/map/furniture/<int:furniture_id>/details')
     @login_required
@@ -132,7 +125,7 @@ def register_routes(bp):
         # Get furniture info
         furniture = get_furniture_by_id(furniture_id)
         if not furniture:
-            return jsonify({'success': False, 'error': 'Mobiliario no encontrado'}), 404
+            return api_error('Mobiliario no encontrado', 404)
 
         # Get furniture type config
         furniture_types = get_all_furniture_types(active_only=True)
@@ -190,10 +183,9 @@ def register_routes(bp):
                     break
 
         # Build response
-        return jsonify({
-            'success': True,
-            'date': date_str,
-            'furniture': {
+        return api_success(
+            date=date_str,
+            furniture={
                 'id': furniture['id'],
                 'number': furniture['number'],
                 'zone_id': furniture['zone_id'],
@@ -207,7 +199,7 @@ def register_routes(bp):
                 'is_temporary': furniture.get('is_temporary', 0),
                 'active': furniture.get('active', 1)
             },
-            'reservation': reservation_data,
-            'customer': customer_data,
-            'is_available': reservation_data is None
-        })
+            reservation=reservation_data,
+            customer=customer_data,
+            is_available=reservation_data is None
+        )

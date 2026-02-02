@@ -5,11 +5,12 @@ Availability checking and date changes.
 
 from datetime import datetime
 
-from flask import current_app, request, jsonify, Response, Blueprint
+from flask import current_app, request, Response, Blueprint
 from flask_login import login_required
 
 from utils.decorators import permission_required
 from utils.validators import validate_integer_list, validate_date_string
+from utils.api_response import api_success, api_error
 from models.furniture import get_all_furniture
 from models.reservation import (
     check_furniture_availability_bulk,
@@ -41,17 +42,17 @@ def register_routes(bp: Blueprint) -> None:
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         # Validate new_date: required, valid YYYY-MM-DD
         valid, new_date, err = validate_date_string(data.get('new_date'), 'new_date')
         if not valid:
-            return jsonify({'success': False, 'error': err}), 400
+            return api_error(err)
 
         # Get reservation
         reservation = get_beach_reservation_by_id(reservation_id)
         if not reservation:
-            return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
 
         current_date = reservation.get('reservation_date') or reservation.get('start_date')
 
@@ -68,15 +69,14 @@ def register_routes(bp: Blueprint) -> None:
             furniture_details = {row['furniture_id']: row['furniture_number'] for row in furniture_rows}
 
         if not furniture_ids:
-            return jsonify({
-                'success': True,
-                'all_available': False,
-                'some_available': False,
-                'available_furniture': [],
-                'unavailable_furniture': [],
-                'conflicts': [],
-                'error': 'No hay mobiliario asignado'
-            })
+            return api_success(
+                all_available=False,
+                some_available=False,
+                available_furniture=[],
+                unavailable_furniture=[],
+                conflicts=[],
+                warning='No hay mobiliario asignado'
+            )
 
         # Check availability on new date
         availability = check_furniture_availability_bulk(
@@ -132,17 +132,16 @@ def register_routes(bp: Blueprint) -> None:
             for fid in unavailable
         ]
 
-        return jsonify({
-            'success': True,
-            'all_available': all_available,
-            'some_available': some_available,
-            'available_furniture': available,
-            'unavailable_furniture': unavailable,
-            'conflicts': conflicts,
-            'total_furniture': len(furniture_ids),
-            'has_alternatives': has_alternatives,
-            'needs_reassignment': not all_available and some_available
-        })
+        return api_success(
+            all_available=all_available,
+            some_available=some_available,
+            available_furniture=available,
+            unavailable_furniture=unavailable,
+            conflicts=conflicts,
+            total_furniture=len(furniture_ids),
+            has_alternatives=has_alternatives,
+            needs_reassignment=not all_available and some_available
+        )
 
     @bp.route('/map/reservations/<int:reservation_id>/change-date', methods=['POST'])
     @login_required
@@ -165,7 +164,7 @@ def register_routes(bp: Blueprint) -> None:
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         new_furniture_ids = data.get('furniture_ids')
         clear_furniture = data.get('clear_furniture', False)
@@ -173,7 +172,7 @@ def register_routes(bp: Blueprint) -> None:
         # Validate new_date: required, valid YYYY-MM-DD
         valid, new_date, err = validate_date_string(data.get('new_date'), 'new_date')
         if not valid:
-            return jsonify({'success': False, 'error': err}), 400
+            return api_error(err)
 
         # Validate furniture_ids if provided: must be list of positive integers
         if new_furniture_ids is not None:
@@ -181,18 +180,18 @@ def register_routes(bp: Blueprint) -> None:
                 new_furniture_ids, 'furniture_ids', allow_empty=True
             )
             if not valid:
-                return jsonify({'success': False, 'error': err}), 400
+                return api_error(err)
 
         # Get reservation
         reservation = get_beach_reservation_by_id(reservation_id)
         if not reservation:
-            return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
 
         current_date = reservation.get('reservation_date') or reservation.get('start_date')
 
         # If same date, no change needed
         if new_date == current_date:
-            return jsonify({'success': True, 'message': 'Sin cambios'})
+            return api_success(message='Sin cambios')
 
         try:
             with get_db() as conn:
@@ -220,12 +219,11 @@ def register_routes(bp: Blueprint) -> None:
 
                     conn.commit()
 
-                    return jsonify({
-                        'success': True,
-                        'cleared_furniture': True,
-                        'new_date': new_date,
-                        'reservation_id': reservation_id
-                    })
+                    return api_success(
+                        cleared_furniture=True,
+                        new_date=new_date,
+                        reservation_id=reservation_id
+                    )
 
                 # Normal flow: Get current furniture if not provided
                 if not new_furniture_ids:
@@ -248,11 +246,11 @@ def register_routes(bp: Blueprint) -> None:
                     unavailable_list = availability.get('unavailable', [])
                     if unavailable_list:
                         conflict_ids = list(set(item['furniture_id'] for item in unavailable_list))
-                        return jsonify({
-                            'success': False,
-                            'error': 'El mobiliario no esta disponible en la nueva fecha',
-                            'conflicts': conflict_ids
-                        }), 409
+                        return api_error(
+                            'El mobiliario no esta disponible en la nueva fecha',
+                            409,
+                            conflicts=conflict_ids
+                        )
 
                 # Update reservation date
                 conn.execute('''
@@ -283,14 +281,13 @@ def register_routes(bp: Blueprint) -> None:
 
                 conn.commit()
 
-            return jsonify({
-                'success': True,
-                'reservation_id': reservation_id,
-                'old_date': current_date,
-                'new_date': new_date,
-                'message': 'Fecha actualizada'
-            })
+            return api_success(
+                message='Fecha actualizada',
+                reservation_id=reservation_id,
+                old_date=current_date,
+                new_date=new_date
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)

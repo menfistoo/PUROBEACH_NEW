@@ -6,6 +6,7 @@ from flask import current_app, request, jsonify
 from flask_login import login_required, current_user
 from utils.decorators import permission_required
 from utils.audit import log_create, log_update, log_delete
+from utils.api_response import api_success, api_error
 from models.reservation import (
     get_reservation_with_details, get_available_furniture,
     get_status_history, add_reservation_state, remove_reservation_state,
@@ -14,7 +15,8 @@ from models.reservation import (
     get_conflicting_reservations, create_linked_multiday_reservations,
     get_multiday_summary, cancel_multiday_reservations,
     update_multiday_reservations, suggest_furniture_for_reservation,
-    build_furniture_occupancy_map, validate_cluster_contiguity
+    build_furniture_occupancy_map, validate_cluster_contiguity,
+    InvalidStateTransitionError, get_allowed_transitions,
 )
 from datetime import date
 
@@ -33,9 +35,9 @@ def register_routes(bp):
         """Get reservation details as JSON."""
         reservation = get_reservation_with_details(reservation_id)
         if not reservation:
-            return jsonify({'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
 
-        return jsonify({
+        return api_success(data={
             'id': reservation['id'],
             'ticket_number': reservation.get('ticket_number'),
             'customer_id': reservation['customer_id'],
@@ -66,7 +68,7 @@ def register_routes(bp):
 
         reservation = get_reservation_with_details(reservation_id)
         if not reservation:
-            return jsonify({'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
 
         data = request.get_json()
         allowed_fields = ['num_people', 'paid', 'notes', 'final_price',
@@ -106,6 +108,10 @@ def register_routes(bp):
                         (state_id,)
                     ).fetchone()
                     if state:
+                        # Check if admin for bypass
+                        is_admin = (hasattr(current_user, 'role') and
+                                    current_user.role and
+                                    current_user.role.name == 'admin')
                         # Remove current states and add new one
                         current_states = reservation.get('current_states', '')
                         current_state_list = [s.strip() for s in current_states.split(',') if s.strip()]
@@ -116,7 +122,8 @@ def register_routes(bp):
                             )
                         add_reservation_state(
                             reservation_id, state['name'],
-                            changed_by=current_user.username if current_user else 'system'
+                            changed_by=current_user.username if current_user else 'system',
+                            bypass_validation=is_admin
                         )
 
             # Update other fields
@@ -140,9 +147,11 @@ def register_routes(bp):
 
             return jsonify({'success': True})
 
+        except InvalidStateTransitionError as e:
+            return api_error(str(e), 400)
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/reservations/<int:reservation_id>/toggle-state', methods=['POST'])
     @login_required
@@ -154,11 +163,16 @@ def register_routes(bp):
         action = data.get('action', 'toggle')
 
         if not state_name:
-            return jsonify({'error': 'Estado requerido'}), 400
+            return api_error('Estado requerido', 400)
 
         reservation = get_reservation_with_details(reservation_id)
         if not reservation:
-            return jsonify({'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
+
+        # Check if admin for bypass
+        is_admin = (hasattr(current_user, 'role') and
+                    current_user.role and
+                    current_user.role.name == 'admin')
 
         # Capture before state for audit logging
         before_state = {
@@ -185,14 +199,16 @@ def register_routes(bp):
                 if not has_state:
                     add_reservation_state(
                         reservation_id, state_name,
-                        changed_by=current_user.username if current_user else 'system'
+                        changed_by=current_user.username if current_user else 'system',
+                        bypass_validation=is_admin
                     )
                 result_action = 'set'
 
             elif action == 'add' or (action == 'toggle' and not has_state):
                 add_reservation_state(
                     reservation_id, state_name,
-                    changed_by=current_user.username if current_user else 'system'
+                    changed_by=current_user.username if current_user else 'system',
+                    bypass_validation=is_admin
                 )
                 result_action = 'added'
 
@@ -214,9 +230,17 @@ def register_routes(bp):
 
             return jsonify({'success': True, 'action': result_action, 'state': state_name})
 
+        except InvalidStateTransitionError as e:
+            current_state = reservation.get('current_state', '')
+            allowed = get_allowed_transitions(current_state)
+            return api_error(
+                str(e), 400,
+                current_state=current_state,
+                allowed_transitions=sorted(allowed)
+            )
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/reservations/<int:reservation_id>/history')
     @login_required
@@ -225,7 +249,7 @@ def register_routes(bp):
         """Get reservation state change history."""
         history = get_status_history(reservation_id)
 
-        return jsonify({
+        return api_success(data={
             'history': [{
                 'status_type': h.get('status_type'),
                 'action': h.get('action'),
@@ -249,7 +273,7 @@ def register_routes(bp):
 
         furniture = get_available_furniture(date_str, zone_id, furniture_type)
 
-        return jsonify({
+        return api_success(data={
             'furniture': [{
                 'id': f['id'],
                 'number': f['number'],
@@ -278,9 +302,9 @@ def register_routes(bp):
         exclude_reservation_id = data.get('exclude_reservation_id')
 
         if not furniture_ids:
-            return jsonify({'error': 'furniture_ids requeridos'}), 400
+            return api_error('furniture_ids requeridos', 400)
         if not dates:
-            return jsonify({'error': 'dates requeridos'}), 400
+            return api_error('dates requeridos', 400)
 
         result = check_furniture_availability_bulk(
             furniture_ids=furniture_ids,
@@ -288,7 +312,7 @@ def register_routes(bp):
             exclude_reservation_id=exclude_reservation_id
         )
 
-        return jsonify(result)
+        return jsonify({'success': True, **result})
 
     @bp.route('/reservations/check-duplicate', methods=['GET', 'POST'])
     @login_required
@@ -322,15 +346,16 @@ def register_routes(bp):
                         exclude_reservation_id=exclude_reservation_id
                     )
                     return jsonify({
+                        'success': True,
                         'has_duplicate': is_duplicate,
                         'is_duplicate': is_duplicate,
                         'existing_reservation': existing
                     })
 
             if not customer_id:
-                return jsonify({'has_duplicate': False, 'existing_reservation': None})
+                return jsonify({'success': True, 'has_duplicate': False, 'existing_reservation': None})
             if not date:
-                return jsonify({'error': 'date requerido'}), 400
+                return api_error('date requerido', 400)
 
             dates = [date]
         else:
@@ -340,9 +365,9 @@ def register_routes(bp):
             exclude_reservation_id = data.get('exclude_reservation_id')
 
             if not customer_id:
-                return jsonify({'error': 'customer_id requerido'}), 400
+                return api_error('customer_id requerido', 400)
             if not dates:
-                return jsonify({'error': 'dates requeridos'}), 400
+                return api_error('dates requeridos', 400)
 
         is_duplicate, existing = check_duplicate_reservation(
             customer_id=customer_id,
@@ -351,6 +376,7 @@ def register_routes(bp):
         )
 
         return jsonify({
+            'success': True,
             'has_duplicate': is_duplicate,
             'is_duplicate': is_duplicate,  # backward compat
             'existing_reservation': existing
@@ -367,7 +393,7 @@ def register_routes(bp):
         furniture_type = request.args.get('type')
 
         if not date_from or not date_to:
-            return jsonify({'error': 'date_from y date_to requeridos'}), 400
+            return api_error('date_from y date_to requeridos', 400)
 
         result = get_furniture_availability_map(
             date_from=date_from,
@@ -376,7 +402,7 @@ def register_routes(bp):
             furniture_type=furniture_type
         )
 
-        return jsonify(result)
+        return jsonify({'success': True, **result})
 
     @bp.route('/reservations/conflicts')
     @login_required
@@ -388,12 +414,12 @@ def register_routes(bp):
         exclude_reservation_id = request.args.get('exclude_reservation_id', type=int)
 
         if not furniture_ids_str or not date_str:
-            return jsonify({'error': 'furniture_ids y date requeridos'}), 400
+            return api_error('furniture_ids y date requeridos', 400)
 
         try:
             furniture_ids = [int(x) for x in furniture_ids_str.split(',')]
         except ValueError:
-            return jsonify({'error': 'furniture_ids debe ser lista de enteros'}), 400
+            return api_error('furniture_ids debe ser lista de enteros', 400)
 
         conflicts = get_conflicting_reservations(
             furniture_ids=furniture_ids,
@@ -401,7 +427,7 @@ def register_routes(bp):
             exclude_reservation_id=exclude_reservation_id
         )
 
-        return jsonify({'conflicts': conflicts})
+        return api_success(data={'conflicts': conflicts})
 
     # ============================================================================
     # MULTI-DAY RESERVATION API ENDPOINTS
@@ -475,9 +501,9 @@ def register_routes(bp):
         summary = get_multiday_summary(reservation_id)
 
         if not summary:
-            return jsonify({'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
 
-        return jsonify(summary)
+        return jsonify({'success': True, **summary})
 
     @bp.route('/reservations/<int:reservation_id>/cancel-multiday', methods=['POST'])
     @login_required
@@ -584,17 +610,17 @@ def register_routes(bp):
         date_str = data.get('date')
 
         if not furniture_ids:
-            return jsonify({'error': 'furniture_ids requerido'}), 400
+            return api_error('furniture_ids requerido', 400)
         if not date_str:
-            return jsonify({'error': 'date requerido'}), 400
+            return api_error('date requerido', 400)
 
         try:
             occupancy_map = build_furniture_occupancy_map(date_str)
             result = validate_cluster_contiguity(furniture_ids, occupancy_map)
-            return jsonify(result)
+            return jsonify({'success': True, **result})
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     # ============================================================================
     # RESERVATIONS LIST API (for auto-filtering)

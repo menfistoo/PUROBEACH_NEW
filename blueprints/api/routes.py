@@ -3,12 +3,13 @@ API routes for JSON endpoints.
 Provides REST API access to beach club data.
 """
 
-from flask import jsonify, request, Blueprint
+from flask import jsonify, request, Blueprint  # jsonify kept for health_check
 from flask_login import login_required
 
 from models.zone import get_all_zones
 from models.furniture import get_all_furniture
 from extensions import limiter
+from utils.api_response import api_success, api_error
 
 api_bp = Blueprint('api', __name__)
 
@@ -58,10 +59,7 @@ def api_zones():
     """
     zones = get_all_zones()
 
-    return jsonify({
-        'success': True,
-        'zones': zones
-    })
+    return api_success(zones=zones)
 
 
 @api_bp.route('/furniture')
@@ -82,11 +80,7 @@ def api_furniture():
 
     furniture = get_all_furniture(zone_id=zone_id, active_only=active_only)
 
-    return jsonify({
-        'success': True,
-        'furniture': furniture,
-        'count': len(furniture)
-    })
+    return api_success(furniture=furniture, count=len(furniture))
 
 
 @api_bp.route('/furniture/<int:furniture_id>')
@@ -106,12 +100,6 @@ def api_furniture_detail(furniture_id):
     furniture = get_furniture_by_id(furniture_id)
 
     if not furniture:
-        return jsonify({
-            'success': False,
-            'error': 'Mobiliario no encontrado'
-        }), 404
+        return api_error('Mobiliario no encontrado', 404)
 
-    return jsonify({
-        'success': True,
-        'furniture': furniture
-    })
+    return api_success(furniture=furniture)

@@ -6,6 +6,7 @@ from flask import current_app, request, jsonify
 from flask_login import login_required
 from utils.decorators import permission_required
 from utils.audit import log_create, log_update
+from utils.api_response import api_success, api_error
 from models.customer import (
     find_duplicates, get_customer_by_id, get_customer_preferences,
     create_customer, set_customer_preferences, search_customers_unified,
@@ -71,7 +72,7 @@ def register_routes(bp):
         customer_type = request.args.get('type', None)
 
         if len(query) < 2:
-            return jsonify({'customers': []})
+            return jsonify({'success': True, 'customers': []})
 
         results = search_customers_unified(query, customer_type)
 
@@ -146,7 +147,7 @@ def register_routes(bp):
 
                 formatted_results.append(customer_data)
 
-        return jsonify({'customers': formatted_results})
+        return jsonify({'success': True, 'customers': formatted_results})
 
     @bp.route('/customers/check-duplicates')
     @login_required
@@ -160,6 +161,7 @@ def register_routes(bp):
         duplicates = find_duplicates(phone, customer_type, room_number)
 
         return jsonify({
+            'success': True,
             'duplicates': [{
                 'id': d['id'],
                 'first_name': d['first_name'],
@@ -354,6 +356,7 @@ def register_routes(bp):
         history = get_customer_reservation_history(customer_id, limit=min(limit, 20))
 
         return jsonify({
+            'success': True,
             'customer_id': customer_id,
             'history': history,
             'count': len(history)
@@ -368,10 +371,10 @@ def register_routes(bp):
 
         try:
             preferred = get_customer_preferred_furniture(customer_id, limit=limit)
-            return jsonify({'preferred_furniture': preferred})
+            return jsonify({'success': True, 'preferred_furniture': preferred})
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/customers/create-from-guest', methods=['POST'])
     @login_required
@@ -535,11 +538,12 @@ def register_routes(bp):
         """Lookup hotel guests by room number for auto-fill and guest selection."""
         room_number = request.args.get('room', '')
         if not room_number:
-            return jsonify({'guests': [], 'guest_count': 0})
+            return jsonify({'success': True, 'guests': [], 'guest_count': 0})
 
         guests = get_guests_by_room(room_number, date.today())
 
         return jsonify({
+            'success': True,
             'guest_count': len(guests),
             'guests': [{
                 'id': g['id'],

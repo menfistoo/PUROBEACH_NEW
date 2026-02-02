@@ -522,3 +522,83 @@ def get_customer_reservation_history(customer_id: int, limit: int = 5) -> list:
             })
 
         return results
+
+
+# =============================================================================
+# EXPORT QUERIES
+# =============================================================================
+
+def get_reservations_for_export(
+    date_from: str = None,
+    date_to: str = None,
+    customer_type: str = None,
+    state: str = None,
+    search: str = None
+) -> list:
+    """
+    Get reservations with full details for Excel export (no pagination).
+
+    Includes zone names and furniture names via subqueries.
+
+    Args:
+        date_from: Start date filter
+        date_to: End date filter
+        customer_type: 'interno' or 'externo'
+        state: State name filter
+        search: Search term (name, ticket, room)
+
+    Returns:
+        list: Reservation dicts with all export-relevant fields
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        query = '''
+            SELECT r.*,
+                   c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
+                   c.customer_type,
+                   c.room_number,
+                   (SELECT GROUP_CONCAT(f.number, ', ')
+                    FROM beach_reservation_furniture rf
+                    JOIN beach_furniture f ON rf.furniture_id = f.id
+                    WHERE rf.reservation_id = r.id) as furniture_names,
+                   (SELECT GROUP_CONCAT(DISTINCT z.name, ', ')
+                    FROM beach_reservation_furniture rf
+                    JOIN beach_furniture f ON rf.furniture_id = f.id
+                    LEFT JOIN beach_zones z ON f.zone_id = z.id
+                    WHERE rf.reservation_id = r.id
+                      AND z.name IS NOT NULL) as zone_names
+            FROM beach_reservations r
+            JOIN beach_customers c ON r.customer_id = c.id
+            WHERE 1=1
+        '''
+        params = []
+
+        if date_from:
+            query += ' AND r.reservation_date >= ?'
+            params.append(date_from)
+
+        if date_to:
+            query += ' AND r.reservation_date <= ?'
+            params.append(date_to)
+
+        if customer_type:
+            query += ' AND c.customer_type = ?'
+            params.append(customer_type)
+
+        if state:
+            query += ' AND r.current_state = ?'
+            params.append(state)
+
+        if search:
+            query += ''' AND (
+                c.first_name LIKE ? OR c.last_name LIKE ? OR
+                c.room_number LIKE ? OR r.ticket_number LIKE ?
+            )'''
+            search_param = f'%{search}%'
+            params.extend([search_param, search_param, search_param, search_param])
+
+        query += ' ORDER BY r.reservation_date DESC, r.created_at DESC'
+
+        cursor.execute(query, params)
+        return [dict(row) for row in cursor.fetchall()]

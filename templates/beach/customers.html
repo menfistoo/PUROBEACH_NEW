@@ -10,9 +10,15 @@
         <h2><i class="fas fa-address-book"></i> Gestión de Clientes</h2>
         <p class="text-muted mb-0">Administración de clientes internos y externos</p>
     </div>
-    <a href="{{ url_for('beach.customers_create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Nuevo Cliente
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('beach.customers_export') }}?{{ request.query_string.decode() }}"
+           class="btn btn-outline-primary" id="export-customers-btn">
+            <i class="fas fa-download me-1"></i>Exportar Excel
+        </a>
+        <a href="{{ url_for('beach.customers_create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Nuevo Cliente
+        </a>
+    </div>
 </div>
 
 <!-- Stats Cards -->
@@ -435,6 +441,9 @@
             // Update browser URL
             updateBrowserUrl(filters);
 
+            // Update export link
+            updateExportLink(filters);
+
         } catch (error) {
             if (error.name === 'AbortError') {
                 // Request was aborted, ignore
@@ -465,6 +474,20 @@
             clearTimeout(debounceTimer);
         }
         performFilter();
+    }
+
+    /**
+     * Update export button href with current filters
+     */
+    function updateExportLink(filters) {
+        const exportBtn = document.getElementById('export-customers-btn');
+        if (!exportBtn) return;
+        const params = new URLSearchParams();
+        if (filters.search) params.set('search', filters.search);
+        if (filters.type) params.set('type', filters.type);
+        if (filters.vip) params.set('vip', filters.vip);
+        const qs = params.toString();
+        exportBtn.href = `{{ url_for('beach.customers_export') }}${qs ? '?' + qs : ''}`;
     }
 
     // Event listeners

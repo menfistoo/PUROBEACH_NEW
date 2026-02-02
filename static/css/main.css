@@ -721,6 +721,17 @@ html.sidebar-collapsed .nav-child.active i {
     font-size: 16px;
 }
 
+/* ==================== Button Loading State ==================== */
+.btn-loading {
+    pointer-events: none;
+    opacity: 0.75;
+    cursor: not-allowed;
+}
+
+.btn-loading .fa-spinner {
+    margin-right: 4px;
+}
+
 /* ==================== Cards ==================== */
 .card {
     background: var(--color-white);

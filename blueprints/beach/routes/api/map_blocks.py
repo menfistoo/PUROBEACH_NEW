@@ -4,13 +4,14 @@ Endpoints for blocking/unblocking furniture (maintenance, VIP hold, etc.).
 """
 
 import logging
-from flask import current_app, request, jsonify
+from flask import current_app, request
 from flask_login import login_required, current_user
 from datetime import date
 
 logger = logging.getLogger(__name__)
 
 from utils.decorators import permission_required
+from utils.api_response import api_success, api_error
 from models.furniture import get_furniture_by_id
 from models.furniture_block import (
     create_furniture_block, get_blocks_for_date, get_block_by_id,
@@ -41,7 +42,7 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         start_date = data.get('start_date')
         end_date = data.get('end_date') or start_date  # Handle empty/null end_date
@@ -50,12 +51,12 @@ def register_routes(bp):
         notes = data.get('notes') or ''
 
         if not start_date:
-            return jsonify({'success': False, 'error': 'Fecha de inicio requerida'}), 400
+            return api_error('Fecha de inicio requerida')
 
         # Check furniture exists
         furniture = get_furniture_by_id(furniture_id)
         if not furniture:
-            return jsonify({'success': False, 'error': 'Mobiliario no encontrado'}), 404
+            return api_error('Mobiliario no encontrado', 404)
 
         try:
             block_id = create_furniture_block(
@@ -68,18 +69,17 @@ def register_routes(bp):
                 created_by=current_user.username if current_user else 'system'
             )
 
-            return jsonify({
-                'success': True,
-                'block_id': block_id,
-                'message': f'Mobiliario {furniture["number"]} bloqueado'
-            })
+            return api_success(
+                message=f'Mobiliario {furniture["number"]} bloqueado',
+                block_id=block_id
+            )
 
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
+            return api_error('Solicitud inválida')
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error al bloquear mobiliario'}), 500
+            return api_error('Error al bloquear mobiliario', 500)
 
     @bp.route('/map/furniture/<int:furniture_id>/block', methods=['DELETE'])
     @login_required
@@ -102,25 +102,25 @@ def register_routes(bp):
             # Delete specific block
             block = get_block_by_id(block_id)
             if not block:
-                return jsonify({'success': False, 'error': 'Bloqueo no encontrado'}), 404
+                return api_error('Bloqueo no encontrado', 404)
 
             if block['furniture_id'] != furniture_id:
-                return jsonify({'success': False, 'error': 'Bloqueo no corresponde al mobiliario'}), 400
+                return api_error('Bloqueo no corresponde al mobiliario')
 
             delete_block(block_id)
-            return jsonify({'success': True, 'message': 'Bloqueo eliminado'})
+            return api_success(message='Bloqueo eliminado')
 
         elif date_str:
             # Find and delete block for this date
             block = is_furniture_blocked(furniture_id, date_str)
             if not block:
-                return jsonify({'success': False, 'error': 'No hay bloqueo para esta fecha'}), 404
+                return api_error('No hay bloqueo para esta fecha', 404)
 
             delete_block(block['id'])
-            return jsonify({'success': True, 'message': 'Bloqueo eliminado'})
+            return api_success(message='Bloqueo eliminado')
 
         else:
-            return jsonify({'success': False, 'error': 'Se requiere date o block_id'}), 400
+            return api_error('Se requiere date o block_id')
 
     @bp.route('/map/furniture/<int:furniture_id>/unblock-partial', methods=['POST'])
     @login_required
@@ -142,25 +142,25 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         block_id = data.get('block_id')
         unblock_start = data.get('unblock_start')
         unblock_end = data.get('unblock_end')
 
         if not block_id:
-            return jsonify({'success': False, 'error': 'block_id requerido'}), 400
+            return api_error('block_id requerido')
 
         if not unblock_start or not unblock_end:
-            return jsonify({'success': False, 'error': 'Fechas de desbloqueo requeridas'}), 400
+            return api_error('Fechas de desbloqueo requeridas')
 
         # Verify block belongs to this furniture
         block = get_block_by_id(block_id)
         if not block:
-            return jsonify({'success': False, 'error': 'Bloqueo no encontrado'}), 404
+            return api_error('Bloqueo no encontrado', 404)
 
         if block['furniture_id'] != furniture_id:
-            return jsonify({'success': False, 'error': 'Bloqueo no corresponde al mobiliario'}), 400
+            return api_error('Bloqueo no corresponde al mobiliario')
 
         try:
             result = partial_unblock(block_id, unblock_start, unblock_end)
@@ -172,19 +172,18 @@ def register_routes(bp):
                 'split': 'Bloqueo dividido en dos'
             }
 
-            return jsonify({
-                'success': True,
-                'action': result['action'],
-                'message': action_messages.get(result['action'], 'Desbloqueo parcial completado'),
-                'block_ids': result.get('block_ids', [])
-            })
+            return api_success(
+                message=action_messages.get(result['action'], 'Desbloqueo parcial completado'),
+                action=result['action'],
+                block_ids=result.get('block_ids', [])
+            )
 
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
+            return api_error('Solicitud inválida')
         except Exception as e:
             logger.error(f"Partial unblock error for furniture {furniture_id}: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': 'Error al procesar desbloqueo parcial'}), 500
+            return api_error('Error al procesar desbloqueo parcial', 500)
 
     @bp.route('/map/blocks')
     @login_required
@@ -205,9 +204,8 @@ def register_routes(bp):
 
         blocks = get_blocks_for_date(date_str, zone_id)
 
-        return jsonify({
-            'success': True,
-            'date': date_str,
-            'blocks': blocks,
-            'block_types': BLOCK_TYPES
-        })
+        return api_success(
+            date=date_str,
+            blocks=blocks,
+            block_types=BLOCK_TYPES
+        )

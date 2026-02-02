@@ -4,11 +4,12 @@ Endpoints for managing the beach waiting list.
 """
 
 import logging
-from flask import current_app, request, jsonify
+from flask import current_app, request
 from flask_login import login_required, current_user
 from datetime import date
 
 from utils.decorators import permission_required
+from utils.api_response import api_success, api_error
 from models.waitlist import (
     get_waitlist_by_date,
     get_waitlist_count,
@@ -47,14 +48,13 @@ def register_routes(bp):
 
         try:
             entries = get_waitlist_by_date(requested_date, include_all=include_all)
-            return jsonify({
-                'success': True,
-                'entries': entries,
-                'count': len([e for e in entries if e['status'] == 'waiting'])
-            })
+            return api_success(
+                entries=entries,
+                count=len([e for e in entries if e['status'] == 'waiting'])
+            )
         except Exception as e:
             logger.error(f"Error listing waitlist: {e}")
-            return jsonify({'success': False, 'error': 'Error al obtener lista'}), 500
+            return api_error('Error al obtener lista', 500)
 
     @bp.route('/waitlist/count', methods=['GET'])
     @login_required
@@ -73,10 +73,10 @@ def register_routes(bp):
 
         try:
             count = get_waitlist_count(requested_date)
-            return jsonify({'success': True, 'count': count})
+            return api_success(count=count)
         except Exception as e:
             logger.error(f"Error getting waitlist count: {e}")
-            return jsonify({'success': False, 'error': 'Error al obtener conteo'}), 500
+            return api_error('Error al obtener conteo', 500)
 
     @bp.route('/waitlist/<int:entry_id>', methods=['GET'])
     @login_required
@@ -85,9 +85,9 @@ def register_routes(bp):
         """Get single waitlist entry."""
         entry = get_waitlist_entry(entry_id)
         if not entry:
-            return jsonify({'success': False, 'error': 'Entrada no encontrada'}), 404
+            return api_error('Entrada no encontrada', 404)
 
-        return jsonify({'success': True, 'entry': entry})
+        return api_success(entry=entry)
 
     @bp.route('/waitlist', methods=['POST'])
     @login_required
@@ -113,21 +113,20 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         try:
             entry_id = create_waitlist_entry(data, created_by=current_user.id)
-            return jsonify({
-                'success': True,
-                'entry_id': entry_id,
-                'message': 'Agregado a lista de espera'
-            })
+            return api_success(
+                message='Agregado a lista de espera',
+                entry_id=entry_id
+            )
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
+            return api_error('Solicitud inválida')
         except Exception as e:
             logger.error(f"Error creating waitlist entry: {e}")
-            return jsonify({'success': False, 'error': 'Error al crear entrada'}), 500
+            return api_error('Error al crear entrada', 500)
 
     @bp.route('/waitlist/<int:entry_id>', methods=['PUT'])
     @login_required
@@ -149,31 +148,24 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         try:
             # If only status field, do status-only update
             if list(data.keys()) == ['status']:
                 update_waitlist_status(entry_id, data['status'])
-                return jsonify({
-                    'success': True,
-                    'message': 'Estado actualizado'
-                })
+                return api_success(message='Estado actualizado')
 
             # Otherwise, do full update
             update_waitlist_entry(entry_id, data)
             entry = get_waitlist_entry(entry_id)
-            return jsonify({
-                'success': True,
-                'message': 'Entrada actualizada',
-                'entry': entry
-            })
+            return api_success(message='Entrada actualizada', entry=entry)
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
+            return api_error('Solicitud inválida')
         except Exception as e:
             logger.error(f"Error updating waitlist entry: {e}")
-            return jsonify({'success': False, 'error': 'Error al actualizar'}), 500
+            return api_error('Error al actualizar', 500)
 
     @bp.route('/waitlist/<int:entry_id>/convert', methods=['POST'])
     @login_required
@@ -191,20 +183,17 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data or 'reservation_id' not in data:
-            return jsonify({'success': False, 'error': 'ID de reserva requerido'}), 400
+            return api_error('ID de reserva requerido')
 
         try:
             convert_to_reservation(entry_id, data['reservation_id'])
-            return jsonify({
-                'success': True,
-                'message': 'Entrada convertida a reserva'
-            })
+            return api_success(message='Entrada convertida a reserva')
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
+            return api_error('Solicitud inválida')
         except Exception as e:
             logger.error(f"Error converting waitlist entry: {e}")
-            return jsonify({'success': False, 'error': 'Error al convertir'}), 500
+            return api_error('Error al convertir', 500)
 
     @bp.route('/waitlist/history', methods=['GET'])
     @login_required
@@ -231,20 +220,17 @@ def register_routes(bp):
                 requested_date=requested_date,
                 customer_id=customer_id
             )
-            return jsonify({'success': True, 'entries': entries})
+            return api_success(entries=entries)
         except Exception as e:
             logger.error(f"Error getting waitlist history: {e}")
-            return jsonify({'success': False, 'error': 'Error al obtener historial'}), 500
+            return api_error('Error al obtener historial', 500)
 
     @bp.route('/waitlist/statuses', methods=['GET'])
     @login_required
     @permission_required('beach.waitlist.view')
     def get_statuses():
         """Get available waitlist statuses."""
-        return jsonify({
-            'success': True,
-            'statuses': WAITLIST_STATUSES
-        })
+        return api_success(statuses=WAITLIST_STATUSES)
 
     @bp.route('/zones', methods=['GET'])
     @login_required
@@ -254,13 +240,10 @@ def register_routes(bp):
         from models.zone import get_all_zones
         try:
             zones = get_all_zones(active_only=True)
-            return jsonify({
-                'success': True,
-                'zones': zones
-            })
+            return api_success(zones=zones)
         except Exception as e:
             logger.error(f"Error getting zones: {e}")
-            return jsonify({'success': False, 'error': 'Error al obtener zonas'}), 500
+            return api_error('Error al obtener zonas', 500)
 
     @bp.route('/furniture-types', methods=['GET'])
     @login_required
@@ -270,13 +253,10 @@ def register_routes(bp):
         from models.furniture_type import get_all_furniture_types
         try:
             types = get_all_furniture_types(active_only=True)
-            return jsonify({
-                'success': True,
-                'furniture_types': types
-            })
+            return api_success(furniture_types=types)
         except Exception as e:
             logger.error(f"Error getting furniture types: {e}")
-            return jsonify({'success': False, 'error': 'Error al obtener tipos'}), 500
+            return api_error('Error al obtener tipos', 500)
 
     @bp.route('/packages', methods=['GET'])
     @login_required
@@ -297,10 +277,7 @@ def register_routes(bp):
                 ''')
                 rows = cursor.fetchall()
                 packages = [dict(row) for row in rows]
-            return jsonify({
-                'success': True,
-                'packages': packages
-            })
+            return api_success(packages=packages)
         except Exception as e:
             logger.error(f"Error getting packages: {e}")
-            return jsonify({'success': False, 'error': 'Error al obtener paquetes'}), 500
+            return api_error('Error al obtener paquetes', 500)

@@ -3,11 +3,12 @@ Map temporary furniture API routes.
 Endpoints for creating/managing temporary furniture (valid for specific dates only).
 """
 
-from flask import current_app, request, jsonify
+from flask import current_app, request
 from flask_login import login_required
 from datetime import date
 
 from utils.decorators import permission_required
+from utils.api_response import api_success, api_error
 from models.furniture_daily import (
     create_temporary_furniture, get_temporary_furniture_for_date,
     delete_temporary_furniture, get_next_temp_furniture_number,
@@ -117,13 +118,13 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         # Required fields
         required = ['zone_id', 'furniture_type', 'capacity', 'start_date']
         for field in required:
             if not data.get(field):
-                return jsonify({'success': False, 'error': f'{field} requerido'}), 400
+                return api_error(f'{field} requerido')
 
         # Get dates
         start_date = data['start_date']
@@ -131,10 +132,7 @@ def register_routes(bp):
 
         # Validate date range
         if start_date > end_date:
-            return jsonify({
-                'success': False,
-                'error': 'La fecha de inicio no puede ser posterior a la fecha de fin'
-            }), 400
+            return api_error('La fecha de inicio no puede ser posterior a la fecha de fin')
 
         # Auto-generate number if not provided
         number = data.get('number')
@@ -184,16 +182,15 @@ def register_routes(bp):
                 rotation=rotation
             )
 
-            return jsonify({
-                'success': True,
-                'furniture_id': furniture_id,
-                'number': number,
-                'message': f'Mobiliario temporal {number} creado'
-            })
+            return api_success(
+                message=f'Mobiliario temporal {number} creado',
+                furniture_id=furniture_id,
+                number=number
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/map/temporary-furniture/<int:furniture_id>', methods=['DELETE'])
     @login_required
@@ -216,34 +213,29 @@ def register_routes(bp):
             if delete_type == 'day' and delete_date:
                 # Partial deletion - remove only this date
                 result = partial_delete_temp_furniture(furniture_id, delete_date)
-                return jsonify({
-                    'success': True,
-                    'action': result['action'],
-                    'furniture_ids': result['furniture_ids'],
-                    'message': f'Mobiliario temporal eliminado para {delete_date}'
-                })
+                return api_success(
+                    message=f'Mobiliario temporal eliminado para {delete_date}',
+                    action=result['action'],
+                    furniture_ids=result['furniture_ids']
+                )
             else:
                 # Full deletion - remove entire furniture
                 deleted = delete_temporary_furniture(furniture_id)
 
                 if deleted:
-                    return jsonify({
-                        'success': True,
-                        'action': 'deleted',
-                        'message': 'Mobiliario temporal eliminado completamente'
-                    })
+                    return api_success(
+                        message='Mobiliario temporal eliminado completamente',
+                        action='deleted'
+                    )
                 else:
-                    return jsonify({
-                        'success': False,
-                        'error': 'No se pudo eliminar'
-                    }), 404
+                    return api_error('No se pudo eliminar', 404)
 
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
+            return api_error('Solicitud inválida')
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/map/temporary-furniture/<int:furniture_id>/info')
     @login_required
@@ -258,12 +250,9 @@ def register_routes(bp):
         info = get_temp_furniture_date_info(furniture_id)
 
         if not info:
-            return jsonify({'success': False, 'error': 'No encontrado'}), 404
+            return api_error('No encontrado', 404)
 
-        return jsonify({
-            'success': True,
-            **info
-        })
+        return api_success(**info)
 
     @bp.route('/map/temporary-furniture')
     @login_required
@@ -284,12 +273,11 @@ def register_routes(bp):
 
         furniture = get_temporary_furniture_for_date(date_str, zone_id)
 
-        return jsonify({
-            'success': True,
-            'date': date_str,
-            'furniture': furniture,
-            'count': len(furniture)
-        })
+        return api_success(
+            date=date_str,
+            furniture=furniture,
+            count=len(furniture)
+        )
 
     @bp.route('/map/temporary-furniture/next-number')
     @login_required
@@ -310,7 +298,4 @@ def register_routes(bp):
 
         next_number = get_next_temp_furniture_number(furniture_type, zone_id)
 
-        return jsonify({
-            'success': True,
-            'number': next_number
-        })
+        return api_success(number=next_number)

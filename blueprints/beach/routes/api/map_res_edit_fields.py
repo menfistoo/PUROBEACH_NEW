@@ -3,11 +3,12 @@ Map reservation edit API routes - Field updates.
 Partial updates and customer changes.
 """
 
-from flask import current_app, request, jsonify, Response, Blueprint
+from flask import current_app, request, Response, Blueprint
 from flask_login import login_required
 
 from utils.decorators import permission_required
 from utils.validators import validate_positive_integer
+from utils.api_response import api_success, api_error
 from models.reservation import get_beach_reservation_by_id
 from models.customer import get_customer_by_id, create_customer_from_hotel_guest
 from database import get_db
@@ -36,12 +37,12 @@ def register_routes(bp: Blueprint) -> None:
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': True, 'message': 'Sin cambios'})
+            return api_success(message='Sin cambios')
 
         # Get existing reservation
         reservation = get_beach_reservation_by_id(reservation_id)
         if not reservation:
-            return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
 
         # Allowed fields for partial update
         # Note: For date changes, use the dedicated /change-dates endpoint
@@ -67,15 +68,12 @@ def register_routes(bp: Blueprint) -> None:
                 updates[db_field] = v
 
         if not updates:
-            return jsonify({'success': True, 'message': 'Sin cambios'})
+            return api_success(message='Sin cambios')
 
         # Validate time_slot if provided
         if 'time_slot' in updates:
             if updates['time_slot'] not in ('all_day', 'morning', 'afternoon'):
-                return jsonify({
-                    'success': False,
-                    'error': 'Valor de time_slot no valido'
-                }), 400
+                return api_error('Valor de time_slot no valido')
 
         # Validate num_people if provided
         if 'num_people' in updates:
@@ -84,10 +82,7 @@ def register_routes(bp: Blueprint) -> None:
                 if updates['num_people'] < 1 or updates['num_people'] > 50:
                     raise ValueError()
             except (ValueError, TypeError):
-                return jsonify({
-                    'success': False,
-                    'error': 'Numero de personas no valido (1-50)'
-                }), 400
+                return api_error('Numero de personas no valido (1-50)')
 
         # Validate paid if provided (should be 0 or 1)
         if 'paid' in updates:
@@ -98,10 +93,7 @@ def register_routes(bp: Blueprint) -> None:
             if updates['payment_method'] and updates['payment_method'] not in (
                 'efectivo', 'tarjeta', 'cargo_habitacion'
             ):
-                return jsonify({
-                    'success': False,
-                    'error': 'Metodo de pago no valido'
-                }), 400
+                return api_error('Metodo de pago no valido')
 
         # payment_ticket_number can be string or None
         if 'payment_ticket_number' in updates:
@@ -165,16 +157,15 @@ def register_routes(bp: Blueprint) -> None:
 
                 conn.commit()
 
-            return jsonify({
-                'success': True,
-                'reservation_id': reservation_id,
-                'updated_fields': list(updates.keys()),
-                'message': 'Reserva actualizada'
-            })
+            return api_success(
+                message='Reserva actualizada',
+                reservation_id=reservation_id,
+                updated_fields=list(updates.keys())
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/map/reservations/<int:reservation_id>/change-customer', methods=['POST'])
     @login_required
@@ -199,16 +190,13 @@ def register_routes(bp: Blueprint) -> None:
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         raw_customer_id = data.get('customer_id')
         raw_guest_id = data.get('hotel_guest_id')
 
         if not raw_customer_id and not raw_guest_id:
-            return jsonify({
-                'success': False,
-                'error': 'customer_id o hotel_guest_id requerido'
-            }), 400
+            return api_error('customer_id o hotel_guest_id requerido')
 
         # Validate types: must be positive integers if provided
         new_customer_id = None
@@ -219,19 +207,19 @@ def register_routes(bp: Blueprint) -> None:
                 raw_customer_id, 'customer_id'
             )
             if not valid:
-                return jsonify({'success': False, 'error': err}), 400
+                return api_error(err)
 
         if raw_guest_id:
             valid, hotel_guest_id, err = validate_positive_integer(
                 raw_guest_id, 'hotel_guest_id'
             )
             if not valid:
-                return jsonify({'success': False, 'error': err}), 400
+                return api_error(err)
 
         # Get reservation
         reservation = get_beach_reservation_by_id(reservation_id)
         if not reservation:
-            return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
 
         # If hotel_guest_id provided, create customer first
         if hotel_guest_id and not new_customer_id:
@@ -240,18 +228,15 @@ def register_routes(bp: Blueprint) -> None:
                 new_customer_id = result['customer_id']
             except ValueError as e:
                 current_app.logger.error(f'Error: {e}', exc_info=True)
-                return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
+                return api_error('Solicitud inválida')
             except Exception as e:
                 current_app.logger.error(f'Error: {e}', exc_info=True)
-                return jsonify({
-                    'success': False,
-                    'error': 'Error al crear cliente desde huesped'
-                }), 500
+                return api_error('Error al crear cliente desde huesped', 500)
 
         # Validate customer exists
         customer = get_customer_by_id(new_customer_id)
         if not customer:
-            return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
+            return api_error('Cliente no encontrado', 404)
 
         # Check for duplicate reservation (same customer + date)
         reservation_date = reservation.get('reservation_date') or reservation.get('start_date')
@@ -270,11 +255,11 @@ def register_routes(bp: Blueprint) -> None:
                 existing = cursor.fetchone()
 
                 if existing:
-                    return jsonify({
-                        'success': False,
-                        'error': f'El cliente ya tiene reserva para esta fecha (#{existing["ticket_number"]})',
-                        'existing_reservation_id': existing['id']
-                    }), 409
+                    return api_error(
+                        f'El cliente ya tiene reserva para esta fecha (#{existing["ticket_number"]})',
+                        409,
+                        existing_reservation_id=existing['id']
+                    )
 
         try:
             with get_db() as conn:
@@ -285,11 +270,11 @@ def register_routes(bp: Blueprint) -> None:
                 ''', (new_customer_id, reservation_id))
                 conn.commit()
 
-            return jsonify({
-                'success': True,
-                'reservation_id': reservation_id,
-                'customer_id': new_customer_id,
-                'customer': {
+            return api_success(
+                message='Cliente actualizado',
+                reservation_id=reservation_id,
+                customer_id=new_customer_id,
+                customer={
                     'id': customer['id'],
                     'first_name': customer.get('first_name'),
                     'last_name': customer.get('last_name'),
@@ -298,10 +283,9 @@ def register_routes(bp: Blueprint) -> None:
                     'room_number': customer.get('room_number'),
                     'vip_status': customer.get('vip_status'),
                     'phone': customer.get('phone')
-                },
-                'message': 'Cliente actualizado'
-            })
+                }
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error al cambiar cliente'}), 500
+            return api_error('Error al cambiar cliente', 500)

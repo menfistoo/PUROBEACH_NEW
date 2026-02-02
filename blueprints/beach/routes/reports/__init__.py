@@ -7,6 +7,9 @@ reports_bp = Blueprint('beach_reports', __name__, url_prefix='/reports')
 from blueprints.beach.routes.reports import payment_reconciliation
 payment_reconciliation.register_routes(reports_bp)
 
+from blueprints.beach.routes.reports import exports
+exports.register_routes(reports_bp)
+
 
 @reports_bp.route('/')
 @login_required

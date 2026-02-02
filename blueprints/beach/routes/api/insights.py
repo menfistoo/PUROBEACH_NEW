@@ -4,9 +4,10 @@ Provides analytics data for dashboard and advanced views.
 """
 
 from datetime import date, timedelta
-from flask import current_app, jsonify, request
+from flask import current_app, request
 from flask_login import login_required
 from utils.decorators import permission_required
+from utils.api_response import api_success, api_error
 from models.insights import (
     get_occupancy_today,
     get_occupancy_by_zone,
@@ -64,20 +65,16 @@ def register_routes(bp):
             pending = get_pending_checkins_count()
             zones = get_occupancy_by_zone()
 
-            return jsonify({
-                'success': True,
-                'occupancy': occupancy,
-                'comparison': comparison,
-                'pending_checkins': pending,
-                'zones': zones
-            })
+            return api_success(
+                occupancy=occupancy,
+                comparison=comparison,
+                pending_checkins=pending,
+                zones=zones
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': 'Error interno del servidor'
-            }), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/insights/occupancy', methods=['GET'])
     @login_required
@@ -114,19 +111,11 @@ def register_routes(bp):
             daily = get_occupancy_range(start_date, end_date)
             by_zone = get_occupancy_by_zone(end_date)
 
-            return jsonify({
-                'success': True,
-                'stats': stats,
-                'daily': daily,
-                'by_zone': by_zone
-            })
+            return api_success(stats=stats, daily=daily, by_zone=by_zone)
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': 'Error interno del servidor'
-            }), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/insights/revenue', methods=['GET'])
     @login_required
@@ -166,19 +155,15 @@ def register_routes(bp):
             breakdown = get_revenue_by_type(start_date, end_date)
             top_packages = get_top_packages(start_date, end_date)
 
-            return jsonify({
-                'success': True,
-                'stats': stats,
-                'breakdown': breakdown,
-                'top_packages': top_packages
-            })
+            return api_success(
+                stats=stats,
+                breakdown=breakdown,
+                top_packages=top_packages
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': 'Error interno del servidor'
-            }), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/insights/customers', methods=['GET'])
     @login_required
@@ -222,21 +207,17 @@ def register_routes(bp):
             preferences = get_popular_preferences(start_date, end_date)
             tags = get_popular_tags(start_date, end_date)
 
-            return jsonify({
-                'success': True,
-                'stats': stats,
-                'segmentation': segmentation,
-                'top_customers': top_customers,
-                'preferences': preferences,
-                'tags': tags
-            })
+            return api_success(
+                stats=stats,
+                segmentation=segmentation,
+                top_customers=top_customers,
+                preferences=preferences,
+                tags=tags
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': 'Error interno del servidor'
-            }), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/insights/patterns', methods=['GET'])
     @login_required
@@ -278,17 +259,13 @@ def register_routes(bp):
             lead_time = get_lead_time_distribution(start_date, end_date)
             cancellation = get_cancellation_breakdown(start_date, end_date)
 
-            return jsonify({
-                'success': True,
-                'stats': stats,
-                'by_day_of_week': by_day_of_week,
-                'lead_time': lead_time,
-                'cancellation': cancellation
-            })
+            return api_success(
+                stats=stats,
+                by_day_of_week=by_day_of_week,
+                lead_time=lead_time,
+                cancellation=cancellation
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': 'Error interno del servidor'
-            }), 500
+            return api_error('Error interno del servidor', 500)

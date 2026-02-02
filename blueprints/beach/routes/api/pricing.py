@@ -2,9 +2,10 @@
 Pricing API endpoints for real-time pricing calculations.
 """
 
-from flask import current_app, request, jsonify, Response
+from flask import current_app, request, Response
 from flask_login import login_required
 from datetime import datetime
+from utils.api_response import api_success, api_error
 from blueprints.beach.services.pricing_service import (
     get_eligible_packages,
     calculate_reservation_pricing
@@ -52,26 +53,17 @@ def register_routes(bp):
             required_fields = ["customer_type", "furniture_ids", "reservation_date", "num_people"]
             for field in required_fields:
                 if field not in data:
-                    return jsonify({
-                        "success": False,
-                        "error": f"Campo requerido: {field}"
-                    }), 400
+                    return api_error(f"Campo requerido: {field}")
 
             # Parse date
             try:
                 reservation_date = datetime.strptime(data["reservation_date"], "%Y-%m-%d").date()
             except ValueError:
-                return jsonify({
-                    "success": False,
-                    "error": "Formato de fecha inválido. Use YYYY-MM-DD"
-                }), 400
+                return api_error("Formato de fecha inválido. Use YYYY-MM-DD")
 
             # Validate customer_type
             if data["customer_type"] not in ["interno", "externo"]:
-                return jsonify({
-                    "success": False,
-                    "error": "customer_type debe ser 'interno' o 'externo'"
-                }), 400
+                return api_error("customer_type debe ser 'interno' o 'externo'")
 
             # Get eligible packages
             packages = get_eligible_packages(
@@ -81,17 +73,11 @@ def register_routes(bp):
                 num_people=data["num_people"]
             )
 
-            return jsonify({
-                "success": True,
-                "packages": packages
-            })
+            return api_success(packages=packages)
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                "success": False,
-                "error": "Error interno del servidor"
-            }), 500
+            return api_error("Error interno del servidor", 500)
 
     @bp.route('/pricing/calculate', methods=['POST'])
     @login_required
@@ -131,19 +117,13 @@ def register_routes(bp):
             required_fields = ["customer_id", "furniture_ids", "reservation_date", "num_people"]
             for field in required_fields:
                 if field not in data:
-                    return jsonify({
-                        "success": False,
-                        "error": f"Campo requerido: {field}"
-                    }), 400
+                    return api_error(f"Campo requerido: {field}")
 
             # Parse date
             try:
                 reservation_date = datetime.strptime(data["reservation_date"], "%Y-%m-%d").date()
             except ValueError:
-                return jsonify({
-                    "success": False,
-                    "error": "Formato de fecha inválido. Use YYYY-MM-DD"
-                }), 400
+                return api_error("Formato de fecha inválido. Use YYYY-MM-DD")
 
             # Calculate pricing
             pricing = calculate_reservation_pricing(
@@ -156,23 +136,14 @@ def register_routes(bp):
                 minimum_consumption_policy_id=data.get("minimum_consumption_policy_id")
             )
 
-            return jsonify({
-                "success": True,
-                "pricing": pricing
-            })
+            return api_success(pricing=pricing)
 
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                "success": False,
-                "error": "Error interno del servidor"
-            }), 400
+            return api_error("Error interno del servidor")
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                "success": False,
-                "error": "Error interno del servidor"
-            }), 500
+            return api_error("Error interno del servidor", 500)
 
     @bp.route('/pricing/minimum-consumption-policies', methods=['GET'])
     @login_required
@@ -200,13 +171,7 @@ def register_routes(bp):
                     if p.get('customer_type') == customer_type or p.get('customer_type') is None
                 ]
 
-            return jsonify({
-                "success": True,
-                "policies": policies
-            })
+            return api_success(policies=policies)
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                "success": False,
-                "error": "Error interno del servidor"
-            }), 500
+            return api_error("Error interno del servidor", 500)

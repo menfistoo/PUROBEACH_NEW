@@ -412,6 +412,46 @@ function toggleSidebar() {
     }
 }
 
+/**
+ * Set a button to loading or normal state.
+ * Prevents double-clicks during AJAX operations by disabling the button and
+ * showing a spinner with a configurable loading message.
+ *
+ * Supports two modes:
+ * 1. Auto mode: pass a button element. Original innerHTML is saved/restored.
+ * 2. data-loading-text: if the button has this attribute, it is used as the
+ *    loading label (e.g. data-loading-text="Guardando...").
+ *
+ * @param {HTMLElement} button - The button element to modify
+ * @param {boolean} loading - true to enter loading state, false to restore
+ * @param {string} [loadingText] - Optional override for the loading message
+ */
+function setButtonLoading(button, loading, loadingText) {
+    if (!button) return;
+
+    if (loading) {
+        // Save original state only once (avoid overwriting on repeated calls)
+        if (!button.dataset.pbOriginalHtml) {
+            button.dataset.pbOriginalHtml = button.innerHTML;
+        }
+        button.disabled = true;
+        button.classList.add('btn-loading');
+
+        const text = loadingText
+            || button.dataset.loadingText
+            || 'Procesando...';
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + text;
+    } else {
+        button.disabled = false;
+        button.classList.remove('btn-loading');
+
+        if (button.dataset.pbOriginalHtml) {
+            button.innerHTML = button.dataset.pbOriginalHtml;
+            delete button.dataset.pbOriginalHtml;
+        }
+    }
+}
+
 // Export functions for global use
 window.PuroBeach = {
     showToast,
@@ -422,5 +462,6 @@ window.PuroBeach = {
     debounce,
     copyToClipboard,
     fetchJSON,
-    toggleSidebar
+    toggleSidebar,
+    setButtonLoading
 };

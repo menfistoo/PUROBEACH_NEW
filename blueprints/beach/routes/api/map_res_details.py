@@ -3,11 +3,12 @@ Map reservation details API routes.
 Reservation panel details and furniture move operations.
 """
 
-from flask import current_app, request, jsonify
+from flask import current_app, request
 from flask_login import login_required
 from datetime import date, datetime
 
 from utils.decorators import permission_required
+from utils.api_response import api_success, api_error
 
 
 def _format_date_iso(value):
@@ -73,7 +74,7 @@ def register_routes(bp):
         reservation = get_reservation_with_details(reservation_id)
 
         if not reservation:
-            return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
 
         # Get customer details
         customer = None
@@ -109,11 +110,37 @@ def register_routes(bp):
                             'vip_code': matching_guest.get('vip_code')
                         }
 
+        # Build customer data
+        customer_data = {
+            'id': customer['id'],
+            'first_name': customer.get('first_name'),
+            'last_name': customer.get('last_name'),
+            'full_name': f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+            'customer_type': customer.get('customer_type'),
+            'room_number': customer.get('room_number'),
+            'phone': customer.get('phone'),
+            'email': customer.get('email'),
+            'vip_status': customer.get('vip_status', 0),
+            'total_visits': customer.get('total_visits', 0),
+            'notes': customer.get('notes'),
+            'preferences': [{
+                'id': p['id'],
+                'code': p.get('code'),
+                'name': p.get('name'),
+                'icon': p.get('icon')
+            } for p in customer_preferences],
+            # Hotel guest info for interno customers
+            'arrival_date': _format_date_iso(hotel_guest_info.get('arrival_date')),
+            'departure_date': _format_date_iso(hotel_guest_info.get('departure_date')),
+            'booking_reference': hotel_guest_info.get('booking_reference'),
+            'nationality': hotel_guest_info.get('nationality'),
+            'vip_code': hotel_guest_info.get('vip_code')
+        } if customer else None
+
         # Build response
-        return jsonify({
-            'success': True,
-            'date': date_str,
-            'reservation': {
+        return api_success(
+            date=date_str,
+            reservation={
                 'id': reservation['id'],
                 'ticket_number': reservation.get('ticket_number'),
                 'current_state': reservation.get('current_state'),
@@ -142,32 +169,8 @@ def register_routes(bp):
                 'payment_ticket_number': reservation.get('payment_ticket_number'),
                 'payment_method': reservation.get('payment_method')
             },
-            'customer': {
-                'id': customer['id'],
-                'first_name': customer.get('first_name'),
-                'last_name': customer.get('last_name'),
-                'full_name': f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
-                'customer_type': customer.get('customer_type'),
-                'room_number': customer.get('room_number'),
-                'phone': customer.get('phone'),
-                'email': customer.get('email'),
-                'vip_status': customer.get('vip_status', 0),
-                'total_visits': customer.get('total_visits', 0),
-                'notes': customer.get('notes'),
-                'preferences': [{
-                    'id': p['id'],
-                    'code': p.get('code'),
-                    'name': p.get('name'),
-                    'icon': p.get('icon')
-                } for p in customer_preferences],
-                # Hotel guest info for interno customers
-                'arrival_date': _format_date_iso(hotel_guest_info.get('arrival_date')),
-                'departure_date': _format_date_iso(hotel_guest_info.get('departure_date')),
-                'booking_reference': hotel_guest_info.get('booking_reference'),
-                'nationality': hotel_guest_info.get('nationality'),
-                'vip_code': hotel_guest_info.get('vip_code')
-            } if customer else None
-        })
+            customer=customer_data
+        )
 
     @bp.route('/map/move-reservation-furniture', methods=['POST'])
     @login_required
@@ -189,7 +192,7 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos')
 
         reservation_id = data.get('reservation_id')
         date_str = data.get('date')
@@ -198,15 +201,12 @@ def register_routes(bp):
 
         # Validation
         if not all([reservation_id, date_str, from_furniture_id, to_furniture_id]):
-            return jsonify({
-                'success': False,
-                'error': 'Faltan parametros requeridos'
-            }), 400
+            return api_error('Faltan parametros requeridos')
 
         # Get reservation
         reservation = get_beach_reservation_by_id(reservation_id)
         if not reservation:
-            return jsonify({'success': False, 'error': 'Reserva no encontrada'}), 404
+            return api_error('Reserva no encontrada', 404)
 
         # Check destination furniture is available
         availability = check_furniture_availability_bulk(
@@ -220,15 +220,12 @@ def register_routes(bp):
             unavailable = availability.get('unavailable', [])
             if unavailable:
                 blocker = unavailable[0]
-                return jsonify({
-                    'success': False,
-                    'error': f'Mobiliario ocupado por {blocker.get("customer_name", "otra reserva")}',
-                    'conflict': blocker
-                }), 409
-            return jsonify({
-                'success': False,
-                'error': 'Mobiliario de destino no disponible'
-            }), 409
+                return api_error(
+                    f'Mobiliario ocupado por {blocker.get("customer_name", "otra reserva")}',
+                    409,
+                    conflict=blocker
+                )
+            return api_error('Mobiliario de destino no disponible', 409)
 
         try:
             with get_db() as conn:
@@ -242,10 +239,7 @@ def register_routes(bp):
 
                 assignment = cursor.fetchone()
                 if not assignment:
-                    return jsonify({
-                        'success': False,
-                        'error': 'La reserva no tiene este mobiliario asignado para esta fecha'
-                    }), 400
+                    return api_error('La reserva no tiene este mobiliario asignado para esta fecha')
 
                 # Update the furniture assignment
                 conn.execute('''
@@ -264,24 +258,20 @@ def register_routes(bp):
             from_furniture = furniture_map.get(from_furniture_id, {})
             to_furniture = furniture_map.get(to_furniture_id, {})
 
-            return jsonify({
-                'success': True,
-                'reservation_id': reservation_id,
-                'date': date_str,
-                'from_furniture': {
+            return api_success(
+                message=f'Reserva movida de {from_furniture.get("number", from_furniture_id)} a {to_furniture.get("number", to_furniture_id)}',
+                reservation_id=reservation_id,
+                date=date_str,
+                from_furniture={
                     'id': from_furniture_id,
                     'number': from_furniture.get('number', str(from_furniture_id))
                 },
-                'to_furniture': {
+                to_furniture={
                     'id': to_furniture_id,
                     'number': to_furniture.get('number', str(to_furniture_id))
-                },
-                'message': f'Reserva movida de {from_furniture.get("number", from_furniture_id)} a {to_furniture.get("number", to_furniture_id)}'
-            })
+                }
+            )
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': 'Error al mover la reserva'
-            }), 500
+            return api_error('Error al mover la reserva', 500)
