@@ -2,6 +2,124 @@
 
 {% block title %}{{ 'Crear' if mode == 'create' else 'Editar' }} Usuario - PuroBeach{% endblock %}
 
+{% block extra_css %}
+<style>
+{% if mode == 'create' %}
+/* =============================================================================
+   PASSWORD VALIDATOR - Interactive password strength indicator
+   ============================================================================= */
+
+.password-validator {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: #FAFAFA;
+    border-radius: 8px;
+    border: 1px solid #E8E8E8;
+    display: none;
+    transition: all 0.3s ease;
+}
+
+.password-validator.visible {
+    display: block;
+    animation: validatorFadeIn 0.25s ease;
+}
+
+@keyframes validatorFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.password-validator-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-secondary);
+    margin-bottom: 8px;
+}
+
+.password-validator-title i {
+    color: var(--color-primary);
+    font-size: 12px;
+}
+
+.password-requirement {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 12.5px;
+    transition: color 0.2s ease;
+}
+
+.password-requirement i {
+    width: 14px;
+    text-align: center;
+    font-size: 11px;
+    transition: all 0.2s ease;
+}
+
+.password-requirement.requirement-unmet {
+    color: #9CA3AF;
+}
+
+.password-requirement.requirement-unmet i {
+    color: #C5C9D0;
+}
+
+.password-requirement.requirement-met {
+    color: var(--color-success);
+}
+
+.password-requirement.requirement-met i {
+    color: var(--color-success);
+}
+
+.password-strength-bar {
+    margin-top: 10px;
+    height: 3px;
+    background: #E8E8E8;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.password-strength-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 3px;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.password-strength-fill.strength-0 { width: 0%; background: #E8E8E8; }
+.password-strength-fill.strength-1 { width: 25%; background: var(--color-error); }
+.password-strength-fill.strength-2 { width: 50%; background: var(--color-warning); }
+.password-strength-fill.strength-3 { width: 75%; background: #E5C04A; }
+.password-strength-fill.strength-4 { width: 100%; background: var(--color-success); }
+
+/* Password match indicator */
+.password-match-indicator {
+    margin-top: 8px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s ease;
+}
+
+.password-match-indicator.match-yes {
+    color: var(--color-success);
+}
+
+.password-match-indicator.match-no {
+    color: var(--color-error);
+}
+{% endif %}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-md-8 mx-auto">
@@ -39,12 +157,40 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="password" class="form-label">Contraseña *</label>
-                            <input type="password" name="password" class="form-control" required minlength="6">
-                            <small class="text-muted">Mínimo 6 caracteres</small>
+                            <input type="password" name="password" id="password" class="form-control" required minlength="8">
+                            <div class="password-validator" id="passwordValidator">
+                                <div class="password-validator-title">
+                                    <i class="fas fa-shield-alt"></i>
+                                    Requisitos de contraseña
+                                </div>
+                                <div class="password-requirement requirement-unmet" id="req-length">
+                                    <i class="fas fa-times"></i>
+                                    <span>Mínimo 8 caracteres</span>
+                                </div>
+                                <div class="password-requirement requirement-unmet" id="req-uppercase">
+                                    <i class="fas fa-times"></i>
+                                    <span>Una letra mayúscula</span>
+                                </div>
+                                <div class="password-requirement requirement-unmet" id="req-lowercase">
+                                    <i class="fas fa-times"></i>
+                                    <span>Una letra minúscula</span>
+                                </div>
+                                <div class="password-requirement requirement-unmet" id="req-number">
+                                    <i class="fas fa-times"></i>
+                                    <span>Un número</span>
+                                </div>
+                                <div class="password-strength-bar">
+                                    <div class="password-strength-fill strength-0" id="strengthFill"></div>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label for="confirm_password" class="form-label">Confirmar Contraseña *</label>
-                            <input type="password" name="confirm_password" class="form-control" required>
+                            <input type="password" name="confirm_password" id="confirm_password" class="form-control" required>
+                            <div class="password-match-indicator" id="passwordMatchIndicator" style="display: none;">
+                                <i class="fas fa-times"></i>
+                                <span></span>
+                            </div>
                         </div>
                     </div>
                     {% endif %}
@@ -88,4 +234,106 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if mode == 'create' %}
+<script>
+(function() {
+    var passwordInput = document.getElementById('password');
+    var confirmInput = document.getElementById('confirm_password');
+    var validator = document.getElementById('passwordValidator');
+    var strengthFill = document.getElementById('strengthFill');
+    var matchIndicator = document.getElementById('passwordMatchIndicator');
+
+    var requirements = [
+        { id: 'req-length',    test: function(pw) { return pw.length >= 8; } },
+        { id: 'req-uppercase', test: function(pw) { return /[A-Z]/.test(pw); } },
+        { id: 'req-lowercase', test: function(pw) { return /[a-z]/.test(pw); } },
+        { id: 'req-number',    test: function(pw) { return /[0-9]/.test(pw); } }
+    ];
+
+    function updateRequirement(el, met) {
+        var icon = el.querySelector('i');
+        if (met) {
+            el.classList.remove('requirement-unmet');
+            el.classList.add('requirement-met');
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-check');
+        } else {
+            el.classList.remove('requirement-met');
+            el.classList.add('requirement-unmet');
+            icon.classList.remove('fa-check');
+            icon.classList.add('fa-times');
+        }
+    }
+
+    function validatePassword() {
+        var pw = passwordInput.value;
+        var metCount = 0;
+
+        requirements.forEach(function(req) {
+            var el = document.getElementById(req.id);
+            var met = req.test(pw);
+            if (met) metCount++;
+            updateRequirement(el, met);
+        });
+
+        // Update strength bar
+        strengthFill.className = 'password-strength-fill strength-' + metCount;
+
+        // Also update match indicator if confirm field has content
+        if (confirmInput.value) {
+            updateMatchIndicator();
+        }
+    }
+
+    function updateMatchIndicator() {
+        var pw = passwordInput.value;
+        var confirm = confirmInput.value;
+        var icon = matchIndicator.querySelector('i');
+        var span = matchIndicator.querySelector('span');
+
+        if (!confirm) {
+            matchIndicator.style.display = 'none';
+            return;
+        }
+
+        matchIndicator.style.display = 'flex';
+
+        if (pw === confirm) {
+            matchIndicator.classList.remove('match-no');
+            matchIndicator.classList.add('match-yes');
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-check');
+            span.textContent = 'Las contraseñas coinciden';
+        } else {
+            matchIndicator.classList.remove('match-yes');
+            matchIndicator.classList.add('match-no');
+            icon.classList.remove('fa-check');
+            icon.classList.add('fa-times');
+            span.textContent = 'Las contraseñas no coinciden';
+        }
+    }
+
+    // Show validator on focus
+    passwordInput.addEventListener('focus', function() {
+        validator.classList.add('visible');
+    });
+
+    // Hide validator on blur only if field is empty
+    passwordInput.addEventListener('blur', function() {
+        if (!passwordInput.value) {
+            validator.classList.remove('visible');
+        }
+    });
+
+    // Validate on every keystroke
+    passwordInput.addEventListener('input', validatePassword);
+
+    // Match indicator on confirm field
+    confirmInput.addEventListener('input', updateMatchIndicator);
+})();
+</script>
+{% endif %}
 {% endblock %}
