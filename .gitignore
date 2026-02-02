@@ -63,6 +63,14 @@ Thumbs.db
 # Logs
 *.log
 
+# Backup and temporary files
+*.BACKUP_*
+*.bak
+*.backup
+*.old
+*.tmp
+cookies.txt
+
 # Git worktrees
 .worktrees/
 
