@@ -2,7 +2,7 @@
 Furniture configuration routes.
 """
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
 from utils.decorators import permission_required
 from models.zone import get_all_zones
@@ -107,7 +107,8 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-list'))
 
             except Exception as e:
-                flash(f'Error al crear mobiliario: {str(e)}', 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Error al crear mobiliario. Contacte al administrador.', 'error')
 
         # GET: Show form
         zones = get_all_zones()
@@ -218,7 +219,8 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-list'))
 
             except Exception as e:
-                flash(f'Error: {str(e)}', 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Error. Contacte al administrador.', 'error')
 
         # GET: Show form
         zones = get_all_zones()
@@ -238,9 +240,11 @@ def register_routes(bp):
             else:
                 flash('Error al eliminar mobiliario', 'error')
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Se produjo un error. Contacte al administrador.', 'error')
         except Exception as e:
-            flash(f'Error al eliminar: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al eliminar. Contacte al administrador.', 'error')
 
         return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-list'))
 
@@ -277,4 +281,5 @@ def register_routes(bp):
             else:
                 return jsonify({'error': 'No se pudo actualizar'}), 400
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500

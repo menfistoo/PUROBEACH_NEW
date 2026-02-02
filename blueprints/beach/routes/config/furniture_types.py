@@ -2,7 +2,7 @@
 Furniture types configuration routes.
 """
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
 from utils.decorators import permission_required
 from models.zone import get_all_zones
@@ -68,9 +68,11 @@ def register_routes(bp):
             return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-types'))
 
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Se produjo un error. Contacte al administrador.', 'error')
         except Exception as e:
-            flash(f'Error al crear tipo: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al crear tipo. Contacte al administrador.', 'error')
 
         return redirect(url_for('beach.beach_config.furniture_manager',
                                 tab='furniture-types', create=1))
@@ -133,9 +135,11 @@ def register_routes(bp):
             return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-types'))
 
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Se produjo un error. Contacte al administrador.', 'error')
         except Exception as e:
-            flash(f'Error al actualizar: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al actualizar. Contacte al administrador.', 'error')
 
         return redirect(url_for('beach.beach_config.furniture_manager',
                                 tab='furniture-types', type_id=type_id))
@@ -154,9 +158,11 @@ def register_routes(bp):
             else:
                 flash('Error al eliminar tipo', 'error')
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Se produjo un error. Contacte al administrador.', 'error')
         except Exception as e:
-            flash(f'Error al eliminar: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al eliminar. Contacte al administrador.', 'error')
 
         return redirect(url_for('beach.beach_config.furniture_manager', tab='furniture-types'))
 
@@ -201,7 +207,8 @@ def register_routes(bp):
                 'next_number': next_number
             })
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500
 
     @bp.route('/furniture-types/reorder', methods=['POST'])
     @login_required
@@ -222,4 +229,5 @@ def register_routes(bp):
             update_furniture_types_order(type_ids)
             return jsonify({'success': True, 'message': 'Orden actualizado'})
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500

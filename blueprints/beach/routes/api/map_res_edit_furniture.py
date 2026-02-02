@@ -3,7 +3,7 @@ Map reservation edit API routes - Furniture operations.
 Furniture reassignment and lock toggle.
 """
 
-from flask import request, jsonify, Response, Blueprint
+from flask import current_app, request, jsonify, Response, Blueprint
 from flask_login import login_required
 
 from utils.decorators import permission_required
@@ -163,6 +163,7 @@ def register_routes(bp: Blueprint) -> None:
             return jsonify(response_data)
 
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({'success': False, 'error': 'Error al actualizar mobiliario'}), 500
 
     @bp.route('/map/reservations/<int:reservation_id>/toggle-lock', methods=['PATCH'])

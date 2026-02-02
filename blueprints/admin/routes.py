@@ -7,7 +7,7 @@ import json
 import os
 import time
 import tempfile
-from flask import render_template, redirect, url_for, flash, request, Blueprint, jsonify
+from flask import current_app, render_template, redirect, url_for, flash, request, Blueprint, jsonify
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
@@ -122,7 +122,8 @@ def users_create():
             return redirect(url_for('admin.users'))
 
         except Exception as e:
-            flash(f'Error al crear usuario: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al crear usuario. Contacte al administrador.', 'error')
             return redirect(url_for('admin.users_create'))
 
     # GET: Show form
@@ -174,7 +175,8 @@ def users_edit(user_id):
                 flash('No se realizaron cambios', 'warning')
 
         except Exception as e:
-            flash(f'Error al actualizar usuario: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al actualizar usuario. Contacte al administrador.', 'error')
 
     # GET: Show form
     roles = get_all_roles()
@@ -201,7 +203,8 @@ def users_delete(user_id):
             flash('Error al eliminar usuario', 'error')
 
     except Exception as e:
-        flash(f'Error al eliminar usuario: {str(e)}', 'error')
+        current_app.logger.error(f'Error: {e}', exc_info=True)
+        flash('Error al eliminar usuario. Contacte al administrador.', 'error')
 
     return redirect(url_for('admin.users'))
 
@@ -480,7 +483,8 @@ def hotel_guests_import():
                     flash(f"Se encontraron {error_count} errores durante la importación", 'error')
 
         except Exception as e:
-            flash(f'Error al importar: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al importar. Contacte al administrador.', 'error')
 
         finally:
             # Clean up temp file (with retry for Windows file locking)
@@ -525,7 +529,8 @@ def hotel_guest_delete(guest_id):
         else:
             flash('Error al eliminar huésped', 'error')
     except Exception as e:
-        flash(f'Error al eliminar: {str(e)}', 'error')
+        current_app.logger.error(f'Error: {e}', exc_info=True)
+        flash('Error al eliminar. Contacte al administrador.', 'error')
 
     return redirect(url_for('admin.hotel_guests'))
 

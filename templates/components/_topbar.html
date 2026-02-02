@@ -25,9 +25,12 @@
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
-                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                    </a>
+                    <form method="POST" action="{{ url_for('auth.logout') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="dropdown-item">
+                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                        </button>
+                    </form>
                 </li>
             </ul>
         </div>

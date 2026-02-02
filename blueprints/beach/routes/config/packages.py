@@ -3,7 +3,7 @@ Package configuration routes.
 CRUD operations for managing beach packages.
 """
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
 from utils.decorators import permission_required
 
@@ -33,17 +33,21 @@ def register_routes(bp):
             # Get form fields
             package_name = request.form.get('package_name', '').strip()
             package_description = request.form.get('package_description', '').strip()
-            base_price = float(request.form.get('base_price', 0) or 0)
+            try:
+                base_price = float(request.form.get('base_price', 0) or 0)
+                min_people = int(request.form.get('min_people', 1) or 1)
+                standard_people = int(request.form.get('standard_people', 2) or 2)
+                max_people = int(request.form.get('max_people', 4) or 4)
+                display_order = int(request.form.get('display_order', 0) or 0)
+            except ValueError:
+                flash('Los campos numéricos deben contener valores válidos', 'error')
+                return redirect(url_for('beach.beach_config.packages_create'))
             price_type = request.form.get('price_type', 'per_package')
-            min_people = int(request.form.get('min_people', 1) or 1)
-            standard_people = int(request.form.get('standard_people', 2) or 2)
-            max_people = int(request.form.get('max_people', 4) or 4)
             furniture_types_included = request.form.get('furniture_types_included', '').strip()
             customer_type = request.form.get('customer_type', '').strip()
             zone_id = request.form.get('zone_id')
             valid_from = request.form.get('valid_from', '').strip()
             valid_until = request.form.get('valid_until', '').strip()
-            display_order = int(request.form.get('display_order', 0) or 0)
 
             # Validate required fields
             if not package_name or base_price <= 0:
@@ -77,9 +81,11 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.pricing', tab='packages'))
 
             except ValueError as e:
-                flash(str(e), 'error')
+                current_app.logger.warning(f'Validation error creating package: {e}')
+                flash('Error de validación al crear paquete.', 'error')
             except Exception as e:
-                flash(f'Error al crear: {str(e)}', 'error')
+                current_app.logger.error(f'Error creating package: {e}', exc_info=True)
+                flash('Error al crear paquete. Contacte al administrador.', 'error')
 
         # Load zones and furniture types for dropdowns
         zones = get_all_zones()
@@ -115,17 +121,21 @@ def register_routes(bp):
             # Get form fields
             package_name = request.form.get('package_name', '').strip()
             package_description = request.form.get('package_description', '').strip()
-            base_price = float(request.form.get('base_price', 0) or 0)
+            try:
+                base_price = float(request.form.get('base_price', 0) or 0)
+                min_people = int(request.form.get('min_people', 1) or 1)
+                standard_people = int(request.form.get('standard_people', 2) or 2)
+                max_people = int(request.form.get('max_people', 4) or 4)
+                display_order = int(request.form.get('display_order', 0) or 0)
+            except ValueError:
+                flash('Los campos numéricos deben contener valores válidos', 'error')
+                return redirect(url_for('beach.beach_config.packages_edit', package_id=package_id))
             price_type = request.form.get('price_type', 'per_package')
-            min_people = int(request.form.get('min_people', 1) or 1)
-            standard_people = int(request.form.get('standard_people', 2) or 2)
-            max_people = int(request.form.get('max_people', 4) or 4)
             furniture_types_included = request.form.get('furniture_types_included', '').strip()
             customer_type = request.form.get('customer_type', '').strip()
             zone_id = request.form.get('zone_id')
             valid_from = request.form.get('valid_from', '').strip()
             valid_until = request.form.get('valid_until', '').strip()
-            display_order = int(request.form.get('display_order', 0) or 0)
             active = 1 if request.form.get('active') == '1' else 0
 
             # Validate required fields
@@ -166,9 +176,11 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.pricing', tab='packages'))
 
             except ValueError as e:
-                flash(str(e), 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Se produjo un error. Contacte al administrador.', 'error')
             except Exception as e:
-                flash(f'Error al actualizar: {str(e)}', 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Error al actualizar. Contacte al administrador.', 'error')
 
         # Load zones and furniture types for dropdowns
         zones = get_all_zones()
@@ -193,9 +205,11 @@ def register_routes(bp):
             else:
                 flash('Error al eliminar paquete', 'error')
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Se produjo un error. Contacte al administrador.', 'error')
         except Exception as e:
-            flash(f'Error al eliminar: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al eliminar. Contacte al administrador.', 'error')
 
         return redirect(url_for('beach.beach_config.pricing', tab='packages'))
 
@@ -222,4 +236,5 @@ def register_routes(bp):
                 return jsonify({'success': False, 'error': 'Error al reordenar'}), 400
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500

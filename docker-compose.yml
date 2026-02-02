@@ -7,9 +7,9 @@ services:
     env_file:
       - .env.production
     environment:
-      - FLASK_ENV=production
+      - FLASK_ENV=${FLASK_ENV:-production}
     ports:
-      - "8000:8000"  # Direct access (remove in production behind Nginx)
+      - "127.0.0.1:${APP_PORT:-8000}:8000"
     volumes:
       - db-data:/app/instance
       - uploads:/app/static/uploads
@@ -25,8 +25,8 @@ services:
     container_name: purobeach-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "161.97.187.97:80:80"
+      - "161.97.187.97:443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro

@@ -2,7 +2,7 @@
 Pricing API endpoints for real-time pricing calculations.
 """
 
-from flask import request, jsonify, Response
+from flask import current_app, request, jsonify, Response
 from flask_login import login_required
 from datetime import datetime
 from blueprints.beach.services.pricing_service import (
@@ -87,9 +87,10 @@ def register_routes(bp):
             })
 
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 "success": False,
-                "error": str(e)
+                "error": "Error interno del servidor"
             }), 500
 
     @bp.route('/pricing/calculate', methods=['POST'])
@@ -161,14 +162,16 @@ def register_routes(bp):
             })
 
         except ValueError as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 "success": False,
-                "error": str(e)
+                "error": "Error interno del servidor"
             }), 400
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 "success": False,
-                "error": str(e)
+                "error": "Error interno del servidor"
             }), 500
 
     @bp.route('/pricing/minimum-consumption-policies', methods=['GET'])
@@ -202,7 +205,8 @@ def register_routes(bp):
                 "policies": policies
             })
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 "success": False,
-                "error": str(e)
+                "error": "Error interno del servidor"
             }), 500

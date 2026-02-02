@@ -3,7 +3,7 @@ Characteristics configuration routes.
 Admin CRUD for the unified caracteristicas system.
 """
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required
 from utils.decorators import permission_required
 
@@ -57,9 +57,11 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.characteristics'))
 
             except ValueError as e:
-                flash(str(e), 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Se produjo un error. Contacte al administrador.', 'error')
             except Exception as e:
-                flash(f'Error al crear: {str(e)}', 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Error al crear. Contacte al administrador.', 'error')
 
         return render_template(
             'beach/config/characteristic_form.html',
@@ -110,7 +112,8 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.characteristics'))
 
             except Exception as e:
-                flash(f'Error al actualizar: {str(e)}', 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Error al actualizar. Contacte al administrador.', 'error')
 
         return render_template(
             'beach/config/characteristic_form.html',
@@ -132,7 +135,8 @@ def register_routes(bp):
             else:
                 flash('Error al eliminar caracteristica', 'error')
         except Exception as e:
-            flash(f'Error al eliminar: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al eliminar. Contacte al administrador.', 'error')
 
         return redirect(url_for('beach.beach_config.characteristics'))
 
@@ -153,4 +157,5 @@ def register_routes(bp):
             reorder_characteristics(ordered_ids)
             return jsonify({'success': True})
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500

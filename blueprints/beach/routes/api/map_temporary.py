@@ -3,7 +3,7 @@ Map temporary furniture API routes.
 Endpoints for creating/managing temporary furniture (valid for specific dates only).
 """
 
-from flask import request, jsonify
+from flask import current_app, request, jsonify
 from flask_login import login_required
 from datetime import date
 
@@ -192,7 +192,8 @@ def register_routes(bp):
             })
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map/temporary-furniture/<int:furniture_id>', methods=['DELETE'])
     @login_required
@@ -238,9 +239,11 @@ def register_routes(bp):
                     }), 404
 
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map/temporary-furniture/<int:furniture_id>/info')
     @login_required

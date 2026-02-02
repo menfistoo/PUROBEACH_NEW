@@ -49,6 +49,8 @@ class DevelopmentConfig(Config):
     DEBUG = True
     TESTING = False
     TEMPLATES_AUTO_RELOAD = True
+    SESSION_COOKIE_SECURE = False
+    WTF_CSRF_SSL_STRICT = False
 
 
 class ProductionConfig(Config):

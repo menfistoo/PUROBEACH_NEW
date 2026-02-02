@@ -3,7 +3,7 @@ Map reservation details API routes.
 Reservation panel details and furniture move operations.
 """
 
-from flask import request, jsonify
+from flask import current_app, request, jsonify
 from flask_login import login_required
 from datetime import date, datetime
 
@@ -280,6 +280,7 @@ def register_routes(bp):
             })
 
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 'success': False,
                 'error': 'Error al mover la reserva'

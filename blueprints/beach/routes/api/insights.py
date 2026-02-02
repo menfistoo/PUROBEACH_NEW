@@ -4,7 +4,7 @@ Provides analytics data for dashboard and advanced views.
 """
 
 from datetime import date, timedelta
-from flask import jsonify, request
+from flask import current_app, jsonify, request
 from flask_login import login_required
 from utils.decorators import permission_required
 from models.insights import (
@@ -73,9 +73,10 @@ def register_routes(bp):
             })
 
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': 'Error interno del servidor'
             }), 500
 
     @bp.route('/insights/occupancy', methods=['GET'])
@@ -121,9 +122,10 @@ def register_routes(bp):
             })
 
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': 'Error interno del servidor'
             }), 500
 
     @bp.route('/insights/revenue', methods=['GET'])
@@ -172,9 +174,10 @@ def register_routes(bp):
             })
 
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': 'Error interno del servidor'
             }), 500
 
     @bp.route('/insights/customers', methods=['GET'])
@@ -229,9 +232,10 @@ def register_routes(bp):
             })
 
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': 'Error interno del servidor'
             }), 500
 
     @bp.route('/insights/patterns', methods=['GET'])
@@ -283,7 +287,8 @@ def register_routes(bp):
             })
 
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': 'Error interno del servidor'
             }), 500

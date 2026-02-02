@@ -1,132 +1,84 @@
 #!/bin/bash
-# =============================================================================
-# PuroBeach One-Command Deployment Script
-# =============================================================================
-# Usage: ./deploy.sh
-# =============================================================================
+# PuroBeach Production Deployment Script
+# Usage: ./deploy.sh <domain>
+# Example: ./deploy.sh beach.purobeach.com
 
 set -e
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+DOMAIN="${1:?Usage: ./deploy.sh <domain>}"
+EMAIL="${2:-catia.schubert@proton.me}"
 
-echo -e "${GREEN}=== PuroBeach Production Deployment ===${NC}"
+echo "=== PuroBeach Production Deployment ==="
+echo "Domain: $DOMAIN"
+echo "Email:  $EMAIL"
+echo ""
 
-# --- 1. Check prerequisites ---
-echo -e "\n${YELLOW}[1/6] Checking prerequisites...${NC}"
+# 1. Update .env.production with domain
+sed -i "s/^DOMAIN=.*/DOMAIN=$DOMAIN/" .env.production
 
-if ! command -v docker &> /dev/null; then
-    echo -e "${RED}Error: Docker is not installed.${NC}"
-    exit 1
+# 2. Create initial Nginx config (HTTP only, for Certbot)
+echo ">>> Step 1: Starting with HTTP-only config for certificate issuance..."
+mkdir -p nginx/conf.d
+cat > nginx/conf.d/purobeach-init.conf << 'INITEOF'
+server {
+    listen 80;
+    server_name DOMAIN_PLACEHOLDER;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        proxy_pass http://app:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+INITEOF
+sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" nginx/conf.d/purobeach-init.conf
+
+# Temporarily rename the SSL config
+if [ -f nginx/conf.d/purobeach.conf ]; then
+    mv nginx/conf.d/purobeach.conf nginx/conf.d/purobeach.conf.ssl
 fi
 
-if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-    echo -e "${RED}Error: Docker Compose is not installed.${NC}"
-    exit 1
-fi
-
-echo "  Docker: $(docker --version)"
-
-# Detect docker compose command
-if docker compose version &> /dev/null; then
-    COMPOSE_CMD="docker compose"
-else
-    COMPOSE_CMD="docker-compose"
-fi
-echo "  Compose: $COMPOSE_CMD"
-
-# --- 2. Environment file ---
-echo -e "\n${YELLOW}[2/6] Checking environment configuration...${NC}"
-
-if [ ! -f .env.production ]; then
-    echo "  Creating .env.production from template..."
-    cp .env.production.example .env.production
-
-    # Generate a random SECRET_KEY
-    SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/null || openssl rand -hex 32)
-    sed -i "s/^SECRET_KEY=$/SECRET_KEY=${SECRET_KEY}/" .env.production
-
-    echo -e "  ${YELLOW}IMPORTANT: Edit .env.production with your domain and email before proceeding.${NC}"
-    echo "  Generated SECRET_KEY automatically."
-    echo ""
-    echo "  Required settings:"
-    echo "    - DOMAIN=your-domain.com"
-    echo "    - ADMIN_EMAIL=your-email@example.com"
-    echo ""
-    read -p "  Press Enter after editing .env.production (or Ctrl+C to abort)..."
-fi
-
-# Validate required env vars
-source .env.production
-if [ -z "${SECRET_KEY}" ]; then
-    echo -e "${RED}Error: SECRET_KEY is not set in .env.production${NC}"
-    exit 1
-fi
-if [ -z "${DOMAIN}" ] || [ "${DOMAIN}" = "example.com" ]; then
-    echo -e "${YELLOW}Warning: DOMAIN is not configured (using '${DOMAIN:-example.com}').${NC}"
-    echo "  For production with SSL, set DOMAIN in .env.production."
-fi
-echo "  Environment OK."
-
-# --- 3. Build images ---
-echo -e "\n${YELLOW}[3/6] Building Docker images...${NC}"
-$COMPOSE_CMD build
-
-# --- 4. Start services ---
-echo -e "\n${YELLOW}[4/6] Starting services...${NC}"
-$COMPOSE_CMD up -d
-
-# --- 5. Health check ---
-echo -e "\n${YELLOW}[5/6] Verifying health...${NC}"
+# 3. Start app + nginx (HTTP only)
+echo ">>> Step 2: Starting services..."
+FLASK_ENV=production APP_PORT=8000 docker compose up -d app nginx
 sleep 5
 
-MAX_RETRIES=10
-RETRY=0
-until curl -sf http://localhost/api/health > /dev/null 2>&1 || [ $RETRY -ge $MAX_RETRIES ]; do
-    RETRY=$((RETRY + 1))
-    echo "  Waiting for app to start (attempt $RETRY/$MAX_RETRIES)..."
-    sleep 3
-done
+# 4. Request SSL certificate
+echo ">>> Step 3: Requesting SSL certificate..."
+docker compose run --rm certbot certonly \
+    --webroot \
+    --webroot-path=/var/www/certbot \
+    --email "$EMAIL" \
+    --agree-tos \
+    --no-eff-email \
+    -d "$DOMAIN"
 
-if [ $RETRY -ge $MAX_RETRIES ]; then
-    echo -e "${YELLOW}  Warning: Health check via Nginx not responding (SSL may need setup).${NC}"
-    echo "  Checking app container directly..."
-    if curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
-        echo -e "  ${GREEN}App container is healthy.${NC}"
-    else
-        echo -e "${RED}  Error: App container health check failed.${NC}"
-        echo "  Check logs: $COMPOSE_CMD logs app"
-        exit 1
-    fi
-else
-    echo -e "  ${GREEN}Health check passed!${NC}"
+# 5. Switch to full SSL Nginx config
+echo ">>> Step 4: Switching to SSL config..."
+rm -f nginx/conf.d/purobeach-init.conf
+if [ -f nginx/conf.d/purobeach.conf.ssl ]; then
+    mv nginx/conf.d/purobeach.conf.ssl nginx/conf.d/purobeach.conf
 fi
 
-# --- 6. Setup backup cron ---
-echo -e "\n${YELLOW}[6/6] Setting up backup cron job...${NC}"
+# Replace ${DOMAIN} placeholders in nginx config with actual domain
+sed -i "s/\${DOMAIN}/$DOMAIN/g" nginx/conf.d/purobeach.conf
 
-CRON_JOB="0 3 * * * docker exec purobeach-app /app/scripts/backup.sh >> /var/log/purobeach-backup.log 2>&1"
-if crontab -l 2>/dev/null | grep -q "purobeach-app"; then
-    echo "  Backup cron already configured."
-else
-    (crontab -l 2>/dev/null; echo "${CRON_JOB}") | crontab -
-    echo "  Backup cron installed (daily at 3:00 AM)."
-fi
+# 6. Restart everything in production mode
+echo ">>> Step 5: Restarting with full production config..."
+FLASK_ENV=production docker compose up -d
 
-# --- Done ---
-echo -e "\n${GREEN}=== Deployment Complete ===${NC}"
 echo ""
-echo "  Services: $COMPOSE_CMD ps"
-echo "  Logs:     $COMPOSE_CMD logs -f"
-echo "  Stop:     $COMPOSE_CMD down"
-echo "  Backup:   docker exec purobeach-app /app/scripts/backup.sh"
+echo "=== Deployment Complete! ==="
+echo "Your app is live at: https://$DOMAIN"
 echo ""
-
-if [ "${DOMAIN}" != "example.com" ] && [ -n "${DOMAIN}" ] && [ -n "${ADMIN_EMAIL}" ]; then
-    echo -e "${YELLOW}SSL Setup:${NC}"
-    echo "  Run once to obtain certificates:"
-    echo "  $COMPOSE_CMD run --rm certbot certonly --webroot -w /var/www/certbot -d ${DOMAIN} -d www.${DOMAIN} --email ${ADMIN_EMAIL} --agree-tos --no-eff-email"
-    echo "  Then restart nginx: $COMPOSE_CMD restart nginx"
-fi
+echo "Login credentials:"
+echo "  Username: admin"
+echo "  Password: (check with your administrator)"
+echo ""
+echo "Certbot auto-renewal is active (every 12h)."

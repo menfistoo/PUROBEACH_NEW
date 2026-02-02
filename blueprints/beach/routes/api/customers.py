@@ -2,7 +2,7 @@
 Customer and hotel guest API routes.
 """
 
-from flask import request, jsonify
+from flask import current_app, request, jsonify
 from flask_login import login_required
 from utils.decorators import permission_required
 from utils.audit import log_create, log_update
@@ -224,7 +224,8 @@ def register_routes(bp):
                 }
             })
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception:
             return jsonify({'success': False, 'error': 'Error al crear cliente'}), 500
 
@@ -307,7 +308,8 @@ def register_routes(bp):
                 }
             })
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception:
             return jsonify({'success': False, 'error': 'Error al crear cliente'}), 500
 
@@ -368,7 +370,8 @@ def register_routes(bp):
             preferred = get_customer_preferred_furniture(customer_id, limit=limit)
             return jsonify({'preferred_furniture': preferred})
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500
 
     @bp.route('/customers/create-from-guest', methods=['POST'])
     @login_required
@@ -406,7 +409,8 @@ def register_routes(bp):
                 return jsonify({'success': False, 'error': 'Error al crear cliente'}), 500
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     # ============================================================================
     # PREFERENCES API ROUTES
@@ -514,6 +518,7 @@ def register_routes(bp):
                 }), 500
 
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({
                 'success': False,
                 'error': 'Error al actualizar preferencias'

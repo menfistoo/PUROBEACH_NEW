@@ -2,7 +2,7 @@
 Zone configuration routes.
 """
 
-from flask import render_template, redirect, url_for, flash, request
+from flask import current_app, render_template, redirect, url_for, flash, request
 from flask_login import login_required
 from utils.decorators import permission_required
 from models.zone import get_all_zones, get_zone_by_id, create_zone, update_zone, delete_zone
@@ -80,7 +80,8 @@ def register_routes(bp):
             return redirect(url_for('beach.beach_config.zones'))
 
         except Exception as e:
-            flash(f'Error al guardar zona: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al guardar zona. Contacte al administrador.', 'error')
             if redirect_tab:
                 if zone_id:
                     return redirect(url_for('beach.beach_config.furniture_manager', tab='zones', zone_id=zone_id))
@@ -115,7 +116,8 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.zones'))
 
             except Exception as e:
-                flash(f'Error al crear zona: {str(e)}', 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Error al crear zona. Contacte al administrador.', 'error')
                 return redirect(url_for('beach.beach_config.zones_create'))
 
         # GET: Show form
@@ -166,7 +168,8 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.zones'))
 
             except Exception as e:
-                flash(f'Error al actualizar zona: {str(e)}', 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Error al actualizar zona. Contacte al administrador.', 'error')
 
         # GET: Show form
         parent_zones = [z for z in get_all_zones() if z['id'] != zone_id]
@@ -187,9 +190,11 @@ def register_routes(bp):
             else:
                 flash('Error al eliminar zona', 'error')
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Se produjo un error. Contacte al administrador.', 'error')
         except Exception as e:
-            flash(f'Error al eliminar: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al eliminar. Contacte al administrador.', 'error')
 
         if redirect_tab:
             return redirect(url_for('beach.beach_config.furniture_manager', tab='zones'))

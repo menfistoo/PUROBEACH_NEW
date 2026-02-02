@@ -3,7 +3,7 @@ Map data API routes.
 Endpoints for retrieving map data and availability information.
 """
 
-from flask import request, jsonify
+from flask import current_app, request, jsonify
 from flask_login import login_required
 from datetime import date
 
@@ -142,7 +142,8 @@ def register_routes(bp):
                 **availability
             })
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/health')
     def health_check():

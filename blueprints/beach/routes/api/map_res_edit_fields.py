@@ -3,7 +3,7 @@ Map reservation edit API routes - Field updates.
 Partial updates and customer changes.
 """
 
-from flask import request, jsonify, Response, Blueprint
+from flask import current_app, request, jsonify, Response, Blueprint
 from flask_login import login_required
 
 from utils.decorators import permission_required
@@ -162,7 +162,8 @@ def register_routes(bp: Blueprint) -> None:
             })
 
         except Exception as e:
-            return jsonify({'success': False, 'error': f'Error al actualizar reserva: {str(e)}'}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map/reservations/<int:reservation_id>/change-customer', methods=['POST'])
     @login_required
@@ -209,8 +210,10 @@ def register_routes(bp: Blueprint) -> None:
                 result = create_customer_from_hotel_guest(hotel_guest_id, {})
                 new_customer_id = result['customer_id']
             except ValueError as e:
-                return jsonify({'success': False, 'error': str(e)}), 400
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
             except Exception as e:
+                current_app.logger.error(f'Error: {e}', exc_info=True)
                 return jsonify({
                     'success': False,
                     'error': 'Error al crear cliente desde huesped'
@@ -271,4 +274,5 @@ def register_routes(bp: Blueprint) -> None:
             })
 
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({'success': False, 'error': 'Error al cambiar cliente'}), 500

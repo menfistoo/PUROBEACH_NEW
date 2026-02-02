@@ -2,7 +2,7 @@
 Tags configuration routes.
 """
 
-from flask import render_template, redirect, url_for, flash, request
+from flask import current_app, render_template, redirect, url_for, flash, request
 from flask_login import login_required
 from utils.decorators import permission_required
 
@@ -45,9 +45,11 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.tags'))
 
             except ValueError as e:
-                flash(str(e), 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Se produjo un error. Contacte al administrador.', 'error')
             except Exception as e:
-                flash(f'Error al crear: {str(e)}', 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Error al crear. Contacte al administrador.', 'error')
 
         return render_template('beach/config/tag_form.html', tag=None, mode='create')
 
@@ -89,7 +91,8 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.tags'))
 
             except Exception as e:
-                flash(f'Error al actualizar: {str(e)}', 'error')
+                current_app.logger.error(f'Error: {e}', exc_info=True)
+                flash('Error al actualizar. Contacte al administrador.', 'error')
 
         return render_template('beach/config/tag_form.html', tag=tag, mode='edit')
 
@@ -107,6 +110,7 @@ def register_routes(bp):
             else:
                 flash('Error al eliminar etiqueta', 'error')
         except Exception as e:
-            flash(f'Error al eliminar: {str(e)}', 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Error al eliminar. Contacte al administrador.', 'error')
 
         return redirect(url_for('beach.beach_config.tags'))

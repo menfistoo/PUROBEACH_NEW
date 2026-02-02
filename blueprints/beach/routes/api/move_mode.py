@@ -8,7 +8,7 @@ Handles furniture reassignment operations during move mode:
 - Get preference-based furniture matches
 """
 
-from flask import jsonify, request
+from flask import current_app, jsonify, request
 from flask_login import login_required
 from utils.decorators import permission_required
 from models.move_mode import (
@@ -85,7 +85,8 @@ def register_routes(bp):
             return jsonify(result)
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/move-mode/assign', methods=['POST'])
     @login_required
@@ -134,7 +135,8 @@ def register_routes(bp):
             return jsonify(result)
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/move-mode/pool-data', methods=['GET'])
     @login_required
@@ -193,7 +195,8 @@ def register_routes(bp):
             return jsonify(result)
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500
 
     @bp.route('/move-mode/preferences-match', methods=['GET'])
     @login_required
@@ -242,7 +245,8 @@ def register_routes(bp):
             return jsonify(result)
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500
 
     @bp.route('/move-mode/unassigned', methods=['GET'])
     @login_required
@@ -274,7 +278,8 @@ def register_routes(bp):
             })
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500
 
     @bp.route('/move-mode/unassigned-global', methods=['GET'])
     @login_required
@@ -297,4 +302,5 @@ def register_routes(bp):
             return jsonify(result)
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500

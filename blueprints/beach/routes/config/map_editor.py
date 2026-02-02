@@ -3,7 +3,7 @@ Map Editor configuration routes.
 Visual editor for designing beach map layout.
 """
 
-from flask import render_template, jsonify, request, redirect, url_for
+from flask import current_app, render_template, jsonify, request, redirect, url_for
 from flask_login import login_required, current_user
 from utils.decorators import permission_required
 from models.zone import get_all_zones, get_zone_by_id, get_zone_with_furniture, update_zone
@@ -70,7 +70,8 @@ def register_routes(bp):
 
             return jsonify({'success': True})
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map-editor/furniture', methods=['POST'])
     @login_required
@@ -107,9 +108,11 @@ def register_routes(bp):
             })
 
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map-editor/furniture/<int:furniture_id>/position', methods=['PUT'])
     @login_required
@@ -136,7 +139,8 @@ def register_routes(bp):
                 'furniture_id': furniture_id
             })
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map-editor/furniture/<int:furniture_id>', methods=['PUT'])
     @login_required
@@ -173,9 +177,11 @@ def register_routes(bp):
             else:
                 return jsonify({'success': False, 'error': 'No se pudo eliminar'}), 400
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map-editor/furniture/next-number/<int:zone_id>/<furniture_type>')
     @login_required
@@ -195,7 +201,8 @@ def register_routes(bp):
                 'next_number': next_num
             })
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map-editor/features')
     @login_required
@@ -299,7 +306,8 @@ def register_routes(bp):
             })
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map-editor/furniture/batch-position', methods=['PUT'])
     @login_required
@@ -332,7 +340,8 @@ def register_routes(bp):
                 'count': len(updates)
             })
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map-editor/furniture/batch-delete', methods=['DELETE'])
     @login_required
@@ -355,7 +364,8 @@ def register_routes(bp):
                     if deleted:
                         deleted_count += 1
                 except ValueError as e:
-                    errors.append(f"ID {furniture_id}: {str(e)}")
+                    current_app.logger.warning(f'Cannot delete furniture {furniture_id}: {e}')
+                    errors.append(f"ID {furniture_id}: no se puede eliminar")
 
             if errors:
                 return jsonify({
@@ -370,4 +380,5 @@ def register_routes(bp):
                 'deleted': deleted_count
             })
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500

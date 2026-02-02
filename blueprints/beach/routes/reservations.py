@@ -4,7 +4,7 @@ Handles reservation list view, quick edit, and Excel export.
 Creation is done via the LiveMap.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
+from flask import current_app, Blueprint, render_template, request, redirect, url_for, flash, Response
 from flask_login import login_required, current_user
 from utils.decorators import permission_required
 from models.reservation import (
@@ -224,7 +224,8 @@ def delete(reservation_id):
         delete_reservation(reservation_id)
         flash('Reserva eliminada exitosamente', 'success')
     except Exception as e:
-        flash(f'Error al eliminar: {str(e)}', 'error')
+        current_app.logger.error(f'Error: {e}', exc_info=True)
+        flash('Error al eliminar. Contacte al administrador.', 'error')
 
     return redirect(url_for('beach.reservations'))
 
@@ -244,6 +245,7 @@ def cancel(reservation_id):
         )
         flash('Reserva cancelada exitosamente', 'success')
     except Exception as e:
-        flash(f'Error al cancelar: {str(e)}', 'error')
+        current_app.logger.error(f'Error: {e}', exc_info=True)
+        flash('Error al cancelar. Contacte al administrador.', 'error')
 
     return redirect(url_for('beach.reservations_detail', reservation_id=reservation_id))

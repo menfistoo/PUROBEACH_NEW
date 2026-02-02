@@ -3,7 +3,7 @@ Minimum consumption policy configuration routes.
 CRUD operations for managing consumption policies.
 """
 
-from flask import Blueprint, Response, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, Response, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required
 from utils.decorators import permission_required
 
@@ -33,12 +33,20 @@ def register_routes(bp: Blueprint) -> None:
             # Get form fields
             policy_name = request.form.get('policy_name', '').strip()
             policy_description = request.form.get('policy_description', '').strip()
-            minimum_amount = float(request.form.get('minimum_amount', 0) or 0)
+            try:
+                minimum_amount = float(request.form.get('minimum_amount', 0) or 0)
+            except ValueError:
+                flash('El monto mínimo debe ser un número válido', 'error')
+                return redirect(url_for('beach.beach_config.minimum_consumption_create'))
             calculation_type = request.form.get('calculation_type', 'per_reservation')
             furniture_type = request.form.get('furniture_type', '').strip()
             customer_type = request.form.get('customer_type', '').strip()
             zone_id = request.form.get('zone_id')
-            priority_order = int(request.form.get('priority_order', 0) or 0)
+            try:
+                priority_order = int(request.form.get('priority_order', 0) or 0)
+            except ValueError:
+                flash('El orden de prioridad debe ser un número válido', 'error')
+                return redirect(url_for('beach.beach_config.minimum_consumption_create'))
 
             # Validate required fields (0€ allowed = "included")
             if not policy_name or minimum_amount < 0:
@@ -65,9 +73,11 @@ def register_routes(bp: Blueprint) -> None:
                 return redirect(url_for('beach.beach_config.pricing', tab='minimum-consumption'))
 
             except ValueError as e:
-                flash(str(e), 'error')
+                current_app.logger.warning(f'Validation error creating consumption policy: {e}')
+                flash('Error de validación al crear política.', 'error')
             except Exception as e:
-                flash(f'Error al crear: {str(e)}', 'error')
+                current_app.logger.error(f'Error creating consumption policy: {e}', exc_info=True)
+                flash('Error al crear política. Contacte al administrador.', 'error')
 
         # Load zones and furniture types for dropdowns
         zones = get_all_zones()
@@ -103,12 +113,20 @@ def register_routes(bp: Blueprint) -> None:
             # Get form fields
             policy_name = request.form.get('policy_name', '').strip()
             policy_description = request.form.get('policy_description', '').strip()
-            minimum_amount = float(request.form.get('minimum_amount', 0) or 0)
+            try:
+                minimum_amount = float(request.form.get('minimum_amount', 0) or 0)
+            except ValueError:
+                flash('El monto mínimo debe ser un número válido', 'error')
+                return redirect(url_for('beach.beach_config.minimum_consumption_edit', policy_id=policy_id))
             calculation_type = request.form.get('calculation_type', 'per_reservation')
             furniture_type = request.form.get('furniture_type', '').strip()
             customer_type = request.form.get('customer_type', '').strip()
             zone_id = request.form.get('zone_id')
-            priority_order = int(request.form.get('priority_order', 0) or 0)
+            try:
+                priority_order = int(request.form.get('priority_order', 0) or 0)
+            except ValueError:
+                flash('El orden de prioridad debe ser un número válido', 'error')
+                return redirect(url_for('beach.beach_config.minimum_consumption_edit', policy_id=policy_id))
             is_active = 1 if request.form.get('is_active') == '1' else 0
 
             # Validate required fields (0€ allowed = "included")
@@ -142,9 +160,11 @@ def register_routes(bp: Blueprint) -> None:
                 return redirect(url_for('beach.beach_config.pricing', tab='minimum-consumption'))
 
             except ValueError as e:
-                flash(str(e), 'error')
+                current_app.logger.warning(f'Validation error updating consumption policy {policy_id}: {e}')
+                flash('Error de validación al actualizar política.', 'error')
             except Exception as e:
-                flash(f'Error al actualizar: {str(e)}', 'error')
+                current_app.logger.error(f'Error updating consumption policy {policy_id}: {e}', exc_info=True)
+                flash('Error al actualizar política. Contacte al administrador.', 'error')
 
         # Load zones and furniture types for dropdowns
         zones = get_all_zones()
@@ -169,9 +189,11 @@ def register_routes(bp: Blueprint) -> None:
             else:
                 flash('Error al eliminar política', 'error')
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.warning(f'Validation error deleting consumption policy {policy_id}: {e}')
+            flash('No se puede eliminar esta política.', 'error')
         except Exception as e:
-            flash(f'Error al eliminar: {str(e)}', 'error')
+            current_app.logger.error(f'Error deleting consumption policy {policy_id}: {e}', exc_info=True)
+            flash('Error al eliminar política. Contacte al administrador.', 'error')
 
         return redirect(url_for('beach.beach_config.pricing', tab='minimum-consumption'))
 
@@ -198,4 +220,5 @@ def register_routes(bp: Blueprint) -> None:
                 return jsonify({'success': False, 'error': 'Error al reordenar'}), 400
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error reordering consumption policies: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error al reordenar políticas'}), 500

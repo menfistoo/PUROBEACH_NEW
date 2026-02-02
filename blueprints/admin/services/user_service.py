@@ -8,6 +8,7 @@ from models.user import get_all_users, get_user_by_username, get_user_by_email
 from models.role import has_users
 from datetime import datetime
 from typing import Dict, List, Any, Tuple
+import re
 import openpyxl
 
 
@@ -27,13 +28,26 @@ def validate_user_creation(username: str, email: str, password: str) -> tuple:
     if get_user_by_username(username):
         return False, 'El nombre de usuario ya existe'
 
+    # Validate email format
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, email):
+        return False, 'Formato de correo electrónico inválido'
+
     # Check email exists
     if get_user_by_email(email):
         return False, 'El correo electrónico ya existe'
 
     # Validate password length
-    if len(password) < 6:
-        return False, 'La contraseña debe tener al menos 6 caracteres'
+    if len(password) < 8:
+        return False, 'La contraseña debe tener al menos 8 caracteres'
+
+    # Validate password complexity
+    if not any(c.isupper() for c in password):
+        return False, 'La contraseña debe contener al menos una letra mayúscula'
+    if not any(c.islower() for c in password):
+        return False, 'La contraseña debe contener al menos una letra minúscula'
+    if not any(c.isdigit() for c in password):
+        return False, 'La contraseña debe contener al menos un número'
 
     return True, ''
 
@@ -334,12 +348,14 @@ def import_hotel_guests_from_excel(
                     })
 
             except Exception as e:
-                result['errors'].append(f"Fila {row_num}: {str(e)}")
+                current_app.logger.error(f'Error importing row {row_num}: {e}', exc_info=True)
+                result['errors'].append(f"Fila {row_num}: error al procesar datos")
 
         wb.close()
 
     except Exception as e:
-        result['errors'].append(f"Error al abrir archivo: {str(e)}")
+        current_app.logger.error(f'Error opening import file: {e}', exc_info=True)
+        result['errors'].append("Error al abrir archivo")
 
     return result
 
@@ -399,4 +415,5 @@ def validate_excel_file(file_path: str) -> Tuple[bool, str, Dict[str, Any]]:
         return True, '', preview_data
 
     except Exception as e:
-        return False, f"Error al leer archivo: {str(e)}", {}
+        current_app.logger.error(f'Error reading Excel file: {e}', exc_info=True)
+        return False, "Error al leer archivo. Verifique el formato.", {}

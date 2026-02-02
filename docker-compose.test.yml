@@ -1,0 +1,23 @@
+services:
+  app:
+    build: .
+    container_name: purobeach-app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - FLASK_ENV=production
+    ports:
+      - "5050:8000"
+    volumes:
+      - db-data:/app/instance
+      - uploads:/app/static/uploads
+      - logs:/app/logs
+
+volumes:
+  db-data:
+    driver: local
+  uploads:
+    driver: local
+  logs:
+    driver: local

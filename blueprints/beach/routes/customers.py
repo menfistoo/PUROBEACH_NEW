@@ -3,7 +3,7 @@ Beach customer routes.
 Handles customer CRUD operations, preferences, and deduplication.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import current_app, Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required
 from utils.decorators import permission_required
 from models.customer import (
@@ -118,7 +118,8 @@ def create():
             return redirect(url_for('beach.customers_detail', customer_id=customer_id))
 
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Se produjo un error. Contacte al administrador.', 'error')
 
     return render_template('beach/customer_form.html',
                            mode='create', preferences=preferences, tags=tags)
@@ -210,7 +211,8 @@ def edit(customer_id):
             return redirect(url_for('beach.customers_detail', customer_id=customer_id))
 
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Se produjo un error. Contacte al administrador.', 'error')
 
     return render_template('beach/customer_form.html',
                            mode='edit', customer=customer,
@@ -226,7 +228,8 @@ def delete(customer_id):
         delete_customer(customer_id)
         flash('Cliente eliminado exitosamente', 'success')
     except ValueError as e:
-        flash(str(e), 'error')
+        current_app.logger.error(f'Error: {e}', exc_info=True)
+        flash('Se produjo un error. Contacte al administrador.', 'error')
 
     return redirect(url_for('beach.customers'))
 
@@ -257,7 +260,8 @@ def merge(customer_id):
             return redirect(url_for('beach.customers_detail', customer_id=target_id))
 
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            flash('Se produjo un error. Contacte al administrador.', 'error')
 
     return render_template('beach/customer_merge.html',
                            customer=customer, duplicates=duplicates)

@@ -3,7 +3,7 @@ Reservation states configuration routes.
 CRUD operations for managing configurable reservation states.
 """
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required
 from utils.decorators import permission_required
 
@@ -34,7 +34,11 @@ def register_routes(bp):
             color = request.form.get('color', '#6C757D')
             icon = request.form.get('icon', '').strip()
             is_releasing = 1 if request.form.get('is_availability_releasing') == '1' else 0
-            priority = int(request.form.get('display_priority', 0) or 0)
+            try:
+                priority = int(request.form.get('display_priority', 0) or 0)
+            except ValueError:
+                flash('La prioridad debe ser un número válido', 'error')
+                return redirect(url_for('beach.beach_config.states_create'))
             creates_incident = 1 if request.form.get('creates_incident') == '1' else 0
 
             if not code or not name:
@@ -55,9 +59,11 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.states'))
 
             except ValueError as e:
-                flash(str(e), 'error')
+                current_app.logger.warning(f'Validation error creating state: {e}')
+                flash('Error de validación al crear estado', 'error')
             except Exception as e:
-                flash(f'Error al crear: {str(e)}', 'error')
+                current_app.logger.error(f'Error creating state: {e}', exc_info=True)
+                flash('Error al crear estado. Contacte al administrador.', 'error')
 
         return render_template('beach/config/state_form.html', state=None, mode='create')
 
@@ -78,7 +84,11 @@ def register_routes(bp):
             color = request.form.get('color', '#6C757D')
             icon = request.form.get('icon', '').strip()
             is_releasing = 1 if request.form.get('is_availability_releasing') == '1' else 0
-            priority = int(request.form.get('display_priority', 0) or 0)
+            try:
+                priority = int(request.form.get('display_priority', 0) or 0)
+            except ValueError:
+                flash('La prioridad debe ser un número válido', 'error')
+                return redirect(url_for('beach.beach_config.states_edit', state_id=state_id))
             creates_incident = 1 if request.form.get('creates_incident') == '1' else 0
             is_default = 1 if request.form.get('is_default') == '1' else 0
             active = 1 if request.form.get('active') == '1' else 0
@@ -107,7 +117,8 @@ def register_routes(bp):
                 return redirect(url_for('beach.beach_config.states'))
 
             except Exception as e:
-                flash(f'Error al actualizar: {str(e)}', 'error')
+                current_app.logger.error(f'Error updating state {state_id}: {e}', exc_info=True)
+                flash('Error al actualizar estado. Contacte al administrador.', 'error')
 
         return render_template('beach/config/state_form.html', state=state, mode='edit')
 
@@ -125,9 +136,11 @@ def register_routes(bp):
             else:
                 flash('Error al eliminar estado', 'error')
         except ValueError as e:
-            flash(str(e), 'error')
+            current_app.logger.warning(f'Validation error deleting state {state_id}: {e}')
+            flash('No se puede eliminar este estado.', 'error')
         except Exception as e:
-            flash(f'Error al eliminar: {str(e)}', 'error')
+            current_app.logger.error(f'Error deleting state {state_id}: {e}', exc_info=True)
+            flash('Error al eliminar estado. Contacte al administrador.', 'error')
 
         return redirect(url_for('beach.beach_config.states'))
 
@@ -154,4 +167,5 @@ def register_routes(bp):
                 return jsonify({'success': False, 'error': 'Error al reordenar'}), 400
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error reordering states: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error al reordenar estados'}), 500

@@ -4,7 +4,7 @@ Used by standalone reservation panel and other components that need
 dynamic state colors without full map data.
 """
 
-from flask import jsonify
+from flask import current_app, jsonify
 from flask_login import login_required
 from models.state import get_all_states
 
@@ -59,7 +59,8 @@ def register_routes(bp):
             })
 
         except Exception as e:
+            current_app.logger.error(f'Error fetching states: {e}', exc_info=True)
             return jsonify({
                 'success': False,
-                'error': str(e)
+                'error': 'Error interno del servidor'
             }), 500

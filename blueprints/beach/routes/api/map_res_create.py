@@ -3,7 +3,7 @@ Map reservation creation API routes.
 Quick reservation creation from the map interface.
 """
 
-from flask import request, jsonify
+from flask import current_app, request, jsonify
 from flask_login import login_required, current_user
 
 from utils.decorators import permission_required
@@ -200,9 +200,7 @@ def register_routes(bp):
 
                 except Exception as pricing_error:
                     # Log error but continue with zero price
-                    import traceback
-                    print(f"Warning: Pricing calculation failed: {pricing_error}")
-                    traceback.print_exc()
+                    current_app.logger.error(f'Pricing calculation failed: {pricing_error}', exc_info=True)
 
             # Multi-day reservation
             if len(dates) > 1:
@@ -303,9 +301,8 @@ def register_routes(bp):
                 })
 
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception as e:
-            # Log the actual error for debugging
-            import traceback
-            traceback.print_exc()
-            return jsonify({'success': False, 'error': f'Error al crear reserva: {str(e)}'}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500

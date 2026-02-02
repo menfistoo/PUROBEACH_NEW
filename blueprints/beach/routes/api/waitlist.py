@@ -4,7 +4,7 @@ Endpoints for managing the beach waiting list.
 """
 
 import logging
-from flask import request, jsonify
+from flask import current_app, request, jsonify
 from flask_login import login_required, current_user
 from datetime import date
 
@@ -123,7 +123,8 @@ def register_routes(bp):
                 'message': 'Agregado a lista de espera'
             })
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception as e:
             logger.error(f"Error creating waitlist entry: {e}")
             return jsonify({'success': False, 'error': 'Error al crear entrada'}), 500
@@ -168,7 +169,8 @@ def register_routes(bp):
                 'entry': entry
             })
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception as e:
             logger.error(f"Error updating waitlist entry: {e}")
             return jsonify({'success': False, 'error': 'Error al actualizar'}), 500
@@ -198,7 +200,8 @@ def register_routes(bp):
                 'message': 'Entrada convertida a reserva'
             })
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception as e:
             logger.error(f"Error converting waitlist entry: {e}")
             return jsonify({'success': False, 'error': 'Error al convertir'}), 500

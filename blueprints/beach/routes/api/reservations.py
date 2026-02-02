@@ -2,7 +2,7 @@
 Reservation API routes including availability, multi-day, and suggestions.
 """
 
-from flask import request, jsonify
+from flask import current_app, request, jsonify
 from flask_login import login_required, current_user
 from utils.decorators import permission_required
 from utils.audit import log_create, log_update, log_delete
@@ -141,7 +141,8 @@ def register_routes(bp):
             return jsonify({'success': True})
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500
 
     @bp.route('/reservations/<int:reservation_id>/toggle-state', methods=['POST'])
     @login_required
@@ -214,7 +215,8 @@ def register_routes(bp):
             return jsonify({'success': True, 'action': result_action, 'state': state_name})
 
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500
 
     @bp.route('/reservations/<int:reservation_id>/history')
     @login_required
@@ -459,9 +461,11 @@ def register_routes(bp):
             return jsonify(result)
 
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception as e:
-            return jsonify({'success': False, 'error': f'Error interno: {str(e)}'}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/reservations/<int:reservation_id>/multiday-summary')
     @login_required
@@ -507,7 +511,8 @@ def register_routes(bp):
             return jsonify(result)
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/reservations/<int:reservation_id>/update-multiday', methods=['POST'])
     @login_required
@@ -528,7 +533,8 @@ def register_routes(bp):
             return jsonify(result)
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     # ============================================================================
     # SMART SUGGESTIONS API ENDPOINTS
@@ -564,7 +570,8 @@ def register_routes(bp):
             return jsonify(result)
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/reservations/validate-contiguity', methods=['POST'])
     @login_required
@@ -586,7 +593,8 @@ def register_routes(bp):
             result = validate_cluster_contiguity(furniture_ids, occupancy_map)
             return jsonify(result)
         except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'error': 'Error interno del servidor'}), 500
 
     # ============================================================================
     # RESERVATIONS LIST API (for auto-filtering)

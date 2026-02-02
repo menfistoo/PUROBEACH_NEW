@@ -3,7 +3,7 @@ Map daily positions API routes.
 Endpoints for daily position overrides (furniture moved for specific dates).
 """
 
-from flask import request, jsonify
+from flask import current_app, request, jsonify
 from flask_login import login_required, current_user
 from datetime import date
 
@@ -69,7 +69,8 @@ def register_routes(bp):
             })
 
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)}), 500
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
     @bp.route('/map/furniture/<int:furniture_id>/daily-position', methods=['DELETE'])
     @login_required

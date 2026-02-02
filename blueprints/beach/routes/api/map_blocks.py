@@ -4,7 +4,7 @@ Endpoints for blocking/unblocking furniture (maintenance, VIP hold, etc.).
 """
 
 import logging
-from flask import request, jsonify
+from flask import current_app, request, jsonify
 from flask_login import login_required, current_user
 from datetime import date
 
@@ -75,8 +75,10 @@ def register_routes(bp):
             })
 
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
             return jsonify({'success': False, 'error': 'Error al bloquear mobiliario'}), 500
 
     @bp.route('/map/furniture/<int:furniture_id>/block', methods=['DELETE'])
@@ -178,7 +180,8 @@ def register_routes(bp):
             })
 
         except ValueError as e:
-            return jsonify({'success': False, 'error': str(e)}), 400
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         except Exception as e:
             logger.error(f"Partial unblock error for furniture {furniture_id}: {e}", exc_info=True)
             return jsonify({'success': False, 'error': 'Error al procesar desbloqueo parcial'}), 500
