@@ -278,10 +278,10 @@ class TestToggleLockAPI:
                 reservation_id = cursor.lastrowid
                 conn.commit()
 
-            # Login first
+            # Login first (password matches database/seed.py)
             client.post('/login', data={
                 'username': 'admin',
-                'password': 'admin123'
+                'password': 'PuroAdmin2026!'
             }, follow_redirects=True)
 
             # Toggle lock ON
@@ -355,10 +355,10 @@ class TestReassignLockCheck:
                 today = cursor.execute("SELECT date('now') as d").fetchone()['d']
                 conn.commit()
 
-            # Login first
+            # Login first (password matches database/seed.py)
             client.post('/login', data={
                 'username': 'admin',
-                'password': 'admin123'
+                'password': 'PuroAdmin2026!'
             }, follow_redirects=True)
 
             # Try to reassign

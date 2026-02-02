@@ -7,6 +7,7 @@ from flask import current_app, request, jsonify, Response, Blueprint
 from flask_login import login_required
 
 from utils.decorators import permission_required
+from utils.validators import validate_positive_integer
 from models.reservation import get_beach_reservation_by_id
 from models.customer import get_customer_by_id, create_customer_from_hotel_guest
 from database import get_db
@@ -91,6 +92,16 @@ def register_routes(bp: Blueprint) -> None:
         # Validate paid if provided (should be 0 or 1)
         if 'paid' in updates:
             updates['paid'] = 1 if updates['paid'] else 0
+
+        # Validate payment_method if provided
+        if 'payment_method' in updates:
+            if updates['payment_method'] and updates['payment_method'] not in (
+                'efectivo', 'tarjeta', 'cargo_habitacion'
+            ):
+                return jsonify({
+                    'success': False,
+                    'error': 'Metodo de pago no valido'
+                }), 400
 
         # payment_ticket_number can be string or None
         if 'payment_ticket_number' in updates:
@@ -190,14 +201,32 @@ def register_routes(bp: Blueprint) -> None:
         if not data:
             return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
 
-        new_customer_id = data.get('customer_id')
-        hotel_guest_id = data.get('hotel_guest_id')
+        raw_customer_id = data.get('customer_id')
+        raw_guest_id = data.get('hotel_guest_id')
 
-        if not new_customer_id and not hotel_guest_id:
+        if not raw_customer_id and not raw_guest_id:
             return jsonify({
                 'success': False,
                 'error': 'customer_id o hotel_guest_id requerido'
             }), 400
+
+        # Validate types: must be positive integers if provided
+        new_customer_id = None
+        hotel_guest_id = None
+
+        if raw_customer_id:
+            valid, new_customer_id, err = validate_positive_integer(
+                raw_customer_id, 'customer_id'
+            )
+            if not valid:
+                return jsonify({'success': False, 'error': err}), 400
+
+        if raw_guest_id:
+            valid, hotel_guest_id, err = validate_positive_integer(
+                raw_guest_id, 'hotel_guest_id'
+            )
+            if not valid:
+                return jsonify({'success': False, 'error': err}), 400
 
         # Get reservation
         reservation = get_beach_reservation_by_id(reservation_id)

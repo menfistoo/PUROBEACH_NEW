@@ -952,7 +952,7 @@ const DEBOUNCE_DELAY = 300;
 let isFiltering = false;
 
 // Store states data for rendering
-const statesData = {{ states | tojson | safe }};
+const statesData = {{ states | default([])|tojson | safe }};
 
 document.addEventListener('DOMContentLoaded', function() {
     quickEditModal = new bootstrap.Modal(document.getElementById('quickEditModal'));

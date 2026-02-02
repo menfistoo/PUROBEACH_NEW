@@ -281,12 +281,14 @@ class TestReservationRoutes:
     def test_reservation_api_requires_auth(self, client):
         """Test that reservation API requires authentication."""
         response = client.get('/beach/api/reservations/1')
-        assert response.status_code == 302
+        # API endpoints return JSON 401 instead of redirect
+        assert response.status_code == 401
 
     def test_available_furniture_api_requires_auth(self, client):
         """Test that available furniture API requires authentication."""
         response = client.get('/beach/api/furniture/available?date=2025-01-01')
-        assert response.status_code == 302
+        # API endpoints return JSON 401 instead of redirect
+        assert response.status_code == 401
 
 
 class TestReservationPreferences:

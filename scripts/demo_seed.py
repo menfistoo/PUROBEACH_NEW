@@ -22,11 +22,13 @@ import random
 import json
 
 # Add the app directory to Python path for imports
-sys.path.insert(0, '/app')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def get_db_connection():
     """Get database connection."""
-    return sqlite3.connect('/app/instance/beach_club.db')
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    db_path = os.environ.get('DATABASE_PATH', os.path.join(base_dir, 'instance', 'beach_club.db'))
+    return sqlite3.connect(db_path)
 
 def clear_demo_data(conn):
     """Clear existing demo data while preserving admin setup."""

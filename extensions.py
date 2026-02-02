@@ -3,6 +3,7 @@ Flask extensions initialization.
 Extensions are initialized here and then initialized with the app in app.py.
 """
 
+from flask import jsonify, request
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
@@ -26,6 +27,28 @@ login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Por favor inicie sesión para acceder a esta página'
 login_manager.login_message_category = 'warning'
 login_manager.session_protection = 'strong'
+
+
+@login_manager.unauthorized_handler
+def handle_unauthorized():
+    """
+    Handle unauthorized access for both API and regular requests.
+
+    For API/AJAX requests: returns JSON 401 error.
+    For regular requests: redirects to login page.
+    """
+    from utils.decorators import _is_api_request
+
+    if _is_api_request():
+        return jsonify({
+            'success': False,
+            'error': 'Sesión no válida o expirada. Inicie sesión nuevamente.'
+        }), 401
+
+    # Default behavior: redirect to login
+    from flask import redirect, url_for, flash
+    flash(login_manager.login_message, login_manager.login_message_category)
+    return redirect(url_for(login_manager.login_view, next=request.url))
 
 
 @login_manager.user_loader

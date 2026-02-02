@@ -342,8 +342,19 @@ https://github.com/menfistoo/PUROBEACH_NEW/issues
 
 ---
 
+## Demo Roadmap
+
+**CRITICAL: `docs/DEMO_ROADMAP.md` is the active roadmap for demo preparation.**
+- Must be updated after every work session
+- Contains all known issues organized by priority (Phase 1-4)
+- Tracks fix status with checkboxes
+- **Always check this file before starting any work session**
+
+---
+
 ## Extended Documentation
 
+- **Demo Roadmap:** `docs/DEMO_ROADMAP.md` **(ACTIVE - update after every session)**
 - **GitHub Issues:** https://github.com/menfistoo/PUROBEACH_NEW/issues
 - **Design System:** `DESIGN_SYSTEM.md` (colors, typography, components)
 - **Development Plan:** `docs/DEVELOPMENT_PLAN.md` (living document)

@@ -111,11 +111,26 @@ def register_blueprints(app):
 
 
 def register_error_handlers(app):
-    """Register error handlers."""
+    """Register error handlers with JSON support for API requests."""
+    from flask import jsonify, request
+
+    def _is_api_request() -> bool:
+        """Check if current request expects a JSON response."""
+        if '/api/' in request.path:
+            return True
+        if request.is_json:
+            return True
+        if request.accept_mimetypes.best == 'application/json':
+            return True
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return True
+        return False
 
     @app.errorhandler(404)
     def not_found_error(error):
         """Handle 404 errors."""
+        if _is_api_request():
+            return jsonify({'success': False, 'error': 'Recurso no encontrado'}), 404
         return render_template('errors/404.html'), 404
 
     @app.errorhandler(500)
@@ -125,21 +140,32 @@ def register_error_handlers(app):
         db = g.get('db')
         if db:
             db.rollback()
+        if _is_api_request():
+            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
         return render_template('errors/500.html'), 500
 
     @app.errorhandler(403)
     def forbidden_error(error):
         """Handle 403 errors."""
+        if _is_api_request():
+            return jsonify({
+                'success': False,
+                'error': 'No tiene permisos para realizar esta acción'
+            }), 403
         return render_template('errors/403.html'), 403
 
     @app.errorhandler(400)
     def bad_request_error(error):
         """Handle 400 errors."""
+        if _is_api_request():
+            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
         return render_template('errors/400.html'), 400
 
     @app.errorhandler(405)
     def method_not_allowed_error(error):
         """Handle 405 errors."""
+        if _is_api_request():
+            return jsonify({'success': False, 'error': 'Método no permitido'}), 405
         return render_template('errors/405.html'), 405
 
 
@@ -290,7 +316,7 @@ def register_context_processors(app):
             else:
                 date_obj = date_str
             return date_obj.strftime(format)
-        except:
+        except (ValueError, TypeError, AttributeError):
             return date_str
 
     @app.template_filter('from_json')
@@ -301,7 +327,7 @@ def register_context_processors(app):
             return {}
         try:
             return json.loads(json_str) if isinstance(json_str, str) else json_str
-        except:
+        except (ValueError, TypeError, AttributeError):
             return {}
 
 

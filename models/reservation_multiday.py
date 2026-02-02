@@ -118,56 +118,62 @@ def create_linked_multiday_reservations(
     else:
         raise ValueError('Se requiere furniture_ids o furniture_by_date')
 
-    # Validate availability
-    if validate_availability:
-        if furniture_by_date and furniture_ids is None:
-            # Per-date availability check when using furniture_by_date
-            # Each date has specific furniture, check only those for that date
-            for date, date_furniture_ids in furniture_by_date.items():
-                avail_result = check_furniture_availability_bulk(date_furniture_ids, [date])
-                if not avail_result['all_available']:
-                    unavail = avail_result['unavailable'][0]
-                    raise ValueError(
-                        f"Mobiliario {unavail['furniture_id']} no disponible el {unavail['date']} "
-                        f"(reserva {unavail['ticket_number']})"
-                    )
-        else:
-            # Same furniture for all days - check all against all
-            avail_result = check_furniture_availability_bulk(all_furniture_ids, dates)
-            if not avail_result['all_available']:
-                unavail = avail_result['unavailable'][0]
-                raise ValueError(
-                    f"Mobiliario {unavail['furniture_id']} no disponible el {unavail['date']} "
-                    f"(reserva {unavail['ticket_number']})"
-                )
-
-    # Check for duplicates
-    if validate_duplicates:
-        is_dup, existing = check_duplicate_reservation(customer_id, dates)
-        if is_dup:
-            raise ValueError(
-                f"Ya existe una reserva para este cliente el {existing['date']} "
-                f"(ticket {existing['ticket_number']})"
-            )
+    # NOTE: Availability and duplicate checks are performed INSIDE the
+    # BEGIN IMMEDIATE transaction to prevent race conditions. The lock is
+    # acquired first, then checks run on the same g.db connection, ensuring
+    # no other writer can insert conflicting reservations between check and create.
 
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Get default state from database
-        default_state = get_default_state()
-        initial_state = default_state.get('name', 'Confirmada')
-
-        # Get customer's current room for original_room tracking
-        cursor.execute('''
-            SELECT room_number, customer_type FROM beach_customers WHERE id = ?
-        ''', (customer_id,))
-        customer_row = cursor.fetchone()
-        original_room = None
-        if customer_row and customer_row['customer_type'] == 'interno':
-            original_room = customer_row['room_number']
-
         try:
+            # Acquire write lock BEFORE any checks to prevent race conditions
             cursor.execute('BEGIN IMMEDIATE')
+
+            # Validate availability (inside transaction lock)
+            if validate_availability:
+                if furniture_by_date and furniture_ids is None:
+                    # Per-date availability check when using furniture_by_date
+                    # Each date has specific furniture, check only those for that date
+                    for date, date_furniture_ids in furniture_by_date.items():
+                        avail_result = check_furniture_availability_bulk(date_furniture_ids, [date])
+                        if not avail_result['all_available']:
+                            unavail = avail_result['unavailable'][0]
+                            raise ValueError(
+                                f"Mobiliario {unavail['furniture_id']} no disponible el {unavail['date']} "
+                                f"(reserva {unavail['ticket_number']})"
+                            )
+                else:
+                    # Same furniture for all days - check all against all
+                    avail_result = check_furniture_availability_bulk(all_furniture_ids, dates)
+                    if not avail_result['all_available']:
+                        unavail = avail_result['unavailable'][0]
+                        raise ValueError(
+                            f"Mobiliario {unavail['furniture_id']} no disponible el {unavail['date']} "
+                            f"(reserva {unavail['ticket_number']})"
+                        )
+
+            # Check for duplicates (inside transaction lock)
+            if validate_duplicates:
+                is_dup, existing = check_duplicate_reservation(customer_id, dates)
+                if is_dup:
+                    raise ValueError(
+                        f"Ya existe una reserva para este cliente el {existing['date']} "
+                        f"(ticket {existing['ticket_number']})"
+                    )
+
+            # Get default state from database
+            default_state = get_default_state()
+            initial_state = default_state.get('name', 'Confirmada')
+
+            # Get customer's current room for original_room tracking
+            cursor.execute('''
+                SELECT room_number, customer_type FROM beach_customers WHERE id = ?
+            ''', (customer_id,))
+            customer_row = cursor.fetchone()
+            original_room = None
+            if customer_row and customer_row['customer_type'] == 'interno':
+                original_room = customer_row['room_number']
 
             parent_id = None
             parent_ticket = None

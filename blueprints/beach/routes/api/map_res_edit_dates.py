@@ -9,6 +9,7 @@ from flask import current_app, request, jsonify, Response, Blueprint
 from flask_login import login_required
 
 from utils.decorators import permission_required
+from utils.validators import validate_integer_list, validate_date_string
 from models.furniture import get_all_furniture
 from models.reservation import (
     check_furniture_availability_bulk,
@@ -42,15 +43,10 @@ def register_routes(bp: Blueprint) -> None:
         if not data:
             return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
 
-        new_date = data.get('new_date')
-        if not new_date:
-            return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
-
-        # Validate date format
-        try:
-            datetime.strptime(new_date, '%Y-%m-%d')
-        except ValueError:
-            return jsonify({'success': False, 'error': 'Formato de fecha invalido'}), 400
+        # Validate new_date: required, valid YYYY-MM-DD
+        valid, new_date, err = validate_date_string(data.get('new_date'), 'new_date')
+        if not valid:
+            return jsonify({'success': False, 'error': err}), 400
 
         # Get reservation
         reservation = get_beach_reservation_by_id(reservation_id)
@@ -171,18 +167,21 @@ def register_routes(bp: Blueprint) -> None:
         if not data:
             return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
 
-        new_date = data.get('new_date')
         new_furniture_ids = data.get('furniture_ids')
         clear_furniture = data.get('clear_furniture', False)
 
-        if not new_date:
-            return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
+        # Validate new_date: required, valid YYYY-MM-DD
+        valid, new_date, err = validate_date_string(data.get('new_date'), 'new_date')
+        if not valid:
+            return jsonify({'success': False, 'error': err}), 400
 
-        # Validate date format
-        try:
-            datetime.strptime(new_date, '%Y-%m-%d')
-        except ValueError:
-            return jsonify({'success': False, 'error': 'Formato de fecha invalido'}), 400
+        # Validate furniture_ids if provided: must be list of positive integers
+        if new_furniture_ids is not None:
+            valid, new_furniture_ids, err = validate_integer_list(
+                new_furniture_ids, 'furniture_ids', allow_empty=True
+            )
+            if not valid:
+                return jsonify({'success': False, 'error': err}), 400
 
         # Get reservation
         reservation = get_beach_reservation_by_id(reservation_id)

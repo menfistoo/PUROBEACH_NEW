@@ -8,6 +8,11 @@ from flask_login import login_required, current_user
 
 from utils.decorators import permission_required
 from utils.audit import log_create
+from utils.validators import (
+    validate_positive_integer, validate_integer_list,
+    validate_date_list, validate_furniture_by_date,
+    validate_start_end_dates
+)
 from models.furniture import get_all_furniture
 from models.reservation import (
     create_beach_reservation, check_furniture_availability_bulk
@@ -48,12 +53,61 @@ def register_routes(bp):
             if not data:
                 return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
 
-            customer_id = data.get('customer_id')
+            # ---- Input validation ----
+
+            # Validate customer_id: required, positive integer
+            valid, customer_id, err = validate_positive_integer(
+                data.get('customer_id'), 'customer_id'
+            )
+            if not valid:
+                return jsonify({'success': False, 'error': err}), 400
+
             furniture_ids = data.get('furniture_ids', [])
             furniture_by_date = data.get('furniture_by_date')  # Per-day furniture selections
             dates = data.get('dates', [])
             date_str = data.get('date')
+
+            # Handle single date or array of dates (build early for validation)
+            if not dates and date_str:
+                dates = [date_str]
+
+            # Validate dates: required, valid YYYY-MM-DD format
+            if not dates:
+                return jsonify({'success': False, 'error': 'El campo fecha es obligatorio'}), 400
+            valid, dates, err = validate_date_list(dates, 'fechas')
+            if not valid:
+                return jsonify({'success': False, 'error': err}), 400
+
+            # Validate start <= end when multiple dates
+            if len(dates) > 1:
+                sorted_dates = sorted(dates)
+                valid, err = validate_start_end_dates(sorted_dates[0], sorted_dates[-1])
+                if not valid:
+                    return jsonify({'success': False, 'error': err}), 400
+
+            # Validate furniture_ids or furniture_by_date: at least one required
+            if furniture_by_date:
+                valid, furniture_by_date, err = validate_furniture_by_date(
+                    furniture_by_date, 'furniture_by_date'
+                )
+                if not valid:
+                    return jsonify({'success': False, 'error': err}), 400
+            elif furniture_ids:
+                valid, furniture_ids, err = validate_integer_list(
+                    furniture_ids, 'furniture_ids'
+                )
+                if not valid:
+                    return jsonify({'success': False, 'error': err}), 400
+            else:
+                return jsonify({'success': False, 'error': 'Mobiliario requerido'}), 400
+
+            # Validate num_people: optional, but must be positive integer if provided
             num_people = data.get('num_people')
+            if num_people is not None:
+                valid, num_people, err = validate_positive_integer(num_people, 'num_people')
+                if not valid:
+                    return jsonify({'success': False, 'error': err}), 400
+
             time_slot = data.get('time_slot', 'all_day')
             preferences = data.get('preferences', [])
             notes = data.get('notes', '')
@@ -86,21 +140,6 @@ def register_routes(bp):
 
             # Paid status (auto-toggled when payment details provided)
             paid = 1 if data.get('paid') else 0
-
-            # Handle single date or array of dates
-            if not dates and date_str:
-                dates = [date_str]
-
-            # Validation
-            if not customer_id:
-                return jsonify({'success': False, 'error': 'Cliente requerido'}), 400
-
-            # Need either furniture_ids or furniture_by_date
-            if not furniture_ids and not furniture_by_date:
-                return jsonify({'success': False, 'error': 'Mobiliario requerido'}), 400
-
-            if not dates:
-                return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
 
             # Validate time_slot
             if time_slot not in ('all_day', 'morning', 'afternoon'):
@@ -174,6 +213,7 @@ def register_routes(bp):
             calculated_price = 0.0
             calculated_min_consumption = 0.0
             min_consumption_policy_id = None
+            pricing_warning = None
 
             if price_override is not None:
                 # Manual price override - use it directly
@@ -199,8 +239,9 @@ def register_routes(bp):
                         calculated_price = calculated_min_consumption
 
                 except Exception as pricing_error:
-                    # Log error but continue with zero price
+                    # Log error and flag the warning for the API response
                     current_app.logger.error(f'Pricing calculation failed: {pricing_error}', exc_info=True)
+                    pricing_warning = 'No se pudo calcular el precio. Revise la configuración de precios.'
 
             # Multi-day reservation
             if len(dates) > 1:
@@ -243,13 +284,16 @@ def register_routes(bp):
                             }
                             log_create('reservation', res_id, data=reservation_data)
 
-                    return jsonify({
+                    response_data = {
                         'success': True,
                         'reservation_id': result['parent_id'],
                         'ticket_number': result['parent_ticket'],
                         'total_days': result['total_created'],
                         'message': f"Reserva {result['parent_ticket']} creada para {result['total_created']} dias"
-                    })
+                    }
+                    if pricing_warning:
+                        response_data['warning'] = pricing_warning
+                    return jsonify(response_data)
                 else:
                     return jsonify({
                         'success': False,
@@ -293,12 +337,15 @@ def register_routes(bp):
                 }
                 log_create('reservation', reservation_id, data=reservation_data)
 
-                return jsonify({
+                response_data = {
                     'success': True,
                     'reservation_id': reservation_id,
                     'ticket_number': ticket_number,
                     'message': f'Reserva {ticket_number} creada exitosamente'
-                })
+                }
+                if pricing_warning:
+                    response_data['warning'] = pricing_warning
+                return jsonify(response_data)
 
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)

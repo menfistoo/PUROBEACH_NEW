@@ -16,7 +16,7 @@ def login_admin(client, app):
     with app.app_context():
         client.post('/login', data={
             'username': 'admin',
-            'password': 'admin123'
+            'password': 'PuroAdmin2026!'
         }, follow_redirects=True)
     return client
 

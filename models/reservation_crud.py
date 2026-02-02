@@ -227,7 +227,7 @@ def create_beach_reservation(
 
             reservation_id = cursor.lastrowid
 
-            # Assign furniture (with availability check)
+            # Assign furniture (with availability check inside transaction lock)
             if furniture_ids:
                 # Check furniture availability before assigning
                 availability = check_furniture_availability_bulk(
@@ -235,8 +235,11 @@ def create_beach_reservation(
                     dates=[reservation_date],
                     exclude_reservation_id=None
                 )
-                if availability.get('conflicts'):
-                    conflict_ids = list(availability['conflicts'].keys())
+                if not availability.get('all_available'):
+                    unavail_items = availability.get('unavailable', [])
+                    conflict_ids = list(set(
+                        item['furniture_id'] for item in unavail_items
+                    ))
                     conn.rollback()
                     raise ValueError(f"Mobiliario no disponible: {conflict_ids}")
 

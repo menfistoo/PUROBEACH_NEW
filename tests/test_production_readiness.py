@@ -45,7 +45,7 @@ def authenticated_client(app, client):
     """Create authenticated client with admin user."""
     client.post('/login', data={
         'username': 'admin',
-        'password': 'admin123'
+        'password': 'PuroAdmin2026!'
     })
     return client
 
@@ -178,7 +178,7 @@ class TestAuthentication:
         """Admin can log in with correct credentials."""
         response = client.post('/login', data={
             'username': 'admin',
-            'password': 'admin123'
+            'password': 'PuroAdmin2026!'
         }, follow_redirects=True)
 
         assert response.status_code == 200
