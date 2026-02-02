@@ -104,24 +104,7 @@ function initSaveButton() {
     });
 }
 
-function showToast(message, type) {
-    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
-
-    const alert = document.createElement('div');
-    alert.className = `alert ${alertClass} alert-dismissible fade show mx-3 mt-2`;
-    alert.innerHTML = `
-        <i class="fas ${icon}"></i> ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-
-    const contentWrapper = document.querySelector('.content-wrapper');
-    if (contentWrapper) {
-        contentWrapper.insertBefore(alert, contentWrapper.firstChild);
-    }
-
-    setTimeout(() => alert.remove(), 5000);
-}
+// showToast is provided by main.js (viewport-fixed, always visible)
 
 // ============================================================
 // Audit Log
