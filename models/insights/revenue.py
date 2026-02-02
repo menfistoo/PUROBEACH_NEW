@@ -13,7 +13,7 @@ from database import get_db
 def get_revenue_stats(start_date: str, end_date: str) -> dict:
     """
     Get revenue statistics for a date range.
-    Only includes paquete and consumo_minimo reservation types.
+    Includes all non-cancelled reservations with a final_price.
 
     Args:
         start_date: Start date (YYYY-MM-DD)
@@ -33,7 +33,7 @@ def get_revenue_stats(start_date: str, end_date: str) -> dict:
             FROM beach_reservations r
             LEFT JOIN beach_reservation_states s ON r.current_state = s.name
             WHERE r.start_date BETWEEN ? AND ?
-              AND r.reservation_type IN ('paquete', 'consumo_minimo')
+              AND r.final_price > 0
               AND (s.is_availability_releasing = 0 OR s.is_availability_releasing IS NULL)
         ''', (start_date, end_date))
 
@@ -148,7 +148,7 @@ def get_top_packages(start_date: str, end_date: str, limit: int = 10) -> list:
             JOIN beach_packages p ON r.package_id = p.id
             LEFT JOIN beach_reservation_states s ON r.current_state = s.name
             WHERE r.start_date BETWEEN ? AND ?
-              AND r.reservation_type = 'paquete'
+              AND r.reservation_type IN ('paquete', 'package')
               AND (s.is_availability_releasing = 0 OR s.is_availability_releasing IS NULL)
             GROUP BY p.id, p.package_name
             ORDER BY count DESC

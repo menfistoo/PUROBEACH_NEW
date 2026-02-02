@@ -169,6 +169,21 @@
     color: #9CA3AF;
 }
 
+/* Password Hint */
+.password-hint {
+    display: block;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #9CA3AF;
+    letter-spacing: 0.2px;
+}
+
+.password-hint i {
+    font-size: 11px;
+    margin-right: 4px;
+    color: #B8B8B8;
+}
+
 /* Remember Me Checkbox */
 .remember-row {
     display: flex;
@@ -379,6 +394,10 @@
                         <i class="fas fa-lock"></i> Contraseña
                     </label>
                     {{ form.password(class='form-control', placeholder='Ingrese su contraseña', autocomplete='current-password') }}
+                    <small class="form-text password-hint">
+                        <i class="fas fa-shield-alt"></i>
+                        Mín. 8 caracteres, una mayúscula, una minúscula y un número
+                    </small>
                 </div>
 
                 <div class="remember-row">
