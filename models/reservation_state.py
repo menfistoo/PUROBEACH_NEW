@@ -5,7 +5,11 @@ Handles state transitions, history, and color calculations.
 State properties are now fully configurable via the database.
 Use models/state.py for state CRUD operations and property lookups.
 
-State transition validation enforces valid workflow flows.
+State transitions are SUGGESTED but NOT ENFORCED by default.
+The VALID_TRANSITIONS matrix is kept as reference for UI hints
+(e.g. highlighting recommended next states) but users can freely
+pick any state they want. Set bypass_validation=False to re-enable
+strict enforcement if needed in the future.
 """
 
 from database import get_db
@@ -68,17 +72,22 @@ def get_allowed_transitions(current_state: str) -> set:
     return set(VALID_TRANSITIONS.get(current_state, set()))
 
 
-def validate_state_transition(current_state: str, new_state: str, bypass_validation: bool = False) -> None:
+def validate_state_transition(current_state: str, new_state: str, bypass_validation: bool = True) -> None:
     """
     Validate that a state transition is allowed.
+
+    By default, validation is BYPASSED (bypass_validation=True) so users
+    can freely choose any state. The VALID_TRANSITIONS matrix is kept as
+    reference for UI suggestions. Set bypass_validation=False to enforce
+    strict transition rules.
 
     Args:
         current_state: Current state name (or None/empty for new reservations)
         new_state: Target state name
-        bypass_validation: If True, skip validation (for admin override)
+        bypass_validation: If True (default), skip validation entirely
 
     Raises:
-        InvalidStateTransitionError: If transition is not allowed
+        InvalidStateTransitionError: If transition is not allowed and bypass_validation=False
     """
     if bypass_validation:
         return
@@ -150,12 +159,12 @@ def get_active_releasing_states() -> list:
 # =============================================================================
 
 def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
-                          notes: str = '', bypass_validation: bool = False) -> bool:
+                          notes: str = '', bypass_validation: bool = True) -> bool:
     """
     Add state to reservation (accumulative CSV).
 
     Behavior:
-    1. Validates state transition
+    1. Validates state transition (skipped by default)
     2. Adds to current_states CSV
     3. Updates current_state to new state
     4. Records in history
@@ -167,13 +176,13 @@ def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
         state_type: State name to add
         changed_by: Username making change
         notes: Optional notes
-        bypass_validation: If True, skip transition validation (admin override)
+        bypass_validation: If True (default), skip transition validation
 
     Returns:
         bool: Success status
 
     Raises:
-        InvalidStateTransitionError: If transition is not allowed
+        InvalidStateTransitionError: Only if bypass_validation=False and transition is invalid
     """
     with get_db() as conn:
         cursor = conn.cursor()
@@ -325,7 +334,7 @@ def remove_reservation_state(reservation_id: int, state_type: str, changed_by: s
 
 
 def change_reservation_state(reservation_id: int, new_state: str, changed_by: str,
-                             reason: str = '', bypass_validation: bool = False) -> bool:
+                             reason: str = '', bypass_validation: bool = True) -> bool:
     """
     Change reservation state (replaces current state).
     For single-state changes, use add_reservation_state for multi-state.
@@ -335,13 +344,13 @@ def change_reservation_state(reservation_id: int, new_state: str, changed_by: st
         new_state: New state name
         changed_by: Username
         reason: Change reason
-        bypass_validation: If True, skip transition validation (admin override)
+        bypass_validation: If True (default), skip transition validation
 
     Returns:
         bool: Success status
 
     Raises:
-        InvalidStateTransitionError: If transition is not allowed
+        InvalidStateTransitionError: Only if bypass_validation=False and transition is invalid
     """
     with get_db() as conn:
         cursor = conn.cursor()
@@ -399,7 +408,7 @@ def change_reservation_state(reservation_id: int, new_state: str, changed_by: st
 
 
 def cancel_beach_reservation(reservation_id: int, cancelled_by: str, notes: str = '',
-                              bypass_validation: bool = False) -> bool:
+                              bypass_validation: bool = True) -> bool:
     """Shortcut to add 'Cancelada' state."""
     return add_reservation_state(reservation_id, 'Cancelada', cancelled_by, notes,
                                   bypass_validation=bypass_validation)

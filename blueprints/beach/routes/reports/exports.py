@@ -200,17 +200,30 @@ def export_customers_handler() -> Response:
         7: 16,  # Total Reservas
     }
 
+    from openpyxl.cell.cell import MergedCell
+
     for col_cells in ws.columns:
-        col_idx = col_cells[0].column
+        # Find the first non-merged cell to get column metadata
+        anchor_cell = None
+        for cell in col_cells:
+            if not isinstance(cell, MergedCell):
+                anchor_cell = cell
+                break
+        if anchor_cell is None:
+            continue
+
+        col_idx = anchor_cell.column
         max_length = column_min_widths.get(col_idx, 10)
         for cell in col_cells:
+            if isinstance(cell, MergedCell):
+                continue
             try:
                 cell_len = len(str(cell.value or ''))
                 if cell_len > max_length:
                     max_length = cell_len
             except Exception:
                 pass
-        ws.column_dimensions[col_cells[0].column_letter].width = min(
+        ws.column_dimensions[anchor_cell.column_letter].width = min(
             max_length + 3, 50
         )
 

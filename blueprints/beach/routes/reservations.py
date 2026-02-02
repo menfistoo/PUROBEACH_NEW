@@ -270,17 +270,32 @@ def export():
         11: 25,  # Notas
     }
 
+    from openpyxl.cell.cell import MergedCell
+
     for col_cells in ws.columns:
-        col_idx = col_cells[0].column
+        # Find the first non-merged cell to get column metadata
+        anchor_cell = None
+        for cell in col_cells:
+            if not isinstance(cell, MergedCell):
+                anchor_cell = cell
+                break
+        if anchor_cell is None:
+            continue
+
+        col_idx = anchor_cell.column
         max_length = column_min_widths.get(col_idx, 10)
         for cell in col_cells:
+            if isinstance(cell, MergedCell):
+                continue
             try:
                 cell_len = len(str(cell.value or ''))
                 if cell_len > max_length:
                     max_length = cell_len
             except Exception:
                 pass
-        ws.column_dimensions[col_cells[0].column_letter].width = min(max_length + 3, 50)
+        ws.column_dimensions[anchor_cell.column_letter].width = min(
+            max_length + 3, 50
+        )
 
     # Save to buffer
     output = io.BytesIO()
@@ -353,15 +368,11 @@ def cancel(reservation_id):
     reason = request.form.get('reason', '')
 
     try:
-        # Admin users bypass transition validation
-        is_admin = (hasattr(current_user, 'role') and
-                    current_user.role and
-                    current_user.role.name == 'admin')
+        # Validation is bypassed by default - users can cancel from any state
         cancel_beach_reservation(
             reservation_id,
             cancelled_by=current_user.username if current_user else 'system',
-            notes=reason,
-            bypass_validation=is_admin
+            notes=reason
         )
         flash('Reserva cancelada exitosamente', 'success')
     except InvalidStateTransitionError as e:

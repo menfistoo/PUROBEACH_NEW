@@ -108,11 +108,8 @@ def register_routes(bp):
                         (state_id,)
                     ).fetchone()
                     if state:
-                        # Check if admin for bypass
-                        is_admin = (hasattr(current_user, 'role') and
-                                    current_user.role and
-                                    current_user.role.name == 'admin')
                         # Remove current states and add new one
+                        # Validation is bypassed by default - users can pick any state
                         current_states = reservation.get('current_states', '')
                         current_state_list = [s.strip() for s in current_states.split(',') if s.strip()]
                         for existing_state in current_state_list:
@@ -122,8 +119,7 @@ def register_routes(bp):
                             )
                         add_reservation_state(
                             reservation_id, state['name'],
-                            changed_by=current_user.username if current_user else 'system',
-                            bypass_validation=is_admin
+                            changed_by=current_user.username if current_user else 'system'
                         )
 
             # Update other fields
@@ -169,11 +165,6 @@ def register_routes(bp):
         if not reservation:
             return api_error('Reserva no encontrada', 404)
 
-        # Check if admin for bypass
-        is_admin = (hasattr(current_user, 'role') and
-                    current_user.role and
-                    current_user.role.name == 'admin')
-
         # Capture before state for audit logging
         before_state = {
             'id': reservation['id'],
@@ -187,6 +178,7 @@ def register_routes(bp):
             result_action = None
 
             # Set action: remove all existing states and set the new one
+            # Validation is bypassed by default - users can pick any state
             if action == 'set':
                 # Remove all existing states first
                 for existing_state in current_state_list:
@@ -199,16 +191,14 @@ def register_routes(bp):
                 if not has_state:
                     add_reservation_state(
                         reservation_id, state_name,
-                        changed_by=current_user.username if current_user else 'system',
-                        bypass_validation=is_admin
+                        changed_by=current_user.username if current_user else 'system'
                     )
                 result_action = 'set'
 
             elif action == 'add' or (action == 'toggle' and not has_state):
                 add_reservation_state(
                     reservation_id, state_name,
-                    changed_by=current_user.username if current_user else 'system',
-                    bypass_validation=is_admin
+                    changed_by=current_user.username if current_user else 'system'
                 )
                 result_action = 'added'
 

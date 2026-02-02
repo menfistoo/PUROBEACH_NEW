@@ -562,7 +562,7 @@ def get_reservations_for_export(
                     FROM beach_reservation_furniture rf
                     JOIN beach_furniture f ON rf.furniture_id = f.id
                     WHERE rf.reservation_id = r.id) as furniture_names,
-                   (SELECT GROUP_CONCAT(DISTINCT z.name, ', ')
+                   (SELECT REPLACE(GROUP_CONCAT(DISTINCT z.name), ',', ', ')
                     FROM beach_reservation_furniture rf
                     JOIN beach_furniture f ON rf.furniture_id = f.id
                     LEFT JOIN beach_zones z ON f.zone_id = z.id

@@ -1,8 +1,9 @@
 """
 Tests for state transition validation.
 
-Validates that the state transition matrix is enforced correctly,
-preventing invalid flows like Completada -> Pendiente.
+Validates that the VALID_TRANSITIONS matrix exists as reference/documentation
+and that validation works when explicitly enabled (bypass_validation=False).
+By default, validation is BYPASSED so users can freely choose any state.
 """
 
 import pytest
@@ -77,172 +78,84 @@ def _create_reservation(app, customer_id, state_name, state_id, date_offset=0):
 
 
 class TestValidateStateTransition:
-    """Tests for the validate_state_transition function."""
+    """Tests for the validate_state_transition function.
 
-    def test_valid_transition_confirmada_to_sentada(self, app):
-        """Confirmada -> Sentada should be allowed."""
+    By default, bypass_validation=True so all transitions pass.
+    Tests verify that:
+    1. Default behavior allows ANY transition (no enforcement)
+    2. Explicit bypass_validation=False re-enables enforcement
+    3. VALID_TRANSITIONS dict is kept as reference
+    """
+
+    def test_default_allows_any_transition(self, app):
+        """Default (bypass_validation=True) should allow any transition."""
         from models.reservation_state import validate_state_transition
 
         with app.app_context():
-            # Should not raise
-            validate_state_transition('Confirmada', 'Sentada')
+            # All of these should pass with default bypass_validation=True
+            validate_state_transition('Completada', 'Confirmada')
+            validate_state_transition('Liberada', 'Sentada')
+            validate_state_transition('Confirmada', 'Completada')
+            validate_state_transition('Sentada', 'No-Show')
+            validate_state_transition(None, 'Cancelada')
+            validate_state_transition('', 'Sentada')
 
-    def test_valid_transition_confirmada_to_cancelada(self, app):
-        """Confirmada -> Cancelada should be allowed."""
-        from models.reservation_state import validate_state_transition
-
-        with app.app_context():
-            validate_state_transition('Confirmada', 'Cancelada')
-
-    def test_valid_transition_confirmada_to_noshow(self, app):
-        """Confirmada -> No-Show should be allowed."""
-        from models.reservation_state import validate_state_transition
-
-        with app.app_context():
-            validate_state_transition('Confirmada', 'No-Show')
-
-    def test_valid_transition_sentada_to_completada(self, app):
-        """Sentada -> Completada should be allowed."""
-        from models.reservation_state import validate_state_transition
-
-        with app.app_context():
-            validate_state_transition('Sentada', 'Completada')
-
-    def test_valid_transition_sentada_to_cancelada(self, app):
-        """Sentada -> Cancelada should be allowed."""
-        from models.reservation_state import validate_state_transition
-
-        with app.app_context():
-            validate_state_transition('Sentada', 'Cancelada')
-
-    def test_valid_transition_sentada_to_liberada(self, app):
-        """Sentada -> Liberada should be allowed."""
-        from models.reservation_state import validate_state_transition
-
-        with app.app_context():
-            validate_state_transition('Sentada', 'Liberada')
-
-    def test_valid_transition_cancelada_to_confirmada(self, app):
-        """Cancelada -> Confirmada should be allowed (reopen)."""
-        from models.reservation_state import validate_state_transition
-
-        with app.app_context():
-            validate_state_transition('Cancelada', 'Confirmada')
-
-    def test_valid_transition_noshow_to_confirmada(self, app):
-        """No-Show -> Confirmada should be allowed (reopen)."""
-        from models.reservation_state import validate_state_transition
-
-        with app.app_context():
-            validate_state_transition('No-Show', 'Confirmada')
-
-    def test_valid_transition_from_none(self, app):
-        """None -> Confirmada should be allowed (new reservation)."""
-        from models.reservation_state import validate_state_transition
-
-        with app.app_context():
-            validate_state_transition(None, 'Confirmada')
-            validate_state_transition('', 'Confirmada')
-
-    def test_invalid_transition_completada_to_confirmada(self, app):
-        """Completada -> Confirmada should be rejected (terminal state)."""
-        from models.reservation_state import validate_state_transition, InvalidStateTransitionError
-
-        with app.app_context():
-            with pytest.raises(InvalidStateTransitionError) as exc_info:
-                validate_state_transition('Completada', 'Confirmada')
-            assert 'Completada' in str(exc_info.value)
-            assert 'terminal' in str(exc_info.value).lower()
-
-    def test_invalid_transition_completada_to_sentada(self, app):
-        """Completada -> Sentada should be rejected."""
+    def test_explicit_enforcement_rejects_invalid(self, app):
+        """bypass_validation=False should enforce the transition matrix."""
         from models.reservation_state import validate_state_transition, InvalidStateTransitionError
 
         with app.app_context():
             with pytest.raises(InvalidStateTransitionError):
-                validate_state_transition('Completada', 'Sentada')
+                validate_state_transition('Completada', 'Confirmada', bypass_validation=False)
 
-    def test_invalid_transition_liberada_to_anything(self, app):
-        """Liberada is terminal - no transitions allowed."""
-        from models.reservation_state import validate_state_transition, InvalidStateTransitionError
-
-        with app.app_context():
-            for target in ['Confirmada', 'Sentada', 'Cancelada', 'No-Show', 'Completada']:
-                with pytest.raises(InvalidStateTransitionError):
-                    validate_state_transition('Liberada', target)
-
-    def test_invalid_transition_confirmada_to_completada(self, app):
-        """Confirmada -> Completada should be rejected (must go through Sentada)."""
-        from models.reservation_state import validate_state_transition, InvalidStateTransitionError
-
-        with app.app_context():
-            with pytest.raises(InvalidStateTransitionError) as exc_info:
-                validate_state_transition('Confirmada', 'Completada')
-            assert 'Confirmada' in str(exc_info.value)
-            assert 'Completada' in str(exc_info.value)
-
-    def test_invalid_transition_sentada_to_noshow(self, app):
-        """Sentada -> No-Show should be rejected (No-Show only from Confirmada)."""
-        from models.reservation_state import validate_state_transition, InvalidStateTransitionError
-
-        with app.app_context():
-            with pytest.raises(InvalidStateTransitionError):
-                validate_state_transition('Sentada', 'No-Show')
-
-    def test_invalid_transition_cancelada_to_completada(self, app):
-        """Cancelada -> Completada should be rejected."""
-        from models.reservation_state import validate_state_transition, InvalidStateTransitionError
-
-        with app.app_context():
-            with pytest.raises(InvalidStateTransitionError):
-                validate_state_transition('Cancelada', 'Completada')
-
-    def test_bypass_validation_allows_any_transition(self, app):
-        """bypass_validation=True should allow any transition."""
+    def test_explicit_enforcement_allows_valid(self, app):
+        """bypass_validation=False should still allow valid transitions."""
         from models.reservation_state import validate_state_transition
 
         with app.app_context():
-            # These would normally fail
-            validate_state_transition('Completada', 'Confirmada', bypass_validation=True)
-            validate_state_transition('Liberada', 'Sentada', bypass_validation=True)
+            validate_state_transition('Confirmada', 'Sentada', bypass_validation=False)
+            validate_state_transition('Confirmada', 'Cancelada', bypass_validation=False)
+            validate_state_transition('Sentada', 'Completada', bypass_validation=False)
 
-    def test_error_message_in_spanish(self, app):
-        """Error messages should be in Spanish."""
+    def test_error_message_in_spanish_when_enforced(self, app):
+        """Error messages should be in Spanish when enforcement is on."""
         from models.reservation_state import validate_state_transition, InvalidStateTransitionError
 
         with app.app_context():
             with pytest.raises(InvalidStateTransitionError) as exc_info:
-                validate_state_transition('Confirmada', 'Completada')
+                validate_state_transition('Confirmada', 'Completada', bypass_validation=False)
             msg = str(exc_info.value)
             assert 'No se puede cambiar' in msg
 
-    def test_error_message_lists_allowed_transitions(self, app):
-        """Error message should list allowed transitions."""
+    def test_error_message_lists_allowed_when_enforced(self, app):
+        """Error message should list allowed transitions when enforcement is on."""
         from models.reservation_state import validate_state_transition, InvalidStateTransitionError
 
         with app.app_context():
             with pytest.raises(InvalidStateTransitionError) as exc_info:
-                validate_state_transition('Confirmada', 'Completada')
+                validate_state_transition('Confirmada', 'Completada', bypass_validation=False)
             msg = str(exc_info.value)
             assert 'Transiciones permitidas' in msg
-            # Should list valid targets
             assert 'Cancelada' in msg
             assert 'Sentada' in msg
 
-    def test_unknown_state_allows_transition(self, app):
-        """Unknown/custom states not in matrix should allow any transition."""
+    def test_unknown_state_allows_transition_when_enforced(self, app):
+        """Unknown/custom states not in matrix should allow any transition even when enforced."""
         from models.reservation_state import validate_state_transition
 
         with app.app_context():
-            # Custom state not in matrix - should not raise
-            validate_state_transition('CustomState', 'Confirmada')
+            validate_state_transition('CustomState', 'Confirmada', bypass_validation=False)
 
 
 class TestGetAllowedTransitions:
-    """Tests for the get_allowed_transitions function."""
+    """Tests for the get_allowed_transitions function.
+
+    These verify the VALID_TRANSITIONS reference data is intact.
+    The data is used for UI hints (suggested next states).
+    """
 
     def test_confirmada_transitions(self, app):
-        """Confirmada should allow Sentada, Cancelada, No-Show."""
+        """Confirmada should suggest Sentada, Cancelada, No-Show."""
         from models.reservation_state import get_allowed_transitions
 
         with app.app_context():
@@ -250,7 +163,7 @@ class TestGetAllowedTransitions:
             assert allowed == {'Sentada', 'Cancelada', 'No-Show'}
 
     def test_completada_transitions(self, app):
-        """Completada is terminal - no transitions."""
+        """Completada suggests no transitions (terminal reference)."""
         from models.reservation_state import get_allowed_transitions
 
         with app.app_context():
@@ -258,7 +171,7 @@ class TestGetAllowedTransitions:
             assert allowed == set()
 
     def test_cancelada_transitions(self, app):
-        """Cancelada allows reopening to Confirmada."""
+        """Cancelada suggests reopening to Confirmada."""
         from models.reservation_state import get_allowed_transitions
 
         with app.app_context():
@@ -275,7 +188,7 @@ class TestGetAllowedTransitions:
 
 
 class TestGetValidTransitions:
-    """Tests for the get_valid_transitions function."""
+    """Tests for the get_valid_transitions function (reference data)."""
 
     def test_returns_copy(self, app):
         """Should return a copy, not the original."""
@@ -289,7 +202,7 @@ class TestGetValidTransitions:
             assert 'SomeNewState' not in VALID_TRANSITIONS['Confirmada']
 
     def test_contains_all_seeded_states(self, app):
-        """Matrix should contain all seeded states."""
+        """Matrix should contain all seeded states as reference."""
         from models.reservation_state import VALID_TRANSITIONS
 
         with app.app_context():
@@ -299,45 +212,44 @@ class TestGetValidTransitions:
 
 
 class TestStateTransitionIntegration:
-    """Integration tests: validate transitions through actual model functions."""
+    """Integration tests: verify transitions work freely by default."""
 
-    def test_add_state_validates_transition(self, app, setup_transition_test_data):
-        """add_reservation_state should enforce transition validation."""
-        from models.reservation_state import add_reservation_state, InvalidStateTransitionError
-
-        data = setup_transition_test_data
-
-        with app.app_context():
-            # Create reservation in Completada state
-            reservation_id = _create_reservation(
-                app, data['customer_id'], 'Completada',
-                data['state_ids'].get('Completada'), date_offset=10
-            )
-
-            # Trying to add Confirmada to a Completada reservation should fail
-            with pytest.raises(InvalidStateTransitionError):
-                add_reservation_state(reservation_id, 'Confirmada', changed_by='test')
-
-    def test_add_state_allows_valid_transition(self, app, setup_transition_test_data):
-        """add_reservation_state should allow valid transitions."""
+    def test_add_state_allows_any_transition_by_default(self, app, setup_transition_test_data):
+        """add_reservation_state should allow any transition by default (no enforcement)."""
         from models.reservation_state import add_reservation_state
 
         data = setup_transition_test_data
 
         with app.app_context():
-            # Create reservation in Confirmada state
+            # Create reservation in Completada state (was terminal with enforcement)
             reservation_id = _create_reservation(
-                app, data['customer_id'], 'Confirmada',
-                data['state_ids'].get('Confirmada'), date_offset=11
+                app, data['customer_id'], 'Completada',
+                data['state_ids'].get('Completada'), date_offset=10
             )
 
-            # Transition to Sentada should work
-            result = add_reservation_state(reservation_id, 'Sentada', changed_by='test')
+            # Adding Confirmada to a Completada reservation should now work
+            result = add_reservation_state(reservation_id, 'Confirmada', changed_by='test')
             assert result is True
 
-    def test_change_state_validates_transition(self, app, setup_transition_test_data):
-        """change_reservation_state should enforce transition validation."""
-        from models.reservation_state import change_reservation_state, InvalidStateTransitionError
+    def test_add_state_enforces_when_bypass_false(self, app, setup_transition_test_data):
+        """add_reservation_state should enforce when bypass_validation=False."""
+        from models.reservation_state import add_reservation_state, InvalidStateTransitionError
+
+        data = setup_transition_test_data
+
+        with app.app_context():
+            reservation_id = _create_reservation(
+                app, data['customer_id'], 'Completada',
+                data['state_ids'].get('Completada'), date_offset=11
+            )
+
+            with pytest.raises(InvalidStateTransitionError):
+                add_reservation_state(reservation_id, 'Confirmada', changed_by='test',
+                                      bypass_validation=False)
+
+    def test_change_state_allows_any_transition_by_default(self, app, setup_transition_test_data):
+        """change_reservation_state should allow any transition by default."""
+        from models.reservation_state import change_reservation_state
 
         data = setup_transition_test_data
 
@@ -348,30 +260,29 @@ class TestStateTransitionIntegration:
                 data['state_ids'].get('Completada'), date_offset=12
             )
 
-            # Trying to change to Confirmada should fail
-            with pytest.raises(InvalidStateTransitionError):
-                change_reservation_state(reservation_id, 'Confirmada', changed_by='test')
+            # Changing to Confirmada should work (was blocked before)
+            result = change_reservation_state(reservation_id, 'Confirmada', changed_by='test')
+            assert result is True
 
-    def test_change_state_allows_valid_transition(self, app, setup_transition_test_data):
-        """change_reservation_state should allow valid transitions."""
-        from models.reservation_state import change_reservation_state
+    def test_change_state_enforces_when_bypass_false(self, app, setup_transition_test_data):
+        """change_reservation_state should enforce when bypass_validation=False."""
+        from models.reservation_state import change_reservation_state, InvalidStateTransitionError
 
         data = setup_transition_test_data
 
         with app.app_context():
-            # Create reservation in Confirmada state
             reservation_id = _create_reservation(
-                app, data['customer_id'], 'Confirmada',
-                data['state_ids'].get('Confirmada'), date_offset=13
+                app, data['customer_id'], 'Completada',
+                data['state_ids'].get('Completada'), date_offset=13
             )
 
-            # Transition to Cancelada should work
-            result = change_reservation_state(reservation_id, 'Cancelada', changed_by='test')
-            assert result is True
+            with pytest.raises(InvalidStateTransitionError):
+                change_reservation_state(reservation_id, 'Confirmada', changed_by='test',
+                                          bypass_validation=False)
 
-    def test_cancel_shortcut_validates_transition(self, app, setup_transition_test_data):
-        """cancel_beach_reservation should enforce transition validation."""
-        from models.reservation_state import cancel_beach_reservation, InvalidStateTransitionError
+    def test_cancel_allows_from_any_state_by_default(self, app, setup_transition_test_data):
+        """cancel_beach_reservation should work from any state by default."""
+        from models.reservation_state import cancel_beach_reservation
 
         data = setup_transition_test_data
 
@@ -382,31 +293,28 @@ class TestStateTransitionIntegration:
                 data['state_ids'].get('Completada'), date_offset=14
             )
 
-            # Cancelling a completed reservation should fail
-            with pytest.raises(InvalidStateTransitionError):
-                cancel_beach_reservation(reservation_id, cancelled_by='test')
+            # Cancelling a completed reservation should now work
+            result = cancel_beach_reservation(reservation_id, cancelled_by='test')
+            assert result is True
 
-    def test_cancel_shortcut_bypass_works(self, app, setup_transition_test_data):
-        """cancel_beach_reservation with bypass should always work."""
-        from models.reservation_state import cancel_beach_reservation
+    def test_cancel_enforces_when_bypass_false(self, app, setup_transition_test_data):
+        """cancel_beach_reservation should enforce when bypass_validation=False."""
+        from models.reservation_state import cancel_beach_reservation, InvalidStateTransitionError
 
         data = setup_transition_test_data
 
         with app.app_context():
-            # Create reservation in Completada state (terminal)
             reservation_id = _create_reservation(
                 app, data['customer_id'], 'Completada',
                 data['state_ids'].get('Completada'), date_offset=15
             )
 
-            # Bypass should allow it
-            result = cancel_beach_reservation(
-                reservation_id, cancelled_by='test', bypass_validation=True
-            )
-            assert result is True
+            with pytest.raises(InvalidStateTransitionError):
+                cancel_beach_reservation(reservation_id, cancelled_by='test',
+                                          bypass_validation=False)
 
     def test_full_lifecycle_flow(self, app, setup_transition_test_data):
-        """Test a full valid lifecycle: Confirmada -> Sentada -> Completada."""
+        """Test a full lifecycle: Confirmada -> Sentada -> Completada."""
         from models.reservation_state import add_reservation_state
         from database import get_db
 
@@ -435,9 +343,9 @@ class TestStateTransitionIntegration:
             row = cursor.fetchone()
             assert row['current_state'] == 'Completada'
 
-    def test_reopen_cancelled_reservation(self, app, setup_transition_test_data):
-        """Test reopening: Confirmada -> Cancelada -> Confirmada."""
-        from models.reservation_state import add_reservation_state, change_reservation_state
+    def test_free_form_state_changes(self, app, setup_transition_test_data):
+        """Test that users can freely pick any state without restrictions."""
+        from models.reservation_state import change_reservation_state
         from database import get_db
 
         data = setup_transition_test_data
@@ -449,19 +357,26 @@ class TestStateTransitionIntegration:
                 data['state_ids'].get('Confirmada'), date_offset=17
             )
 
-            # Cancel it
-            result = add_reservation_state(reservation_id, 'Cancelada', changed_by='test')
+            # Jump directly to Completada (skipping Sentada) - previously blocked
+            result = change_reservation_state(reservation_id, 'Completada', changed_by='test')
             assert result is True
 
-            # Reopen it by changing state (not adding, since CSV accumulation
-            # would keep Cancelada as the current state due to priority)
+            # Go back to Confirmada from Completada - previously blocked (terminal)
             result = change_reservation_state(reservation_id, 'Confirmada', changed_by='test')
             assert result is True
 
-            # Verify
+            # Jump to Liberada from Confirmada - previously blocked
+            result = change_reservation_state(reservation_id, 'Liberada', changed_by='test')
+            assert result is True
+
+            # Come back from Liberada - previously blocked (terminal)
+            result = change_reservation_state(reservation_id, 'Sentada', changed_by='test')
+            assert result is True
+
+            # Verify final state
             db = get_db()
             cursor = db.cursor()
             cursor.execute('SELECT current_state FROM beach_reservations WHERE id = ?',
                           (reservation_id,))
             row = cursor.fetchone()
-            assert row['current_state'] == 'Confirmada'
+            assert row['current_state'] == 'Sentada'
