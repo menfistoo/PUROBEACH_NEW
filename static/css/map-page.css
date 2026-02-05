@@ -46,7 +46,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 6px 12px;
-    background: var(--color-secondary);
+    background: var(--color-cromad);
     color: white;
     min-height: 44px;
     gap: 8px;
@@ -82,7 +82,7 @@
     position: absolute;
     top: 0;
     right: 0;
-    background: #C1444F;
+    background: var(--color-red);
     color: white;
     font-size: 9px;
     font-weight: 700;
@@ -93,7 +93,7 @@
     align-items: center;
     justify-content: center;
     animation: badge-pulse 1.5s ease-in-out infinite;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    box-shadow: none;
     z-index: 10;
     border: 1px solid white;
 }
@@ -131,15 +131,16 @@
 
 /* Gold Zone Selector */
 .zone-selector-gold {
-    background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+    background: var(--color-primary);
     color: white;
+    font-family: var(--font-primary);
     font-weight: 600;
     font-size: 12px;
     border: none;
     border-radius: 16px;
     padding: 6px 14px;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(212, 175, 55, 0.4);
+    box-shadow: none;
     min-width: 120px;
     text-align: center;
     appearance: none;
@@ -148,16 +149,21 @@
     background-repeat: no-repeat;
     background-position: right 10px center;
     padding-right: 26px;
+    transition: background 0.2s ease;
+}
+
+.zone-selector-gold:hover {
+    background: var(--color-primary-hover);
 }
 
 .zone-selector-gold:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.5);
+    box-shadow: none;
 }
 
 .zone-selector-gold option {
     background: white;
-    color: #1A3A5C;
+    color: var(--color-cromad);
     font-weight: 500;
     padding: 8px 12px;
 }
@@ -184,9 +190,10 @@
 }
 
 .stat-item .stat-value {
+    font-family: var(--font-primary);
     font-size: 15px;
     font-weight: 700;
-    color: var(--color-secondary);
+    color: var(--color-cromad);
     line-height: 1;
 }
 
