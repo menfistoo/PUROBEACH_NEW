@@ -6,50 +6,53 @@
 
 /* ==================== CSS Variables ==================== */
 :root {
-    /* Primary Colors */
-    --color-primary: #D4AF37;
-    --color-primary-dark: #B8960C;
-    --color-primary-light: #E5C04A;
-    --color-secondary: #1A3A5C;
-    --color-accent: #F5E6D3;
+    /* ========== PRIMARY BRAND COLORS ========== */
+    --color-gold: #CEB677;
+    --color-natural: #EAD6B7;
+    --color-beige: #EEE5D3;
+    --color-wood: #A2795D;
 
-    --color-sand-gold: #D4AF37;
-    --color-deep-ocean: #1A3A5C;
-    --color-warm-sand: #F5E6D3;
-    --color-sunset-coral: #E07B54;
-    --color-sea-foam: #7FB5B5;
-    --color-driftwood: #8B7355;
+    /* ========== SECONDARY BRAND COLORS ========== */
+    --color-red: #E45E41;
+    --color-safari: #55996D;
+    --color-med: #6890C9;
+    --color-cromad: #1A1A1A;
 
-    /* Functional Colors */
-    --color-success: #4A7C59;
-    --color-error: #C1444F;
+    /* ========== SEMANTIC MAPPING ========== */
+    --color-primary: var(--color-gold);
+    --color-primary-hover: #B8A166;
+    --color-secondary: var(--color-med);
+    --color-accent: var(--color-natural);
+
+    --color-success: var(--color-safari);
+    --color-error: var(--color-red);
     --color-warning: #E5A33D;
-    --color-info: #4A90A4;
+    --color-info: var(--color-med);
 
-    /* Neutral Colors */
+    /* ========== NEUTRAL COLORS ========== */
     --color-white: #FFFFFF;
-    --color-off-white: #FAFAFA;
-    --color-light-gray: #E8E8E8;
-    --color-medium-gray: #9CA3AF;
-    --color-dark-gray: #4B5563;
-    --color-near-black: #1F2937;
-
-    /* Text Colors */
-    --color-text: #1F2937;
-    --color-text-secondary: #4B5563;
-    --color-text-muted: #9CA3AF;
-
-    /* Background & Surface */
     --color-background: #FAFAFA;
     --color-surface: #FFFFFF;
-    --color-border: #E8E8E8;
+    --color-border: #E0E0E0;
+    --color-text: var(--color-cromad);
+    --color-text-secondary: #666666;
+    --color-text-muted: #999999;
 
-    /* Typography */
-    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    /* ========== DERIVED COLORS ========== */
+    --color-wood-light: #C29A7D;
+    --color-safari-dark: #3E7D52;
+    --color-red-dark: #C14830;
+    --color-med-dark: #5578A3;
+
+    /* ========== TYPOGRAPHY ========== */
+    --font-primary: 'Gilroy', 'Montserrat', 'Inter', -apple-system, sans-serif;
+    --font-secondary: 'Cralika', 'Inter', -apple-system, 'Segoe UI', sans-serif;
+    --font-accent: 'Solitas', 'Inter', Georgia, serif;
+    --font-family: var(--font-secondary);
     --font-size-base: 14px;
     --line-height-base: 1.5;
 
-    /* Spacing */
+    /* ========== SPACING ========== */
     --space-unit: 4px;
     --space-1: 4px;
     --space-2: 8px;
@@ -61,25 +64,25 @@
     --space-10: 40px;
     --space-12: 48px;
 
-    /* Border Radius */
+    /* ========== BORDERS ========== */
     --border-radius-sm: 4px;
     --border-radius-md: 8px;
     --border-radius-lg: 12px;
     --border-radius-xl: 16px;
     --border-radius-full: 9999px;
 
-    /* Shadows */
+    /* ========== SHADOWS (Minimal use) ========== */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
     --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
     --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
 
-    /* Transitions */
+    /* ========== TRANSITIONS ========== */
     --transition-fast: 0.15s ease;
     --transition-normal: 0.2s ease;
     --transition-slow: 0.3s ease;
 
-    /* Z-index */
+    /* ========== Z-INDEX ========== */
     --z-dropdown: 100;
     --z-sticky: 200;
     --z-modal-backdrop: 300;
@@ -87,17 +90,17 @@
     --z-toast: 500;
     --z-tooltip: 600;
 
-    /* Sidebar dimensions */
+    /* ========== LAYOUT ========== */
     --sidebar-width: 260px;
     --sidebar-collapsed-width: 70px;
 
-    /* Map-specific colors */
-    --map-available-fill: #F5E6D3;
-    --map-available-stroke: #D4AF37;
-    --map-selected-fill: #D4AF37;
-    --map-selected-stroke: #8B6914;
-    --map-zone-label: #1A3A5C;
-    --map-tooltip-bg: #1A3A5C;
+    /* ========== MAP SPECIFIC ========== */
+    --map-available-fill: var(--color-natural);
+    --map-available-stroke: var(--color-gold);
+    --map-selected-fill: var(--color-gold);
+    --map-selected-stroke: var(--color-wood);
+    --map-zone-label: var(--color-cromad);
+    --map-tooltip-bg: var(--color-cromad);
     --map-pool-primary: #87CEEB;
     --map-pool-secondary: #5DADE2;
     --map-canvas-bg: #dee2e6;
@@ -134,28 +137,35 @@
 .border-info { border-color: var(--color-info) !important; }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%) !important;
+    background: var(--color-primary) !important;
     border-color: var(--color-primary) !important;
+    color: var(--color-white) !important;
+    box-shadow: none !important;
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%) !important;
-    border-color: var(--color-primary-dark) !important;
+    background: var(--color-primary-hover) !important;
+    border-color: var(--color-primary-hover) !important;
+    color: var(--color-white) !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 .btn-outline-primary {
     color: var(--color-primary) !important;
     border-color: var(--color-primary) !important;
+    background: transparent !important;
 }
 
 .btn-outline-primary:hover {
     background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
     color: var(--color-white) !important;
 }
 
 /* Nav Pills / Tabs */
 .nav-pills .nav-link {
-    color: var(--color-secondary) !important;
+    color: var(--color-cromad) !important;
     background-color: transparent;
     border-radius: var(--border-radius-md);
     transition: var(--transition-normal);
@@ -163,11 +173,11 @@
 
 .nav-pills .nav-link:hover {
     background-color: var(--color-accent) !important;
-    color: var(--color-secondary) !important;
+    color: var(--color-cromad) !important;
 }
 
 .nav-pills .nav-link.active {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%) !important;
+    background: var(--color-primary) !important;
     color: var(--color-white) !important;
 }
 
@@ -212,7 +222,8 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-    color: var(--color-secondary);
+    font-family: var(--font-primary);
+    color: var(--color-cromad);
     font-weight: 600;
 }
 
