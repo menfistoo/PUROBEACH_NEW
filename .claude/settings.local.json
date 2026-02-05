@@ -94,7 +94,9 @@
       "Bash(kill:*)",
       "Bash(del beach_club.db)",
       "Bash(dir:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(git stash:*)",
+      "Bash(PYTHONIOENCODING=utf-8 python:*)"
     ]
   }
 }

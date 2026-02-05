@@ -263,7 +263,7 @@ a:hover {
 /* ==================== Sidebar Navigation ==================== */
 .sidebar {
     width: var(--sidebar-width);
-    background: linear-gradient(180deg, #1A3A5C 0%, #0F2744 100%);
+    background: var(--color-cromad);
     color: var(--color-white);
     min-height: 100vh;
     position: sticky;
@@ -331,7 +331,7 @@ a:hover {
 }
 
 .nav-item.active {
-    background: rgba(212, 175, 55, 0.15);
+    background: rgba(206, 182, 119, 0.15);
     color: var(--color-primary);
     border-left-color: var(--color-primary);
 }
@@ -623,9 +623,10 @@ html.sidebar-collapsed .nav-child.active i {
 }
 
 .topbar-title {
+    font-family: var(--font-primary);
     font-size: 20px;
     font-weight: 600;
-    color: var(--color-secondary);
+    color: var(--color-cromad);
 }
 
 .topbar-actions {
@@ -654,6 +655,8 @@ html.sidebar-collapsed .nav-child.active i {
     border-radius: 50%;
     background: var(--color-primary);
     color: var(--color-white);
+    font-family: var(--font-primary);
+    font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -746,8 +749,10 @@ html.sidebar-collapsed .nav-child.active i {
 /* ==================== Cards ==================== */
 .card {
     background: var(--color-white);
-    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
     padding: var(--space-6);
+    box-shadow: none;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--color-border);
     margin-bottom: var(--space-6);
@@ -814,7 +819,7 @@ html.sidebar-collapsed .nav-child.active i {
 .form-control:focus, .form-input:focus, .form-select:focus {
     border-color: var(--color-primary);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    box-shadow: none;
 }
 
 .form-control::placeholder, .form-input::placeholder {
@@ -844,9 +849,13 @@ html.sidebar-collapsed .nav-child.active i {
 }
 
 .table thead th {
-    background: var(--color-accent);
-    color: var(--color-secondary);
+    background: var(--color-beige);
+    color: var(--color-cromad);
+    font-family: var(--font-primary);
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--color-primary);
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -881,28 +890,28 @@ html.sidebar-collapsed .nav-child.active i {
 }
 
 .badge-gold {
-    background: #FEF3C7;
-    color: #92400E;
+    background: var(--color-gold);
+    color: var(--color-white);
 }
 
 .badge-success {
-    background: #D1FAE5;
-    color: #065F46;
+    background: var(--color-safari);
+    color: var(--color-white);
 }
 
 .badge-danger {
-    background: #FEE2E2;
-    color: #991B1B;
+    background: var(--color-red);
+    color: var(--color-white);
 }
 
 .badge-info {
-    background: #DBEAFE;
-    color: #1E40AF;
+    background: var(--color-med);
+    color: var(--color-white);
 }
 
 .badge-warning {
-    background: #FEF3C7;
-    color: #92400E;
+    background: var(--color-warning);
+    color: var(--color-cromad);
 }
 
 /* ==================== Alerts / Flash Messages ==================== */
@@ -1014,25 +1023,26 @@ html.sidebar-collapsed .nav-child.active i {
 
 /* ==================== Modals ==================== */
 .modal-backdrop {
-    background: rgba(26, 58, 92, 0.6);
+    background: rgba(26, 26, 26, 0.6);
     backdrop-filter: blur(4px);
 }
 
 .modal-content {
-    border-radius: var(--border-radius-xl);
+    border-radius: var(--border-radius-md);
     border: none;
     overflow: hidden;
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
 .modal-header {
-    background: linear-gradient(135deg, #1A3A5C 0%, #2A4A6C 100%);
+    background: var(--color-cromad);
     color: var(--color-white);
     padding: var(--space-5) var(--space-6);
-    border-bottom: none;
+    border-bottom: 3px solid var(--color-primary);
 }
 
 .modal-title {
+    font-family: var(--font-primary);
     color: var(--color-white);
 }
 
@@ -1041,7 +1051,7 @@ html.sidebar-collapsed .nav-child.active i {
 }
 
 .modal-footer {
-    background: var(--color-off-white);
+    background: var(--color-beige);
     padding: var(--space-4) var(--space-6);
     border-top: 1px solid var(--color-border);
 }
