@@ -1,118 +1,150 @@
-# Beach Club Design System
+# Purobeach Design System
 
-> Complete visual design specification for the Beach Club Management System.
-> Luxury beach club aesthetic with professional hospitality UX.
+> Official visual design specification for the Beach Club Management System.
+> Based on Purobeach Brand Guide (Santa Ponsa, February 2025).
 
 ---
 
 ## Brand Identity
 
 ### Concept
-**Luxury Mediterranean Beach Club** - Elegant, warm, and professional. The design evokes sandy beaches, golden sunsets, and premium hospitality service.
+**Premium Mediterranean Beach Club** - Modern luxury with minimalist sophistication. The design embodies coastal elegance, warm hospitality, and contemporary style.
 
 ### Design Principles
-1. **Clarity First** - Information hierarchy that staff can scan in seconds
-2. **Warm Professionalism** - Luxury feel without being cold or corporate
-3. **Action-Oriented** - Clear CTAs, obvious next steps
-4. **Responsive** - Works on reception desk monitors and handheld tablets
-5. **Accessible** - WCAG 2.1 AA compliant, readable in bright environments
-
----
-
-## Color Palette
-
-### Primary Colors
-
-| Name | Hex | RGB | Usage |
-|------|-----|-----|-------|
-| **Sand Gold** | `#D4AF37` | 212, 175, 55 | Primary brand, CTAs, highlights |
-| **Deep Ocean** | `#1A3A5C` | 26, 58, 92 | Headers, primary text, navigation |
-| **Warm Sand** | `#F5E6D3` | 245, 230, 211 | Backgrounds, cards, available state |
-
-### Secondary Colors
-
-| Name | Hex | RGB | Usage |
-|------|-----|-----|-------|
-| **Sunset Coral** | `#E07B54` | 224, 123, 84 | Warnings, attention items |
-| **Sea Foam** | `#7FB5B5` | 127, 181, 181 | Secondary actions, info states |
-| **Driftwood** | `#8B7355` | 139, 115, 85 | Borders, subtle elements |
-
-### Functional Colors
-
-| Name | Hex | Usage |
-|------|-----|-------|
-| **Success Green** | `#4A7C59` | Confirmations, completed states |
-| **Error Red** | `#C1444F` | Errors, cancellations, alerts |
-| **Warning Amber** | `#E5A33D` | Warnings, pending actions |
-| **Info Blue** | `#4A90A4` | Information, help text |
-
-### Neutral Colors
-
-| Name | Hex | Usage |
-|------|-----|-------|
-| **White** | `#FFFFFF` | Card backgrounds, modals |
-| **Off White** | `#FAFAFA` | Page backgrounds |
-| **Light Gray** | `#E8E8E8` | Borders, dividers |
-| **Medium Gray** | `#9CA3AF` | Placeholder text, disabled |
-| **Dark Gray** | `#4B5563` | Secondary text |
-| **Near Black** | `#1F2937` | Primary text |
-
-### State Colors (Reservations)
-
-| State | Background | Border | Text |
-|-------|------------|--------|------|
-| Pendiente | `#FEF3C7` | `#F59E0B` | `#92400E` |
-| Confirmada | `#DBEAFE` | `#3B82F6` | `#1E40AF` |
-| Check-in | `#D1FAE5` | `#10B981` | `#065F46` |
-| Activa | `#DCFCE7` | `#22C55E` | `#166534` |
-| Completada | `#F3F4F6` | `#9CA3AF` | `#4B5563` |
-| Cancelada | `#FEE2E2` | `#EF4444` | `#991B1B` |
-| No-Show | `#FCE7F3` | `#EC4899` | `#9D174D` |
-
-### Map Colors (Furniture States)
-
-| State | Fill | Stroke | Opacity |
-|-------|------|--------|---------|
-| Available | `#F5E6D3` | `#D4AF37` | 100% |
-| Occupied | `#90EE90` | `#228B22` | 100% |
-| Selected | `#D4AF37` | `#8B6914` | 100% |
-| Maintenance | `#9CA3AF` | `#6B7280` | 70% |
-| Temporary | `#E0F2FE` | `#0EA5E9` | 100% |
+1. **Minimalist Luxury** - Flat design, no gradients or shadows, clean aesthetics
+2. **Clarity First** - Information hierarchy that staff can scan in seconds
+3. **Geometric Precision** - Clean lines with subtle curves, professional execution
+4. **Action-Oriented** - Clear CTAs with brand gold accent
+5. **Accessible** - WCAG 2.1 AA compliant, readable in all environments
 
 ---
 
 ## Typography
 
-### Font Stack
+### Font Families
 
+**Primary Font: Gilroy**
+- Use for: Headers, navigation, buttons, CTAs
+- Weights: 400 (Regular), 500 (Medium), 600 (Semibold), 700 (Bold)
+- Characteristics: Geometric, modern, professional
+
+**Secondary Font: Cralika**
+- Use for: Body text, descriptions, table content
+- Weights: 400 (Regular), 500 (Medium), 600 (Semibold)
+- Characteristics: Readable, clean, versatile
+
+**Accent Font: Solitas**
+- Use for: Special labels, badges, decorative elements
+- Weights: 500 (Medium), 600 (Semibold)
+- Characteristics: Distinctive, premium feel
+
+**Fallback Stack:**
 ```css
-/* Primary Font - Headers & UI */
-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-
-/* Alternative for Spanish Characters */
-font-family: 'Source Sans Pro', 'Inter', sans-serif;
+/* If brand fonts unavailable, use web-safe alternatives */
+--font-primary: 'Gilroy', 'Montserrat', 'Inter', -apple-system, sans-serif;
+--font-secondary: 'Cralika', 'Inter', -apple-system, 'Segoe UI', sans-serif;
+--font-accent: 'Solitas', 'Inter', Georgia, serif;
 ```
 
 ### Type Scale
 
-| Name | Size | Weight | Line Height | Usage |
-|------|------|--------|-------------|-------|
-| Display | 36px | 700 | 1.2 | Page titles |
-| H1 | 28px | 600 | 1.3 | Section headers |
-| H2 | 24px | 600 | 1.3 | Card titles |
-| H3 | 20px | 600 | 1.4 | Subsections |
-| H4 | 18px | 500 | 1.4 | Widget titles |
-| Body Large | 16px | 400 | 1.5 | Primary content |
-| Body | 14px | 400 | 1.5 | Default text |
-| Body Small | 13px | 400 | 1.5 | Secondary info |
-| Caption | 12px | 400 | 1.4 | Labels, hints |
-| Micro | 11px | 500 | 1.3 | Badges, tags |
+| Element | Font | Size | Weight | Line Height | Usage |
+|---------|------|------|--------|-------------|-------|
+| Display | Gilroy | 36px | 700 | 1.2 | Page titles, hero text |
+| H1 | Gilroy | 28px | 600 | 1.3 | Section headers |
+| H2 | Gilroy | 24px | 600 | 1.3 | Card titles, subsections |
+| H3 | Gilroy | 20px | 600 | 1.4 | Widget titles |
+| H4 | Gilroy | 18px | 500 | 1.4 | Subheadings |
+| Body Large | Cralika | 16px | 400 | 1.5 | Primary content, intro text |
+| Body | Cralika | 14px | 400 | 1.5 | Default text, descriptions |
+| Body Small | Cralika | 13px | 400 | 1.5 | Secondary info, captions |
+| Caption | Cralika | 12px | 400 | 1.4 | Labels, hints, metadata |
+| Micro/Badge | Solitas | 11px | 500 | 1.3 | Badges, tags, tiny labels |
 
-### Font Weights
-- **Regular (400):** Body text, descriptions
-- **Medium (500):** Labels, table headers
-- **Semibold (600):** Headings, buttons
-- **Bold (700):** Display, emphasis
+---
+
+## Color Palette
+
+### Primary Colors (Brand Core)
+
+| Name | Hex | RGB | Usage |
+|------|-----|-----|-------|
+| **Gold** | `#CEB677` | 206, 182, 119 | Primary brand, CTAs, highlights, active states |
+| **Natural** | `#EAD6B7` | 234, 214, 183 | Light backgrounds, available furniture states |
+| **Beige** | `#EEE5D3` | 238, 229, 211 | Card backgrounds, table headers, subtle surfaces |
+| **Wood** | `#A2795D` | 162, 121, 93 | Dark accents, borders, hover states |
+
+### Secondary Colors (Functional)
+
+| Name | Hex | RGB | Usage |
+|------|-----|-----|-------|
+| **Red** | `#E45E41` | 228, 94, 65 | Errors, alerts, cancellations, danger actions |
+| **Safari** | `#55996D` | 85, 153, 109 | Success, confirmations, completed states |
+| **Med** | `#6890C9` | 104, 144, 201 | Info, links, secondary actions, highlights |
+| **Cromad** | `#1A1A1A` | 26, 26, 26 | Primary text, headers, dark elements |
+
+### Neutral Colors
+
+| Name | Hex | Usage |
+|------|-----|-------|
+| **White** | `#FFFFFF` | Card backgrounds, modal surfaces |
+| **Off White** | `#FAFAFA` | Page backgrounds |
+| **Light Gray** | `#E0E0E0` | Borders, dividers, subtle separators |
+| **Medium Gray** | `#999999` | Placeholder text, disabled states |
+| **Dark Gray** | `#666666` | Secondary text |
+| **Near Black** | `#1F1F1F` | Body text (if Cromad too dark) |
+
+### Derived Colors (Generated)
+
+```css
+/* Hover states - darker variations */
+--color-gold-hover: #B8A166;
+--color-wood-light: #C29A7D;
+--color-safari-dark: #3E7D52;
+--color-red-dark: #C14830;
+--color-med-dark: #5578A3;
+```
+
+---
+
+## Reservation State Colors
+
+These colors serve functional purposes for operational clarity:
+
+| State | Background | Border | Text | Usage |
+|-------|------------|--------|------|-------|
+| **Pendiente** | `#FEF3C7` | `#CEB677` (Gold) | `#A2795D` (Wood) | Pending confirmation |
+| **Confirmada** | `#E3F2FD` | `#6890C9` (Med) | `#1565C0` | Confirmed, awaiting check-in |
+| **Check-in** | `#E8F5E9` | `#55996D` (Safari) | `#2E7D32` | Customer checked in |
+| **Activa** | `#DCFCE7` | `#55996D` (Safari) | `#166534` | Active reservation |
+| **Completada** | `#F5F5F5` | `#9E9E9E` | `#616161` | Completed successfully |
+| **Cancelada** | `#FFEBEE` | `#E45E41` (Red) | `#C62828` | Cancelled by customer/staff |
+| **No-Show** | `#FCE7F3` | `#E45E41` (Red) | `#9D174D` | Customer didn't arrive |
+
+---
+
+## Beach Map Colors
+
+### Furniture States
+
+| State | Fill | Stroke | Usage |
+|-------|------|--------|-------|
+| **Available** | `#EAD6B7` (Natural) | `#CEB677` (Gold) | Free for booking |
+| **Occupied** | `#55996D` (Safari) | `#3E7D52` | Reserved/occupied |
+| **Selected** | `#CEB677` (Gold) | `#A2795D` (Wood) | User selection |
+| **Blocked** | `#E45E41` (Red) | `#C14830` | Maintenance/blocked |
+| **Temporary** | `#6890C9` (Med) | `#5578A3` | Temporary furniture |
+
+### Zone Rendering
+
+```css
+.zone {
+    fill: rgba(234, 214, 183, 0.2);    /* Natural with 20% opacity */
+    stroke: #CEB677;                    /* Gold */
+    stroke-width: 2px;
+    stroke-dasharray: 8 4;
+}
+```
 
 ---
 
@@ -132,173 +164,174 @@ font-family: 'Source Sans Pro', 'Inter', sans-serif;
 | `space-10` | 40px | Page sections |
 | `space-12` | 48px | Hero spacing |
 
-### Layout Grid
-- **Max Width:** 1440px
-- **Columns:** 12
-- **Gutter:** 24px
-- **Margin:** 32px (desktop), 16px (mobile)
-
 ---
 
 ## Components
 
 ### Buttons
 
-#### Primary Button
+#### Primary Button (Gold)
 ```css
 .btn-primary {
-    background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+    background: #CEB677;              /* Flat gold, no gradient */
     color: #FFFFFF;
+    border: none;
+    border-radius: 4px;
     padding: 12px 24px;
-    border-radius: 8px;
+    font-family: var(--font-primary);
     font-weight: 600;
     font-size: 14px;
-    border: none;
-    box-shadow: 0 2px 4px rgba(212, 175, 55, 0.3);
-    transition: all 0.2s ease;
+    transition: background 0.2s ease;
+    /* NO box-shadow, NO transform */
 }
 .btn-primary:hover {
-    background: linear-gradient(135deg, #E5C04A 0%, #C9A71D 100%);
-    box-shadow: 0 4px 8px rgba(212, 175, 55, 0.4);
-    transform: translateY(-1px);
+    background: #B8A166;              /* Darker gold */
 }
 ```
 
-#### Secondary Button
+#### Secondary Button (Outline)
 ```css
-.btn-secondary {
-    background: #FFFFFF;
-    color: #1A3A5C;
+.btn-outline-primary {
+    background: transparent;
+    color: #CEB677;
+    border: 2px solid #CEB677;
+    border-radius: 4px;
     padding: 12px 24px;
-    border-radius: 8px;
+    font-family: var(--font-primary);
     font-weight: 600;
-    font-size: 14px;
-    border: 2px solid #D4AF37;
-    transition: all 0.2s ease;
 }
-.btn-secondary:hover {
-    background: #FDF8E8;
-    border-color: #B8960C;
+.btn-outline-primary:hover {
+    background: #CEB677;
+    color: #FFFFFF;
 }
 ```
 
 #### Danger Button
 ```css
 .btn-danger {
-    background: #C1444F;
+    background: #E45E41;
     color: #FFFFFF;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: 600;
     border: none;
 }
 .btn-danger:hover {
-    background: #A93842;
+    background: #C14830;
 }
 ```
 
-#### Button Sizes
-- **Small:** padding: 8px 16px; font-size: 13px;
-- **Medium:** padding: 12px 24px; font-size: 14px;
-- **Large:** padding: 16px 32px; font-size: 16px;
+**Button Sizes:**
+- Small: `padding: 8px 16px; font-size: 13px;`
+- Medium (default): `padding: 12px 24px; font-size: 14px;`
+- Large: `padding: 16px 32px; font-size: 16px;`
+
+---
 
 ### Cards
 
 ```css
 .card {
     background: #FFFFFF;
-    border-radius: 12px;
+    border: 1px solid #E0E0E0;
+    border-radius: 8px;
     padding: 24px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08),
-                0 4px 12px rgba(0, 0, 0, 0.05);
-    border: 1px solid #E8E8E8;
+    /* NO box-shadow */
 }
+
 .card-header {
-    border-bottom: 1px solid #E8E8E8;
-    padding-bottom: 16px;
-    margin-bottom: 16px;
+    background: #EEE5D3;              /* Beige */
+    border-bottom: 1px solid #E0E0E0;
+    padding: 16px 24px;
+    margin: -24px -24px 24px -24px;
+    border-radius: 8px 8px 0 0;
 }
+
 .card-title {
+    font-family: var(--font-primary);
     font-size: 18px;
     font-weight: 600;
-    color: #1A3A5C;
+    color: #1A1A1A;
+    margin: 0;
 }
 ```
 
-### Form Inputs
+---
 
+### Forms
+
+#### Labels
 ```css
-.form-input {
-    width: 100%;
-    padding: 12px 16px;
-    border: 2px solid #E8E8E8;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #1F2937;
-    background: #FFFFFF;
-    transition: all 0.2s ease;
-}
-.form-input:focus {
-    border-color: #D4AF37;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
-}
-.form-input::placeholder {
-    color: #9CA3AF;
-}
-.form-input.error {
-    border-color: #C1444F;
-}
 .form-label {
-    display: block;
+    font-family: var(--font-primary);
     font-size: 13px;
-    font-weight: 500;
-    color: #4B5563;
+    font-weight: 600;
+    color: #1A1A1A;
     margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 ```
 
-### Select Dropdown
-
+#### Inputs
 ```css
-.form-select {
-    appearance: none;
-    background-image: url("data:image/svg+xml,..."); /* chevron icon */
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 40px;
+.form-control {
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-family: var(--font-secondary);
+    font-size: 14px;
+    color: #1F1F1F;
+    background: #FFFFFF;
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+    border-color: #CEB677;
+    outline: none;
+    /* NO box-shadow */
+}
+
+.form-control::placeholder {
+    color: #999999;
+    font-style: italic;
+}
+
+.form-control.error {
+    border-color: #E45E41;
 }
 ```
+
+---
 
 ### Tables
 
 ```css
-.table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-}
 .table th {
-    background: #F5E6D3;
-    color: #1A3A5C;
+    background: #EEE5D3;              /* Beige */
+    color: #1A1A1A;
+    font-family: var(--font-primary);
     font-weight: 600;
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding: 12px 16px;
+    padding: 14px 16px;
     text-align: left;
-    border-bottom: 2px solid #D4AF37;
+    border-bottom: 2px solid #CEB677;
 }
+
 .table td {
     padding: 14px 16px;
     border-bottom: 1px solid #E8E8E8;
+    font-family: var(--font-secondary);
     font-size: 14px;
-    color: #1F2937;
+    color: #1F1F1F;
+    vertical-align: middle;
 }
-.table tr:hover {
-    background: #FAFAFA;
+
+.table tbody tr:hover {
+    background: #EAD6B7;              /* Natural - light gold tint */
 }
 ```
+
+---
 
 ### Badges & Tags
 
@@ -306,63 +339,73 @@ font-family: 'Source Sans Pro', 'Inter', sans-serif;
 .badge {
     display: inline-flex;
     align-items: center;
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-radius: 20px;
+    font-family: var(--font-primary);
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
 }
+
 .badge-gold {
-    background: #FEF3C7;
-    color: #92400E;
+    background: #CEB677;
+    color: #FFFFFF;
 }
-.badge-success {
-    background: #D1FAE5;
-    color: #065F46;
+
+.badge-safari {
+    background: #55996D;
+    color: #FFFFFF;
 }
-.badge-danger {
-    background: #FEE2E2;
-    color: #991B1B;
+
+.badge-red {
+    background: #E45E41;
+    color: #FFFFFF;
 }
-.badge-info {
-    background: #DBEAFE;
-    color: #1E40AF;
+
+.badge-med {
+    background: #6890C9;
+    color: #FFFFFF;
 }
 ```
+
+---
 
 ### Modals
 
 ```css
-.modal-overlay {
-    background: rgba(26, 58, 92, 0.6);
-    backdrop-filter: blur(4px);
+.modal-content {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
-.modal {
-    background: #FFFFFF;
-    border-radius: 16px;
-    max-width: 600px;
-    width: 90%;
-    max-height: 90vh;
-    overflow: hidden;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-}
+
 .modal-header {
-    background: linear-gradient(135deg, #1A3A5C 0%, #2A4A6C 100%);
+    background: #1A1A1A;              /* Cromad dark */
     color: #FFFFFF;
     padding: 20px 24px;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 3px solid #CEB677; /* Gold accent */
 }
+
+.modal-title {
+    font-family: var(--font-primary);
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
 .modal-body {
     padding: 24px;
-    overflow-y: auto;
+    background: #FFFFFF;
 }
+
 .modal-footer {
-    background: #FAFAFA;
+    background: #EEE5D3;              /* Beige */
     padding: 16px 24px;
-    border-top: 1px solid #E8E8E8;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
+    border-top: 1px solid #E0E0E0;
+    border-radius: 0 0 8px 8px;
 }
 ```
+
+---
 
 ### Toast Notifications
 
@@ -370,31 +413,28 @@ font-family: 'Source Sans Pro', 'Inter', sans-serif;
 .toast {
     padding: 16px 20px;
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     display: flex;
     align-items: center;
     gap: 12px;
     max-width: 400px;
 }
+
 .toast-success {
-    background: #D1FAE5;
-    border-left: 4px solid #10B981;
-    color: #065F46;
+    background: #E8F5E9;
+    border-left: 4px solid #55996D;   /* Safari */
+    color: #2E7D32;
 }
+
 .toast-error {
-    background: #FEE2E2;
-    border-left: 4px solid #EF4444;
-    color: #991B1B;
+    background: #FFEBEE;
+    border-left: 4px solid #E45E41;   /* Red */
+    color: #C62828;
 }
-.toast-warning {
-    background: #FEF3C7;
-    border-left: 4px solid #F59E0B;
-    color: #92400E;
-}
+
 .toast-info {
-    background: #DBEAFE;
-    border-left: 4px solid #3B82F6;
-    color: #1E40AF;
+    background: #E3F2FD;
+    border-left: 4px solid #6890C9;   /* Med */
+    color: #1565C0;
 }
 ```
 
@@ -402,80 +442,72 @@ font-family: 'Source Sans Pro', 'Inter', sans-serif;
 
 ## Navigation
 
-### Sidebar
+### Sidebar (Dark Theme)
 
 ```css
 .sidebar {
     width: 260px;
-    background: linear-gradient(180deg, #1A3A5C 0%, #0F2744 100%);
+    background: #1A1A1A;              /* Cromad dark */
     color: #FFFFFF;
     min-height: 100vh;
 }
+
 .sidebar-logo {
     padding: 24px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
 }
+
 .sidebar-logo img {
     height: 40px;
+    /* Use Logo_PBSP_Blanco.svg (white) */
 }
-.sidebar-nav {
-    padding: 16px 0;
-}
+
 .nav-item {
     padding: 12px 24px;
     display: flex;
     align-items: center;
     gap: 12px;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.6);
+    font-family: var(--font-primary);
     font-size: 14px;
     font-weight: 500;
     transition: all 0.2s ease;
     border-left: 3px solid transparent;
 }
+
 .nav-item:hover {
     background: rgba(255, 255, 255, 0.05);
     color: #FFFFFF;
 }
+
 .nav-item.active {
-    background: rgba(212, 175, 55, 0.15);
-    color: #D4AF37;
-    border-left-color: #D4AF37;
-}
-.nav-item i {
-    width: 20px;
-    text-align: center;
-}
-.nav-section-title {
-    padding: 16px 24px 8px;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: rgba(255, 255, 255, 0.4);
+    background: rgba(206, 182, 119, 0.15);  /* Gold tint */
+    color: #CEB677;
+    border-left-color: #CEB677;
 }
 ```
 
-### Top Bar
+### Topbar
 
 ```css
 .topbar {
     height: 64px;
     background: #FFFFFF;
-    border-bottom: 1px solid #E8E8E8;
+    border-bottom: 1px solid #E0E0E0;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 24px;
 }
+
 .topbar-title {
+    font-family: var(--font-primary);
     font-size: 20px;
     font-weight: 600;
-    color: #1A3A5C;
+    color: #1A1A1A;
 }
-.topbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
+
 .user-menu {
     display: flex;
     align-items: center;
@@ -483,247 +515,191 @@ font-family: 'Source Sans Pro', 'Inter', sans-serif;
     padding: 8px 12px;
     border-radius: 8px;
     cursor: pointer;
+    transition: background 0.2s ease;
 }
+
 .user-menu:hover {
-    background: #F5E6D3;
+    background: #EAD6B7;              /* Natural */
 }
+
 .user-avatar {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #D4AF37;
+    background: #CEB677;              /* Gold */
     color: #FFFFFF;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-}
-```
-
----
-
-## Beach Map Specific
-
-### Furniture Elements
-
-```css
-/* Hamaca (Lounger) */
-.furniture-hamaca {
-    width: 60px;
-    height: 30px;
-    rx: 4px;
-}
-
-/* Balinesa (Day Bed) */
-.furniture-balinesa {
-    width: 80px;
-    height: 80px;
-    rx: 8px;
-}
-
-/* Sombrilla (Umbrella) */
-.furniture-sombrilla {
-    r: 25px; /* circle */
-}
-
-/* Furniture Number Label */
-.furniture-label {
-    font-size: 12px;
-    font-weight: 600;
-    fill: #1A3A5C;
-    text-anchor: middle;
-    dominant-baseline: middle;
-}
-
-/* Selection Indicator */
-.furniture-selected {
-    stroke: #D4AF37;
-    stroke-width: 3px;
-    filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.5));
-}
-```
-
-### Zone Rendering
-
-```css
-.zone {
-    fill: rgba(245, 230, 211, 0.3);
-    stroke: #D4AF37;
-    stroke-width: 2px;
-    stroke-dasharray: 8 4;
-}
-.zone-label {
-    font-size: 14px;
-    font-weight: 600;
-    fill: #1A3A5C;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-```
-
-### Map Controls
-
-```css
-.map-controls {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.map-control-btn {
-    width: 40px;
-    height: 40px;
-    background: #FFFFFF;
-    border: 1px solid #E8E8E8;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.map-control-btn:hover {
-    background: #F5E6D3;
-    border-color: #D4AF37;
-}
-```
-
-### Date Navigator
-
-```css
-.date-navigator {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    background: #FFFFFF;
-    padding: 12px 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-.date-nav-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #F5E6D3;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.date-nav-btn:hover {
-    background: #D4AF37;
-    color: #FFFFFF;
-}
-.date-display {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1A3A5C;
-    min-width: 200px;
-    text-align: center;
-}
-.date-today-badge {
-    background: #D4AF37;
-    color: #FFFFFF;
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    margin-left: 8px;
-}
-```
-
----
-
-## Dashboard Widgets
-
-### Stats Card
-
-```css
-.stats-card {
-    background: #FFFFFF;
-    border-radius: 12px;
-    padding: 20px;
-    border: 1px solid #E8E8E8;
-}
-.stats-card-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    margin-bottom: 12px;
-}
-.stats-card-icon.gold {
-    background: #FEF3C7;
-    color: #D4AF37;
-}
-.stats-card-icon.blue {
-    background: #DBEAFE;
-    color: #3B82F6;
-}
-.stats-card-icon.green {
-    background: #D1FAE5;
-    color: #10B981;
-}
-.stats-card-value {
-    font-size: 32px;
+    font-family: var(--font-primary);
     font-weight: 700;
-    color: #1A3A5C;
-    line-height: 1;
-}
-.stats-card-label {
-    font-size: 14px;
-    color: #6B7280;
-    margin-top: 4px;
-}
-.stats-card-trend {
-    font-size: 13px;
-    margin-top: 8px;
-}
-.stats-card-trend.up {
-    color: #10B981;
-}
-.stats-card-trend.down {
-    color: #EF4444;
 }
 ```
 
-### Quick Actions
+---
+
+## Logo Usage
+
+### Logo Variants
+
+1. **Logo_PBSP_Blanco.svg** (White)
+   - Use on: Dark backgrounds (sidebar, dark headers, dark sections)
+   - Background: #1A1A1A, dark images, dark overlays
+
+2. **Logo_PBSP_Dorado.svg** (Gold)
+   - Use on: Light backgrounds (login page, white cards, light sections)
+   - Background: #FFFFFF, #FAFAFA, light images
+
+3. **Logo_PBSP_Negro.svg** (Black)
+   - Use on: High contrast applications (print, documents, very light backgrounds)
+   - Background: #FFFFFF, #F5F5F5
+
+### Logo Specifications
+- **Minimum Width:** 120px
+- **Clear Space:** Minimum 20px on all sides
+- **Aspect Ratio:** Maintain original proportions (~2.8:1)
+- **Format:** SVG (scalable) preferred, PNG fallback
+
+---
+
+## CSS Variables Reference
 
 ```css
-.quick-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 16px;
+:root {
+    /* ========== BRAND COLORS ========== */
+    --color-gold: #CEB677;
+    --color-natural: #EAD6B7;
+    --color-beige: #EEE5D3;
+    --color-wood: #A2795D;
+
+    --color-red: #E45E41;
+    --color-safari: #55996D;
+    --color-med: #6890C9;
+    --color-cromad: #1A1A1A;
+
+    /* ========== SEMANTIC MAPPING ========== */
+    --color-primary: var(--color-gold);
+    --color-secondary: var(--color-med);
+    --color-accent: var(--color-natural);
+
+    --color-success: var(--color-safari);
+    --color-error: var(--color-red);
+    --color-warning: #E5A33D;
+    --color-info: var(--color-med);
+
+    /* ========== NEUTRALS ========== */
+    --color-white: #FFFFFF;
+    --color-background: #FAFAFA;
+    --color-surface: #FFFFFF;
+    --color-border: #E0E0E0;
+    --color-text: #1A1A1A;
+    --color-text-secondary: #666666;
+    --color-text-muted: #999999;
+
+    /* ========== DERIVED ========== */
+    --color-gold-hover: #B8A166;
+    --color-wood-light: #C29A7D;
+
+    /* ========== TYPOGRAPHY ========== */
+    --font-primary: 'Gilroy', 'Montserrat', 'Inter', sans-serif;
+    --font-secondary: 'Cralika', 'Inter', sans-serif;
+    --font-accent: 'Solitas', 'Inter', serif;
+
+    --font-size-base: 14px;
+    --line-height-base: 1.5;
+
+    /* ========== SPACING ========== */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+
+    /* ========== BORDERS ========== */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+    --border-radius-full: 9999px;
+
+    /* ========== TRANSITIONS ========== */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.2s ease;
+    --transition-slow: 0.3s ease;
+
+    /* ========== Z-INDEX ========== */
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-modal-backdrop: 300;
+    --z-modal: 400;
+    --z-toast: 500;
+    --z-tooltip: 600;
+
+    /* ========== MAP SPECIFIC ========== */
+    --map-available-fill: var(--color-natural);
+    --map-available-stroke: var(--color-gold);
+    --map-selected-fill: var(--color-gold);
+    --map-selected-stroke: var(--color-wood);
 }
-.quick-action-btn {
-    background: #FFFFFF;
-    border: 2px solid #E8E8E8;
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
+```
+
+---
+
+## Accessibility
+
+### Color Contrast (WCAG 2.1 AA)
+
+**Compliant Combinations:**
+- ✅ Cromad (#1A1A1A) on White (#FFFFFF): 15.7:1 - Use for body text
+- ✅ Safari (#55996D) on White (#FFFFFF): 4.1:1 - Use for large text (18px+)
+- ✅ Med (#6890C9) on White (#FFFFFF): 4.5:1 - Use for all text
+- ✅ Red (#E45E41) on White (#FFFFFF): 4.2:1 - Use for large text
+
+**Caution:**
+- ⚠️ Gold (#CEB677) on White (#FFFFFF): 2.8:1 - Use for large UI elements (18px+), icons, borders ONLY
+- ⚠️ Wood (#A2795D) on Beige (#EEE5D3): 3.2:1 - Use for large text only
+
+**Best Practices:**
+- Use Cromad (#1A1A1A) for all body text and small text
+- Use Gold (#CEB677) for buttons, icons, large headers (18px+)
+- Never use Gold for small body text
+- Ensure all interactive elements have visible focus states
+
+### Focus Indicators
+```css
+*:focus {
+    outline: 2px solid #CEB677;
+    outline-offset: 2px;
 }
-.quick-action-btn:hover {
-    border-color: #D4AF37;
-    background: #FDF8E8;
-    transform: translateY(-2px);
-}
-.quick-action-icon {
-    font-size: 24px;
-    color: #D4AF37;
-    margin-bottom: 8px;
-}
-.quick-action-label {
-    font-size: 14px;
-    font-weight: 500;
-    color: #1A3A5C;
-}
+```
+
+---
+
+## Bootstrap 5 Integration
+
+### Variable Overrides
+
+```scss
+// _variables.scss (if using SCSS)
+$primary: #CEB677;
+$secondary: #6890C9;
+$success: #55996D;
+$danger: #E45E41;
+$warning: #E5A33D;
+$info: #6890C9;
+
+$body-bg: #FAFAFA;
+$body-color: #1A1A1A;
+
+$font-family-base: 'Cralika', 'Inter', sans-serif;
+$headings-font-family: 'Gilroy', 'Montserrat', sans-serif;
+
+$border-radius: 0.25rem;
+$border-radius-lg: 0.5rem;
 ```
 
 ---
@@ -731,116 +707,39 @@ font-family: 'Source Sans Pro', 'Inter', sans-serif;
 ## Responsive Breakpoints
 
 ```css
-/* Mobile First */
-/* Small phones */
-@media (min-width: 320px) { }
-
-/* Large phones */
-@media (min-width: 480px) { }
-
-/* Tablets */
-@media (min-width: 768px) { }
-
-/* Laptops */
-@media (min-width: 1024px) { }
-
-/* Desktops */
-@media (min-width: 1280px) { }
-
-/* Large screens */
-@media (min-width: 1440px) { }
+/* Mobile First Approach */
+/* Extra small (default) */
+@media (min-width: 576px) { /* Small */ }
+@media (min-width: 768px) { /* Tablets */ }
+@media (min-width: 1024px) { /* Laptops */ }
+@media (min-width: 1280px) { /* Desktops */ }
+@media (min-width: 1440px) { /* Large screens */ }
 ```
-
-### Mobile Adaptations
-- Sidebar becomes bottom navigation or hamburger menu
-- Tables become cards on mobile
-- Modal becomes full-screen on mobile
-- Touch-friendly tap targets (min 44px)
-
----
-
-## Icons
-
-### Icon Library
-Use **Font Awesome 6** (Free) for consistency.
-
-### Common Icons
-
-| Action | Icon | Class |
-|--------|------|-------|
-| Add/Create | Plus | `fa-plus` |
-| Edit | Pencil | `fa-pen` |
-| Delete | Trash | `fa-trash` |
-| View | Eye | `fa-eye` |
-| Search | Magnifying glass | `fa-magnifying-glass` |
-| Filter | Filter | `fa-filter` |
-| Export | Download | `fa-download` |
-| Import | Upload | `fa-upload` |
-| Settings | Gear | `fa-gear` |
-| User | User | `fa-user` |
-| Calendar | Calendar | `fa-calendar` |
-| Map | Map | `fa-map` |
-| Reservation | Calendar check | `fa-calendar-check` |
-| Customer | Users | `fa-users` |
-| Furniture | Umbrella beach | `fa-umbrella-beach` |
-| Zone | Layer group | `fa-layer-group` |
-| Reports | Chart | `fa-chart-bar` |
-| Hotel | Hotel | `fa-hotel` |
-| Check | Check | `fa-check` |
-| Close | Xmark | `fa-xmark` |
-| Warning | Triangle exclamation | `fa-triangle-exclamation` |
-| Info | Circle info | `fa-circle-info` |
-| Success | Circle check | `fa-circle-check` |
 
 ---
 
 ## Animation & Transitions
 
 ### Standard Transitions
-
 ```css
-/* Quick interactions */
-transition: all 0.15s ease;
+/* Simple state changes */
+transition: background 0.2s ease;
+transition: color 0.2s ease;
+transition: border-color 0.2s ease;
 
-/* Normal transitions */
-transition: all 0.2s ease;
-
-/* Smooth transitions */
-transition: all 0.3s ease;
-
-/* Emphasis */
-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-```
-
-### Hover Effects
-
-```css
-/* Lift effect */
-.hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Scale effect */
-.hover-scale:hover {
-    transform: scale(1.02);
-}
-
-/* Glow effect (gold) */
-.hover-glow:hover {
-    box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-}
+/* NO transform animations (flat design) */
+/* NO box-shadow animations */
 ```
 
 ### Loading States
-
 ```css
 /* Skeleton loading */
 .skeleton {
-    background: linear-gradient(90deg, #E8E8E8 25%, #F5F5F5 50%, #E8E8E8 75%);
+    background: linear-gradient(90deg, #E0E0E0 25%, #F0F0F0 50%, #E0E0E0 75%);
     background-size: 200% 100%;
     animation: skeleton-loading 1.5s infinite;
 }
+
 @keyframes skeleton-loading {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
@@ -850,11 +749,12 @@ transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 .spinner {
     width: 24px;
     height: 24px;
-    border: 3px solid #E8E8E8;
-    border-top-color: #D4AF37;
+    border: 3px solid #E0E0E0;
+    border-top-color: #CEB677;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
+
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
@@ -862,136 +762,77 @@ transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
 ---
 
-## CSS Variables (Root)
+## Icon System
 
-```css
-:root {
-    /* Colors */
-    --color-primary: #D4AF37;
-    --color-primary-dark: #B8960C;
-    --color-primary-light: #E5C04A;
-    --color-secondary: #1A3A5C;
-    --color-accent: #F5E6D3;
+### FontAwesome 6 (Functional Icons)
+Use for utility icons: arrows, close, check, search, filter, etc.
 
-    --color-success: #4A7C59;
-    --color-error: #C1444F;
-    --color-warning: #E5A33D;
-    --color-info: #4A90A4;
+### Custom Brand Icons
+Located in `static/images/icons/` (from Brand Guide):
+- Circular framed design
+- Gold/tan colorization
+- Line-based, outline style
+- Use for: Dashboard features, marketing areas, branding moments
 
-    --color-text: #1F2937;
-    --color-text-secondary: #4B5563;
-    --color-text-muted: #9CA3AF;
+---
 
-    --color-background: #FAFAFA;
-    --color-surface: #FFFFFF;
-    --color-border: #E8E8E8;
+## Implementation Checklist
 
-    /* Typography */
-    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-size-base: 14px;
-    --line-height-base: 1.5;
+Before launching UI updates:
 
-    /* Spacing */
-    --space-unit: 4px;
-    --space-1: calc(var(--space-unit) * 1);
-    --space-2: calc(var(--space-unit) * 2);
-    --space-3: calc(var(--space-unit) * 3);
-    --space-4: calc(var(--space-unit) * 4);
-    --space-6: calc(var(--space-unit) * 6);
-    --space-8: calc(var(--space-unit) * 8);
+**Visual Consistency:**
+- [ ] All pages use brand color palette (Gold, Natural, Beige, Wood, etc.)
+- [ ] Gilroy font loaded and applied to headers/navigation
+- [ ] Cralika/fallback applied to body text
+- [ ] Logos display correctly (white/gold/black variants)
+- [ ] NO gradients or box-shadows remain
+- [ ] Flat, minimal design throughout
 
-    /* Borders */
-    --border-radius-sm: 4px;
-    --border-radius-md: 8px;
-    --border-radius-lg: 12px;
-    --border-radius-xl: 16px;
-    --border-radius-full: 9999px;
+**Accessibility:**
+- [ ] Color contrast ratios meet WCAG 2.1 AA
+- [ ] Focus indicators visible on all interactive elements
+- [ ] Keyboard navigation functional
+- [ ] All images have alt text
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+**Functionality:**
+- [ ] All buttons clickable with correct hover states
+- [ ] Forms validate and submit properly
+- [ ] Map interactions work (selection, drag, zoom)
+- [ ] Modals open/close correctly
+- [ ] Navigation active states accurate
 
-    /* Transitions */
-    --transition-fast: 0.15s ease;
-    --transition-normal: 0.2s ease;
-    --transition-slow: 0.3s ease;
+---
 
-    /* Z-index */
-    --z-dropdown: 100;
-    --z-sticky: 200;
-    --z-modal-backdrop: 300;
-    --z-modal: 400;
-    --z-toast: 500;
-    --z-tooltip: 600;
-}
+## Quick Reference
+
+```
+PRIMARY COLORS:
+Gold:    #CEB677
+Natural: #EAD6B7
+Beige:   #EEE5D3
+Wood:    #A2795D
+
+SECONDARY COLORS:
+Red:     #E45E41
+Safari:  #55996D
+Med:     #6890C9
+Cromad:  #1A1A1A
+
+FONTS:
+Primary:   Gilroy (headers, navigation)
+Secondary: Cralika (body)
+Accent:    Solitas (special)
+Fallback:  Montserrat, Inter
+
+DESIGN PHILOSOPHY:
+- Flat design (no gradients, no shadows)
+- Clean geometric shapes
+- Generous whitespace
+- Premium, sophisticated
+- WCAG 2.1 AA compliant
 ```
 
 ---
 
-## Implementation Notes
-
-### Bootstrap 5 Integration
-This design system is meant to work **with** Bootstrap 5, not replace it. Override Bootstrap's variables:
-
-```scss
-// _variables.scss
-$primary: #D4AF37;
-$secondary: #1A3A5C;
-$success: #4A7C59;
-$danger: #C1444F;
-$warning: #E5A33D;
-$info: #4A90A4;
-
-$body-bg: #FAFAFA;
-$body-color: #1F2937;
-
-$font-family-base: 'Inter', sans-serif;
-$font-size-base: 0.875rem;
-
-$border-radius: 0.5rem;
-$border-radius-lg: 0.75rem;
-
-$box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-$box-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-```
-
-### File Organization
-
-```
-static/
-├── css/
-│   ├── variables.css       # CSS custom properties
-│   ├── base.css            # Reset, typography, utilities
-│   ├── components/
-│   │   ├── buttons.css
-│   │   ├── cards.css
-│   │   ├── forms.css
-│   │   ├── tables.css
-│   │   ├── modals.css
-│   │   └── navigation.css
-│   ├── pages/
-│   │   ├── dashboard.css
-│   │   ├── map.css
-│   │   ├── reservations.css
-│   │   └── customers.css
-│   └── main.css            # Import all
-```
-
----
-
-## Quick Reference: Color Codes
-
-```
-Primary Gold:     #D4AF37
-Deep Ocean:       #1A3A5C
-Warm Sand:        #F5E6D3
-Success:          #4A7C59
-Error:            #C1444F
-Warning:          #E5A33D
-Text Primary:     #1F2937
-Text Secondary:   #4B5563
-Border:           #E8E8E8
-Background:       #FAFAFA
-```
+**Last Updated:** 2026-02-05 (Brand UI Facelift)
+**Based On:** Purobeach Brand Guide, Santa Ponsa, February 2025

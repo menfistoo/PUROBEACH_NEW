@@ -282,8 +282,41 @@ REASON: New waitlist feature
 
 **CRITICAL:** Before creating or editing ANY UI elements, run `/frontend-design` to load design guidelines.
 
-**Reference:** See `DESIGN_SYSTEM.md` for complete specifications:
-- Color palette, typography, spacing
+### Official Purobeach Brand Identity
+
+**Typography:**
+- **Gilroy** - Primary (headers, navigation, CTAs)
+- **Cralika** - Secondary (body text)
+- **Solitas** - Accent (special elements, labels)
+- **Fallback:** Inter, Montserrat (web-safe alternatives)
+
+**Primary Colors:**
+- **Gold** `#CEB677` - Primary brand color, CTAs, highlights, active states
+- **Natural** `#EAD6B7` - Light backgrounds, available furniture states
+- **Beige** `#EEE5D3` - Card backgrounds, subtle surfaces
+- **Wood** `#A2795D` - Dark accents, borders, hover states
+
+**Secondary Colors:**
+- **Red** `#E45E41` - Errors, alerts, cancellations
+- **Safari** `#55996D` - Success, confirmations, completed states
+- **Med** `#6890C9` - Info, links, secondary actions
+- **Cromad** `#1A1A1A` - Primary text, headers, dark elements
+
+**Design Philosophy:**
+- Flat, minimalist design (NO gradients, NO shadows)
+- Clean geometric shapes with subtle curves
+- Generous whitespace, uncluttered layouts
+- Premium, sophisticated aesthetic
+- WCAG 2.1 AA accessibility compliance
+
+**Logo Usage:**
+- **Dark backgrounds:** Logo_PBSP_Blanco.svg (white)
+- **Light backgrounds:** Logo_PBSP_Dorado.svg (gold)
+- **High contrast:** Logo_PBSP_Negro.svg (black)
+
+**Reference:** See `design-review/DESIGN_SYSTEM.md` for complete specifications:
+- Complete color palette with accessibility notes
+- Typography scale and font weights
 - Component patterns (buttons, cards, forms, tables, modals)
 - Beach map styles (furniture states, zones)
 - Reservation state colors
