@@ -38,8 +38,14 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==========================================================================
     const blockManager = new BlockManager({
         getCurrentDate: () => map.getCurrentDate(),
-        onBlockSuccess: () => map.refreshAvailability(),
-        onUnblockSuccess: () => map.refreshAvailability(),
+        onBlockSuccess: () => {
+            map.clearSelection();
+            map.refreshAvailability();
+        },
+        onUnblockSuccess: () => {
+            map.clearSelection();
+            map.refreshAvailability();
+        },
         getBlockInfo: (furnitureId) => {
             const data = map.getData();
             return data?.blocks?.[furnitureId] || null;
@@ -65,7 +71,10 @@ document.addEventListener('DOMContentLoaded', function () {
         getZones: () => map.getData()?.zones || [],
         getFurnitureTypes: () => map.getData()?.furniture_types || {},
         onCreateSuccess: () => map.refreshAvailability(),
-        onDeleteSuccess: () => map.refreshAvailability()
+        onDeleteSuccess: () => {
+            map.clearSelection();
+            map.refreshAvailability();
+        }
     });
 
     // Wire up temp furniture callbacks
