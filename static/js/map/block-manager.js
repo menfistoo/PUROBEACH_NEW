@@ -237,19 +237,32 @@ export class BlockManager {
 
     /**
      * Show the unblock modal for a furniture item
-     * @param {number} furnitureId - Furniture ID
-     * @param {string} furnitureNumber - Furniture number for display
+     * @param {number|Array<number>} furnitureId - Furniture ID(s)
+     * @param {string|Array<string>} furnitureNumber - Furniture number(s) for display
      * @param {Object} blockInfo - Block information (optional, will fetch if not provided)
      */
-    showUnblockModal(furnitureId, furnitureNumber, blockInfo = null) {
+    async showUnblockModal(furnitureId, furnitureNumber, blockInfo = null) {
         if (!this.unblockModal) {
             showToast('Modal de desbloqueo no disponible', 'error');
             return;
         }
 
-        this.furnitureToUnblock = furnitureId;
-        this.furnitureNumberToUnblock = furnitureNumber;
-        this.currentBlockInfo = blockInfo || this.getBlockInfo(furnitureId);
+        // Handle arrays for multi-unblock
+        const isMultiUnblock = Array.isArray(furnitureId) && furnitureId.length > 1;
+
+        if (isMultiUnblock) {
+            // For multi-unblock, show simplified confirmation and unblock all
+            await this.handleMultiUnblock(furnitureId, furnitureNumber);
+            return;
+        }
+
+        // Single unblock - extract from array if needed
+        const singleId = Array.isArray(furnitureId) ? furnitureId[0] : furnitureId;
+        const singleNumber = Array.isArray(furnitureNumber) ? furnitureNumber[0] : furnitureNumber;
+
+        this.furnitureToUnblock = singleId;
+        this.furnitureNumberToUnblock = singleNumber;
+        this.currentBlockInfo = blockInfo || this.getBlockInfo(singleId);
 
         if (!this.currentBlockInfo) {
             showToast('No se encontró información del bloqueo', 'error');
@@ -306,6 +319,69 @@ export class BlockManager {
         // Show modal
         const bsModal = bootstrap.Modal.getOrCreateInstance(this.unblockModal);
         bsModal.show();
+    }
+
+    /**
+     * Handle unblocking of multiple furniture items
+     * @param {Array<number>} furnitureIds - Array of furniture IDs to unblock
+     * @param {Array<string>} furnitureNumbers - Array of furniture numbers for display
+     */
+    async handleMultiUnblock(furnitureIds, furnitureNumbers) {
+        // Show confirmation with count
+        const count = furnitureIds.length;
+        const confirmed = confirm(`¿Está seguro de desbloquear ${count} mobiliarios?\n\nEsto desbloqueará completamente:\n${furnitureNumbers.join(', ')}`);
+
+        if (!confirmed) {
+            return;
+        }
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        // Unblock each item individually
+        for (let i = 0; i < furnitureIds.length; i++) {
+            try {
+                const blockInfo = this.getBlockInfo(furnitureIds[i]);
+                if (!blockInfo) {
+                    console.warn(`No block info found for furniture ${furnitureNumbers[i]}`);
+                    errorCount++;
+                    continue;
+                }
+
+                const response = await fetch(`/beach/api/map/furniture/${furnitureIds[i]}/block`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': this.getCSRFToken()
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    successCount++;
+                } else {
+                    console.error(`Error unblocking furniture ${furnitureNumbers[i]}:`, result.error);
+                    errorCount++;
+                }
+            } catch (error) {
+                console.error(`Error unblocking furniture ${furnitureNumbers[i]}:`, error);
+                errorCount++;
+            }
+        }
+
+        // Show result message
+        if (errorCount === 0) {
+            showToast(`${successCount} mobiliarios desbloqueados`, 'success');
+        } else if (successCount === 0) {
+            showToast(`Error al desbloquear mobiliarios`, 'error');
+        } else {
+            showToast(`${successCount} desbloqueados, ${errorCount} con errores`, 'warning');
+        }
+
+        // Refresh map
+        if (this.onUnblockSuccess) {
+            this.onUnblockSuccess();
+        }
     }
 
     /**
