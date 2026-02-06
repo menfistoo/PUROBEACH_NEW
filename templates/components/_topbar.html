@@ -1,8 +1,28 @@
 <div class="topbar">
-    <!-- Page Title -->
-    <div class="topbar-title">
-        {% if page_title is defined %}{{ page_title }}{% else %}Dashboard{% endif %}
-    </div>
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="topbar-breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('beach.map') }}">
+                    <i class="fas fa-home"></i>
+                    Beach Club
+                </a>
+            </li>
+            {% if breadcrumbs %}
+                {% for crumb in breadcrumbs %}
+                <li class="breadcrumb-item {% if loop.last %}active{% endif %}" {% if loop.last %}aria-current="page"{% endif %}>
+                    {% if crumb.url and not loop.last %}
+                        <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+                    {% else %}
+                        {{ crumb.label }}
+                    {% endif %}
+                </li>
+                {% endfor %}
+            {% elif page_title is defined %}
+                <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+            {% endif %}
+        </ol>
+    </nav>
 
     <!-- Actions -->
     <div class="topbar-actions">

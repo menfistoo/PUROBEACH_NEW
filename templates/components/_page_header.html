@@ -1,0 +1,52 @@
+{#
+    Unified Page Header Component
+
+    Usage:
+    {% include 'components/_page_header.html' with context %}
+
+    Variables:
+    - title: Page title (required)
+    - icon: Font Awesome icon class (optional, e.g., 'fas fa-calendar-alt')
+    - subtitle: Descriptive subtitle (optional)
+    - actions: List of action buttons (optional)
+        [
+            {'label': 'Button Text', 'icon': 'fas fa-plus', 'url': 'url', 'class': 'btn-primary'},
+            ...
+        ]
+
+    Example:
+    {% set header_title = 'Reservas' %}
+    {% set header_icon = 'fas fa-calendar-alt' %}
+    {% set header_subtitle = 'Base de datos de reservaciones' %}
+    {% set header_actions = [
+        {'label': 'Exportar', 'icon': 'fas fa-download', 'url': url_for('...'), 'class': 'btn-outline-primary'},
+        {'label': 'Nueva Reserva', 'icon': 'fas fa-plus', 'url': url_for('...'), 'class': 'btn-primary'}
+    ] %}
+    {% include 'components/_page_header.html' %}
+#}
+
+<div class="page-header-container">
+    <div class="page-header-content">
+        <h1 class="page-title">
+            {% if header_icon or icon %}
+                <i class="{{ header_icon or icon }}"></i>
+            {% endif %}
+            {{ header_title or title }}
+        </h1>
+        {% if header_subtitle or subtitle %}
+        <p class="page-subtitle">{{ header_subtitle or subtitle }}</p>
+        {% endif %}
+    </div>
+
+    {% if header_actions or actions %}
+    <div class="page-header-actions">
+        {% for action in (header_actions or actions) %}
+        <a href="{{ action.url }}" class="btn {{ action.class|default('btn-primary') }}"
+           {% if action.target %}target="{{ action.target }}"{% endif %}>
+            {% if action.icon %}<i class="{{ action.icon }} me-2"></i>{% endif %}
+            {{ action.label }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

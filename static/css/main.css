@@ -232,22 +232,93 @@ h2 { font-size: 24px; line-height: 1.3; }
 h3 { font-size: 20px; line-height: 1.4; }
 h4 { font-size: 18px; line-height: 1.4; font-weight: 500; }
 
-/* Page Title - Unified standard for all page headers */
+/* ==================== Page Headers (Level 3) ==================== */
+
+.page-header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--color-accent);
+}
+
+.page-header-content {
+    flex: 1;
+}
+
 .page-title {
     font-family: var(--font-primary);
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 600;
     line-height: 1.3;
-    color: #1A3A5C;
-    margin-bottom: 0;
+    color: var(--color-cromad);
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 12px;
 }
 
 .page-title i {
-    color: #D4AF37;
-    font-size: 1.1em;
+    color: var(--color-primary);
+    font-size: 1em;
+}
+
+.page-subtitle {
+    font-family: var(--font-secondary);
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+.page-header-actions {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header-container {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .page-header-actions {
+        width: 100%;
+    }
+
+    .page-header-actions .btn {
+        flex: 1;
+    }
+}
+
+/* ==================== Section Headers (Level 4) ==================== */
+
+.section-header {
+    font-family: var(--font-primary);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--color-cromad);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-header i {
+    color: var(--color-primary);
+    font-size: 0.9em;
+}
+
+.section-subheader {
+    font-family: var(--font-primary);
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--color-cromad);
+    margin-bottom: 12px;
 }
 
 /* Insight Cards - Unified standard for dashboard and summary cards */
@@ -676,26 +747,56 @@ html.sidebar-collapsed .nav-child.active i {
 
 /* ==================== Topbar ==================== */
 .topbar {
-    height: 64px;
+    height: 56px;
     background: var(--color-white);
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid #E0E0E0;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 var(--space-6);
 }
 
-.topbar-title {
-    font-family: var(--font-primary);
-    font-size: 20px;
-    font-weight: 600;
+.topbar-breadcrumb {
+    flex: 1;
+}
+
+.breadcrumb {
+    margin-bottom: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 13px;
+}
+
+.breadcrumb-item {
+    color: var(--color-text-secondary);
+}
+
+.breadcrumb-item.active {
     color: var(--color-cromad);
+    font-weight: 500;
+}
+
+.breadcrumb-item a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: var(--transition-normal);
+}
+
+.breadcrumb-item a:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+}
+
+.breadcrumb-item i {
+    font-size: 11px;
+    margin-right: 4px;
 }
 
 .topbar-actions {
     display: flex;
     align-items: center;
     gap: var(--space-4);
+    flex-shrink: 0;
 }
 
 .user-menu {

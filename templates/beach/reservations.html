@@ -1,30 +1,14 @@
 {% extends "base.html" %}
 
-{% set page_title = "Reservas" %}
+{% set breadcrumbs = [
+    {'label': 'Reservas'}
+] %}
 
 {% block title %}Reservas - PuroBeach{% endblock %}
 
 {% block extra_css %}
 <style>
 /* Reservations Database Styles */
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.page-header h2 {
-    color: var(--color-secondary, #1A3A5C);
-    font-weight: 600;
-    margin: 0;
-    font-size: 1.5rem;
-}
-
-.page-header .header-actions {
-    display: flex;
-    gap: 0.75rem;
-}
 
 /* Compact filter bar */
 .filter-bar {
@@ -551,21 +535,14 @@
 
 {% block content %}
 <!-- Page Header -->
-<div class="page-header">
-    <div>
-        <h2 class="page-title"><i class="fas fa-database"></i>Reservas</h2>
-        <small class="text-muted">Base de datos de reservaciones</small>
-    </div>
-    <div class="header-actions">
-        <a href="{{ url_for('beach.reservations_export') }}?{{ request.query_string.decode() }}"
-           class="btn btn-outline-primary">
-            <i class="fas fa-download me-1"></i>Exportar Excel
-        </a>
-        <a href="{{ url_for('beach.map') }}" class="btn btn-primary">
-            <i class="fas fa-map me-1"></i>Ir al Mapa
-        </a>
-    </div>
-</div>
+{% set header_title = 'Reservas' %}
+{% set header_icon = 'fas fa-database' %}
+{% set header_subtitle = 'Base de datos de reservaciones' %}
+{% set header_actions = [
+    {'label': 'Exportar Excel', 'icon': 'fas fa-download', 'url': url_for('beach.reservations_export') + '?' + request.query_string.decode(), 'class': 'btn-outline-primary'},
+    {'label': 'Ir al Mapa', 'icon': 'fas fa-map', 'url': url_for('beach.map'), 'class': 'btn-primary'}
+] %}
+{% include 'components/_page_header.html' %}
 
 <!-- Filter Bar -->
 <div class="filter-bar">
