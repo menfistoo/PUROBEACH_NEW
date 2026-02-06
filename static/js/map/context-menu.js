@@ -43,6 +43,7 @@ export class ContextMenuManager {
         this.currentFurnitureId = null;
         this.currentFurnitureNumber = null;
         this.currentFurnitureIsTemp = false;
+        this.currentSelection = []; // Array of IDs for multi-select operations
         this.currentClickPosition = { x: 0, y: 0 };
         this.currentZoneId = null;
 
@@ -132,12 +133,25 @@ export class ContextMenuManager {
         // Block option click/keyboard
         const blockItem = this.menuElement.querySelector('#ctx-block');
         const handleBlock = () => {
-            // Save values before hide() clears them
-            const furnitureId = this.currentFurnitureId;
-            const furnitureNumber = this.currentFurnitureNumber;
-            this.hide();
-            if (furnitureId) {
-                this.onBlock(furnitureId, furnitureNumber);
+            // Check if multi-select or single
+            if (this.currentSelection.length > 0) {
+                // Multi-select: get furniture data for all selected items
+                const beachMap = this.getData()?.beachMap;
+                if (beachMap) {
+                    const selectedData = beachMap.getSelectedFurnitureData();
+                    const ids = selectedData.map(f => f.id);
+                    const numbers = selectedData.map(f => f.number);
+                    this.hide();
+                    this.onBlock(ids, numbers);
+                }
+            } else {
+                // Single selection
+                const furnitureId = this.currentFurnitureId;
+                const furnitureNumber = this.currentFurnitureNumber;
+                this.hide();
+                if (furnitureId) {
+                    this.onBlock([furnitureId], [furnitureNumber]);
+                }
             }
         };
         blockItem?.addEventListener('click', handleBlock);
@@ -151,12 +165,25 @@ export class ContextMenuManager {
         // Unblock option click/keyboard
         const unblockItem = this.menuElement.querySelector('#ctx-unblock');
         const handleUnblock = () => {
-            // Save values before hide() clears them
-            const furnitureId = this.currentFurnitureId;
-            const furnitureNumber = this.currentFurnitureNumber;
-            this.hide();
-            if (furnitureId) {
-                this.onUnblock(furnitureId, furnitureNumber);
+            // Check if multi-select or single
+            if (this.currentSelection.length > 0) {
+                // Multi-select: get furniture data for all selected items
+                const beachMap = this.getData()?.beachMap;
+                if (beachMap) {
+                    const selectedData = beachMap.getSelectedFurnitureData();
+                    const ids = selectedData.map(f => f.id);
+                    const numbers = selectedData.map(f => f.number);
+                    this.hide();
+                    this.onUnblock(ids, numbers);
+                }
+            } else {
+                // Single selection
+                const furnitureId = this.currentFurnitureId;
+                const furnitureNumber = this.currentFurnitureNumber;
+                this.hide();
+                if (furnitureId) {
+                    this.onUnblock([furnitureId], [furnitureNumber]);
+                }
             }
         };
         unblockItem?.addEventListener('click', handleUnblock);
@@ -188,11 +215,25 @@ export class ContextMenuManager {
         // Delete temporary furniture click/keyboard
         const deleteTempItem = this.menuElement.querySelector('#ctx-delete-temp');
         const handleDeleteTemp = () => {
-            const furnitureId = this.currentFurnitureId;
-            const furnitureNumber = this.currentFurnitureNumber;
-            this.hide();
-            if (furnitureId) {
-                this.onDeleteTemporary(furnitureId, furnitureNumber);
+            // Check if multi-select or single
+            if (this.currentSelection.length > 0) {
+                // Multi-select: get furniture data for all selected items
+                const beachMap = this.getData()?.beachMap;
+                if (beachMap) {
+                    const selectedData = beachMap.getSelectedFurnitureData();
+                    const ids = selectedData.map(f => f.id);
+                    const numbers = selectedData.map(f => f.number);
+                    this.hide();
+                    this.onDeleteTemporary(ids, numbers);
+                }
+            } else {
+                // Single selection
+                const furnitureId = this.currentFurnitureId;
+                const furnitureNumber = this.currentFurnitureNumber;
+                this.hide();
+                if (furnitureId) {
+                    this.onDeleteTemporary([furnitureId], [furnitureNumber]);
+                }
             }
         };
         deleteTempItem?.addEventListener('click', handleDeleteTemp);
@@ -260,15 +301,34 @@ export class ContextMenuManager {
         // Hide empty space menu if open
         this.hideEmptySpaceMenu();
 
-        this.currentFurnitureId = furniture.id;
-        this.currentFurnitureNumber = furniture.number;
+        // Check if this furniture is part of a multi-selection
+        const beachMap = this.getData()?.beachMap;
+        const selectedIds = beachMap ? beachMap.getSelectedFurniture() : [];
+        const isMultiSelect = selectedIds.length > 1 && selectedIds.includes(furniture.id);
+
+        if (isMultiSelect) {
+            // Store all selected IDs for multi-select operations
+            this.currentSelection = selectedIds;
+            this.currentFurnitureId = null; // Clear single ID to indicate multi-select
+            this.currentFurnitureNumber = null;
+        } else {
+            // Single selection
+            this.currentSelection = [];
+            this.currentFurnitureId = furniture.id;
+            this.currentFurnitureNumber = furniture.number;
+        }
+
         this.currentFurnitureIsTemp = !!furniture.is_temporary;
 
         // Update header
         const header = this.menuElement.querySelector('.ctx-furniture-number');
         if (header) {
-            const tempLabel = furniture.is_temporary ? ' (Temporal)' : '';
-            header.textContent = `Mobiliario ${furniture.number}${tempLabel}`;
+            if (isMultiSelect) {
+                header.textContent = `${selectedIds.length} items seleccionados`;
+            } else {
+                const tempLabel = furniture.is_temporary ? ' (Temporal)' : '';
+                header.textContent = `Mobiliario ${furniture.number}${tempLabel}`;
+            }
         }
 
         // Check if blocked

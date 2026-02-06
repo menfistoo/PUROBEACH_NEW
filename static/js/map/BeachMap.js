@@ -99,15 +99,17 @@ export class BeachMap {
         // Context menu manager (initialized after container is ready)
         this.contextMenu = new ContextMenuManager({
             container: this.container,
-            getData: () => this.data,
-            onBlock: (furnitureId, furnitureNumber) => {
+            getData: () => ({ ...this.data, beachMap: this }),
+            onBlock: (furnitureIds, furnitureNumbers) => {
                 if (this.callbacks.onBlockRequest) {
-                    this.callbacks.onBlockRequest([furnitureId], [furnitureNumber]);
+                    // Context menu now passes arrays directly
+                    this.callbacks.onBlockRequest(furnitureIds, furnitureNumbers);
                 }
             },
-            onUnblock: (furnitureId, furnitureNumber) => {
+            onUnblock: (furnitureIds, furnitureNumbers) => {
                 if (this.callbacks.onUnblockRequest) {
-                    this.callbacks.onUnblockRequest(furnitureId, furnitureNumber);
+                    // Context menu now passes arrays directly
+                    this.callbacks.onUnblockRequest(furnitureIds, furnitureNumbers);
                 }
             },
             onAddTemporary: (x, y, zoneId) => {
@@ -115,9 +117,10 @@ export class BeachMap {
                     this.callbacks.onAddTemporaryRequest(x, y, zoneId);
                 }
             },
-            onDeleteTemporary: (furnitureId, furnitureNumber) => {
+            onDeleteTemporary: (furnitureIds, furnitureNumbers) => {
                 if (this.callbacks.onDeleteTemporaryRequest) {
-                    this.callbacks.onDeleteTemporaryRequest(furnitureId, furnitureNumber);
+                    // Context menu now passes arrays directly
+                    this.callbacks.onDeleteTemporaryRequest(furnitureIds, furnitureNumbers);
                 }
             },
             getZoneAtPosition: (x, y) => this.getZoneAtPosition(x, y)
