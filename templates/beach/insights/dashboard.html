@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
+{% set breadcrumbs = [
+    {'label': 'Informes'},
+    {'label': 'Dashboard del Día'}
+] %}
+
 {% block title %}Dashboard del Dia - Beach Club{% endblock %}
 
 {% block extra_css %}
@@ -90,26 +95,19 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1" style="color: #1A3A5C;">
-                <i class="fas fa-chart-line me-2" style="color: #D4AF37;"></i>
-                Dashboard del Dia
-            </h1>
-            <p class="text-muted mb-0" id="current-date"></p>
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-primary refresh-btn" id="refresh-btn" aria-label="Actualizar datos">
-                <i class="fas fa-sync-alt me-1"></i> Actualizar
-            </button>
-            {% if current_user_can('beach.insights.analytics') %}
-            <a href="{{ url_for('beach.insights_analytics') }}" class="btn btn-primary">
-                Ver Analiticas Avanzadas <i class="fas fa-arrow-right ms-1"></i>
-            </a>
-            {% endif %}
-        </div>
-    </div>
+    <!-- Page Header -->
+    {% set header_title = 'Dashboard del Día' %}
+    {% set header_icon = 'fas fa-chart-line' %}
+    {% set header_subtitle = '<span id="current-date"></span>' %}
+    {% set header_actions = [
+        {'label': 'Actualizar', 'icon': 'fas fa-sync-alt', 'url': 'javascript:void(0)', 'class': 'btn-outline-primary refresh-btn', 'onclick': 'loadDashboardData()'}
+    ] %}
+    {% if current_user_can('beach.insights.analytics') %}
+        {% set header_actions = header_actions + [
+            {'label': 'Ver Analíticas Avanzadas', 'icon': 'fas fa-arrow-right', 'url': url_for('beach.insights_analytics'), 'class': 'btn-primary'}
+        ] %}
+    {% endif %}
+    {% include 'components/_page_header.html' %}
 
     <!-- KPI Cards -->
     <div class="row g-4 mb-4">

@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
+{% set breadcrumbs = [
+    {'label': 'Informes'},
+    {'label': 'Conciliación de Pagos'}
+] %}
+
 {% block title %}Conciliación de Pagos - PuroBeach{% endblock %}
 
 {% block extra_css %}
@@ -592,18 +597,18 @@
 
 {% block content %}
 <!-- Page Header -->
-<div class="page-header">
-    <div>
-        <h2 class="page-title"><i class="fas fa-cash-register"></i>Conciliación de Pagos</h2>
-        <small class="text-muted">Gestión de cobros y tickets del día</small>
-    </div>
-    <div class="header-controls">
-        <input type="date" id="selected-date" class="form-control"
-               value="{{ selected_date }}" aria-label="Fecha seleccionada">
-        <button type="button" class="btn btn-outline-primary" id="btn-refresh" aria-label="Actualizar datos">
-            <i class="fas fa-sync-alt"></i>
-        </button>
-    </div>
+{% set header_title = 'Conciliación de Pagos' %}
+{% set header_icon = 'fas fa-cash-register' %}
+{% set header_subtitle = 'Gestión de cobros y tickets del día' %}
+{% include 'components/_page_header.html' %}
+
+<!-- Date Controls -->
+<div class="mb-3 d-flex gap-2 justify-content-end">
+    <input type="date" id="selected-date" class="form-control" style="width: auto;"
+           value="{{ selected_date }}" aria-label="Fecha seleccionada">
+    <button type="button" class="btn btn-outline-primary" id="btn-refresh" aria-label="Actualizar datos">
+        <i class="fas fa-sync-alt"></i>
+    </button>
 </div>
 
 <!-- Summary Cards -->

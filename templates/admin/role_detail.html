@@ -1,31 +1,44 @@
 {% extends "base.html" %}
 
+{% set breadcrumbs = [
+    {'label': 'Administración'},
+    {'label': 'Roles', 'url': url_for('admin.roles')},
+    {'label': role.display_name}
+] %}
+
 {% block title %}{{ role.display_name }} - Permisos - PuroBeach{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-start mb-4">
-    <div>
-        <h2>
-            <i class="fas fa-user-shield"></i> {{ role.display_name }}
-            {% if role.is_system %}
-            <span class="badge bg-warning text-dark">Sistema</span>
-            {% else %}
-            <span class="badge bg-secondary">Personalizado</span>
-            {% endif %}
-        </h2>
-        <p class="text-muted">{{ role.description or 'Sin descripción' }}</p>
-    </div>
-    <div>
-        <a href="{{ url_for('admin.roles') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Volver
-        </a>
-        {% if role.name != 'admin' %}
-        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editRoleModal">
-            <i class="fas fa-edit"></i> Editar Rol
-        </button>
-        {% endif %}
-    </div>
-</div>
+<!-- Page Header -->
+{% set header_title = role.display_name %}
+{% if role.is_system %}
+    {% set header_title = header_title + ' <span class="badge bg-warning text-dark">Sistema</span>' %}
+{% else %}
+    {% set header_title = header_title + ' <span class="badge bg-secondary">Personalizado</span>' %}
+{% endif %}
+{% set header_icon = 'fas fa-user-shield' %}
+{% set header_subtitle = role.description or 'Sin descripción' %}
+{% set header_actions = [
+    {'label': 'Volver', 'icon': 'fas fa-arrow-left', 'url': url_for('admin.roles'), 'class': 'btn-outline-secondary'}
+] %}
+{% if role.name != 'admin' %}
+    {% set header_actions = header_actions + [
+        {'label': 'Editar Rol', 'icon': 'fas fa-edit', 'url': 'javascript:void(0)', 'class': 'btn-outline-primary', 'data-bs-toggle': 'modal', 'data-bs-target': '#editRoleModal'}
+    ] %}
+{% endif %}
+{% include 'components/_page_header.html' %}
+
+<script>
+// Fix for modal trigger in action button
+document.addEventListener('DOMContentLoaded', function() {
+    const editBtn = document.querySelector('.page-header-actions a[href="javascript:void(0)"]');
+    if (editBtn) {
+        editBtn.setAttribute('data-bs-toggle', 'modal');
+        editBtn.setAttribute('data-bs-target', '#editRoleModal');
+        editBtn.style.cursor = 'pointer';
+    }
+});
+</script>
 
 <!-- Tabs -->
 <ul class="nav nav-tabs mb-3" role="tablist">

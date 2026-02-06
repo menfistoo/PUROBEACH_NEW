@@ -1,16 +1,23 @@
 {% extends "base.html" %}
 
+{% set breadcrumbs = [
+    {'label': 'Administración'},
+    {'label': 'Huéspedes del Hotel', 'url': url_for('admin.hotel_guests')},
+    {'label': 'Importar'}
+] %}
+
 {% set page_title = "Importar Huéspedes" %}
 
 {% block title %}Importar Huéspedes - PuroBeach{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fa-solid fa-file-import"></i> Importar Huéspedes</h2>
-    <a href="{{ url_for('admin.hotel_guests') }}" class="btn btn-secondary">
-        <i class="fa-solid fa-arrow-left"></i> Volver
-    </a>
-</div>
+<!-- Page Header -->
+{% set header_title = 'Importar Huéspedes' %}
+{% set header_icon = 'fas fa-file-import' %}
+{% set header_actions = [
+    {'label': 'Volver', 'icon': 'fas fa-arrow-left', 'url': url_for('admin.hotel_guests'), 'class': 'btn-secondary'}
+] %}
+{% include 'components/_page_header.html' %}
 
 <div class="row">
     <div class="col-md-8">
