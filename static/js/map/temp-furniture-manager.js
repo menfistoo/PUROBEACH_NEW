@@ -292,8 +292,8 @@ export class TempFurnitureManager {
 
     /**
      * Show the delete confirmation modal
-     * @param {number} furnitureId - Furniture ID to delete
-     * @param {string} furnitureNumber - Furniture number for display
+     * @param {number|Array<number>} furnitureId - Furniture ID(s) to delete
+     * @param {string|Array<string>} furnitureNumber - Furniture number(s) for display
      */
     async showDeleteModal(furnitureId, furnitureNumber) {
         if (!this.deleteModal) {
@@ -301,8 +301,21 @@ export class TempFurnitureManager {
             return;
         }
 
-        this.furnitureToDelete = furnitureId;
-        this.furnitureNumberToDelete = furnitureNumber;
+        // Handle arrays for multi-delete
+        const isMultiDelete = Array.isArray(furnitureId) && furnitureId.length > 1;
+
+        if (isMultiDelete) {
+            // For multi-delete, show simplified confirmation and delete all
+            await this.handleMultiDelete(furnitureId, furnitureNumber);
+            return;
+        }
+
+        // Single delete - extract from array if needed
+        const singleId = Array.isArray(furnitureId) ? furnitureId[0] : furnitureId;
+        const singleNumber = Array.isArray(furnitureNumber) ? furnitureNumber[0] : furnitureNumber;
+
+        this.furnitureToDelete = singleId;
+        this.furnitureNumberToDelete = singleNumber;
         this.isMultiDay = false;
 
         // Update modal content
@@ -368,6 +381,61 @@ export class TempFurnitureManager {
         if (!dateStr) return '';
         const [year, month, day] = dateStr.split('-');
         return `${day}/${month}/${year}`;
+    }
+
+    /**
+     * Handle deletion of multiple temporary furniture items
+     * @param {Array<number>} furnitureIds - Array of furniture IDs to delete
+     * @param {Array<string>} furnitureNumbers - Array of furniture numbers for display
+     */
+    async handleMultiDelete(furnitureIds, furnitureNumbers) {
+        // Show simplified confirmation with count
+        const count = furnitureIds.length;
+        const confirmed = confirm(`¿Está seguro de eliminar ${count} mobiliarios temporales?\n\nEsto eliminará completamente:\n${furnitureNumbers.join(', ')}`);
+
+        if (!confirmed) {
+            return;
+        }
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        // Delete each item individually
+        for (let i = 0; i < furnitureIds.length; i++) {
+            try {
+                const url = `/beach/api/map/temporary-furniture/${furnitureIds[i]}?delete_type=all`;
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': this.getCSRFToken()
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    successCount++;
+                } else {
+                    console.error(`Error deleting furniture ${furnitureNumbers[i]}:`, result.error);
+                    errorCount++;
+                }
+            } catch (error) {
+                console.error(`Error deleting furniture ${furnitureNumbers[i]}:`, error);
+                errorCount++;
+            }
+        }
+
+        // Show result message
+        if (errorCount === 0) {
+            showToast(`${successCount} mobiliarios temporales eliminados`, 'success');
+        } else if (successCount === 0) {
+            showToast(`Error al eliminar mobiliarios temporales`, 'error');
+        } else {
+            showToast(`${successCount} eliminados, ${errorCount} con errores`, 'warning');
+        }
+
+        // Refresh map
+        this.onDeleteSuccess();
     }
 
     /**
