@@ -10,7 +10,7 @@
 .new-reservation-panel-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(26, 58, 92, 0.6);
+    background: rgba(26, 26, 26, 0.6);
     z-index: var(--z-modal-backdrop);
     opacity: 0;
     visibility: hidden;
@@ -38,7 +38,7 @@
     flex-direction: column;
     transform: translateX(100%);
     transition: transform var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
 }
 
 .new-reservation-panel.open {
@@ -49,20 +49,33 @@
 .new-reservation-panel::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 8px;
-    width: 4px;
-    height: 40px;
-    background: rgba(0, 0, 0, 0.1);
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.5);
     border-radius: 2px;
-    transform: translateY(-50%);
+    z-index: 10;
 }
 
-/* Desktop: Fixed width panel */
+/* Tablet: Fixed width panel */
 @media (min-width: 768px) {
     .new-reservation-panel {
         width: 400px;
-        border-radius: var(--border-radius-xl) 0 0 var(--border-radius-xl);
+        top: 60px;
+        height: calc(100vh - 80px);
+        border-radius: 12px 0 0 12px;
+    }
+
+    .new-reservation-panel.open.collapsed {
+        transform: translateX(calc(100% - 48px));
+    }
+
+    /* Maintain rounded corners when collapsed */
+    .new-reservation-panel.collapsed {
+        border-radius: 12px 0 0 12px !important;
+        overflow: visible;
     }
 
     .new-reservation-panel::before {
@@ -70,9 +83,10 @@
     }
 }
 
+/* Desktop: Slightly wider */
 @media (min-width: 1200px) {
     .new-reservation-panel {
-        width: 450px;
+        width: 420px;
     }
 }
 
@@ -83,11 +97,28 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-3) var(--space-4);
-    background: linear-gradient(135deg, var(--color-secondary) 0%, #2a4a6c 100%);
+    padding: 16px 20px;
+    background: var(--color-cromad);
+    border-bottom: 3px solid var(--color-primary);
     color: var(--color-white);
     min-height: 60px;
     flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+    .new-reservation-panel .panel-header {
+        border-radius: 12px 0 0 0; /* Rounded top-left corner to match panel */
+    }
+
+    /* When collapsed, collapsed bar has the rounded edge */
+    .new-reservation-panel.open.collapsed .panel-header {
+        border-radius: 0;
+        display: none; /* Hide header when collapsed */
+    }
+
+    .new-reservation-panel.open.collapsed .panel-body {
+        display: none; /* Hide body when collapsed */
+    }
 }
 
 .new-reservation-panel .panel-close-btn {
@@ -123,6 +154,66 @@
 .new-reservation-panel .panel-date {
     font-size: 12px;
     opacity: 0.8;
+}
+
+/* =============================================================================
+   COLLAPSED BAR - Vertical strip on left edge, always visible when collapsed
+   ============================================================================= */
+
+.new-reservation-panel .collapsed-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 48px;
+    height: 100%;
+    background: var(--color-cromad);
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    align-items: center;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    gap: 12px;
+    z-index: 100;
+    border-radius: 12px 0 0 12px !important;
+}
+
+/* Show collapsed bar ONLY when panel is open AND collapsed (tablet+) */
+@media (min-width: 768px) {
+    .new-reservation-panel.open.collapsed .collapsed-bar {
+        display: flex;
+    }
+}
+
+/* =============================================================================
+   COLLAPSE TOGGLE - TOUCH FRIENDLY
+   ============================================================================= */
+
+.new-reservation-panel .collapse-toggle {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.new-reservation-panel .collapse-toggle:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.new-reservation-panel .collapse-toggle:active {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.new-reservation-panel.collapsed .collapse-toggle i {
+    transform: rotate(180deg);
 }
 
 /* =============================================================================
@@ -260,7 +351,7 @@
 .new-reservation-panel .customer-search-wrapper input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+    box-shadow: 0 0 0 3px rgba(206, 182, 119, 0.1);
 }
 
 /* Selected Customer Display - Compact Layout */
@@ -342,7 +433,7 @@
 .new-reservation-panel .guest-selector-wrapper {
     margin-top: var(--space-2);
     padding: var(--space-2) var(--space-3);
-    background: rgba(26, 58, 92, 0.05);
+    background: rgba(26, 26, 26, 0.05);
     border-radius: var(--border-radius-md);
     border: 1px solid var(--color-border);
 }
@@ -375,7 +466,7 @@
 
 /* Inline Create Customer Form */
 .new-reservation-panel .create-customer-inline {
-    background: linear-gradient(135deg, var(--color-background) 0%, var(--color-white) 100%);
+    background: var(--color-white);
     border: 2px solid var(--color-primary);
     border-radius: var(--border-radius-md);
     overflow: hidden;
@@ -515,7 +606,7 @@
 .new-reservation-panel .pref-chip:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+    box-shadow: 0 0 0 3px rgba(206, 182, 119, 0.2);
 }
 
 .new-reservation-panel .pref-chip:focus-visible {
@@ -565,7 +656,7 @@
 .new-reservation-panel .panel-save-btn {
     flex: 2;
     padding: var(--space-3);
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark, #B8960C) 100%);
+    background: var(--color-primary);
     border: none;
     border-radius: var(--border-radius-lg);
     color: var(--color-white);
@@ -577,12 +668,12 @@
 
 .new-reservation-panel .panel-save-btn:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
+    box-shadow: 0 0 0 3px rgba(206, 182, 119, 0.2);
 }
 
 .new-reservation-panel .panel-save-btn:hover:not(:disabled) {
+    opacity: 0.9;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
 }
 
 .new-reservation-panel .panel-save-btn:disabled {
@@ -613,9 +704,8 @@
     top: 0;
     bottom: 0;
     width: 50px;
-    background: linear-gradient(90deg,
-        rgba(212, 175, 55, 0.95) 0%,
-        rgba(212, 175, 55, 0.8) 100%);
+    background: var(--color-primary);
+    opacity: 0.95;
     pointer-events: auto;
     cursor: pointer;
 }
@@ -720,9 +810,8 @@
         bottom: auto;
         width: auto;
         height: 60px;
-        background: linear-gradient(180deg,
-            rgba(212, 175, 55, 0.95) 0%,
-            rgba(212, 175, 55, 0.8) 100%);
+        background: var(--color-primary);
+        opacity: 0.95;
     }
 
     .new-reservation-panel.minimized::after {
@@ -769,7 +858,7 @@
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
-    background: rgba(26, 58, 92, 0.05);
+    background: rgba(26, 26, 26, 0.05);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-md);
     cursor: pointer;
@@ -777,7 +866,7 @@
 }
 
 .new-reservation-panel .charge-to-room-check:hover {
-    background: rgba(26, 58, 92, 0.1);
+    background: rgba(26, 26, 26, 0.1);
     border-color: var(--color-secondary);
 }
 
@@ -812,7 +901,7 @@
 .quick-swap-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(26, 58, 92, 0.6);
+    background: rgba(26, 26, 26, 0.6);
     backdrop-filter: blur(2px);
 }
 
@@ -1011,7 +1100,7 @@
     font-weight: 600;
     color: var(--color-primary, #D4AF37);
     background: white;
-    border: 2px solid rgba(26, 58, 92, 0.15);
+    border: 2px solid rgba(26, 26, 26, 0.15);
     border-radius: 8px;
     transition: all 0.2s ease;
 }
@@ -1024,7 +1113,7 @@
 .pricing-section .pricing-input:focus {
     outline: none;
     border-color: var(--color-primary, #D4AF37);
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    box-shadow: 0 0 0 3px rgba(206, 182, 119, 0.15);
     background: white;
 }
 
@@ -1035,8 +1124,8 @@
 
 .pricing-section .pricing-reset-btn {
     padding: 8px 12px;
-    background: rgba(26, 58, 92, 0.08);
-    border: 1px solid rgba(26, 58, 92, 0.15);
+    background: rgba(26, 26, 26, 0.08);
+    border: 1px solid rgba(26, 26, 26, 0.15);
     border-radius: 6px;
     color: var(--color-text, #1F2937);
     cursor: pointer;
@@ -1054,7 +1143,7 @@
 .pricing-section .pricing-calculated {
     margin-top: var(--space-2);
     padding: var(--space-2);
-    background: rgba(26, 58, 92, 0.05);
+    background: rgba(26, 26, 26, 0.05);
     border-left: 3px solid var(--color-primary, #D4AF37);
     border-radius: 4px;
     font-size: 12px;
@@ -1070,7 +1159,7 @@
     font-size: 13px;
     color: var(--color-text-muted);
     padding: var(--space-2);
-    background: rgba(26, 58, 92, 0.05);
+    background: rgba(26, 26, 26, 0.05);
     border-radius: var(--border-radius);
     margin-top: var(--space-2);
     transition: all 0.3s ease;
@@ -1149,7 +1238,7 @@
     font-weight: 400;
     color: var(--color-text, #1F2937);
     background-color: white;
-    border: 1.5px solid rgba(26, 58, 92, 0.2);
+    border: 1.5px solid rgba(26, 26, 26, 0.2);
     border-radius: 8px;
     transition: all 0.2s ease;
     cursor: pointer;
@@ -1163,7 +1252,7 @@
 .pricing-section .pricing-select:focus {
     outline: none;
     border-color: var(--color-primary, #D4AF37);
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    box-shadow: 0 0 0 3px rgba(206, 182, 119, 0.15);
     background-color: white;
 }
 

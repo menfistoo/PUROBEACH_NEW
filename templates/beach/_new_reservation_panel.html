@@ -9,11 +9,21 @@
 
 <!-- New Reservation Panel -->
 <div class="new-reservation-panel" id="newReservationPanel" role="dialog" aria-labelledby="newPanelTitle" aria-modal="true">
+    <!-- Collapsed bar - always visible in the 48px strip when collapsed -->
+    <div class="collapsed-bar">
+        <button type="button" class="collapse-toggle" id="newReservationCollapseBtn" title="Colapsar panel" aria-label="Colapsar panel">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+
     <!-- Header -->
     <div class="panel-header">
+        <button type="button" class="collapse-toggle" id="newReservationCollapseBtnHeader" title="Colapsar panel" aria-label="Colapsar panel">
+            <i class="fas fa-chevron-right"></i>
+        </button>
         <button type="button" class="panel-close-btn" id="newPanelCloseBtn"
                 aria-label="Cerrar panel" title="Cerrar">
-            <i class="fas fa-chevron-right"></i>
+            <i class="fas fa-xmark"></i>
         </button>
         <div class="panel-title">
             <span class="panel-ticket" id="newPanelTitle">Nueva Reserva</span>

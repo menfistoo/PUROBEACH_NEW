@@ -26,6 +26,8 @@ export function cacheElements() {
 
         // Header
         closeBtn: document.getElementById('waitlistPanelCloseBtn'),
+        collapseBtn: document.getElementById('waitlistCollapseBtn'),
+        collapseBtnHeader: document.getElementById('waitlistCollapseBtnHeader'),
         addBtn: document.getElementById('waitlistAddBtn'),
         dateDisplay: document.getElementById('waitlistPanelDate'),
 

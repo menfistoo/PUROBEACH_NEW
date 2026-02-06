@@ -122,6 +122,7 @@ export class ReservationPanelBase {
 
         // Header elements
         this.toggleBtn = document.getElementById('panelToggleBtn');
+        this.collapseBtn = document.getElementById('reservationCollapseBtn');
         this.toggleIcon = document.getElementById('panelToggleIcon');
         this.closeBtn = document.getElementById('panelCloseBtn');
         this.editBtn = document.getElementById('panelEditBtn');
@@ -238,8 +239,9 @@ export class ReservationPanelBase {
     attachListeners() {
         if (!this.panel) return;
 
-        // Toggle button (collapse/expand)
+        // Toggle buttons (collapse/expand)
         this.toggleBtn?.addEventListener('click', () => this.toggleCollapse());
+        this.collapseBtn?.addEventListener('click', () => this.toggleCollapse());
 
         // Close button
         this.closeBtn?.addEventListener('click', () => this.close());

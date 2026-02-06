@@ -9,9 +9,16 @@
 
 <!-- Reservation Panel -->
 <div class="reservation-panel" id="reservationPanel" role="dialog" aria-labelledby="panelTicket" aria-modal="true">
+    <!-- Collapsed bar - always visible in the 48px strip when collapsed -->
+    <div class="collapsed-bar">
+        <button type="button" class="collapse-toggle panel-toggle-btn" id="reservationCollapseBtn" title="Colapsar panel" aria-label="Colapsar panel">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+
     <!-- Header -->
     <div class="panel-header">
-        <button type="button" class="panel-toggle-btn" id="panelToggleBtn"
+        <button type="button" class="panel-toggle-btn collapse-toggle" id="panelToggleBtn"
                 aria-label="Colapsar panel" title="Colapsar">
             <i class="fas fa-chevron-right" id="panelToggleIcon"></i>
         </button>

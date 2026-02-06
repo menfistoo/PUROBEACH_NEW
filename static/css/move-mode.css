@@ -8,10 +8,10 @@
    ============================================================================= */
 
 :root {
-    --move-mode-primary: #D4AF37;
-    --move-mode-secondary: #1A3A5C;
-    --move-mode-accent: #F5E6D3;
-    --move-mode-success: #4A7C59;
+    --move-mode-primary: #CEB677;
+    --move-mode-secondary: #1A1A1A;
+    --move-mode-accent: #EEE5D3;
+    --move-mode-success: #55996D;
     --move-mode-warning: #E5A33D;
     --move-mode-panel-width: 320px;
     --move-mode-transition: 0.3s ease;
@@ -53,7 +53,7 @@
     height: 100vh;
     height: 100dvh; /* Dynamic viewport for mobile */
     background: white;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
     z-index: 1050;
     display: flex;
     flex-direction: column;
@@ -197,14 +197,14 @@
     align-items: center;
     justify-content: center;
     gap: 2px;
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+    box-shadow: -1px 0 4px rgba(0, 0, 0, 0.08);
     cursor: pointer;
     transition: all var(--move-mode-transition);
 }
 
 .collapsed-thumbnail:hover {
     transform: scale(1.05);
-    box-shadow: -3px 0 12px rgba(0, 0, 0, 0.2);
+    box-shadow: -2px 0 6px rgba(0, 0, 0, 0.12);
 }
 
 .collapsed-thumbnail:active {
@@ -246,7 +246,7 @@
 /* VIP indicator */
 .collapsed-thumbnail.is-vip {
     border-color: var(--move-mode-primary);
-    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    background: #FEF3C7;
 }
 
 .collapsed-thumbnail .vip-star {
@@ -262,7 +262,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* "+N more" badge */
@@ -325,7 +325,7 @@
 /* Completed thumbnail state - brief flash before removal */
 .collapsed-thumbnail.is-complete {
     border-color: var(--move-mode-success);
-    background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+    background: #D1FAE5;
     animation: complete-pulse 0.6s ease-out;
 }
 
@@ -340,7 +340,7 @@
 
 @keyframes complete-pulse {
     0% { transform: scale(1); }
-    50% { transform: scale(1.15); box-shadow: 0 0 12px rgba(74, 124, 89, 0.5); }
+    50% { transform: scale(1.15); }
     100% { transform: scale(1); opacity: 0.8; }
 }
 
@@ -359,7 +359,7 @@
     max-width: 200px;
     z-index: 1100;
     pointer-events: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     line-height: 1.4;
     opacity: 0.98;
     animation: tooltipFadeIn 0.15s ease;
@@ -466,9 +466,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
+    padding: 16px 20px;
     padding-top: 20px; /* Space for swipe indicator on mobile */
-    background: linear-gradient(135deg, var(--move-mode-secondary) 0%, #2a4a6c 100%);
+    background: var(--move-mode-secondary);
+    border-bottom: 3px solid var(--move-mode-primary);
     min-height: 60px;
     flex-shrink: 0;
 }
@@ -694,17 +695,17 @@
 /* Undo button (2/3 width, primary style) */
 .move-mode-footer-btn.btn-undo {
     flex: 2;
-    background: linear-gradient(135deg, var(--move-mode-primary) 0%, #B8960C 100%);
+    background: var(--move-mode-primary);
     border: none;
     color: white;
     font-weight: 600;
-    box-shadow: 0 2px 4px rgba(212, 175, 55, 0.3);
+    box-shadow: none;
 }
 
 .move-mode-footer-btn.btn-undo:hover {
-    background: linear-gradient(135deg, #E5C04A 0%, #C9A71D 100%);
+    background: var(--move-mode-primary);
+    opacity: 0.9;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(212, 175, 55, 0.4);
 }
 
 .move-mode-footer-btn.btn-undo:active {
@@ -763,13 +764,13 @@
 
 .move-mode-card:hover {
     border-color: var(--move-mode-primary);
-    box-shadow: 0 1px 4px rgba(212, 175, 55, 0.2);
+    box-shadow: 0 1px 3px rgba(206, 182, 119, 0.15);
 }
 
 .move-mode-card.selected {
     border-color: var(--move-mode-primary);
     border-width: 2px;
-    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+    box-shadow: 0 0 0 2px rgba(206, 182, 119, 0.15);
 }
 
 .move-mode-card .card-header {
@@ -936,7 +937,7 @@
     border: 1px solid var(--move-mode-primary);
     border-radius: 8px;
     padding: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .legend-header {
@@ -1044,14 +1045,15 @@
    ============================================================================= */
 
 .move-mode-btn {
-    background: linear-gradient(135deg, var(--move-mode-primary), #c4a030);
+    background: var(--move-mode-primary);
     border: none;
     color: var(--move-mode-secondary);
     font-weight: 600;
 }
 
 .move-mode-btn:hover {
-    background: linear-gradient(135deg, #c4a030, var(--move-mode-primary));
+    background: var(--move-mode-primary);
+    opacity: 0.9;
     color: var(--move-mode-secondary);
 }
 
@@ -1076,7 +1078,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
     z-index: 2000;
     animation: slideUp 0.3s ease;
 }
@@ -1163,7 +1165,7 @@
 .furniture-item.long-press-active circle,
 .furniture-item.long-press-active ellipse,
 .furniture-item.long-press-active polygon {
-    stroke: #C1444F !important;
+    stroke: #E45E41 !important;
     stroke-width: 4px !important;
     animation: long-press-pulse 0.5s ease-in-out;
 }
@@ -1184,7 +1186,7 @@
     width: 60px;
     height: 60px;
     border: 3px solid transparent;
-    border-top-color: #C1444F;
+    border-top-color: #E45E41;
     border-radius: 50%;
     animation: long-press-spin 0.5s linear;
 }
@@ -1251,7 +1253,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: #C1444F;
+    background: #E45E41;
     color: white;
     padding: 6px 12px;
     border-radius: 20px;
@@ -1259,7 +1261,7 @@
     font-weight: 600;
     animation: pool-warning-pulse 1.5s ease-in-out infinite;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(193, 68, 79, 0.4);
+    box-shadow: 0 1px 4px rgba(228, 94, 65, 0.3);
 }
 
 .pool-warning-indicator:hover {
@@ -1272,7 +1274,7 @@
 
 .pool-warning-count {
     background: white;
-    color: #C1444F;
+    color: #E45E41;
     padding: 2px 8px;
     border-radius: 12px;
     font-size: 12px;
@@ -1283,10 +1285,10 @@
 
 @keyframes pool-warning-pulse {
     0%, 100% {
-        box-shadow: 0 2px 8px rgba(193, 68, 79, 0.4);
+        box-shadow: 0 1px 4px rgba(228, 94, 65, 0.3);
     }
     50% {
-        box-shadow: 0 2px 16px rgba(193, 68, 79, 0.7);
+        box-shadow: 0 2px 8px rgba(228, 94, 65, 0.5);
     }
 }
 
@@ -1298,7 +1300,7 @@
     position: absolute;
     top: -4px;
     right: -4px;
-    background: #C1444F;
+    background: #E45E41;
     color: white;
     font-size: 11px;
     font-weight: 700;
@@ -1309,7 +1311,7 @@
     align-items: center;
     justify-content: center;
     animation: badge-pulse 1.5s ease-in-out infinite;
-    box-shadow: 0 2px 4px rgba(193, 68, 79, 0.5);
+    box-shadow: 0 1px 3px rgba(228, 94, 65, 0.4);
 }
 
 @keyframes badge-pulse {

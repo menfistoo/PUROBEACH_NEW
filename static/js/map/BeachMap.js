@@ -83,6 +83,15 @@ export class BeachMap {
         });
         this.tooltipManager = new TooltipManager(this.container, this.colors);
 
+        // Initialize Modal State Manager
+        if (window.modalStateManager) {
+            window.modalStateManager.initialize({
+                interactionManager: this.interaction,
+                selectionManager: this.selection
+            });
+            console.log('[BeachMap] Modal State Manager initialized');
+        }
+
         // Offline manager
         this.offlineManager = null;
         this.isOfflineMode = false;

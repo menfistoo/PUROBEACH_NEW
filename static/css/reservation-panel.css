@@ -39,31 +39,21 @@
     flex-direction: column;
     transform: translateX(100%);
     transition: transform var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
 }
 
 .reservation-panel.open {
     transform: translateX(0);
 }
 
-/* Collapsed state - slide partially left to show just header */
-.reservation-panel.collapsed {
-    transform: translateX(calc(100% - 80px)) !important;
-}
-
+/* Collapsed state handled by open.collapsed below */
 .reservation-panel.collapsed .panel-body {
     overflow: hidden;
 }
 
 /* When collapsed, flip the chevron to point left */
 .reservation-panel.collapsed .panel-toggle-btn i {
-    transform: scaleX(-1);
-}
-
-@media (min-width: 768px) {
-    .reservation-panel.collapsed {
-        transform: translateX(calc(100% - 80px)) !important;
-    }
+    transform: rotate(180deg);
 }
 
 /* Swipe indicator for mobile */
@@ -85,7 +75,19 @@
 @media (min-width: 768px) {
     .reservation-panel {
         width: 400px;
-        border-radius: var(--border-radius-xl) 0 0 var(--border-radius-xl);
+        top: 60px;
+        height: calc(100vh - 80px);
+        border-radius: 12px 0 0 12px;
+    }
+
+    .reservation-panel.open.collapsed {
+        transform: translateX(calc(100% - 48px));
+    }
+
+    /* Maintain rounded corners when collapsed */
+    .reservation-panel.collapsed {
+        border-radius: 12px 0 0 12px !important;
+        overflow: visible;
     }
 
     .reservation-panel::before {
@@ -99,7 +101,7 @@
     }
 }
 
-/* Desktop: Larger panel */
+/* Desktop: Slightly wider */
 @media (min-width: 1200px) {
     .reservation-panel {
         width: 420px;
@@ -128,6 +130,17 @@
 @media (min-width: 768px) {
     .reservation-panel .panel-header {
         padding-top: var(--space-3);
+        border-radius: 12px 0 0 0; /* Rounded top-left corner to match panel */
+    }
+
+    /* When collapsed, collapsed bar has the rounded edge */
+    .reservation-panel.open.collapsed .panel-header {
+        border-radius: 0;
+        display: none; /* Hide header when collapsed */
+    }
+
+    .reservation-panel.open.collapsed .panel-body {
+        display: none; /* Hide body when collapsed */
     }
 }
 
@@ -164,6 +177,66 @@
 /* Toggle button icon transition */
 .reservation-panel .panel-toggle-btn i {
     transition: transform var(--transition-fast);
+}
+
+/* =============================================================================
+   COLLAPSED BAR - Vertical strip on left edge, always visible when collapsed
+   ============================================================================= */
+
+.reservation-panel .collapsed-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 48px;
+    height: 100%;
+    background: var(--color-cromad);
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    align-items: center;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    gap: 12px;
+    z-index: 100;
+    border-radius: 12px 0 0 12px !important;
+}
+
+/* Show collapsed bar ONLY when panel is open AND collapsed (tablet+) */
+@media (min-width: 768px) {
+    .reservation-panel.open.collapsed .collapsed-bar {
+        display: flex;
+    }
+}
+
+/* =============================================================================
+   COLLAPSE TOGGLE - TOUCH FRIENDLY
+   ============================================================================= */
+
+.reservation-panel .collapse-toggle {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.reservation-panel .collapse-toggle:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.reservation-panel .collapse-toggle:active {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.reservation-panel.collapsed .collapse-toggle i {
+    transform: rotate(180deg);
 }
 
 .reservation-panel .panel-title {

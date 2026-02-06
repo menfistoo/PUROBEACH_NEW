@@ -49,6 +49,10 @@ class WaitlistManager {
         elements.closeBtn?.addEventListener('click', () => this.close());
         elements.backdrop?.addEventListener('click', () => this.close());
 
+        // Collapse buttons
+        elements.collapseBtn?.addEventListener('click', () => this.toggleCollapse());
+        elements.collapseBtnHeader?.addEventListener('click', () => this.toggleCollapse());
+
         // Add buttons
         elements.addBtn?.addEventListener('click', () => this.openAddModal());
         elements.footerAddBtn?.addEventListener('click', () => this.openAddModal());
@@ -119,6 +123,11 @@ class WaitlistManager {
 
         this.state.isOpen = true;
 
+        // Notify modal state manager (closes other modals, bottom bar, controls map)
+        if (window.modalStateManager) {
+            window.modalStateManager.openModal('waitlist', this);
+        }
+
         // Update date display
         if (this.elements.dateDisplay) {
             this.elements.dateDisplay.textContent = formatDateDisplay(this.state.currentDate);
@@ -143,9 +152,35 @@ class WaitlistManager {
         if (!this.elements.panel) return;
 
         this.state.isOpen = false;
+
+        // Notify modal state manager
+        if (window.modalStateManager) {
+            window.modalStateManager.closeModal('waitlist');
+        }
+
         this.elements.panel.classList.remove('open');
+        this.elements.panel.classList.remove('collapsed');
         this.elements.backdrop?.classList.remove('show');
         document.body.style.overflow = '';
+    }
+
+    /**
+     * Toggle panel collapsed state
+     */
+    toggleCollapse() {
+        if (!this.elements.panel) return;
+
+        const isCurrentlyCollapsed = this.elements.panel.classList.contains('collapsed');
+        this.elements.panel.classList.toggle('collapsed');
+
+        // Notify modal state manager
+        if (window.modalStateManager) {
+            if (isCurrentlyCollapsed) {
+                window.modalStateManager.expandModal('waitlist');
+            } else {
+                window.modalStateManager.collapseModal('waitlist');
+            }
+        }
     }
 
     /**

@@ -11,6 +11,7 @@ import { getCSRFToken, showToast } from './utils.js';
 export class InteractionManager {
     constructor(options = {}) {
         this.editMode = false;
+        this.readOnly = false;  // Read-only state (controlled by ModalStateManager)
         this.isDragging = false;
         this.dragTarget = null;
         this.dragStart = null;
@@ -55,6 +56,31 @@ export class InteractionManager {
      */
     setZoom(zoom) {
         this.zoom = zoom;
+    }
+
+    /**
+     * Set read-only state (controlled by ModalStateManager)
+     * @param {boolean} readOnly - True to disable interactions
+     */
+    setReadOnly(readOnly) {
+        this.readOnly = readOnly;
+        console.log(`[InteractionManager] Read-only mode: ${readOnly}`);
+
+        // If entering read-only, cancel any ongoing drags
+        if (readOnly && this.isDragging) {
+            this.cancelDrag();
+        }
+        if (readOnly && this.isDraggingTemp) {
+            this.cancelTempDrag();
+        }
+    }
+
+    /**
+     * Check if interactions are currently allowed
+     * @returns {boolean} True if interactions are allowed
+     */
+    canInteract() {
+        return !this.readOnly;
     }
 
     /**

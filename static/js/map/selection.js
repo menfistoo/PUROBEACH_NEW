@@ -9,6 +9,7 @@
 export class SelectionManager {
     constructor() {
         this.selectedFurniture = new Set();
+        this.readOnly = false;  // Read-only state (controlled by ModalStateManager)
         this.callbacks = {
             onSelect: null,
             onDeselect: null
@@ -28,12 +29,35 @@ export class SelectionManager {
     }
 
     /**
+     * Set read-only state (controlled by ModalStateManager)
+     * @param {boolean} readOnly - True to disable selections
+     */
+    setReadOnly(readOnly) {
+        this.readOnly = readOnly;
+        console.log(`[SelectionManager] Read-only mode: ${readOnly}`);
+    }
+
+    /**
+     * Check if selections are currently allowed
+     * @returns {boolean} True if selections are allowed
+     */
+    canSelect() {
+        return !this.readOnly;
+    }
+
+    /**
      * Select or toggle furniture selection
      * @param {number} id - Furniture ID
      * @param {boolean} addToSelection - Whether to add to existing selection
      * @returns {boolean} Whether selection changed
      */
     select(id, addToSelection = false) {
+        // Block selections in read-only mode
+        if (this.readOnly) {
+            console.log('[SelectionManager] Selection blocked - read-only mode active');
+            return false;
+        }
+
         if (!addToSelection) {
             this.selectedFurniture.clear();
         }

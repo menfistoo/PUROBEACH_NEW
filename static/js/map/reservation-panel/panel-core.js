@@ -88,6 +88,8 @@ class NewReservationPanel {
 
         // Buttons
         this.closeBtn = document.getElementById('newPanelCloseBtn');
+        this.collapseBtn = document.getElementById('newReservationCollapseBtn');
+        this.collapseBtnHeader = document.getElementById('newReservationCollapseBtnHeader');
         this.cancelBtn = document.getElementById('newPanelCancelBtn');
         this.createBtn = document.getElementById('newPanelCreateBtn');
     }
@@ -180,6 +182,10 @@ class NewReservationPanel {
         this.cancelBtn?.addEventListener('click', () => this.close());
         this.backdrop?.addEventListener('click', () => this.close());
 
+        // Collapse buttons
+        this.collapseBtn?.addEventListener('click', () => this.toggleCollapse());
+        this.collapseBtnHeader?.addEventListener('click', () => this.toggleCollapse());
+
         // Create button
         this.createBtn?.addEventListener('click', () => this.createReservation());
 
@@ -251,6 +257,11 @@ class NewReservationPanel {
         this.state.currentDate = date;
         this.state.preferences = [];
 
+        // Notify modal state manager (closes other modals, bottom bar, controls map)
+        if (window.modalStateManager) {
+            window.modalStateManager.openModal('new-reservation', this);
+        }
+
         // Reset manual edit flag when opening new reservation
         this.numPeopleManuallyEdited = false;
 
@@ -293,13 +304,39 @@ class NewReservationPanel {
         this.state.conflictResolutionMode = false;
         this.state.savedCustomerForRetry = null;
         this.state.waitlistEntryId = null;  // Clear waitlist entry on close
+
+        // Notify modal state manager
+        if (window.modalStateManager) {
+            window.modalStateManager.closeModal('new-reservation');
+        }
+
         this.panel.classList.remove('open');
         this.panel.classList.remove('minimized');
+        this.panel.classList.remove('collapsed');
         this.backdrop.classList.remove('show');
 
         // Notify callback
         if (this.options.onCancel) {
             this.options.onCancel();
+        }
+    }
+
+    /**
+     * Toggle panel collapsed state
+     */
+    toggleCollapse() {
+        if (!this.panel) return;
+
+        const isCurrentlyCollapsed = this.panel.classList.contains('collapsed');
+        this.panel.classList.toggle('collapsed');
+
+        // Notify modal state manager
+        if (window.modalStateManager) {
+            if (isCurrentlyCollapsed) {
+                window.modalStateManager.expandModal('new-reservation');
+            } else {
+                window.modalStateManager.collapseModal('new-reservation');
+            }
         }
     }
 

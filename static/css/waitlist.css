@@ -12,7 +12,7 @@
 .waitlist-panel-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(26, 58, 92, 0.6);
+    background: rgba(26, 26, 26, 0.6);
     z-index: var(--z-modal-backdrop);
     opacity: 0;
     visibility: hidden;
@@ -40,7 +40,7 @@
     flex-direction: column;
     transform: translateX(100%);
     transition: transform var(--transition-slow) cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
 }
 
 .waitlist-panel.open {
@@ -66,7 +66,19 @@
 @media (min-width: 768px) {
     .waitlist-panel {
         width: 400px;
-        border-radius: var(--border-radius-xl) 0 0 var(--border-radius-xl);
+        top: 60px;
+        height: calc(100vh - 80px);
+        border-radius: 12px 0 0 12px;
+    }
+
+    .waitlist-panel.open.collapsed {
+        transform: translateX(calc(100% - 48px));
+    }
+
+    /* Maintain rounded corners when collapsed */
+    .waitlist-panel.collapsed {
+        border-radius: 12px 0 0 12px !important;
+        overflow: visible;
     }
 
     .waitlist-panel::before {
@@ -74,7 +86,7 @@
     }
 }
 
-/* Desktop: Larger panel */
+/* Desktop: Slightly wider */
 @media (min-width: 1200px) {
     .waitlist-panel {
         width: 420px;
@@ -88,9 +100,10 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    padding: var(--space-3) var(--space-4);
-    padding-top: calc(var(--space-3) + 8px);
-    background: linear-gradient(135deg, var(--color-secondary) 0%, #2a4a6c 100%);
+    padding: 16px 20px;
+    padding-top: calc(16px + 8px);
+    background: var(--color-cromad);
+    border-bottom: 3px solid var(--color-primary);
     color: var(--color-white);
     flex-shrink: 0;
 }
@@ -98,6 +111,17 @@
 @media (min-width: 768px) {
     .waitlist-panel .panel-header {
         padding-top: var(--space-3);
+        border-radius: 12px 0 0 0; /* Rounded top-left corner to match panel */
+    }
+
+    /* When collapsed, collapsed bar has the rounded edge */
+    .waitlist-panel.open.collapsed .panel-header {
+        border-radius: 0;
+        display: none; /* Hide header when collapsed */
+    }
+
+    .waitlist-panel.open.collapsed .panel-body {
+        display: none; /* Hide body when collapsed */
     }
 }
 
@@ -150,6 +174,66 @@
 .waitlist-panel .panel-date {
     font-size: 13px;
     opacity: 0.8;
+}
+
+/* =============================================================================
+   COLLAPSED BAR - Vertical strip on left edge, always visible when collapsed
+   ============================================================================= */
+
+.waitlist-panel .collapsed-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 48px;
+    height: 100%;
+    background: var(--color-cromad);
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    align-items: center;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    gap: 12px;
+    z-index: 100;
+    border-radius: 12px 0 0 12px !important;
+}
+
+/* Show collapsed bar ONLY when panel is open AND collapsed (tablet+) */
+@media (min-width: 768px) {
+    .waitlist-panel.open.collapsed .collapsed-bar {
+        display: flex;
+    }
+}
+
+/* =============================================================================
+   COLLAPSE TOGGLE - TOUCH FRIENDLY
+   ============================================================================= */
+
+.waitlist-panel .collapse-toggle {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.waitlist-panel .collapse-toggle:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.waitlist-panel .collapse-toggle:active {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.waitlist-panel.collapsed .collapse-toggle i {
+    transform: rotate(180deg);
 }
 
 /* =============================================================================
@@ -527,7 +611,7 @@
     width: 100%;
     padding: var(--space-3);
     min-height: 48px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    background: var(--color-primary);
     border: none;
     border-radius: var(--border-radius-lg);
     color: var(--color-white);
@@ -541,8 +625,8 @@
 }
 
 .waitlist-panel .btn-add-entry:hover {
+    opacity: 0.9;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
 }
 
 /* =============================================================================
@@ -561,7 +645,7 @@
 .waitlist-modal-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(26, 58, 92, 0.7);
+    background: rgba(26, 26, 26, 0.7);
     backdrop-filter: blur(4px);
 }
 
@@ -583,8 +667,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-4);
-    background: linear-gradient(135deg, var(--color-secondary) 0%, #2a4a6c 100%);
+    padding: 16px 20px;
+    background: var(--color-cromad);
+    border-bottom: 3px solid var(--color-primary);
     color: var(--color-white);
     flex-shrink: 0;
 }
@@ -654,7 +739,7 @@
 .waitlist-modal .form-select:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    box-shadow: 0 0 0 3px rgba(206, 182, 119, 0.15);
 }
 
 .waitlist-modal .form-control::placeholder {
@@ -902,7 +987,7 @@
     flex: 2;
     padding: var(--space-3);
     min-height: 48px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    background: var(--color-primary);
     border: none;
     border-radius: var(--border-radius-lg);
     color: var(--color-white);
@@ -916,8 +1001,8 @@
 }
 
 .waitlist-modal .btn-save:hover:not(:disabled) {
+    opacity: 0.9;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
 }
 
 .waitlist-modal .btn-save:disabled {

@@ -45,6 +45,11 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
         this.state.currentDate = date;
         this.state.mode = mode;
         this.state.isOpen = true;
+
+        // Notify modal state manager (closes other modals, bottom bar, controls map)
+        if (window.modalStateManager) {
+            window.modalStateManager.openModal('reservation', this);
+        }
         this.state.isDirty = false;
         this.state.numPeopleManuallyEdited = false;  // Reset flag when opening new reservation
 
@@ -121,6 +126,11 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
         this.state.mode = 'view';
         this.state.isDirty = false;
 
+        // Notify modal state manager
+        if (window.modalStateManager) {
+            window.modalStateManager.closeModal('reservation');
+        }
+
         // Hide panel and backdrop
         this.backdrop.classList.remove('show');
         this.panel.classList.remove('open');
@@ -158,7 +168,17 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
     toggleCollapse() {
         if (!this.state.isOpen) return;
 
+        const wasCollapsed = this.state.isCollapsed;
         this.state.isCollapsed = !this.state.isCollapsed;
+
+        // Notify modal state manager
+        if (window.modalStateManager) {
+            if (this.state.isCollapsed) {
+                window.modalStateManager.collapseModal('reservation');
+            } else {
+                window.modalStateManager.expandModal('reservation');
+            }
+        }
 
         // Get map canvas wrapper
         const mapWrapper = document.querySelector('.map-canvas-wrapper');

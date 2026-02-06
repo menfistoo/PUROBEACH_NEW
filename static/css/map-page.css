@@ -599,13 +599,14 @@
     left: var(--sidebar-width, 260px);
     right: 0;
     background: white;
-    border-top: 2px solid var(--color-primary);
-    padding: 10px 16px;
-    padding-bottom: max(10px, env(safe-area-inset-bottom));
-    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    border-top: 3px solid var(--color-primary);
+    padding: 16px 20px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+    border-radius: 12px 12px 0 0;
     transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s, left 0.3s ease;
-    z-index: 100;
+    z-index: 1040;
     visibility: hidden;
     pointer-events: none;
 }
@@ -735,24 +736,26 @@ html.sidebar-collapsed .bottom-action-bar {
 .btn-reserve {
     flex: 0 1 auto;
     min-width: 140px;
-    padding: 12px 20px;
-    background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
-    color: white;
+    padding: 12px 24px;
+    background: #CEB677;
+    color: #1A1A1A;
     font-weight: 600;
     font-size: 15px;
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: all 0.2s;
-    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(206, 182, 119, 0.3);
 }
 
 .btn-reserve:hover {
-    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+    background: #D4B87D;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(206, 182, 119, 0.4);
 }
 
 .btn-reserve:active {
@@ -943,4 +946,40 @@ html.sidebar-collapsed .bottom-action-bar {
 
 .furniture-item.existing-reservation-highlight {
     filter: drop-shadow(0 0 8px rgba(193, 68, 79, 0.6)) !important;
+}
+
+/* =============================================================================
+   MAP READ-ONLY STATE (Modal State Manager)
+   ============================================================================= */
+
+/* Visual overlay when map is read-only (modal open) */
+.beach-map-container.read-only {
+    position: relative;
+}
+
+.beach-map-container.read-only::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 26, 26, 0.02);
+    pointer-events: all; /* Block all clicks */
+    z-index: 100;
+    cursor: not-allowed;
+}
+
+/* Disable cursor changes on furniture when read-only */
+.beach-map-container.read-only .furniture-item {
+    cursor: default !important;
+    pointer-events: none;
+}
+
+/* Disable interaction with zones when read-only */
+.beach-map-container.read-only .zone-polygon {
+    pointer-events: none;
+}
+
+/* Disable temporary furniture interactions when read-only */
+.beach-map-container.read-only .temp-furniture {
+    pointer-events: none;
+    cursor: default !important;
 }

@@ -259,6 +259,12 @@ export class MoveModePanel {
      */
     show() {
         this.container?.classList.add('visible');
+
+        // Notify modal state manager (closes other modals, bottom bar, keeps map interactive)
+        if (window.modalStateManager) {
+            window.modalStateManager.openModal('move-mode', this);
+        }
+
         this.updateUndoState();
     }
 
@@ -268,6 +274,12 @@ export class MoveModePanel {
     hide() {
         this.container?.classList.remove('visible');
         this.container?.classList.remove('collapsed');
+
+        // Notify modal state manager
+        if (window.modalStateManager) {
+            window.modalStateManager.closeModal('move-mode');
+        }
+
         this._hideThumbnailTooltip();
     }
 
@@ -275,7 +287,17 @@ export class MoveModePanel {
      * Toggle panel collapsed state
      */
     toggleCollapse() {
+        const isCurrentlyCollapsed = this.container?.classList.contains('collapsed');
         this.container?.classList.toggle('collapsed');
+
+        // Notify modal state manager
+        if (window.modalStateManager) {
+            if (isCurrentlyCollapsed) {
+                window.modalStateManager.expandModal('move-mode');
+            } else {
+                window.modalStateManager.collapseModal('move-mode');
+            }
+        }
     }
 
     /**
