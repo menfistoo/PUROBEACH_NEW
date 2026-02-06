@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
-{% set page_title = "Precios" %}
+{% set breadcrumbs = [
+    {'label': 'Configuración'},
+    {'label': 'Precios'}
+] %}
 
 {% block title %}Precios - PuroBeach{% endblock %}
 
@@ -52,9 +55,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0"><i class="fas fa-tags me-2"></i>Precios</h4>
-</div>
+<!-- Page Header -->
+{% set header_title = 'Precios' %}
+{% set header_icon = 'fas fa-tags' %}
+{% include 'components/_page_header.html' %}
 
 <!-- Tab Navigation -->
 <ul class="nav nav-tabs pricing-tabs" id="pricingTabs" role="tablist">
