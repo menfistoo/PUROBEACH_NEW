@@ -389,14 +389,57 @@ export class TempFurnitureManager {
      * @param {Array<string>} furnitureNumbers - Array of furniture numbers for display
      */
     async handleMultiDelete(furnitureIds, furnitureNumbers) {
-        // Show simplified confirmation with count
-        const count = furnitureIds.length;
-        const confirmed = confirm(`¿Está seguro de eliminar ${count} mobiliarios temporales?\n\nEsto eliminará completamente:\n${furnitureNumbers.join(', ')}`);
-
-        if (!confirmed) {
+        if (!this.deleteModal) {
+            showToast('Modal no disponible', 'error');
             return;
         }
 
+        // Store for later use
+        this.furnitureToDelete = furnitureIds;
+        this.furnitureNumberToDelete = furnitureNumbers;
+        this.isMultiDay = false;
+
+        // Update modal for multi-delete
+        const numberEl = document.getElementById('delete-temp-number');
+        if (numberEl) {
+            numberEl.innerHTML = `<strong>${furnitureIds.length} mobiliarios temporales</strong>`;
+        }
+
+        // Show list of items to be deleted
+        const optionsEl = document.getElementById('delete-temp-options');
+        const singleDayMsgEl = document.getElementById('delete-temp-single-day-msg');
+        const dateInfoEl = document.getElementById('delete-temp-date-info');
+
+        // Hide options and single day message
+        if (optionsEl) optionsEl.style.display = 'none';
+        if (singleDayMsgEl) singleDayMsgEl.style.display = 'none';
+
+        // Show list of furniture to delete
+        if (dateInfoEl) {
+            dateInfoEl.innerHTML = `
+                <div class="alert alert-warning mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Se eliminarán completamente los siguientes mobiliarios:
+                </div>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    ${furnitureNumbers.map(num =>
+                        `<span class="badge bg-secondary fs-6">${num}</span>`
+                    ).join('')}
+                </div>
+            `;
+        }
+
+        // Show modal
+        const bsModal = bootstrap.Modal.getOrCreateInstance(this.deleteModal);
+        bsModal.show();
+    }
+
+    /**
+     * Execute multi-delete after modal confirmation
+     * @param {Array<number>} furnitureIds - Array of furniture IDs
+     * @param {Array<string>} furnitureNumbers - Array of furniture numbers
+     */
+    async executeMultiDelete(furnitureIds, furnitureNumbers) {
         let successCount = 0;
         let errorCount = 0;
 
@@ -447,6 +490,29 @@ export class TempFurnitureManager {
             return;
         }
 
+        // Check if this is a multi-delete
+        if (Array.isArray(this.furnitureToDelete)) {
+            // Disable button during request
+            const confirmBtn = document.getElementById('confirm-temp-delete-btn');
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Eliminando...';
+            }
+
+            try {
+                await this.executeMultiDelete(this.furnitureToDelete, this.furnitureNumberToDelete);
+                bootstrap.Modal.getInstance(this.deleteModal)?.hide();
+            } finally {
+                // Re-enable button
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="fas fa-trash me-1"></i>Eliminar';
+                }
+            }
+            return;
+        }
+
+        // Single delete continues below
         // Determine delete type from radio selection
         let deleteType = 'all';
         let deleteDate = '';
