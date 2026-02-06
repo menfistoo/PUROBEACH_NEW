@@ -250,6 +250,51 @@ h4 { font-size: 18px; line-height: 1.4; font-weight: 500; }
     font-size: 1.1em;
 }
 
+/* Insight Cards - Unified standard for dashboard and summary cards */
+.insight-card {
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--color-border, #E8E8E8);
+    border-top: 4px solid var(--color-primary, #D4AF37);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.insight-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Card color variants with 4px top accent border */
+.insight-card.cash {
+    border-top-color: var(--color-success, #4A7C59);
+}
+
+.insight-card.card-payment {
+    border-top-color: var(--color-info, #4A90A4);
+}
+
+.insight-card.room-charge {
+    border-top-color: var(--color-secondary, #1A3A5C);
+}
+
+.insight-card.pending {
+    border-top-color: var(--color-warning, #E5A33D);
+}
+
+.insight-card.occupancy {
+    border-top-color: var(--color-primary, #D4AF37);
+}
+
+.insight-card.warning {
+    border-top-color: var(--color-warning, #E5A33D);
+}
+
+.insight-card.success {
+    border-top-color: var(--color-success, #4A7C59);
+}
+
 a {
     color: var(--color-primary);
     text-decoration: none;

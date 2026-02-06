@@ -4,27 +4,18 @@
 
 {% block extra_css %}
 <style>
-    .kpi-card {
-        border-radius: 12px;
-        border: 1px solid #E8E8E8;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .kpi-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .kpi-value {
+    /* KPI card content styling */
+    .insight-card .kpi-value {
         font-size: 36px;
         font-weight: 700;
         color: #1A3A5C;
     }
-    .kpi-label {
+    .insight-card .kpi-label {
         font-size: 14px;
         color: #4B5563;
         margin-top: 4px;
     }
-    .kpi-trend {
+    .insight-card .kpi-trend {
         font-size: 13px;
         margin-top: 8px;
     }
@@ -124,52 +115,46 @@
     <div class="row g-4 mb-4">
         <!-- Occupancy -->
         <div class="col-md-4">
-            <div class="card kpi-card h-100 position-relative">
+            <div class="insight-card occupancy h-100 position-relative text-center">
                 <div class="loading-overlay hidden" id="loading-occupancy">
                     <div class="spinner-border text-warning" role="status">
                         <span class="visually-hidden">Cargando...</span>
                     </div>
                 </div>
-                <div class="card-body text-center py-4">
-                    <div class="kpi-value" id="kpi-occupancy-rate">--</div>
-                    <div class="kpi-label">Ocupación del Día</div>
-                    <div class="kpi-trend" id="kpi-occupancy-trend">
-                        <span class="trend-icon"></span>
-                        <span class="trend-text"></span>
-                    </div>
+                <div class="kpi-value" id="kpi-occupancy-rate">--</div>
+                <div class="kpi-label">Ocupación del Día</div>
+                <div class="kpi-trend" id="kpi-occupancy-trend">
+                    <span class="trend-icon"></span>
+                    <span class="trend-text"></span>
                 </div>
             </div>
         </div>
 
         <!-- Free Furniture -->
         <div class="col-md-4">
-            <div class="card kpi-card h-100 position-relative">
+            <div class="insight-card success h-100 position-relative text-center">
                 <div class="loading-overlay hidden" id="loading-free">
                     <div class="spinner-border text-warning" role="status">
                         <span class="visually-hidden">Cargando...</span>
                     </div>
                 </div>
-                <div class="card-body text-center py-4">
-                    <div class="kpi-value" id="kpi-free-count">--</div>
-                    <div class="kpi-label">Mobiliario Libre</div>
-                    <div class="kpi-subtitle" id="kpi-free-breakdown"></div>
-                </div>
+                <div class="kpi-value" id="kpi-free-count">--</div>
+                <div class="kpi-label">Mobiliario Libre</div>
+                <div class="kpi-subtitle" id="kpi-free-breakdown"></div>
             </div>
         </div>
 
         <!-- Pending Check-ins -->
         <div class="col-md-4">
-            <div class="card kpi-card h-100 position-relative">
+            <div class="insight-card warning h-100 position-relative text-center">
                 <div class="loading-overlay hidden" id="loading-pending">
                     <div class="spinner-border text-warning" role="status">
                         <span class="visually-hidden">Cargando...</span>
                     </div>
                 </div>
-                <div class="card-body text-center py-4">
-                    <div class="kpi-value" id="kpi-pending-count">--</div>
-                    <div class="kpi-label">Reservas Pendientes</div>
-                    <div class="kpi-subtitle">de Check-in</div>
-                </div>
+                <div class="kpi-value" id="kpi-pending-count">--</div>
+                <div class="kpi-label">Reservas Pendientes</div>
+                <div class="kpi-subtitle">de Check-in</div>
             </div>
         </div>
     </div>
