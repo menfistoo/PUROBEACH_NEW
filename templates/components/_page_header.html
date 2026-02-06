@@ -34,7 +34,7 @@
             {{ header_title or title }}
         </h1>
         {% if header_subtitle or subtitle %}
-        <p class="page-subtitle">{{ header_subtitle or subtitle | safe }}</p>
+        <p class="page-subtitle">{{ (header_subtitle or subtitle) | safe }}</p>
         {% endif %}
     </div>
 
