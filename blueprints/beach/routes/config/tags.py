@@ -22,7 +22,7 @@ def register_routes(bp):
         active_tab = request.args.get('tab', 'tags')
         show_inactive = request.args.get('show_inactive') == '1'
 
-        tags = get_all_tags(active_only=False)
+        tags = get_all_tags(active_only=not show_inactive)
         characteristics = get_all_characteristics(active_only=not show_inactive)
 
         return render_template(

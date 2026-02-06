@@ -2,10 +2,24 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h5 class="mb-0"><i class="fa-solid fa-tags"></i> Etiquetas</h5>
+            {% if show_inactive %}
+            <small class="text-muted">Mostrando etiquetas inactivas</small>
+            {% endif %}
         </div>
-        <a href="{{ url_for('beach.beach_config.tags_create') }}" class="btn btn-primary btn-sm">
-            <i class="fa-solid fa-plus"></i> Nueva Etiqueta
-        </a>
+        <div class="d-flex gap-2">
+            {% if show_inactive %}
+            <a href="{{ url_for('beach.beach_config.tags_characteristics', tab='tags') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-eye-slash"></i> Ocultar Inactivas
+            </a>
+            {% else %}
+            <a href="{{ url_for('beach.beach_config.tags_characteristics', tab='tags', show_inactive='1') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fa-solid fa-eye"></i> Ver Inactivas
+            </a>
+            {% endif %}
+            <a href="{{ url_for('beach.beach_config.tags_create') }}" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-plus"></i> Nueva Etiqueta
+            </a>
+        </div>
     </div>
 
     <div class="card">
