@@ -40,10 +40,16 @@ document.addEventListener('DOMContentLoaded', function () {
         getCurrentDate: () => map.getCurrentDate(),
         onBlockSuccess: () => {
             map.clearSelection();
+            if (window.modalStateManager) {
+                window.modalStateManager.closeBottomBar();
+            }
             map.refreshAvailability();
         },
         onUnblockSuccess: () => {
             map.clearSelection();
+            if (window.modalStateManager) {
+                window.modalStateManager.closeBottomBar();
+            }
             map.refreshAvailability();
         },
         getBlockInfo: (furnitureId) => {
@@ -73,6 +79,9 @@ document.addEventListener('DOMContentLoaded', function () {
         onCreateSuccess: () => map.refreshAvailability(),
         onDeleteSuccess: () => {
             map.clearSelection();
+            if (window.modalStateManager) {
+                window.modalStateManager.closeBottomBar();
+            }
             map.refreshAvailability();
         }
     });
