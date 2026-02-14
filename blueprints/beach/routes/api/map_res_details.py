@@ -46,7 +46,7 @@ from models.reservation import (
     get_beach_reservation_by_id
 )
 from models.customer import get_customer_by_id
-from models.characteristic_assignments import get_customer_characteristics
+from models.characteristic_assignments import get_customer_characteristics, get_reservation_characteristics
 from database import get_db
 
 
@@ -75,6 +75,9 @@ def register_routes(bp):
 
         if not reservation:
             return api_error('Reserva no encontrada', 404)
+
+        # Get reservation-specific characteristics (always, regardless of customer)
+        reservation_characteristics = get_reservation_characteristics(reservation_id)
 
         # Get customer details
         customer = None
@@ -169,7 +172,13 @@ def register_routes(bp):
                 'payment_ticket_number': reservation.get('payment_ticket_number'),
                 'payment_method': reservation.get('payment_method')
             },
-            customer=customer_data
+            customer=customer_data,
+            reservation_characteristics=[{
+                'id': c['id'],
+                'code': c.get('code'),
+                'name': c.get('name'),
+                'icon': c.get('icon')
+            } for c in reservation_characteristics]
         )
 
     @bp.route('/map/move-reservation-furniture', methods=['POST'])
