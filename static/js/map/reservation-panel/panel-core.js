@@ -32,6 +32,7 @@ class NewReservationPanel {
             selectedFurniture: [],
             currentDate: null,
             preferences: [],
+            selectedTags: [],
             conflictResolutionMode: false,
             furnitureByDate: {},   // {date: [furniture_ids]} - per-day selections
             savedCustomerForRetry: null,  // Saved customer data during conflict resolution
@@ -85,6 +86,7 @@ class NewReservationPanel {
         this.notesInput = document.getElementById('newPanelNotes');
         this.preferencesInput = document.getElementById('newPanelPreferences');
         this.preferenceChipsContainer = document.getElementById('newPanelPreferenceChips');
+        this.tagChipsContainer = document.getElementById('newPanelTagChips');
 
         // Buttons
         this.closeBtn = document.getElementById('newPanelCloseBtn');
@@ -174,6 +176,68 @@ class NewReservationPanel {
     }
 
     /**
+     * Load available tags from API
+     */
+    async loadTags() {
+        try {
+            const response = await fetch(`${this.options.apiBaseUrl}/tags`);
+            if (response.ok) {
+                const result = await response.json();
+                this.availableTags = result.tags || [];
+                this.renderTagChips();
+            }
+        } catch (error) {
+            console.warn('Could not load tags:', error);
+            if (this.tagChipsContainer) {
+                this.tagChipsContainer.innerHTML =
+                    '<span class="text-muted small">Error al cargar etiquetas</span>';
+            }
+        }
+    }
+
+    /**
+     * Render tag chips dynamically
+     */
+    renderTagChips() {
+        if (!this.tagChipsContainer) return;
+
+        if (!this.availableTags || this.availableTags.length === 0) {
+            this.tagChipsContainer.innerHTML =
+                '<span class="text-muted small">No hay etiquetas disponibles</span>';
+            return;
+        }
+
+        const chipsHtml = this.availableTags.map(tag => {
+            const isActive = this.state.selectedTags.includes(tag.id);
+            const color = tag.color || '#6C757D';
+            return `
+                <button type="button" class="tag-chip ${isActive ? 'active' : ''}"
+                        data-tag-id="${tag.id}" style="--tag-color: ${color};">
+                    <i class="fas fa-tag"></i> ${tag.name}
+                </button>
+            `;
+        }).join('');
+
+        this.tagChipsContainer.innerHTML = chipsHtml;
+    }
+
+    /**
+     * Toggle tag chip
+     */
+    toggleTag(chip) {
+        const tagId = parseInt(chip.dataset.tagId);
+        chip.classList.toggle('active');
+
+        if (chip.classList.contains('active')) {
+            if (!this.state.selectedTags.includes(tagId)) {
+                this.state.selectedTags.push(tagId);
+            }
+        } else {
+            this.state.selectedTags = this.state.selectedTags.filter(id => id !== tagId);
+        }
+    }
+
+    /**
      * Setup event listeners
      */
     setupEventListeners() {
@@ -205,8 +269,17 @@ class NewReservationPanel {
             }
         });
 
-        // Load available characteristics
+        // Tag chips - use event delegation for dynamic chips
+        this.tagChipsContainer?.addEventListener('click', (e) => {
+            const chip = e.target.closest('.tag-chip');
+            if (chip) {
+                this.toggleTag(chip);
+            }
+        });
+
+        // Load available characteristics and tags
         this.loadCharacteristics();
+        this.loadTags();
 
         // Keyboard: Escape to close
         document.addEventListener('keydown', (e) => {
@@ -256,6 +329,7 @@ class NewReservationPanel {
         this.state.selectedFurniture = furniture;
         this.state.currentDate = date;
         this.state.preferences = [];
+        this.state.selectedTags = [];
 
         // Notify modal state manager (closes other modals, bottom bar, controls map)
         if (window.modalStateManager) {
@@ -568,6 +642,11 @@ class NewReservationPanel {
         if (this.preferencesInput) {
             this.preferencesInput.value = '';
         }
+
+        // Clear tag chips
+        const tagChips = this.tagChipsContainer?.querySelectorAll('.tag-chip');
+        tagChips?.forEach(chip => chip.classList.remove('active'));
+        this.state.selectedTags = [];
     }
 
     /**
@@ -659,6 +738,7 @@ class NewReservationPanel {
                 time_slot: 'all_day',
                 notes: this.notesInput.value.trim(),
                 preferences: this.state.preferences,
+                tag_ids: this.state.selectedTags,
                 charge_to_room: document.getElementById('newPanelChargeToRoom')?.checked || false,
                 payment_ticket_number: paymentTicketValue,
                 payment_method: paymentMethodValue,

@@ -421,6 +421,40 @@
     font-size: 12px;
 }
 
+/* Tag chips */
+#quickEditModal .tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#quickEditModal .tag-chip {
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 2px solid var(--tag-color, #6C757D);
+    background: transparent;
+    color: var(--tag-color, #6C757D);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#quickEditModal .tag-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+#quickEditModal .tag-chip.selected {
+    background: var(--tag-color, #6C757D);
+    color: #fff;
+    border-color: var(--tag-color, #6C757D);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+
 /* Responsive */
 @media (max-width: 576px) {
     #quickEditModal .edit-row {

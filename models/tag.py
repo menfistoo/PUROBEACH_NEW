@@ -281,6 +281,28 @@ def assign_tag_to_reservation(reservation_id: int, tag_id: int) -> bool:
             return False
 
 
+def set_reservation_tags(reservation_id: int, tag_ids: list) -> None:
+    """
+    Set reservation tags (replaces existing).
+
+    Args:
+        reservation_id: Reservation ID
+        tag_ids: List of tag IDs to assign
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            'DELETE FROM beach_reservation_tags WHERE reservation_id = ?',
+            (reservation_id,)
+        )
+        for tag_id in tag_ids:
+            cursor.execute('''
+                INSERT OR IGNORE INTO beach_reservation_tags (reservation_id, tag_id)
+                VALUES (?, ?)
+            ''', (reservation_id, int(tag_id)))
+        conn.commit()
+
+
 def remove_tag_from_reservation(reservation_id: int, tag_id: int) -> bool:
     """
     Remove a tag from a reservation.

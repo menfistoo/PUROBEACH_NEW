@@ -138,6 +138,13 @@ def register_routes(bp):
                 pref_codes = [c.strip() for c in pref_value.split(',') if c.strip()] if pref_value else []
                 set_reservation_characteristics_by_codes(reservation_id, pref_codes)
 
+            # Handle tags
+            if 'tag_ids' in data:
+                from models.tag import set_reservation_tags
+                tag_ids = data['tag_ids']
+                if isinstance(tag_ids, list):
+                    set_reservation_tags(reservation_id, tag_ids)
+
             # Update other fields
             if updates:
                 update_beach_reservation(reservation_id, **updates)

@@ -11,6 +11,7 @@
 let quickEditModal = null;
 let currentReservation = null;
 let allCharacteristics = [];
+let allTags = [];
 
 document.addEventListener('DOMContentLoaded', function() {
     const modalEl = document.getElementById('quickEditModal');
@@ -104,6 +105,47 @@ function renderCharacteristicsChips(selectedCharacteristics) {
     });
 }
 
+async function loadAllTags() {
+    if (allTags.length > 0) return;
+    try {
+        const response = await fetch('/beach/api/tags');
+        if (response.ok) {
+            const result = await response.json();
+            allTags = result.tags || [];
+        }
+    } catch (error) {
+        console.error('Failed to load tags:', error);
+    }
+}
+
+function renderTagChips(selectedTags) {
+    const container = document.getElementById('edit-tag-chips');
+    if (!container || allTags.length === 0) {
+        if (container) container.innerHTML = '<span class="text-muted small">Sin etiquetas disponibles</span>';
+        return;
+    }
+
+    const selectedIds = (selectedTags || []).map(t => t.id);
+
+    container.innerHTML = allTags.map(tag => {
+        const isSelected = selectedIds.includes(tag.id);
+        return `
+            <button type="button" class="tag-chip ${isSelected ? 'selected' : ''}"
+                    data-tag-id="${tag.id}" title="${tag.description || tag.name}"
+                    style="--tag-color: ${tag.color || '#6C757D'};">
+                <i class="fas fa-tag"></i>
+                <span>${tag.name}</span>
+            </button>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.tag-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            chip.classList.toggle('selected');
+        });
+    });
+}
+
 async function openQuickEdit(reservationId) {
     try {
         const response = await fetch(`/beach/api/reservations/${reservationId}`);
@@ -166,6 +208,10 @@ async function openQuickEdit(reservationId) {
         // Load and render characteristics
         await loadAllCharacteristics();
         renderCharacteristicsChips(data.reservation_characteristics || []);
+
+        // Load and render tags
+        await loadAllTags();
+        renderTagChips(data.tags || []);
 
         // Select current state
         document.querySelectorAll('#quickEditModal .state-chip').forEach(chip => {
@@ -230,6 +276,12 @@ async function saveQuickEdit() {
         document.querySelectorAll('#edit-characteristics-chips .char-chip.selected')
     ).map(chip => chip.dataset.code);
     updates.preferences = selectedChars.join(',');
+
+    // Collect selected tags
+    const selectedTagIds = Array.from(
+        document.querySelectorAll('#edit-tag-chips .tag-chip.selected')
+    ).map(chip => parseInt(chip.dataset.tagId));
+    updates.tag_ids = selectedTagIds;
 
     // Add state if changed
     if (selectedState && selectedState.dataset.stateName !== currentReservation.current_state) {

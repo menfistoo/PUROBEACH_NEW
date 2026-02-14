@@ -439,6 +439,25 @@ def register_routes(bp):
             } for c in characteristics]
         })
 
+    @bp.route('/tags')
+    @login_required
+    @permission_required('beach.customers.view')
+    def list_tags():
+        """Get all available tags."""
+        from models.tag import get_all_tags
+        active_only = request.args.get('active', 'true').lower() == 'true'
+        tags = get_all_tags(active_only=active_only)
+
+        return jsonify({
+            'success': True,
+            'tags': [{
+                'id': t['id'],
+                'name': t['name'],
+                'color': t.get('color', '#6C757D'),
+                'description': t.get('description')
+            } for t in tags]
+        })
+
     @bp.route('/customers/<int:customer_id>/preferences', methods=['PUT'])
     @login_required
     @permission_required('beach.customers.edit')
