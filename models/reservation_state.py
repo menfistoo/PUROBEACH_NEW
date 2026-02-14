@@ -491,6 +491,7 @@ def update_customer_statistics(customer_id: int) -> bool:
     - no_shows: Count of reservations with No-Show state
     - cancellations: Count of reservations with Cancelada state
     - total_reservations: All reservations excluding cancelled/no-show
+    - total_spent: Sum of final_price excluding cancelled/no-show
 
     Args:
         customer_id: Customer ID
@@ -548,6 +549,16 @@ def update_customer_statistics(customer_id: int) -> bool:
             ''', (customer_id,))
             total_reservations = cursor.fetchone()['total']
 
+            # Calculate total spent (sum of final_price, excluding cancelled/no-show)
+            cursor.execute('''
+                SELECT COALESCE(SUM(final_price), 0) as total_spent
+                FROM beach_reservations
+                WHERE customer_id = ?
+                  AND current_states NOT LIKE '%Cancelada%'
+                  AND current_states NOT LIKE '%No-Show%'
+            ''', (customer_id,))
+            total_spent = cursor.fetchone()['total_spent']
+
             # Update customer
             cursor.execute('''
                 UPDATE beach_customers
@@ -556,9 +567,10 @@ def update_customer_statistics(customer_id: int) -> bool:
                     no_shows = ?,
                     cancellations = ?,
                     total_reservations = ?,
+                    total_spent = ?,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
-            ''', (visits, last_visit, no_shows, cancellations, total_reservations, customer_id))
+            ''', (visits, last_visit, no_shows, cancellations, total_reservations, total_spent, customer_id))
 
             conn.commit()
             return True
