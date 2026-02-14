@@ -70,6 +70,14 @@ export class ReservationPanelBase {
             originalCodes: []         // Original codes for dirty checking
         };
 
+        // Tags editing state
+        this.tagsEditState = {
+            isEditing: false,
+            allTags: [],              // All available tags from server
+            selectedIds: [],          // Currently selected tag IDs
+            originalIds: []           // Original IDs for dirty checking
+        };
+
         // Pricing editing state
         this.pricingEditState = {
             originalPrice: 0,         // Original price from reservation
@@ -162,6 +170,13 @@ export class ReservationPanelBase {
         this.preferencesViewMode = document.getElementById('preferencesViewMode');
         this.preferencesEditMode = document.getElementById('preferencesEditMode');
         this.preferencesAllChips = document.getElementById('panelAllPreferencesChips');
+
+        // Tags section
+        this.tagsSection = document.getElementById('tagsSection');
+        this.tagChipsContainer = document.getElementById('panelTagChips');
+        this.tagsViewMode = document.getElementById('tagsViewMode');
+        this.tagsEditModeEl = document.getElementById('tagsEditMode');
+        this.tagsAllChips = document.getElementById('panelAllTagChips');
 
         // State section
         this.stateChipsContainer = document.getElementById('panelStateChips');

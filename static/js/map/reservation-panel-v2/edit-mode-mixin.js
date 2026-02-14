@@ -113,6 +113,9 @@ export const EditModeMixin = (Base) => class extends Base {
         // Also enter preferences edit mode
         await this.enterPreferencesEditMode();
 
+        // Enter tags edit mode
+        await this.enterTagsEditMode();
+
         // Enter pricing edit mode - fetch packages and calculate pricing
         await this.enterPricingEditMode();
     }
@@ -173,6 +176,9 @@ export const EditModeMixin = (Base) => class extends Base {
 
         // Exit preferences edit mode
         this.exitPreferencesEditMode(discard);
+
+        // Exit tags edit mode
+        this.exitTagsEditMode(discard);
 
         // Exit pricing edit mode
         this.exitPricingEditMode(discard);

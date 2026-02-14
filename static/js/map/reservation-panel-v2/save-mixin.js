@@ -396,8 +396,15 @@ export const SaveMixin = (Base) => class extends Base {
         const selectedCodes = this.preferencesEditState.selectedCodes || [];
         preferencesChanged = JSON.stringify(originalCodes.sort()) !== JSON.stringify(selectedCodes.sort());
 
+        // ---------------------------------------------------------------------
+        // Check if tags have changed
+        // ---------------------------------------------------------------------
+        const originalTagIds = [...(this.tagsEditState.originalIds || [])].sort();
+        const selectedTagIds = [...(this.tagsEditState.selectedIds || [])].sort();
+        const tagsChanged = JSON.stringify(originalTagIds) !== JSON.stringify(selectedTagIds);
+
         // Exit early if no changes
-        if (!hasChanges && !preferencesChanged) {
+        if (!hasChanges && !preferencesChanged && !tagsChanged) {
             this.exitEditMode(false);
             return;
         }
@@ -498,6 +505,47 @@ export const SaveMixin = (Base) => class extends Base {
             }
 
             // -----------------------------------------------------------------
+            // Save tags if changed
+            // -----------------------------------------------------------------
+            if (tagsChanged) {
+                const tagResponse = await fetch(
+                    `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/update`,
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.csrfToken
+                        },
+                        body: JSON.stringify({
+                            tag_ids: this.tagsEditState.selectedIds
+                        })
+                    }
+                );
+
+                const tagResult = await tagResponse.json();
+
+                if (!tagResult.success) {
+                    throw new Error(tagResult.error || 'Error al guardar etiquetas');
+                }
+
+                // Update local data with new tags
+                const allTags = this.tagsEditState.allTags;
+                const newTags = this.tagsEditState.selectedIds.map(id => {
+                    return allTags.find(t => t.id === id);
+                }).filter(Boolean);
+
+                if (this.state.data) {
+                    this.state.data.tags = newTags;
+                    if (this.state.data.reservation) {
+                        this.state.data.reservation.tags = newTags;
+                    }
+                }
+
+                // Re-render tags section with updated data
+                this.renderTagsSection(this.state.data?.reservation || this.state.data);
+            }
+
+            // -----------------------------------------------------------------
             // Exit edit mode and notify
             // -----------------------------------------------------------------
             this.state.isDirty = false;
@@ -508,7 +556,8 @@ export const SaveMixin = (Base) => class extends Base {
             if (this.options.onSave) {
                 this.options.onSave(this.state.reservationId, {
                     ...updates,
-                    preferences_changed: preferencesChanged
+                    preferences_changed: preferencesChanged,
+                    tags_changed: tagsChanged
                 });
             }
 

@@ -277,6 +277,7 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
         // Render sections
         this.renderCustomerSection(customer);
         this.renderPreferencesSection(customer);
+        this.renderTagsSection(res);
         this.renderStateSection(res);
         this.renderFurnitureSection(res);
         this.renderDetailsSection(res);

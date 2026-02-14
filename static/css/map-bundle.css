@@ -1288,6 +1288,78 @@
 }
 
 /* =============================================================================
+   TAGS SECTION
+   ============================================================================= */
+.reservation-panel .tags-section {
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+}
+
+.reservation-panel .tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.reservation-panel .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-3);
+    background: var(--color-white);
+    border: 1px solid var(--tag-color, var(--color-border));
+    border-radius: var(--border-radius-full);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--tag-color, var(--color-text-muted));
+    transition: all var(--transition-fast);
+}
+
+.reservation-panel .tag-chip i {
+    font-size: 10px;
+    color: var(--tag-color, var(--color-text-muted));
+}
+
+.reservation-panel .tag-chip.toggleable {
+    cursor: pointer;
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    opacity: 0.7;
+}
+
+.reservation-panel .tag-chip.toggleable i {
+    color: var(--color-text-muted);
+}
+
+.reservation-panel .tag-chip.toggleable:hover {
+    opacity: 1;
+    border-color: var(--tag-color, var(--color-primary));
+    color: var(--tag-color, var(--color-primary));
+}
+
+.reservation-panel .tag-chip.toggleable:focus {
+    outline: none;
+    border-color: var(--tag-color, var(--color-primary));
+}
+
+.reservation-panel .tag-chip.toggleable:focus-visible {
+    outline: 2px solid var(--tag-color, var(--color-primary));
+    outline-offset: 2px;
+}
+
+.reservation-panel .tag-chip.toggleable.active {
+    background: var(--tag-color, var(--color-primary));
+    border-color: var(--tag-color, var(--color-primary));
+    color: var(--color-white);
+    opacity: 1;
+}
+
+.reservation-panel .tag-chip.toggleable.active i {
+    color: var(--color-white);
+}
+
+/* =============================================================================
    STATE SECTION
    ============================================================================= */
 .reservation-panel .state-chips {

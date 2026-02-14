@@ -8,6 +8,7 @@ import { PanelLifecycleMixin } from './panel-lifecycle.js';
 import { EditModeMixin } from './edit-mode-mixin.js';
 import { CustomerMixin } from './customer-mixin.js';
 import { PreferencesMixin } from './preferences-mixin.js';
+import { TagsMixin } from './tags-mixin.js';
 import { StateMixin } from './state-mixin.js';
 import { FurnitureMixin } from './furniture-mixin.js';
 import { PricingMixin } from './pricing-mixin.js';
@@ -23,11 +24,13 @@ const ReservationPanel = SaveMixin(
         PricingMixin(
             FurnitureMixin(
                 StateMixin(
-                    PreferencesMixin(
-                        CustomerMixin(
-                            EditModeMixin(
-                                PanelLifecycleMixin(
-                                    ReservationPanelBase
+                    TagsMixin(
+                        PreferencesMixin(
+                            CustomerMixin(
+                                EditModeMixin(
+                                    PanelLifecycleMixin(
+                                        ReservationPanelBase
+                                    )
                                 )
                             )
                         )

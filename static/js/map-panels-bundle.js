@@ -166,7 +166,6 @@ function dismissToast(toastId) {
     }
 }
 
-
 // --- reservation-panel-v2/panel-base.js ---
 /**
  * ReservationPanelBase - Base class for the reservation panel
@@ -237,6 +236,14 @@ class ReservationPanelBase {
             allPreferences: [],       // All available preferences from server
             selectedCodes: [],        // Currently selected preference codes
             originalCodes: []         // Original codes for dirty checking
+        };
+
+        // Tags editing state
+        this.tagsEditState = {
+            isEditing: false,
+            allTags: [],              // All available tags from server
+            selectedIds: [],          // Currently selected tag IDs
+            originalIds: []           // Original IDs for dirty checking
         };
 
         // Pricing editing state
@@ -331,6 +338,13 @@ class ReservationPanelBase {
         this.preferencesViewMode = document.getElementById('preferencesViewMode');
         this.preferencesEditMode = document.getElementById('preferencesEditMode');
         this.preferencesAllChips = document.getElementById('panelAllPreferencesChips');
+
+        // Tags section
+        this.tagsSection = document.getElementById('tagsSection');
+        this.tagChipsContainer = document.getElementById('panelTagChips');
+        this.tagsViewMode = document.getElementById('tagsViewMode');
+        this.tagsEditModeEl = document.getElementById('tagsEditMode');
+        this.tagsAllChips = document.getElementById('panelAllTagChips');
 
         // State section
         this.stateChipsContainer = document.getElementById('panelStateChips');
@@ -787,7 +801,6 @@ class ReservationPanelBase {
 // =============================================================================
 
 
-
 // --- reservation-panel-v2/panel-lifecycle.js ---
 /**
  * Panel Lifecycle Mixin
@@ -1067,6 +1080,7 @@ const PanelLifecycleMixin = (Base) => class extends Base {
         // Render sections
         this.renderCustomerSection(customer);
         this.renderPreferencesSection(customer);
+        this.renderTagsSection(res);
         this.renderStateSection(res);
         this.renderFurnitureSection(res);
         this.renderDetailsSection(res);
@@ -1102,7 +1116,6 @@ const PanelLifecycleMixin = (Base) => class extends Base {
         }
     }
 };
-
 
 // --- reservation-panel-v2/edit-mode-mixin.js ---
 /**
@@ -1220,6 +1233,9 @@ const EditModeMixin = (Base) => class extends Base {
         // Also enter preferences edit mode
         await this.enterPreferencesEditMode();
 
+        // Enter tags edit mode
+        await this.enterTagsEditMode();
+
         // Enter pricing edit mode - fetch packages and calculate pricing
         await this.enterPricingEditMode();
     }
@@ -1281,6 +1297,9 @@ const EditModeMixin = (Base) => class extends Base {
         // Exit preferences edit mode
         this.exitPreferencesEditMode(discard);
 
+        // Exit tags edit mode
+        this.exitTagsEditMode(discard);
+
         // Exit pricing edit mode
         this.exitPricingEditMode(discard);
 
@@ -1288,7 +1307,6 @@ const EditModeMixin = (Base) => class extends Base {
         this.exitCustomerEditMode();
     }
 };
-
 
 // --- reservation-panel-v2/customer-mixin.js ---
 /**
@@ -1907,7 +1925,6 @@ const CustomerMixin = (Base) => class extends Base {
     }
 };
 
-
 // --- reservation-panel-v2/preferences-mixin.js ---
 /**
  * ReservationPanel Preferences Mixin
@@ -2173,6 +2190,203 @@ const PreferencesMixin = (Base) => class extends Base {
     }
 };
 
+// --- reservation-panel-v2/tags-mixin.js ---
+/**
+ * ReservationPanel Tags Mixin
+ *
+ * Handles reservation tag functionality:
+ * - Rendering tags section with chips
+ * - Entering/exiting tags edit mode
+ * - Loading all available tags
+ * - Toggling tag selections
+ *
+ * @module reservation-panel-v2/tags-mixin
+ */
+
+// =============================================================================
+// TAGS MIXIN
+// =============================================================================
+
+const TagsMixin = (Base) => class extends Base {
+
+    // =========================================================================
+    // TAGS SECTION RENDERING
+    // =========================================================================
+
+    /**
+     * Render tags section with chips (view mode)
+     * @param {Object} reservation - Reservation data
+     */
+    renderTagsSection(reservation) {
+        if (!this.tagChipsContainer) return;
+
+        const tags = reservation?.tags || [];
+
+        if (this.tagsSection) {
+            this.tagsSection.style.display = 'block';
+        }
+
+        if (tags.length === 0) {
+            this.tagChipsContainer.innerHTML =
+                '<span class="text-muted small">Sin etiquetas</span>';
+            return;
+        }
+
+        const chipsHtml = tags.map(tag => {
+            const color = tag.color || '#6C757D';
+            return `
+                <span class="tag-chip" style="--tag-color: ${color};" title="${tag.description || tag.name}">
+                    <i class="fas fa-tag"></i>
+                    <span>${tag.name}</span>
+                </span>
+            `;
+        }).join('');
+
+        this.tagChipsContainer.innerHTML = chipsHtml;
+    }
+
+    // =========================================================================
+    // TAGS EDIT MODE
+    // =========================================================================
+
+    /**
+     * Enter tags edit mode
+     * Loads all available tags and renders them as toggleable chips
+     */
+    async enterTagsEditMode() {
+        if (this.tagsEditState.allTags.length === 0) {
+            await this.loadAllTags();
+        }
+
+        const currentTags = this.state.data?.reservation?.tags || [];
+        this.tagsEditState.selectedIds = currentTags.map(t => t.id);
+        this.tagsEditState.originalIds = [...this.tagsEditState.selectedIds];
+        this.tagsEditState.isEditing = true;
+
+        this.renderAllTagChips();
+
+        if (this.tagsViewMode) {
+            this.tagsViewMode.style.display = 'none';
+        }
+        if (this.tagsEditModeEl) {
+            this.tagsEditModeEl.style.display = 'block';
+        }
+        if (this.tagsSection) {
+            this.tagsSection.style.display = 'block';
+        }
+    }
+
+    /**
+     * Exit tags edit mode
+     * @param {boolean} discard - Whether to discard changes
+     */
+    exitTagsEditMode(discard = false) {
+        this.tagsEditState.isEditing = false;
+
+        if (this.tagsViewMode) {
+            this.tagsViewMode.style.display = 'block';
+        }
+        if (this.tagsEditModeEl) {
+            this.tagsEditModeEl.style.display = 'none';
+        }
+
+        const reservation = this.state.data?.reservation;
+        if (reservation) {
+            this.renderTagsSection(reservation);
+        }
+    }
+
+    // =========================================================================
+    // TAGS DATA LOADING
+    // =========================================================================
+
+    /**
+     * Load all available tags from server
+     */
+    async loadAllTags() {
+        try {
+            const response = await fetch(`${this.options.apiBaseUrl}/tags`);
+            if (response.ok) {
+                const result = await response.json();
+                this.tagsEditState.allTags = result.tags || [];
+            }
+        } catch (error) {
+            console.error('Failed to load tags:', error);
+        }
+    }
+
+    // =========================================================================
+    // TAGS CHIPS RENDERING
+    // =========================================================================
+
+    /**
+     * Render all tags as toggleable chips (edit mode)
+     */
+    renderAllTagChips() {
+        if (!this.tagsAllChips) return;
+
+        const allTags = this.tagsEditState.allTags;
+        const selectedIds = this.tagsEditState.selectedIds;
+
+        if (allTags.length === 0) {
+            this.tagsAllChips.innerHTML =
+                '<span class="text-muted small">No hay etiquetas disponibles</span>';
+            return;
+        }
+
+        const chipsHtml = allTags.map(tag => {
+            const isSelected = selectedIds.includes(tag.id);
+            const color = tag.color || '#6C757D';
+            return `
+                <button type="button" class="tag-chip toggleable ${isSelected ? 'active' : ''}"
+                        data-tag-id="${tag.id}"
+                        style="--tag-color: ${color};"
+                        title="${tag.description || tag.name}">
+                    <i class="fas fa-tag"></i>
+                    <span>${tag.name}</span>
+                </button>
+            `;
+        }).join('');
+
+        this.tagsAllChips.innerHTML = chipsHtml;
+
+        this._attachTagChipHandlers();
+    }
+
+    /**
+     * Attach click handlers to toggleable tag chips
+     * @private
+     */
+    _attachTagChipHandlers() {
+        if (!this.tagsAllChips) return;
+
+        this.tagsAllChips
+            .querySelectorAll('.tag-chip.toggleable')
+            .forEach(chip => {
+                chip.addEventListener('click', () => {
+                    this.toggleTag(parseInt(chip.dataset.tagId));
+                });
+            });
+    }
+
+    // =========================================================================
+    // TAGS SELECTION
+    // =========================================================================
+
+    /**
+     * Toggle a tag selection
+     * @param {number} tagId - The tag ID to toggle
+     */
+    toggleTag(tagId) {
+        const index = this.tagsEditState.selectedIds.indexOf(tagId);
+        if (index >= 0) {
+            this.tagsEditState.selectedIds.splice(index, 1);
+        } else {
+            this.tagsEditState.selectedIds.push(tagId);
+        }
+        this.renderAllTagChips();
+    }
+};
 
 // --- reservation-panel-v2/state-mixin.js ---
 /**
@@ -2468,7 +2682,6 @@ const StateMixin = (Base) => class extends Base {
     }
 };
 
-
 // --- reservation-panel-v2/furniture-mixin.js ---
 /**
  * ReservationPanel Furniture Mixin
@@ -2729,7 +2942,6 @@ const FurnitureMixin = (Base) => class extends Base {
         return meta ? meta.content : '';
     }
 };
-
 
 // --- reservation-panel-v2/pricing-mixin.js ---
 /**
@@ -3177,7 +3389,6 @@ const PricingMixin = (Base) => class extends Base {
     }
 };
 
-
 // --- reservation-panel-v2/details-mixin.js ---
 /**
  * Details Mixin for ReservationPanel
@@ -3302,7 +3513,6 @@ const DetailsMixin = (Base) => class extends Base {
         }
     }
 };
-
 
 // --- reservation-panel-v2/save-mixin.js ---
 /**
@@ -3702,8 +3912,15 @@ const SaveMixin = (Base) => class extends Base {
         const selectedCodes = this.preferencesEditState.selectedCodes || [];
         preferencesChanged = JSON.stringify(originalCodes.sort()) !== JSON.stringify(selectedCodes.sort());
 
+        // ---------------------------------------------------------------------
+        // Check if tags have changed
+        // ---------------------------------------------------------------------
+        const originalTagIds = [...(this.tagsEditState.originalIds || [])].sort();
+        const selectedTagIds = [...(this.tagsEditState.selectedIds || [])].sort();
+        const tagsChanged = JSON.stringify(originalTagIds) !== JSON.stringify(selectedTagIds);
+
         // Exit early if no changes
-        if (!hasChanges && !preferencesChanged) {
+        if (!hasChanges && !preferencesChanged && !tagsChanged) {
             this.exitEditMode(false);
             return;
         }
@@ -3804,6 +4021,47 @@ const SaveMixin = (Base) => class extends Base {
             }
 
             // -----------------------------------------------------------------
+            // Save tags if changed
+            // -----------------------------------------------------------------
+            if (tagsChanged) {
+                const tagResponse = await fetch(
+                    `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/update`,
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.csrfToken
+                        },
+                        body: JSON.stringify({
+                            tag_ids: this.tagsEditState.selectedIds
+                        })
+                    }
+                );
+
+                const tagResult = await tagResponse.json();
+
+                if (!tagResult.success) {
+                    throw new Error(tagResult.error || 'Error al guardar etiquetas');
+                }
+
+                // Update local data with new tags
+                const allTags = this.tagsEditState.allTags;
+                const newTags = this.tagsEditState.selectedIds.map(id => {
+                    return allTags.find(t => t.id === id);
+                }).filter(Boolean);
+
+                if (this.state.data) {
+                    this.state.data.tags = newTags;
+                    if (this.state.data.reservation) {
+                        this.state.data.reservation.tags = newTags;
+                    }
+                }
+
+                // Re-render tags section with updated data
+                this.renderTagsSection(this.state.data?.reservation || this.state.data);
+            }
+
+            // -----------------------------------------------------------------
             // Exit edit mode and notify
             // -----------------------------------------------------------------
             this.state.isDirty = false;
@@ -3814,7 +4072,8 @@ const SaveMixin = (Base) => class extends Base {
             if (this.options.onSave) {
                 this.options.onSave(this.state.reservationId, {
                     ...updates,
-                    preferences_changed: preferencesChanged
+                    preferences_changed: preferencesChanged,
+                    tags_changed: tagsChanged
                 });
             }
 
@@ -3833,7 +4092,6 @@ const SaveMixin = (Base) => class extends Base {
     }
 };
 
-
 // --- reservation-panel-v2/index.js ---
 /**
  * ReservationPanel - Main Entry Point
@@ -3850,11 +4108,13 @@ const ReservationPanel = SaveMixin(
         PricingMixin(
             FurnitureMixin(
                 StateMixin(
-                    PreferencesMixin(
-                        CustomerMixin(
-                            EditModeMixin(
-                                PanelLifecycleMixin(
-                                    ReservationPanelBase
+                    TagsMixin(
+                        PreferencesMixin(
+                            CustomerMixin(
+                                EditModeMixin(
+                                    PanelLifecycleMixin(
+                                        ReservationPanelBase
+                                    )
                                 )
                             )
                         )
@@ -3869,7 +4129,6 @@ const ReservationPanel = SaveMixin(
 
 // Also expose on window for legacy compatibility
 window.ReservationPanel = ReservationPanel;
-
 
 // ============================================
 // V1 NEW RESERVATION PANEL (traditional scripts)
