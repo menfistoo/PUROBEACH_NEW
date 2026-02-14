@@ -671,12 +671,6 @@ async function clearOldData(todayDate) {
  * Orchestrates sync, storage, and UI state for offline functionality
  */
 
-    saveMapData,
-    getMapData,
-    saveSyncMeta,
-    getSyncMeta,
-    clearOldData
-} from './storage.js';
 
 const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const STALE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
@@ -3287,12 +3281,6 @@ window.PinchZoomHandler = PinchZoomHandler;
  * Main class that coordinates all map modules
  */
 
-    createSVG,
-    renderZones,
-    renderDecorativeItems,
-    renderFurniture,
-    updateLegend
-} from './renderer.js';
 
 /**
  * Main BeachMap class
