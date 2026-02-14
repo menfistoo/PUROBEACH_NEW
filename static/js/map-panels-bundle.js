@@ -16,6 +16,22 @@
  */
 
 // =============================================================================
+// HTML UTILITIES
+// =============================================================================
+
+/**
+ * Escape HTML entities to prevent XSS when inserting user data into innerHTML
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string safe for HTML insertion
+ */
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// =============================================================================
 // NAME UTILITIES
 // =============================================================================
 
@@ -179,7 +195,6 @@ function dismissToast(toastId) {
  *
  * This class is extended by mixins to add specific functionality.
  */
-
 
 // =============================================================================
 // RESERVATION PANEL BASE CLASS
@@ -800,6 +815,7 @@ class ReservationPanelBase {
 // EXPORTS
 // =============================================================================
 
+ReservationPanelBase;
 
 // --- reservation-panel-v2/panel-lifecycle.js ---
 /**
@@ -812,7 +828,6 @@ class ReservationPanelBase {
  * - Collapse/expand functionality
  * - Error display
  */
-
 
 // =============================================================================
 // PANEL LIFECYCLE MIXIN
@@ -1319,7 +1334,6 @@ const EditModeMixin = (Base) => class extends Base {
  *
  * @module reservation-panel-v2/customer-mixin
  */
-
 
 // =============================================================================
 // CUSTOMER MIXIN
@@ -2233,11 +2247,13 @@ const TagsMixin = (Base) => class extends Base {
         }
 
         const chipsHtml = tags.map(tag => {
-            const color = tag.color || '#6C757D';
+            const color = this._sanitizeColor(tag.color) || '#6C757D';
+            const name = escapeHtml(tag.name);
+            const title = escapeHtml(tag.description || tag.name);
             return `
-                <span class="tag-chip" style="--tag-color: ${color};" title="${tag.description || tag.name}">
+                <span class="tag-chip" style="--tag-color: ${color};" title="${title}">
                     <i class="fas fa-tag"></i>
-                    <span>${tag.name}</span>
+                    <span>${name}</span>
                 </span>
             `;
         }).join('');
@@ -2336,14 +2352,16 @@ const TagsMixin = (Base) => class extends Base {
 
         const chipsHtml = allTags.map(tag => {
             const isSelected = selectedIds.includes(tag.id);
-            const color = tag.color || '#6C757D';
+            const color = this._sanitizeColor(tag.color) || '#6C757D';
+            const name = escapeHtml(tag.name);
+            const title = escapeHtml(tag.description || tag.name);
             return `
                 <button type="button" class="tag-chip toggleable ${isSelected ? 'active' : ''}"
                         data-tag-id="${tag.id}"
                         style="--tag-color: ${color};"
-                        title="${tag.description || tag.name}">
+                        title="${title}">
                     <i class="fas fa-tag"></i>
-                    <span>${tag.name}</span>
+                    <span>${name}</span>
                 </button>
             `;
         }).join('');
@@ -2385,6 +2403,26 @@ const TagsMixin = (Base) => class extends Base {
             this.tagsEditState.selectedIds.push(tagId);
         }
         this.renderAllTagChips();
+        this.markDirty();
+    }
+
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
+
+    /**
+     * Sanitize a CSS color value to prevent injection via style attributes
+     * @param {string} color - Color value (hex, rgb, named)
+     * @returns {string|null} Sanitized color or null if invalid
+     * @private
+     */
+    _sanitizeColor(color) {
+        if (!color) return null;
+        // Allow hex colors, rgb/rgba, hsl/hsla, and named colors (letters only)
+        if (/^#[0-9A-Fa-f]{3,8}$/.test(color)) return color;
+        if (/^(rgb|hsl)a?\([^)]+\)$/.test(color)) return color;
+        if (/^[a-zA-Z]+$/.test(color)) return color;
+        return null;
     }
 };
 
@@ -2400,7 +2438,6 @@ const TagsMixin = (Base) => class extends Base {
  *
  * @module reservation-panel-v2/state-mixin
  */
-
 
 // =============================================================================
 // STATE MIXIN
@@ -2693,7 +2730,6 @@ const StateMixin = (Base) => class extends Base {
  * - Furniture lock toggle
  */
 
-
 // =============================================================================
 // FURNITURE MIXIN
 // =============================================================================
@@ -2969,7 +3005,6 @@ const FurnitureMixin = (Base) => class extends Base {
  * - options: { apiBaseUrl }
  * - csrfToken
  */
-
 
 // =============================================================================
 // PRICING MIXIN
@@ -3524,7 +3559,6 @@ const DetailsMixin = (Base) => class extends Base {
  * Extracted from reservation-panel.js as part of the modular refactoring.
  */
 
-
 // =============================================================================
 // SAVE MIXIN
 // =============================================================================
@@ -3919,8 +3953,14 @@ const SaveMixin = (Base) => class extends Base {
         const selectedTagIds = [...(this.tagsEditState.selectedIds || [])].sort();
         const tagsChanged = JSON.stringify(originalTagIds) !== JSON.stringify(selectedTagIds);
 
+        // Include tag_ids in the main updates payload to avoid a separate API call
+        if (tagsChanged) {
+            updates.tag_ids = this.tagsEditState.selectedIds;
+            hasChanges = true;
+        }
+
         // Exit early if no changes
-        if (!hasChanges && !preferencesChanged && !tagsChanged) {
+        if (!hasChanges && !preferencesChanged) {
             this.exitEditMode(false);
             return;
         }
@@ -4021,44 +4061,19 @@ const SaveMixin = (Base) => class extends Base {
             }
 
             // -----------------------------------------------------------------
-            // Save tags if changed
+            // Update local tag data if tags changed
             // -----------------------------------------------------------------
             if (tagsChanged) {
-                const tagResponse = await fetch(
-                    `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/update`,
-                    {
-                        method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': this.csrfToken
-                        },
-                        body: JSON.stringify({
-                            tag_ids: this.tagsEditState.selectedIds
-                        })
-                    }
-                );
-
-                const tagResult = await tagResponse.json();
-
-                if (!tagResult.success) {
-                    throw new Error(tagResult.error || 'Error al guardar etiquetas');
-                }
-
-                // Update local data with new tags
                 const allTags = this.tagsEditState.allTags;
                 const newTags = this.tagsEditState.selectedIds.map(id => {
                     return allTags.find(t => t.id === id);
                 }).filter(Boolean);
 
-                if (this.state.data) {
-                    this.state.data.tags = newTags;
-                    if (this.state.data.reservation) {
-                        this.state.data.reservation.tags = newTags;
-                    }
+                if (this.state.data?.reservation) {
+                    this.state.data.reservation.tags = newTags;
                 }
 
-                // Re-render tags section with updated data
-                this.renderTagsSection(this.state.data?.reservation || this.state.data);
+                this.renderTagsSection(this.state.data?.reservation);
             }
 
             // -----------------------------------------------------------------
@@ -4097,7 +4112,6 @@ const SaveMixin = (Base) => class extends Base {
  * ReservationPanel - Main Entry Point
  * Composes all mixins into the final ReservationPanel class
  */
-
 
 /**
  * Compose all mixins into the final ReservationPanel class

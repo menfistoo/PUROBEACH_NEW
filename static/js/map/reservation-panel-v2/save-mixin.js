@@ -403,8 +403,14 @@ export const SaveMixin = (Base) => class extends Base {
         const selectedTagIds = [...(this.tagsEditState.selectedIds || [])].sort();
         const tagsChanged = JSON.stringify(originalTagIds) !== JSON.stringify(selectedTagIds);
 
+        // Include tag_ids in the main updates payload to avoid a separate API call
+        if (tagsChanged) {
+            updates.tag_ids = this.tagsEditState.selectedIds;
+            hasChanges = true;
+        }
+
         // Exit early if no changes
-        if (!hasChanges && !preferencesChanged && !tagsChanged) {
+        if (!hasChanges && !preferencesChanged) {
             this.exitEditMode(false);
             return;
         }
@@ -505,44 +511,19 @@ export const SaveMixin = (Base) => class extends Base {
             }
 
             // -----------------------------------------------------------------
-            // Save tags if changed
+            // Update local tag data if tags changed
             // -----------------------------------------------------------------
             if (tagsChanged) {
-                const tagResponse = await fetch(
-                    `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/update`,
-                    {
-                        method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': this.csrfToken
-                        },
-                        body: JSON.stringify({
-                            tag_ids: this.tagsEditState.selectedIds
-                        })
-                    }
-                );
-
-                const tagResult = await tagResponse.json();
-
-                if (!tagResult.success) {
-                    throw new Error(tagResult.error || 'Error al guardar etiquetas');
-                }
-
-                // Update local data with new tags
                 const allTags = this.tagsEditState.allTags;
                 const newTags = this.tagsEditState.selectedIds.map(id => {
                     return allTags.find(t => t.id === id);
                 }).filter(Boolean);
 
-                if (this.state.data) {
-                    this.state.data.tags = newTags;
-                    if (this.state.data.reservation) {
-                        this.state.data.reservation.tags = newTags;
-                    }
+                if (this.state.data?.reservation) {
+                    this.state.data.reservation.tags = newTags;
                 }
 
-                // Re-render tags section with updated data
-                this.renderTagsSection(this.state.data?.reservation || this.state.data);
+                this.renderTagsSection(this.state.data?.reservation);
             }
 
             // -----------------------------------------------------------------

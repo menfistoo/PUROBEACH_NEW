@@ -10,6 +10,8 @@
  * @module reservation-panel-v2/tags-mixin
  */
 
+import { escapeHtml } from './utils.js';
+
 // =============================================================================
 // TAGS MIXIN
 // =============================================================================
@@ -40,11 +42,13 @@ export const TagsMixin = (Base) => class extends Base {
         }
 
         const chipsHtml = tags.map(tag => {
-            const color = tag.color || '#6C757D';
+            const color = this._sanitizeColor(tag.color) || '#6C757D';
+            const name = escapeHtml(tag.name);
+            const title = escapeHtml(tag.description || tag.name);
             return `
-                <span class="tag-chip" style="--tag-color: ${color};" title="${tag.description || tag.name}">
+                <span class="tag-chip" style="--tag-color: ${color};" title="${title}">
                     <i class="fas fa-tag"></i>
-                    <span>${tag.name}</span>
+                    <span>${name}</span>
                 </span>
             `;
         }).join('');
@@ -143,14 +147,16 @@ export const TagsMixin = (Base) => class extends Base {
 
         const chipsHtml = allTags.map(tag => {
             const isSelected = selectedIds.includes(tag.id);
-            const color = tag.color || '#6C757D';
+            const color = this._sanitizeColor(tag.color) || '#6C757D';
+            const name = escapeHtml(tag.name);
+            const title = escapeHtml(tag.description || tag.name);
             return `
                 <button type="button" class="tag-chip toggleable ${isSelected ? 'active' : ''}"
                         data-tag-id="${tag.id}"
                         style="--tag-color: ${color};"
-                        title="${tag.description || tag.name}">
+                        title="${title}">
                     <i class="fas fa-tag"></i>
-                    <span>${tag.name}</span>
+                    <span>${name}</span>
                 </button>
             `;
         }).join('');
@@ -192,5 +198,25 @@ export const TagsMixin = (Base) => class extends Base {
             this.tagsEditState.selectedIds.push(tagId);
         }
         this.renderAllTagChips();
+        this.markDirty();
+    }
+
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
+
+    /**
+     * Sanitize a CSS color value to prevent injection via style attributes
+     * @param {string} color - Color value (hex, rgb, named)
+     * @returns {string|null} Sanitized color or null if invalid
+     * @private
+     */
+    _sanitizeColor(color) {
+        if (!color) return null;
+        // Allow hex colors, rgb/rgba, hsl/hsla, and named colors (letters only)
+        if (/^#[0-9A-Fa-f]{3,8}$/.test(color)) return color;
+        if (/^(rgb|hsl)a?\([^)]+\)$/.test(color)) return color;
+        if (/^[a-zA-Z]+$/.test(color)) return color;
+        return null;
     }
 };
