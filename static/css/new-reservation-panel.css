@@ -635,26 +635,34 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
-    padding: 6px 12px;
-    border-radius: 20px;
+    padding: 8px 12px;
+    background: var(--color-white);
+    border: 1px solid var(--tag-color, var(--color-border));
+    border-radius: var(--border-radius-full);
     font-size: 12px;
-    font-weight: 500;
+    color: var(--tag-color, var(--color-text-secondary));
     cursor: pointer;
-    border: 2px solid var(--tag-color, #6C757D);
-    background: transparent;
-    color: var(--tag-color, #6C757D);
     transition: all var(--transition-fast);
 }
 
 .new-reservation-panel .tag-chip:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-color: var(--tag-color, var(--color-primary));
+}
+
+.new-reservation-panel .tag-chip:focus {
+    outline: none;
+    border-color: var(--tag-color, var(--color-primary));
+}
+
+.new-reservation-panel .tag-chip:focus-visible {
+    outline: 2px solid var(--tag-color, var(--color-primary));
+    outline-offset: 2px;
 }
 
 .new-reservation-panel .tag-chip.active {
-    background: var(--tag-color, #6C757D);
+    background: var(--tag-color, var(--color-primary));
+    border-color: var(--tag-color, var(--color-primary));
     color: var(--color-white);
-    border-color: var(--tag-color, #6C757D);
 }
 
 .new-reservation-panel .tag-chip i {
