@@ -239,7 +239,18 @@
     color: #fff;
 }
 
-/* Quick edit modal */
+/* =============================================================================
+   QUICK EDIT MODAL - PuroBeach Design System
+   ============================================================================= */
+
+/* Modal structure */
+.quick-edit-modal .modal-content {
+    border-radius: 16px;
+    border: none;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(26, 58, 92, 0.25), 0 8px 24px rgba(0,0,0,0.12);
+}
+
 .quick-edit-modal .modal-header {
     background: linear-gradient(135deg, #1A3A5C 0%, #2A4A6C 100%);
     color: #fff;
@@ -247,125 +258,230 @@
     padding: 1rem 1.5rem;
 }
 
-.quick-edit-modal .modal-content {
-    border-radius: 16px;
-    border: none;
-    overflow: hidden;
+.quick-edit-modal .modal-header .modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.quick-edit-modal .modal-header .modal-title i {
+    color: #D4AF37;
 }
 
 .quick-edit-modal .modal-footer {
     background: #FAFAFA;
     border-top: 1px solid var(--color-border, #E8E8E8);
     padding: 1rem 1.5rem;
+    gap: 8px;
+}
+
+.quick-edit-modal .modal-footer .btn-outline-secondary {
+    border: 2px solid #E8E8E8;
+    color: #4B5563;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.quick-edit-modal .modal-footer .btn-outline-secondary:hover {
+    background: #F5E6D3;
+    border-color: #D4AF37;
+    color: #1A3A5C;
+}
+
+.quick-edit-modal .modal-footer .btn-primary {
+    background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+    transition: all 0.2s ease;
+}
+
+.quick-edit-modal .modal-footer .btn-primary:hover {
+    background: linear-gradient(135deg, #E5C04A 0%, #C9A71D 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
 }
 
 /* Info bar */
 #quickEditModal .edit-info-bar {
-    background: #F5E6D3 !important;
-    padding: 0.875rem 1.5rem;
-    display: flex !important;
+    background: var(--color-accent, #F5E6D3);
+    padding: 12px 24px;
+    display: flex;
     flex-wrap: wrap;
-    gap: 1.5rem;
-    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    gap: 16px;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.25);
 }
 
 #quickEditModal .edit-info-bar .info-item {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 8px;
     font-size: 14px;
-    color: #1A3A5C;
+    font-weight: 500;
+    color: var(--color-secondary, #1A3A5C);
 }
 
 #quickEditModal .edit-info-bar .info-item i {
-    color: #D4AF37;
+    color: var(--color-primary, #D4AF37);
     font-size: 13px;
+    width: 16px;
+    text-align: center;
 }
 
 #quickEditModal .info-badge {
     font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: #1A3A5C;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
     color: #fff;
-    margin-left: 6px;
+    margin-left: 4px;
+    letter-spacing: 0.3px;
+}
+
+#quickEditModal .room-badge {
+    background: var(--color-primary, #D4AF37);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 8px;
+}
+
+/* Form body */
+#quickEditModal .edit-form-body {
+    padding: 24px;
+}
+
+#quickEditModal .edit-section {
+    margin-bottom: 20px;
+}
+
+#quickEditModal .edit-section:last-child {
+    margin-bottom: 0;
+}
+
+#quickEditModal .edit-section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#quickEditModal .edit-section-label i {
+    color: var(--color-primary, #D4AF37);
+    font-size: 12px;
+    width: 14px;
+    text-align: center;
+}
+
+#quickEditModal .edit-section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #E8E8E8;
+    margin-left: 8px;
+}
+
+#quickEditModal .edit-row {
+    display: flex;
+    gap: 24px;
+}
+
+#quickEditModal .edit-section-half {
+    flex: 1;
 }
 
 /* State chips */
 #quickEditModal .state-chips {
-    display: flex !important;
+    display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
 
 #quickEditModal .state-chip {
-    padding: 10px 18px !important;
-    border-radius: 25px !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
-    border: 2px solid var(--chip-color, #6C757D) !important;
+    border: 2px solid var(--chip-color, #9CA3AF);
     transition: all 0.2s ease;
-    background: transparent !important;
-    color: var(--chip-color, #6C757D) !important;
+    background: transparent;
+    color: var(--chip-color, #9CA3AF);
 }
 
 #quickEditModal .state-chip:hover {
-    transform: translateY(-2px);
-    opacity: 0.85;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 #quickEditModal .state-chip.selected {
-    background: var(--chip-color, #6C757D) !important;
-    color: #fff !important;
-    border-color: var(--chip-color, #6C757D) !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    transform: scale(1.05);
+    background: var(--chip-color, #9CA3AF);
+    color: #fff;
+    border-color: var(--chip-color, #9CA3AF);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
 }
 
 /* People control */
 #quickEditModal .people-control {
-    display: flex !important;
+    display: flex;
     align-items: center;
     gap: 0;
-    background: #f8f9fa !important;
-    border-radius: 10px !important;
-    border: 2px solid #E8E8E8 !important;
+    background: #FAFAFA;
+    border-radius: 10px;
+    border: 2px solid #E8E8E8;
     overflow: hidden;
     width: fit-content;
+    transition: border-color 0.2s ease;
+}
+
+#quickEditModal .people-control:focus-within {
+    border-color: var(--color-primary, #D4AF37);
 }
 
 #quickEditModal .people-btn {
-    width: 44px !important;
-    height: 44px !important;
-    border: none !important;
-    background: transparent !important;
-    color: #1A3A5C !important;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: var(--color-secondary, #1A3A5C);
     cursor: pointer;
     transition: all 0.2s ease;
-    display: flex !important;
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 !important;
+    padding: 0;
+    font-size: 13px;
 }
 
 #quickEditModal .people-btn:hover {
-    background: #D4AF37 !important;
-    color: #fff !important;
+    background: var(--color-primary, #D4AF37);
+    color: #fff;
 }
 
 #quickEditModal .people-input {
-    width: 60px !important;
-    height: 44px !important;
-    border: none !important;
-    background: #fff !important;
+    width: 50px;
+    height: 40px;
+    border: none;
+    border-left: 1px solid #E8E8E8;
+    border-right: 1px solid #E8E8E8;
+    background: #fff;
     text-align: center;
-    font-size: 18px !important;
-    font-weight: 600 !important;
-    color: #1A3A5C !important;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-secondary, #1A3A5C);
     -moz-appearance: textfield;
-    padding: 0 !important;
-    border-radius: 0 !important;
+    padding: 0;
+    border-radius: 0;
 }
 
 #quickEditModal .people-input::-webkit-outer-spin-button,
@@ -376,7 +492,7 @@
 
 /* Paid toggle */
 #quickEditModal .paid-toggle {
-    display: flex !important;
+    display: flex;
     align-items: center;
     gap: 12px;
     margin-bottom: 8px;
@@ -384,8 +500,8 @@
 
 #quickEditModal .toggle-switch {
     position: relative;
-    width: 52px;
-    height: 28px;
+    width: 48px;
+    height: 26px;
     cursor: pointer;
     display: inline-block;
 }
@@ -403,74 +519,106 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: #ccc;
-    border-radius: 28px;
-    transition: 0.3s;
+    background: #E8E8E8;
+    border-radius: 26px;
+    transition: all 0.3s ease;
 }
 
 #quickEditModal .toggle-slider:before {
     position: absolute;
     content: "";
-    height: 22px;
-    width: 22px;
+    height: 20px;
+    width: 20px;
     left: 3px;
     bottom: 3px;
-    background: white;
+    background: #fff;
     border-radius: 50%;
-    transition: 0.3s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
 #quickEditModal .toggle-switch input:checked + .toggle-slider {
-    background: #4A7C59;
+    background: var(--color-success, #4A7C59);
 }
 
 #quickEditModal .toggle-switch input:checked + .toggle-slider:before {
-    transform: translateX(24px);
+    transform: translateX(22px);
 }
 
 #quickEditModal .paid-label {
     font-size: 14px;
     font-weight: 500;
-    color: #4B5563;
+    color: #9CA3AF;
+    transition: color 0.2s ease;
 }
 
 #quickEditModal .paid-label.paid {
-    color: #4A7C59;
+    color: var(--color-success, #4A7C59);
     font-weight: 600;
 }
 
 #quickEditModal .price-display {
-    display: flex !important;
-    align-items: center;
+    display: flex;
+    align-items: baseline;
     gap: 8px;
-    margin-top: 8px;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #FAFAFA;
+    border-radius: 8px;
+    border: 1px solid #E8E8E8;
 }
 
 #quickEditModal .price-label {
-    font-size: 13px;
-    color: #4B5563;
+    font-size: 12px;
+    font-weight: 500;
+    color: #9CA3AF;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 #quickEditModal .price-value {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
-    color: #4A7C59;
+    color: var(--color-success, #4A7C59);
+}
+
+/* Payment fields */
+#quickEditModal .form-control,
+#quickEditModal .form-select {
+    border: 2px solid #E8E8E8;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+#quickEditModal .form-control:focus,
+#quickEditModal .form-select:focus {
+    border-color: var(--color-primary, #D4AF37);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+#quickEditModal .form-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #4B5563;
 }
 
 /* Notes input */
 #quickEditModal .notes-input {
-    border: 2px solid #E8E8E8 !important;
-    border-radius: 10px !important;
-    padding: 12px !important;
-    font-size: 14px !important;
+    border: 2px solid #E8E8E8;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 14px;
     resize: none;
     width: 100%;
+    transition: all 0.2s ease;
 }
 
 #quickEditModal .notes-input:focus {
-    border-color: #D4AF37 !important;
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15) !important;
+    border-color: var(--color-primary, #D4AF37);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    outline: none;
 }
 
 /* Characteristics chips */
@@ -487,7 +635,7 @@
     font-weight: 500;
     cursor: pointer;
     border: 2px solid #E8E8E8;
-    background: transparent;
+    background: #fff;
     color: #4B5563;
     transition: all 0.2s ease;
     display: inline-flex;
@@ -496,54 +644,38 @@
 }
 
 #quickEditModal .char-chip:hover {
-    border-color: #D4AF37;
-    color: #1A3A5C;
+    border-color: var(--color-primary, #D4AF37);
+    color: var(--color-secondary, #1A3A5C);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.15);
 }
 
 #quickEditModal .char-chip.selected {
-    background: #D4AF37;
-    border-color: #D4AF37;
+    background: var(--color-primary, #D4AF37);
+    border-color: var(--color-primary, #D4AF37);
     color: #fff;
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
 }
 
 #quickEditModal .char-chip i {
     font-size: 12px;
 }
 
-/* Form body */
-#quickEditModal .edit-form-body {
-    padding: 1.5rem;
-}
+/* Responsive */
+@media (max-width: 576px) {
+    #quickEditModal .edit-row {
+        flex-direction: column;
+        gap: 16px;
+    }
 
-#quickEditModal .edit-section {
-    margin-bottom: 1.25rem;
-}
+    #quickEditModal .edit-info-bar {
+        gap: 10px;
+        padding: 10px 16px;
+    }
 
-#quickEditModal .edit-section:last-child {
-    margin-bottom: 0;
-}
-
-#quickEditModal .edit-section-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #1A3A5C;
-    margin-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-#quickEditModal .edit-section-label i {
-    margin-right: 6px;
-    color: #D4AF37;
-}
-
-#quickEditModal .edit-row {
-    display: flex;
-    gap: 1.5rem;
-}
-
-#quickEditModal .edit-section-half {
-    flex: 1;
+    #quickEditModal .edit-form-body {
+        padding: 16px;
+    }
 }
 
 /* Responsive */
@@ -810,7 +942,7 @@
                 <form id="quick-edit-form">
                     <input type="hidden" id="edit-reservation-id">
 
-                    <!-- Customer & Date Info (Read-only) -->
+                    <!-- Reservation Info Bar (Read-only) -->
                     <div class="edit-info-bar">
                         <div class="info-item">
                             <i class="fas fa-user"></i>
@@ -819,10 +951,10 @@
                         </div>
                         <div class="info-item" id="edit-room-item" style="display: none;">
                             <i class="fas fa-door-open"></i>
-                            <span id="edit-room">-</span>
+                            <span class="room-badge" id="edit-room">-</span>
                         </div>
                         <div class="info-item">
-                            <i class="fas fa-calendar"></i>
+                            <i class="fas fa-calendar-day"></i>
                             <span id="edit-date">-</span>
                         </div>
                         <div class="info-item">
@@ -891,15 +1023,15 @@
                             <div class="edit-section-label">
                                 <i class="fas fa-receipt"></i> Detalles de Pago
                             </div>
-                            <div class="row g-2">
+                            <div class="row g-3">
                                 <div class="col-6">
-                                    <label for="edit-payment-ticket" class="form-label small text-muted mb-1">Nº ticket</label>
-                                    <input type="text" class="form-control form-control-sm"
+                                    <label for="edit-payment-ticket" class="form-label">Nº ticket</label>
+                                    <input type="text" class="form-control"
                                            id="edit-payment-ticket" placeholder="Ej: 12345">
                                 </div>
                                 <div class="col-6">
-                                    <label for="edit-payment-method" class="form-label small text-muted mb-1">Forma de pago</label>
-                                    <select class="form-select form-select-sm" id="edit-payment-method">
+                                    <label for="edit-payment-method" class="form-label">Forma de pago</label>
+                                    <select class="form-select" id="edit-payment-method">
                                         <option value="">Seleccionar...</option>
                                         <option value="efectivo">Efectivo</option>
                                         <option value="tarjeta">Tarjeta</option>
@@ -931,11 +1063,13 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>Cancelar
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"
+                        aria-label="Cancelar edición">
+                    <i class="fas fa-xmark me-1"></i>Cancelar
                 </button>
-                <button type="button" class="btn btn-primary" onclick="saveQuickEdit()">
-                    <i class="fas fa-check me-1"></i>Guardar Cambios
+                <button type="button" class="btn btn-primary" onclick="saveQuickEdit()"
+                        aria-label="Guardar cambios de la reserva">
+                    <i class="fas fa-check me-1"></i>Guardar
                 </button>
             </div>
         </div>
