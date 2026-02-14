@@ -5,7 +5,7 @@ Provides login and profile editing forms with CSRF protection.
 
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SelectField
-from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional
+from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional, Regexp
 
 
 class LoginForm(FlaskForm):
@@ -50,7 +50,10 @@ class ChangePasswordForm(FlaskForm):
 
     new_password = PasswordField('Nueva Contraseña', validators=[
         DataRequired(message='La nueva contraseña es requerida'),
-        Length(min=8, message='La contraseña debe tener al menos 8 caracteres')
+        Length(min=8, message='La contraseña debe tener al menos 8 caracteres'),
+        Regexp(r'(?=.*[A-Z])', message='Debe contener al menos una mayúscula'),
+        Regexp(r'(?=.*[a-z])', message='Debe contener al menos una minúscula'),
+        Regexp(r'(?=.*\d)', message='Debe contener al menos un número'),
     ])
 
     confirm_password = PasswordField('Confirmar Contraseña', validators=[

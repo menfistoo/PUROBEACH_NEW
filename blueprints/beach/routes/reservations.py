@@ -376,7 +376,8 @@ def cancel(reservation_id):
         )
         flash('Reserva cancelada exitosamente', 'success')
     except InvalidStateTransitionError as e:
-        flash(str(e), 'warning')
+        current_app.logger.warning(f'Invalid state transition: {e}')
+        flash('Transición de estado no permitida', 'warning')
     except Exception as e:
         current_app.logger.error(f'Error: {e}', exc_info=True)
         flash('Error al cancelar. Contacte al administrador.', 'error')

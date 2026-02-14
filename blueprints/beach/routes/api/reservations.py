@@ -167,7 +167,8 @@ def register_routes(bp):
             return jsonify({'success': True})
 
         except InvalidStateTransitionError as e:
-            return api_error(str(e), 400)
+            current_app.logger.warning(f'Invalid state transition: {e}')
+            return api_error('Transición de estado no permitida', 400)
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
             return api_error('Error interno del servidor', 500)
@@ -244,10 +245,11 @@ def register_routes(bp):
             return jsonify({'success': True, 'action': result_action, 'state': state_name})
 
         except InvalidStateTransitionError as e:
+            current_app.logger.warning(f'Invalid state transition: {e}')
             current_state = reservation.get('current_state', '')
             allowed = get_allowed_transitions(current_state)
             return api_error(
-                str(e), 400,
+                'Transición de estado no permitida', 400,
                 current_state=current_state,
                 allowed_transitions=sorted(allowed)
             )

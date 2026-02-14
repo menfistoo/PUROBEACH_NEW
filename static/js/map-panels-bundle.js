@@ -820,7 +820,7 @@ class ReservationPanelBase {
 // EXPORTS
 // =============================================================================
 
-default ReservationPanelBase;
+// ReservationPanelBase is used by mixins below (was: export default)
 
 // =============================================================================
 // SOURCE: reservation-panel-v2/panel-lifecycle.js
@@ -4193,3 +4193,2749 @@ const ReservationPanel = SaveMixin(
 
 // Also expose on window for legacy compatibility
 window.ReservationPanel = ReservationPanel;
+
+// =============================================================================
+// NEW RESERVATION PANEL (V1) - For creating new reservations
+// =============================================================================
+
+// --- customer-handler.js ---
+/**
+ * CustomerHandler - Manages customer selection, creation, and display
+ * Handles customer search, inline creation form, hotel guest integration
+ */
+class CustomerHandler {
+    constructor(panel) {
+        this.panel = panel;
+        this.state = {
+            selectedCustomer: null,
+            selectedGuest: null,
+            roomGuests: []
+        };
+
+        // Initialize create customer form handlers
+        this.initCreateCustomerForm();
+    }
+
+    /**
+     * Initialize create customer form event handlers
+     */
+    initCreateCustomerForm() {
+        const cancelBtn = document.getElementById('newPanelCancelCreateBtn');
+        const saveBtn = document.getElementById('newPanelSaveCustomerBtn');
+
+        cancelBtn?.addEventListener('click', () => this.hideCreateCustomerForm());
+        saveBtn?.addEventListener('click', () => this.saveNewCustomer());
+    }
+
+    /**
+     * Show the inline create customer form
+     * @param {Object} prefillData - Data to pre-fill the form with
+     * @param {string} prefillData.first_name - First name
+     * @param {string} prefillData.last_name - Last name
+     * @param {string} prefillData.phone - Phone number
+     * @param {string} prefillData.email - Email address
+     * @param {string} prefillData.language - Language code
+     */
+    showCreateCustomerForm(prefillData = {}) {
+        const createForm = document.getElementById('newPanelCreateCustomerForm');
+        const searchWrapper = document.getElementById('newPanelCustomerWrapper');
+        const firstNameInput = document.getElementById('newCustFirstName');
+        const lastNameInput = document.getElementById('newCustLastName');
+        const phoneInput = document.getElementById('newCustPhone');
+        const emailInput = document.getElementById('newCustEmail');
+        const languageSelect = document.getElementById('newCustLanguage');
+
+        if (!createForm) return;
+
+        // Hide search wrapper
+        searchWrapper.style.display = 'none';
+
+        // Pre-fill fields if provided
+        if (prefillData.first_name) {
+            firstNameInput.value = prefillData.first_name;
+        }
+        if (prefillData.last_name) {
+            lastNameInput.value = prefillData.last_name;
+        }
+        if (prefillData.phone && phoneInput) {
+            phoneInput.value = prefillData.phone;
+        }
+        if (prefillData.email && emailInput) {
+            emailInput.value = prefillData.email;
+        }
+        if (prefillData.language && languageSelect) {
+            languageSelect.value = prefillData.language;
+        }
+
+        // Show create form
+        createForm.style.display = 'block';
+        firstNameInput?.focus();
+    }
+
+    /**
+     * Hide the inline create customer form
+     */
+    hideCreateCustomerForm() {
+        const createForm = document.getElementById('newPanelCreateCustomerForm');
+        const searchWrapper = document.getElementById('newPanelCustomerWrapper');
+        const errorEl = document.getElementById('newCustError');
+
+        if (!createForm) return;
+
+        // Clear form
+        document.getElementById('newCustFirstName').value = '';
+        document.getElementById('newCustLastName').value = '';
+        document.getElementById('newCustPhone').value = '';
+        document.getElementById('newCustEmail').value = '';
+        document.getElementById('newCustLanguage').value = '';
+        if (errorEl) errorEl.style.display = 'none';
+
+        // Hide form, show search
+        createForm.style.display = 'none';
+        searchWrapper.style.display = 'block';
+        document.getElementById('newPanelCustomerSearch').value = '';
+    }
+
+    /**
+     * Save the new customer from the inline form
+     */
+    async saveNewCustomer() {
+        const firstName = document.getElementById('newCustFirstName')?.value.trim() || '';
+        const lastName = document.getElementById('newCustLastName')?.value.trim() || '';
+        const phone = document.getElementById('newCustPhone')?.value.trim() || '';
+        const email = document.getElementById('newCustEmail')?.value.trim() || '';
+        const language = document.getElementById('newCustLanguage')?.value || '';
+        const saveBtn = document.getElementById('newPanelSaveCustomerBtn');
+
+        // Validation
+        if (!firstName) {
+            this.showCreateError('El nombre es requerido');
+            return;
+        }
+        if (!phone && !email) {
+            this.showCreateError('Se requiere telefono o email');
+            return;
+        }
+
+        // Disable button
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+
+        try {
+            const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+            const response = await fetch(`${this.panel.options.apiBaseUrl}/customers/create`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    customer_type: 'externo',
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone: phone,
+                    email: email,
+                    language: language,
+                    country_code: '+34'
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.customer) {
+                this.hideCreateCustomerForm();
+                this.handleNewCustomerCreated(result.customer);
+            } else {
+                this.showCreateError(result.error || 'Error al crear cliente');
+            }
+        } catch (error) {
+            console.error('Error creating customer:', error);
+            this.showCreateError('Error de conexion');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-check"></i> Crear Cliente';
+        }
+    }
+
+    /**
+     * Show error in create form
+     */
+    showCreateError(message) {
+        const errorEl = document.getElementById('newCustError');
+        if (errorEl) {
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 3000);
+        }
+    }
+
+    /**
+     * Handle newly created customer from inline form
+     */
+    handleNewCustomerCreated(customer) {
+        document.getElementById('newPanelCustomerId').value = customer.id;
+        document.getElementById('newPanelCustomerSource').value = 'customer';
+        this.state.selectedCustomer = customer;
+        this.state.selectedGuest = null;
+
+        // Show customer display
+        this.showCustomerDisplay(customer);
+
+        // Hide guest selector (external customers don't have room guests)
+        this.hideGuestSelector();
+
+        // Set num_people from the form if provided (only if not manually edited)
+        const numPeopleInput = document.getElementById('newPanelNumPeople');
+        if (customer.num_people && numPeopleInput && !this.panel.numPeopleManuallyEdited) {
+            numPeopleInput.value = customer.num_people;
+        }
+
+        // Clear preferences (new customer has no preferences yet)
+        this.panel.clearPreferences();
+
+        // Calculate pricing after customer creation
+        this.panel.pricingCalculator.calculateAndDisplayPricing();
+    }
+
+    /**
+     * Auto-fill preferences and notes from customer record
+     */
+    async autoFillCustomerData(customer) {
+        this.state.selectedCustomer = customer;
+
+        // Show customer display with details
+        this.showCustomerDisplay(customer);
+
+        // Clear current preferences first
+        this.panel.clearPreferences();
+
+        // If customer has preferences, activate matching chips
+        if (customer.preferences && customer.preferences.length > 0) {
+            customer.preferences.forEach(prefCode => {
+                const chip = document.querySelector(`#newPanelPreferenceChips .pref-chip[data-pref="${prefCode}"]`);
+                if (chip) {
+                    chip.classList.add('active');
+                    if (!this.panel.state.preferences.includes(prefCode)) {
+                        this.panel.state.preferences.push(prefCode);
+                    }
+                }
+            });
+            // Update hidden input
+            const prefsInput = document.getElementById('newPanelPreferences');
+            if (prefsInput) {
+                prefsInput.value = this.panel.state.preferences.join(',');
+            }
+        }
+
+        // Auto-fill notes from customer record
+        const notesInput = document.getElementById('newPanelNotes');
+        if (customer.notes && notesInput) {
+            let notes = customer.notes;
+            // If showing dates in UI, remove date patterns from notes (legacy data cleanup)
+            if (isInterno && customer.room_number) {
+                notes = notes
+                    .replace(/huesped\s+hotel\s*\([^)]*llegada[^)]*salida[^)]*\)/gi, '')
+                    .replace(/check[- ]?in:?\s*[\d\-\/]+/gi, '')
+                    .replace(/check[- ]?out:?\s*[\d\-\/]+/gi, '')
+                    .replace(/entrada:?\s*[\d\-\/]+/gi, '')
+                    .replace(/salida:?\s*[\d\-\/]+/gi, '')
+                    .replace(/llegada:?\s*[\d\-\/]+/gi, '')
+                    .replace(/\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}\s*[-–]\s*\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}/g, '')
+                    .replace(/\s*[,;]\s*[,;]\s*/g, ', ')
+                    .replace(/^\s*[,;]\s*/g, '')
+                    .replace(/\s*[,;]\s*$/g, '')
+                    .trim();
+            }
+            notesInput.value = notes;
+        }
+
+        // Calculate pricing after customer selection
+        this.panel.pricingCalculator.calculateAndDisplayPricing();
+
+        // For internal customers with a room number, fetch room guests
+        if (isInterno && customer.room_number) {
+            await this.fetchRoomGuests(customer);
+        } else {
+            // External customer - no guest selector
+            this.hideGuestSelector();
+            this.state.selectedGuest = null;
+        }
+    }
+
+    /**
+     * Fetch room guests for internal customer or hotel guest
+     */
+    async fetchRoomGuests(customer) {
+        try {
+            const response = await fetch(
+                `${this.panel.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(customer.room_number)}`
+            );
+            const data = await response.json();
+
+            this.state.roomGuests = data.guests || [];
+            const guestCount = data.guest_count || 1;
+
+            // If multiple guests in room, show the selector
+            if (guestCount > 1 && this.state.roomGuests.length > 1) {
+                // Find the matching guest based on customer name
+                const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim().toUpperCase();
+                let matchingGuest = this.state.roomGuests.find(g =>
+                    g.guest_name.toUpperCase() === customerName
+                );
+
+                // If no exact match, use main guest or first guest
+                if (!matchingGuest) {
+                    matchingGuest = this.state.roomGuests.find(g => g.is_main_guest) || this.state.roomGuests[0];
+                }
+
+                this.state.selectedGuest = matchingGuest;
+                this.showGuestSelector(matchingGuest, guestCount);
+
+                // Update display with hotel guest data (arrival/departure)
+                if (matchingGuest) {
+                    this.showCustomerDisplay({
+                        ...customer,
+                        arrival_date: matchingGuest.arrival_date,
+                        departure_date: matchingGuest.departure_date,
+                        booking_reference: matchingGuest.booking_reference,
+                        vip_code: matchingGuest.vip_code
+                    });
+                }
+            } else if (this.state.roomGuests.length === 1) {
+                // Single guest - update display with hotel data
+                const guest = this.state.roomGuests[0];
+                this.state.selectedGuest = guest;
+                this.hideGuestSelector();
+                this.showCustomerDisplay({
+                    ...customer,
+                    arrival_date: guest.arrival_date,
+                    departure_date: guest.departure_date,
+                    booking_reference: guest.booking_reference,
+                    vip_code: guest.vip_code
+                });
+            } else {
+                this.hideGuestSelector();
+                this.state.selectedGuest = null;
+            }
+
+            // Auto-set num_people based on guest count (only if not manually edited)
+            const capacity = this.panel.calculateCapacity();
+            const numPeopleInput = document.getElementById('newPanelNumPeople');
+            if (numPeopleInput && guestCount > 0 && !this.panel.numPeopleManuallyEdited) {
+                numPeopleInput.value = guestCount;
+            }
+
+            // Check capacity warning
+            if (guestCount > capacity) {
+                this.panel.showCapacityWarning(guestCount, capacity);
+            } else {
+                this.panel.hideCapacityWarning();
+            }
+
+        } catch (error) {
+            console.error('Error fetching room guests for customer:', error);
+            this.hideGuestSelector();
+            this.state.selectedGuest = null;
+        }
+    }
+
+    /**
+     * Show customer display with expanded details
+     */
+    showCustomerDisplay(customer) {
+        // Hide search wrapper, show customer display
+        const searchWrapper = document.getElementById('newPanelCustomerWrapper');
+        const customerDisplay = document.getElementById('newPanelCustomerDisplay');
+        const clearBtn = document.getElementById('newPanelCustomerClearBtn');
+
+        if (searchWrapper) searchWrapper.style.display = 'none';
+        if (customerDisplay) customerDisplay.style.display = 'block';
+        if (clearBtn) clearBtn.style.display = 'flex';
+
+        // Initials
+        const firstName = customer.first_name || customer.guest_name?.split(' ')[0] || '';
+        const lastName = customer.last_name || customer.guest_name?.split(' ').slice(1).join(' ') || '';
+        const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || '--';
+        const initialsEl = document.getElementById('newPanelCustomerInitials');
+        if (initialsEl) initialsEl.textContent = initials;
+
+        // Avatar class
+        const avatarEl = document.getElementById('newPanelCustomerAvatar');
+        if (avatarEl) {
+            avatarEl.className = 'customer-avatar';
+            if (customer.vip_status || customer.vip_code) {
+                avatarEl.classList.add('vip');
+            } else if (customer.customer_type === 'interno' || customer.source === 'hotel_guest') {
+                avatarEl.classList.add('interno');
+            }
+        }
+
+        // Name
+        const fullName = customer.display_name || customer.full_name ||
+            `${customer.first_name || ''} ${customer.last_name || ''}`.trim() ||
+            customer.guest_name || 'Sin nombre';
+        const nameEl = document.getElementById('newPanelCustomerName');
+        if (nameEl) nameEl.textContent = fullName;
+
+        // Meta (type badge, VIP, phone)
+        let meta = [];
+        if (customer.customer_type === 'interno' || customer.source === 'hotel_guest') {
+            meta.push('<span class="badge bg-info">Interno</span>');
+        } else {
+            meta.push('<span class="badge bg-secondary">Externo</span>');
+        }
+        if (customer.vip_status || customer.vip_code) {
+            meta.push('<i class="fas fa-star vip-badge"></i> VIP');
+        }
+        if (customer.phone) {
+            meta.push(`<i class="fas fa-phone"></i> ${customer.phone}`);
+        }
+        const metaEl = document.getElementById('newPanelCustomerMeta');
+        if (metaEl) {
+            metaEl.innerHTML = meta.join(' <span class="mx-1">•</span> ');
+        }
+
+        // Details grid
+        this.renderCustomerDetailsGrid(customer);
+    }
+
+    /**
+     * Render customer details inline (room, check-in, check-out, booking ref)
+     */
+    renderCustomerDetailsGrid(customer) {
+        // Room
+        const roomEl = document.getElementById('newPanelCustomerRoom');
+        const roomItem = document.getElementById('newPanelRoomItem');
+        if (roomEl) {
+            const room = customer.room_number;
+            if (room) {
+                roomEl.textContent = `Hab. ${room}`;
+                if (roomItem) roomItem.style.display = 'inline-flex';
+            } else {
+                if (roomItem) roomItem.style.display = 'none';
+            }
+        }
+
+        // Check-in date
+        const checkinEl = document.getElementById('newPanelCustomerCheckin');
+        const checkinItem = document.getElementById('newPanelCheckinItem');
+        if (checkinEl) {
+            const arrivalDate = customer.arrival_date;
+            if (arrivalDate) {
+                checkinEl.textContent = this.formatDateShort(arrivalDate);
+                if (checkinItem) checkinItem.style.display = 'inline-flex';
+            } else {
+                if (checkinItem) checkinItem.style.display = 'none';
+            }
+        }
+
+        // Check-out date
+        const checkoutEl = document.getElementById('newPanelCustomerCheckout');
+        const checkoutItem = document.getElementById('newPanelCheckoutItem');
+        if (checkoutEl) {
+            const departureDate = customer.departure_date;
+            if (departureDate) {
+                checkoutEl.textContent = this.formatDateShort(departureDate);
+                if (checkoutItem) checkoutItem.style.display = 'inline-flex';
+            } else {
+                if (checkoutItem) checkoutItem.style.display = 'none';
+            }
+        }
+
+        // Booking reference
+        const bookingEl = document.getElementById('newPanelCustomerBookingRef');
+        const bookingItem = document.getElementById('newPanelBookingItem');
+        if (bookingEl) {
+            const bookingRef = customer.booking_reference;
+            if (bookingRef) {
+                bookingEl.textContent = bookingRef;
+                if (bookingItem) bookingItem.style.display = 'inline-flex';
+            } else {
+                if (bookingItem) bookingItem.style.display = 'none';
+            }
+        }
+
+        // Hide details row if no details (external customer without hotel info)
+        const detailsGrid = document.getElementById('newPanelCustomerDetailsGrid');
+        if (detailsGrid) {
+            const hasDetails = customer.room_number || customer.arrival_date ||
+                               customer.departure_date || customer.booking_reference;
+            detailsGrid.style.display = hasDetails ? 'flex' : 'none';
+        }
+    }
+
+    /**
+     * Format date for display (short format: DD/MM)
+     */
+    formatDateShort(dateStr) {
+        if (!dateStr) return '-';
+        try {
+            const date = new Date(dateStr);
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            return `${day}/${month}`;
+        } catch (e) {
+            return dateStr;
+        }
+    }
+
+    /**
+     * Clear customer selection and show search again
+     */
+    clearCustomerSelection() {
+        // Clear state
+        document.getElementById('newPanelCustomerId').value = '';
+        document.getElementById('newPanelCustomerSource').value = 'customer';
+        this.state.selectedCustomer = null;
+        this.state.selectedGuest = null;
+
+        // Hide customer display, show search wrapper
+        const customerDisplay = document.getElementById('newPanelCustomerDisplay');
+        const searchWrapper = document.getElementById('newPanelCustomerWrapper');
+        const clearBtn = document.getElementById('newPanelCustomerClearBtn');
+
+        if (customerDisplay) customerDisplay.style.display = 'none';
+        if (searchWrapper) searchWrapper.style.display = 'block';
+        if (clearBtn) clearBtn.style.display = 'none';
+
+        // Clear and reset search
+        if (this.panel.customerSearch) {
+            this.panel.customerSearch.clear();
+        }
+
+        // Hide guest selector
+        this.hideGuestSelector();
+
+        // Clear notes
+        const notesInput = document.getElementById('newPanelNotes');
+        if (notesInput) notesInput.value = '';
+
+        // Clear preferences
+        this.panel.clearPreferences();
+
+        // Focus on search input
+        document.getElementById('newPanelCustomerSearch')?.focus();
+    }
+
+    /**
+     * Handle hotel guest selection - fetch room guests and populate selector
+     */
+    async handleHotelGuestSelect(guest) {
+        document.getElementById('newPanelCustomerId').value = guest.id;
+        document.getElementById('newPanelCustomerSource').value = 'hotel_guest';
+        this.state.selectedGuest = guest;
+
+        // Show customer display with guest details
+        this.showCustomerDisplay(guest);
+
+        // Hotel guests don't have preferences yet, clear them
+        this.panel.clearPreferences();
+
+        // But they may have notes from the PMS
+        const notesInput = document.getElementById('newPanelNotes');
+        if (guest.notes && notesInput) {
+            notesInput.value = guest.notes;
+        }
+
+        // Calculate pricing after hotel guest selection
+        this.panel.pricingCalculator.calculateAndDisplayPricing();
+
+        // Fetch all guests in the room
+        await this.fetchRoomGuestsForGuest(guest);
+    }
+
+    /**
+     * Fetch all room guests (for hotel guest selection)
+     */
+    async fetchRoomGuestsForGuest(guest) {
+        try {
+            const response = await fetch(
+                `${this.panel.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(guest.room_number)}`
+            );
+            const data = await response.json();
+
+            this.state.roomGuests = data.guests || [];
+            const guestCount = data.guest_count || 1;
+
+            // If multiple guests, show the selector
+            if (guestCount > 1 && this.state.roomGuests.length > 1) {
+                this.showGuestSelector(guest, guestCount);
+            } else {
+                this.hideGuestSelector();
+            }
+
+            // Auto-set num_people based on guest count (only if not manually edited)
+            const capacity = this.panel.calculateCapacity();
+            const numPeopleInput = document.getElementById('newPanelNumPeople');
+            if (numPeopleInput && !this.panel.numPeopleManuallyEdited) {
+                numPeopleInput.value = guestCount;
+            }
+
+            // Check if we need more furniture for all guests
+            if (guestCount > capacity) {
+                this.panel.showCapacityWarning(guestCount, capacity);
+            } else {
+                this.panel.hideCapacityWarning();
+            }
+
+        } catch (error) {
+            console.error('Error fetching room guests:', error);
+            this.hideGuestSelector();
+            // Set default num_people to 1 if fetch fails (only if not manually edited)
+            const numPeopleInput = document.getElementById('newPanelNumPeople');
+            if (numPeopleInput && !this.panel.numPeopleManuallyEdited) {
+                numPeopleInput.value = 1;
+            }
+        }
+    }
+
+    /**
+     * Show the guest selector dropdown
+     */
+    showGuestSelector(selectedGuest, guestCount) {
+        const selectorWrapper = document.getElementById('newPanelGuestSelectorWrapper');
+        const guestSelector = document.getElementById('newPanelGuestSelector');
+        const guestCountDisplay = document.getElementById('newPanelGuestCount');
+
+        if (!selectorWrapper || !guestSelector) return;
+
+        // Update guest count display
+        if (guestCountDisplay) {
+            guestCountDisplay.textContent = guestCount;
+        }
+
+        // Populate the selector with all room guests
+        guestSelector.innerHTML = this.state.roomGuests.map(g => {
+            const isSelected = g.id === selectedGuest.id;
+            const mainBadge = g.is_main_guest ? ' (Principal)' : '';
+            return `<option value="${g.id}" ${isSelected ? 'selected' : ''}>${g.guest_name}${mainBadge}</option>`;
+        }).join('');
+
+        // Show the wrapper
+        selectorWrapper.style.display = 'block';
+    }
+
+    /**
+     * Hide the guest selector
+     */
+    hideGuestSelector() {
+        const selectorWrapper = document.getElementById('newPanelGuestSelectorWrapper');
+        if (selectorWrapper) {
+            selectorWrapper.style.display = 'none';
+        }
+        this.state.roomGuests = [];
+    }
+
+    /**
+     * Handle guest selector change
+     */
+    onGuestSelectorChange() {
+        const guestSelector = document.getElementById('newPanelGuestSelector');
+        const selectedId = parseInt(guestSelector.value);
+        const guest = this.state.roomGuests.find(g => g.id === selectedId);
+
+        if (guest) {
+            document.getElementById('newPanelCustomerId').value = guest.id;
+            this.state.selectedGuest = guest;
+
+            // Update customer display with new guest info
+            this.showCustomerDisplay(guest);
+
+            // Update notes if the guest has any
+            const notesInput = document.getElementById('newPanelNotes');
+            if (notesInput) {
+                notesInput.value = guest.notes || '';
+            }
+        }
+    }
+}
+
+// --- date-availability.js ---
+/**
+ * DateAvailabilityHandler - Manages date picker and real-time availability checking
+ * SG-02: Real-time availability check when dates change
+ */
+class DateAvailabilityHandler {
+    constructor(panel) {
+        this.panel = panel;
+        this._availabilityCheckTimeout = null;
+    }
+
+    /**
+     * Initialize DatePicker for the panel
+     */
+    initDatePicker(date) {
+        const container = document.getElementById('newPanelDatePicker');
+        if (!container) return null;
+
+        // Destroy existing picker if any
+        if (this.panel.datePicker) {
+            this.panel.datePicker.destroy();
+        }
+
+        // Create new DatePicker with current date
+        const datePicker = new DatePicker({
+            container: container,
+            initialDates: [date],
+            onDateChange: (dates) => {
+                // SG-02: Real-time availability check when dates change
+                this.checkAvailabilityRealtime(dates);
+                // Calculate pricing when dates change
+                this.panel.pricingCalculator.calculateAndDisplayPricing();
+            }
+        });
+
+        return datePicker;
+    }
+
+    /**
+     * SG-02: Real-time availability check (called when dates change)
+     * Uses debouncing to avoid excessive API calls
+     */
+    checkAvailabilityRealtime(dates) {
+        // Clear any pending check
+        if (this._availabilityCheckTimeout) {
+            clearTimeout(this._availabilityCheckTimeout);
+        }
+
+        // Debounce: wait 300ms before checking
+        this._availabilityCheckTimeout = setTimeout(async () => {
+            if (!dates || dates.length === 0) return;
+
+            const furnitureIds = this.panel.state.selectedFurniture.map(f => f.id);
+            if (furnitureIds.length === 0) return;
+
+            try {
+                const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+                const response = await fetch(`${this.panel.options.apiBaseUrl}/reservations/check-availability`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        furniture_ids: furnitureIds,
+                        dates: dates
+                    })
+                });
+
+                if (!response.ok) return;
+
+                const result = await response.json();
+
+                if (!result.all_available && result.unavailable && result.unavailable.length > 0) {
+                    // Show inline warning in the furniture section
+                    this.showAvailabilityWarning(result.unavailable, dates);
+                } else {
+                    // Clear any existing warning
+                    this.clearAvailabilityWarning();
+                }
+            } catch (error) {
+                console.error('Real-time availability check error:', error);
+            }
+        }, 300);
+    }
+
+    /**
+     * Show inline availability warning in furniture section
+     */
+    showAvailabilityWarning(conflicts, selectedDates) {
+        const furnitureChips = document.getElementById('newPanelFurnitureChips');
+        if (!furnitureChips) return;
+
+        // Find or create warning element
+        let warningEl = furnitureChips.parentElement?.querySelector('.availability-warning');
+        if (!warningEl) {
+            warningEl = document.createElement('div');
+            warningEl.className = 'availability-warning';
+            furnitureChips.parentElement?.appendChild(warningEl);
+        }
+
+        // Get furniture numbers for display
+        const furnitureMap = {};
+        this.panel.state.selectedFurniture.forEach(f => {
+            furnitureMap[f.id] = f.number;
+        });
+
+        // Group conflicts by date
+        const conflictsByDate = {};
+        conflicts.forEach(c => {
+            if (!conflictsByDate[c.date]) conflictsByDate[c.date] = [];
+            conflictsByDate[c.date].push({
+                ...c,
+                furniture_number: furnitureMap[c.furniture_id] || `#${c.furniture_id}`
+            });
+        });
+
+        // Build warning message
+        const formatDate = (dateStr) => {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+        };
+
+        let warningHtml = '<i class="fas fa-exclamation-triangle"></i> ';
+        const conflictDates = Object.keys(conflictsByDate);
+
+        if (conflictDates.length === 1) {
+            const date = conflictDates[0];
+            const items = conflictsByDate[date];
+            warningHtml += `<strong>${items.map(i => i.furniture_number).join(', ')}</strong> ocupado el ${formatDate(date)}`;
+        } else {
+            warningHtml += `Mobiliario no disponible para ${conflictDates.length} fechas`;
+        }
+
+        warningEl.innerHTML = warningHtml;
+        warningEl.style.display = 'flex';
+    }
+
+    /**
+     * Clear availability warning
+     */
+    clearAvailabilityWarning() {
+        const furnitureChips = document.getElementById('newPanelFurnitureChips');
+        const warningEl = furnitureChips?.parentElement?.querySelector('.availability-warning');
+        if (warningEl) {
+            warningEl.style.display = 'none';
+        }
+    }
+
+    /**
+     * Show capacity warning when guest count exceeds furniture capacity
+     */
+    showCapacityWarning(guestCount, capacity) {
+        const furnitureSummary = document.getElementById('newPanelFurnitureSummary');
+        if (!furnitureSummary) return;
+
+        // Find or create warning element in furniture section
+        let warningEl = document.getElementById('newPanelCapacityWarning');
+        if (!warningEl) {
+            warningEl = document.createElement('div');
+            warningEl.id = 'newPanelCapacityWarning';
+            warningEl.className = 'capacity-warning';
+            furnitureSummary.parentElement?.appendChild(warningEl);
+        }
+
+        const needed = guestCount - capacity;
+        warningEl.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>
+                <strong>${guestCount} huespedes</strong> en la habitacion pero el mobiliario seleccionado
+                solo tiene capacidad para <strong>${capacity}</strong>.
+            </span>
+            <button type="button" class="btn-add-furniture" id="btnAddMoreFurniture">
+                <i class="fas fa-plus"></i> Agregar mobiliario
+            </button>
+        `;
+        warningEl.style.display = 'flex';
+
+        // Bind click event for add furniture button
+        const addBtn = document.getElementById('btnAddMoreFurniture');
+        addBtn?.addEventListener('click', () => this.triggerAddMoreFurniture(needed));
+    }
+
+    /**
+     * Hide capacity warning
+     */
+    hideCapacityWarning() {
+        const warningEl = document.getElementById('newPanelCapacityWarning');
+        if (warningEl) {
+            warningEl.style.display = 'none';
+        }
+    }
+
+    /**
+     * Trigger the add more furniture flow
+     */
+    triggerAddMoreFurniture(neededCapacity) {
+        const panel = document.getElementById('newReservationPanel');
+        const backdrop = document.getElementById('newReservationPanelBackdrop');
+
+        // Minimize the panel and hide backdrop to allow map interaction
+        panel.classList.add('minimized');
+        backdrop.classList.remove('show');
+
+        // Dispatch event to tell the map to enter furniture addition mode
+        document.dispatchEvent(new CustomEvent('reservation:addMoreFurniture', {
+            detail: {
+                currentFurniture: this.panel.state.selectedFurniture.map(f => f.id),
+                neededCapacity: neededCapacity,
+                currentDate: this.panel.state.currentDate
+            }
+        }));
+    }
+
+    /**
+     * Add furniture to the current selection (called from map)
+     */
+    addFurniture(furniture) {
+        // Add to selected furniture
+        furniture.forEach(f => {
+            if (!this.panel.state.selectedFurniture.find(sf => sf.id === f.id)) {
+                this.panel.state.selectedFurniture.push(f);
+            }
+        });
+
+        // Re-render furniture chips
+        this.panel.renderFurnitureChips();
+
+        // Check capacity again
+        const capacity = this.panel.calculateCapacity();
+        const numPeopleInput = document.getElementById('newPanelNumPeople');
+        const guestCount = this.panel.customerHandler.state.roomGuests.length ||
+                          parseInt(numPeopleInput?.value) || 2;
+
+        if (guestCount > capacity) {
+            this.showCapacityWarning(guestCount, capacity);
+        } else {
+            this.hideCapacityWarning();
+        }
+
+        // Restore panel and backdrop
+        const panel = document.getElementById('newReservationPanel');
+        const backdrop = document.getElementById('newReservationPanelBackdrop');
+        panel.classList.remove('minimized');
+        backdrop.classList.add('show');
+
+        // Calculate pricing after furniture changes
+        this.panel.pricingCalculator.calculateAndDisplayPricing();
+    }
+}
+
+// --- pricing-calculator.js ---
+/**
+ * PricingCalculator - Manages pricing calculations and display
+ * Handles package fetching, selection, price calculation, and manual editing
+ */
+class PricingCalculator {
+    constructor(panel) {
+        this.panel = panel;
+        this._lastCalculatedPrice = 0;
+        this._packageChangeHandler = null;
+
+        // Initialize price editing handlers
+        this.setupPriceEditing();
+    }
+
+    /**
+     * Fetch available packages based on reservation details
+     */
+    async fetchAvailablePackages(customerType, furnitureIds, reservationDate, numPeople) {
+        try {
+            console.log('[Pricing] Fetching available packages:', {customerType, furnitureIds, reservationDate, numPeople});
+            const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+            const response = await fetch(`${this.panel.options.apiBaseUrl}/pricing/packages/available`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    customer_type: customerType,
+                    furniture_ids: furnitureIds,
+                    reservation_date: reservationDate,
+                    num_people: numPeople
+                })
+            });
+
+            const result = await response.json();
+            console.log('[Pricing] Available packages:', result);
+
+            if (result.success) {
+                return result.packages || [];
+            }
+            return [];
+        } catch (error) {
+            console.error('[Pricing] Error fetching packages:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Update package selector UI with available options (compact dropdown)
+     */
+    updatePackageSelector(packages, customerType) {
+        const pricingTypeSelector = document.getElementById('newPanelPricingTypeSelector');
+        const pricingTypeSelect = document.getElementById('newPanelPricingTypeSelect');
+        const selectedPackageIdInput = document.getElementById('newPanelSelectedPackageId');
+
+        if (!pricingTypeSelector || !pricingTypeSelect) return;
+
+        // Hide selector if no packages available
+        if (!packages || packages.length === 0) {
+            pricingTypeSelector.style.display = 'none';
+            selectedPackageIdInput.value = '';
+            return;
+        }
+
+        // Check if we need to rebuild (packages changed)
+        const currentPackageIds = Array.from(pricingTypeSelect.options)
+            .map(opt => opt.value)
+            .filter(v => v !== '') // Exclude minimum consumption option
+            .sort()
+            .join(',');
+
+        const newPackageIds = packages.map(p => p.id.toString()).sort().join(',');
+
+        // If packages haven't changed, don't rebuild (preserve selection)
+        if (currentPackageIds === newPackageIds && pricingTypeSelect.options.length > 1) {
+            pricingTypeSelector.style.display = 'block';
+            return;
+        }
+
+        // Save current selection before rebuilding
+        const currentSelection = selectedPackageIdInput.value;
+
+        // Clear previous options (keep the default minimum consumption)
+        pricingTypeSelect.innerHTML = '<option value="">Consumo mínimo</option>';
+
+        // Add package options to dropdown
+        packages.forEach(pkg => {
+            const option = document.createElement('option');
+            option.value = pkg.id;
+            option.textContent = `${pkg.package_name} - €${pkg.calculated_price.toFixed(2)}`;
+            pricingTypeSelect.appendChild(option);
+        });
+
+        // Show selector
+        pricingTypeSelector.style.display = 'block';
+
+        // Add event listener for dropdown change
+        pricingTypeSelect.removeEventListener('change', this._packageChangeHandler); // Remove old listener
+        this._packageChangeHandler = () => {
+            const selectedValue = pricingTypeSelect.value;
+            selectedPackageIdInput.value = selectedValue;
+
+            console.log('[Pricing] Package changed to:', selectedValue || 'Consumo mínimo');
+            this.calculatePricingOnly();
+        };
+        pricingTypeSelect.addEventListener('change', this._packageChangeHandler);
+
+        // Restore previous selection or default to minimum consumption
+        if (currentSelection && pricingTypeSelect.querySelector(`option[value="${currentSelection}"]`)) {
+            pricingTypeSelect.value = currentSelection;
+            selectedPackageIdInput.value = currentSelection;
+        } else {
+            pricingTypeSelect.value = '';
+            selectedPackageIdInput.value = '';
+        }
+    }
+
+    /**
+     * Calculate pricing only (without refetching packages)
+     * Use when only the package selection changes
+     */
+    async calculatePricingOnly() {
+        const customerId = document.getElementById('newPanelCustomerId').value;
+        const customerSource = document.getElementById('newPanelCustomerSource')?.value || 'customer';
+        const furniture = this.panel.state.selectedFurniture.map(f => f.id);
+        const dates = this.panel.datePicker ? this.panel.datePicker.getSelectedDates() : [];
+        const numPeople = parseInt(document.getElementById('newPanelNumPeople')?.value) || 2;
+        const selectedPackageIdInput = document.getElementById('newPanelSelectedPackageId');
+
+        if (!customerId || furniture.length === 0 || dates.length === 0) {
+            return;
+        }
+
+        // Show loading
+        const pricingDisplay = document.getElementById('newPanelPricingDisplay');
+        const loadingEl = pricingDisplay?.querySelector('.pricing-loading');
+        const contentEl = pricingDisplay?.querySelector('.pricing-content');
+
+        if (loadingEl && contentEl) {
+            loadingEl.style.display = 'flex';
+            contentEl.style.display = 'none';
+        }
+
+        try {
+            const packageId = selectedPackageIdInput?.value || '';
+
+            const requestBody = {
+                customer_id: parseInt(customerId),
+                customer_source: customerSource,
+                furniture_ids: furniture,
+                reservation_date: dates[0],
+                num_people: numPeople
+            };
+
+            if (packageId) {
+                requestBody.package_id = parseInt(packageId);
+            }
+
+            const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+            const response = await fetch(`${this.panel.options.apiBaseUrl}/pricing/calculate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.updatePricingDisplay(result.pricing);
+            } else {
+                console.error('[Pricing] Calculation error:', result.error);
+            }
+        } catch (error) {
+            console.error('[Pricing] API error:', error);
+        } finally {
+            if (loadingEl && contentEl) {
+                loadingEl.style.display = 'none';
+                contentEl.style.display = 'flex';
+            }
+        }
+    }
+
+    /**
+     * Calculate and display pricing for current reservation
+     */
+    async calculateAndDisplayPricing() {
+        const customerId = document.getElementById('newPanelCustomerId').value;
+        const customerSource = document.getElementById('newPanelCustomerSource')?.value || 'customer';
+        const furniture = this.panel.state.selectedFurniture.map(f => f.id);
+        const dates = this.panel.datePicker ? this.panel.datePicker.getSelectedDates() : [];
+        const numPeople = parseInt(document.getElementById('newPanelNumPeople')?.value) || 2;
+        const selectedPackageIdInput = document.getElementById('newPanelSelectedPackageId');
+
+        console.log('[Pricing] Calculating pricing:', {customerId, customerSource, furniture, dates, numPeople});
+
+        // Clear if not enough data
+        if (!customerId || furniture.length === 0 || dates.length === 0) {
+            console.log('[Pricing] Not enough data, clearing display');
+            this.updatePricingDisplay(null);
+            this.updatePackageSelector([], customerSource);
+            return;
+        }
+
+        // Show loading
+        const pricingDisplay = document.getElementById('newPanelPricingDisplay');
+        const loadingEl = pricingDisplay?.querySelector('.pricing-loading');
+        const contentEl = pricingDisplay?.querySelector('.pricing-content');
+
+        if (loadingEl && contentEl) {
+            loadingEl.style.display = 'flex';
+            contentEl.style.display = 'none';
+        }
+
+        try {
+            // Determine customer type based on source and actual customer data
+            // Hotel guests are always 'interno'
+            // For beach_customers, use the actual customer_type from the customer record
+            let customerType;
+            if (customerSource === 'hotel_guest') {
+                customerType = 'interno';
+            } else {
+                // Try to get customer_type from the selected customer object
+                customerType = this.panel.customerHandler?.state?.selectedCustomer?.customer_type || 'externo';
+            }
+
+            console.log('[Pricing] Determined customer_type:', customerType);
+
+            // First, fetch available packages to populate the selector
+            const packages = await this.fetchAvailablePackages(
+                customerType,
+                furniture,
+                dates[0],
+                numPeople
+            );
+
+            // Update package selector UI (only if packages list changed)
+            this.updatePackageSelector(packages, customerType);
+
+            // Get selected package_id (empty string for minimum consumption)
+            const packageId = selectedPackageIdInput?.value || '';
+
+            console.log('[Pricing] Calling API:', `${this.panel.options.apiBaseUrl}/pricing/calculate`);
+            const requestBody = {
+                customer_id: parseInt(customerId),
+                customer_source: customerSource,
+                furniture_ids: furniture,
+                reservation_date: dates[0], // Use first date for pricing
+                num_people: numPeople
+            };
+
+            // Add package_id only if selected
+            if (packageId) {
+                requestBody.package_id = parseInt(packageId);
+            }
+
+            const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+            const response = await fetch(`${this.panel.options.apiBaseUrl}/pricing/calculate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            console.log('[Pricing] Response status:', response.status);
+            const result = await response.json();
+            console.log('[Pricing] Response data:', result);
+
+            if (result.success) {
+                this.updatePricingDisplay(result.pricing);
+            } else {
+                console.error('[Pricing] Calculation error:', result.error);
+                this.updatePricingDisplay(null);
+            }
+        } catch (error) {
+            console.error('[Pricing] API error:', error);
+            this.updatePricingDisplay(null);
+        } finally {
+            if (loadingEl && contentEl) {
+                loadingEl.style.display = 'none';
+                contentEl.style.display = 'flex';
+            }
+        }
+    }
+
+    /**
+     * Update pricing display UI (with editable price)
+     */
+    updatePricingDisplay(pricing) {
+        const priceInput = document.getElementById('newPanelFinalPriceInput');
+        const calculatedPriceEl = document.getElementById('newPanelCalculatedPrice');
+        const calculatedAmountEl = calculatedPriceEl?.querySelector('.calculated-amount');
+        const breakdownEl = document.getElementById('newPanelPricingBreakdown');
+        const priceOverrideInput = document.getElementById('newPanelPriceOverride');
+        const resetBtn = document.getElementById('newPanelPriceResetBtn');
+
+        if (!pricing) {
+            if (priceInput) priceInput.value = '0.00';
+            if (calculatedPriceEl) calculatedPriceEl.style.display = 'none';
+            if (breakdownEl) breakdownEl.style.display = 'none';
+            if (resetBtn) resetBtn.style.display = 'none';
+            if (priceOverrideInput) priceOverrideInput.value = '';
+            return;
+        }
+
+        const calculatedPrice = pricing.calculated_price.toFixed(2);
+
+        // Store calculated price for reference
+        this._lastCalculatedPrice = parseFloat(calculatedPrice);
+
+        // Update calculated price display
+        if (calculatedAmountEl) {
+            calculatedAmountEl.textContent = `€${calculatedPrice}`;
+        }
+
+        // Only update input if user hasn't manually overridden it
+        if (!priceOverrideInput?.value) {
+            if (priceInput) {
+                priceInput.value = calculatedPrice;
+                priceInput.classList.remove('modified');
+            }
+            if (calculatedPriceEl) calculatedPriceEl.style.display = 'none';
+            if (resetBtn) resetBtn.style.display = 'none';
+        } else {
+            // Show that price is modified
+            if (priceInput) priceInput.classList.add('modified');
+            if (calculatedPriceEl) calculatedPriceEl.style.display = 'block';
+            if (resetBtn) resetBtn.style.display = 'block';
+        }
+
+        // Show breakdown
+        if (breakdownEl && pricing.breakdown) {
+            breakdownEl.textContent = pricing.breakdown;
+            breakdownEl.style.display = 'block';
+        } else if (breakdownEl) {
+            breakdownEl.style.display = 'none';
+        }
+    }
+
+    /**
+     * Setup price editing handlers
+     */
+    setupPriceEditing() {
+        const priceInput = document.getElementById('newPanelFinalPriceInput');
+        const priceOverrideInput = document.getElementById('newPanelPriceOverride');
+        const resetBtn = document.getElementById('newPanelPriceResetBtn');
+        const calculatedPriceEl = document.getElementById('newPanelCalculatedPrice');
+
+        if (!priceInput) return;
+
+        // Handle manual price changes
+        priceInput.addEventListener('input', () => {
+            const manualPrice = parseFloat(priceInput.value) || 0;
+            const calculatedPrice = this._lastCalculatedPrice || 0;
+
+            if (Math.abs(manualPrice - calculatedPrice) > 0.01) {
+                // Price has been manually modified
+                priceInput.classList.add('modified');
+                priceOverrideInput.value = manualPrice.toFixed(2);
+                if (calculatedPriceEl) calculatedPriceEl.style.display = 'block';
+                if (resetBtn) resetBtn.style.display = 'block';
+            } else {
+                // Price matches calculated, remove override
+                priceInput.classList.remove('modified');
+                priceOverrideInput.value = '';
+                if (calculatedPriceEl) calculatedPriceEl.style.display = 'none';
+                if (resetBtn) resetBtn.style.display = 'none';
+            }
+        });
+
+        // Handle reset button
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                const calculatedPrice = this._lastCalculatedPrice || 0;
+                priceInput.value = calculatedPrice.toFixed(2);
+                priceInput.classList.remove('modified');
+                priceOverrideInput.value = '';
+                calculatedPriceEl.style.display = 'none';
+                resetBtn.style.display = 'none';
+            });
+        }
+    }
+}
+
+// --- conflict-resolver.js ---
+/**
+ * ConflictResolver - Handles multi-day furniture conflicts
+ * Shows conflict modal, navigates to conflict days, retries with per-day selections
+ */
+class ConflictResolver {
+    constructor(panel) {
+        this.panel = panel;
+        this.conflictModal = null;
+    }
+
+    /**
+     * Initialize the conflict resolution modal (lazy)
+     */
+    initConflictModal() {
+        if (this.conflictModal) return;
+
+        this.conflictModal = new ConflictResolutionModal({
+            onNavigateToDay: (date, conflicts) => {
+                this.handleNavigateToConflictDay(date, conflicts);
+            },
+            onRetry: (furnitureByDate) => {
+                this.retryWithPerDayFurniture(furnitureByDate);
+            },
+            onCancel: () => {
+                this.panel.state.conflictResolutionMode = false;
+                const panelEl = document.getElementById('newReservationPanel');
+                panelEl.classList.remove('minimized');
+            },
+            onRemoveDate: (date) => {
+                // Update the DatePicker when a date is removed from conflict modal
+                if (this.panel.datePicker) {
+                    this.panel.datePicker.removeDate(date);
+                }
+            }
+        });
+    }
+
+    /**
+     * Handle conflict error from API - show the conflict modal
+     */
+    handleConflictError(result, selectedDates) {
+        this.initConflictModal();
+
+        const originalFurniture = this.panel.state.selectedFurniture.map(f => f.id);
+
+        // Save customer data for retry - the DOM might get reset during conflict resolution
+        this.panel.state.savedCustomerForRetry = {
+            customerId: document.getElementById('newPanelCustomerId').value,
+            customerSource: document.getElementById('newPanelCustomerSource').value,
+            selectedGuest: this.panel.customerHandler.state.selectedGuest,
+            selectedCustomer: this.panel.customerHandler.state.selectedCustomer,
+            chargeToRoom: document.getElementById('newPanelChargeToRoom')?.checked || false,
+            numPeople: parseInt(document.getElementById('newPanelNumPeople').value) || 2,
+            notes: document.getElementById('newPanelNotes')?.value || '',
+            preferences: [...this.panel.state.preferences]
+        };
+
+        this.conflictModal.show(
+            result.unavailable,
+            selectedDates,
+            originalFurniture
+        );
+
+        this.panel.state.conflictResolutionMode = true;
+    }
+
+    /**
+     * Handle navigation to a conflict day - minimize panel and navigate map
+     */
+    handleNavigateToConflictDay(date, conflicts) {
+        const panelEl = document.getElementById('newReservationPanel');
+        // Minimize the panel
+        panelEl.classList.add('minimized');
+
+        // Get original selection for this date (or all furniture if not set)
+        const originalSelection = this.panel.state.furnitureByDate[date] ||
+                                  this.panel.state.selectedFurniture.map(f => f.id);
+
+        // Build furniture number map for display
+        const furnitureMap = {};
+        this.panel.state.selectedFurniture.forEach(f => {
+            furnitureMap[f.id] = f.number;
+        });
+
+        // Enhance conflicts with furniture numbers
+        const enhancedConflicts = conflicts.map(c => ({
+            ...c,
+            furniture_number: c.furniture_number || furnitureMap[c.furniture_id] || `#${c.furniture_id}`
+        }));
+
+        // Dispatch event to tell the map to navigate and enter selection mode
+        document.dispatchEvent(new CustomEvent('conflictResolution:selectAlternative', {
+            detail: {
+                date: date,
+                conflicts: enhancedConflicts,
+                currentSelection: originalSelection,
+                originalCount: originalSelection.length,  // Total furniture to select
+                conflictingLabels: enhancedConflicts.map(c => c.furniture_number).join(', ')
+            }
+        }));
+    }
+
+    /**
+     * Retry creating reservation with per-day furniture selections
+     */
+    async retryWithPerDayFurniture(furnitureByDate) {
+        const selectedDates = Object.keys(furnitureByDate).sort();
+
+        if (selectedDates.length === 0) {
+            this.panel.showToast('No hay fechas seleccionadas', 'warning');
+            return;
+        }
+
+        // Validate all dates have furniture selections
+        const missingDates = selectedDates.filter(d => !furnitureByDate[d]?.length);
+        if (missingDates.length > 0) {
+            this.panel.showToast('Selecciona mobiliario para todas las fechas', 'warning');
+            return;
+        }
+
+        // Show loading state
+        const createBtn = document.getElementById('newPanelCreateBtn');
+        createBtn.disabled = true;
+        createBtn.querySelector('.save-text').style.display = 'none';
+        createBtn.querySelector('.save-loading').style.display = 'flex';
+
+        try {
+            // Use saved customer data from conflict resolution - PRIORITIZE saved values
+            // because DOM might have been reset during conflict resolution flow
+            const saved = this.panel.state.savedCustomerForRetry || {};
+
+            // In conflict resolution, always use saved data if available
+            const customerId = saved.customerId || document.getElementById('newPanelCustomerId').value;
+            const customerSource = saved.customerSource || document.getElementById('newPanelCustomerSource').value || 'customer';
+
+            console.log('[RetryReservation] Customer data:', {
+                savedCustomerId: saved.customerId,
+                domCustomerId: document.getElementById('newPanelCustomerId').value,
+                finalCustomerId: customerId,
+                savedSource: saved.customerSource,
+                domSource: document.getElementById('newPanelCustomerSource').value,
+                finalSource: customerSource
+            });
+
+            if (!customerId) {
+                throw new Error('Cliente requerido');
+            }
+
+            let finalCustomerId = parseInt(customerId);
+
+            // If hotel guest, convert to beach customer first
+            if (customerSource === 'hotel_guest') {
+                const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+                const convertResponse = await fetch(`${this.panel.options.apiBaseUrl}/customers/from-hotel-guest`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        hotel_guest_id: finalCustomerId
+                    })
+                });
+
+                const convertData = await convertResponse.json();
+
+                if (!convertData.success) {
+                    throw new Error(convertData.error || 'Error al convertir huesped a cliente');
+                }
+
+                finalCustomerId = convertData.customer.id;
+            }
+
+            // Build payload with furniture_by_date, using saved values as fallback
+            const numPeople = parseInt(document.getElementById('newPanelNumPeople').value) || saved.numPeople || 2;
+            const notes = document.getElementById('newPanelNotes')?.value?.trim() || saved.notes || '';
+            const preferences = this.panel.state.preferences?.length > 0 ? this.panel.state.preferences : (saved.preferences || []);
+            const chargeToRoom = document.getElementById('newPanelChargeToRoom')?.checked ?? saved.chargeToRoom ?? false;
+
+            const payload = {
+                customer_id: finalCustomerId,
+                dates: selectedDates,
+                furniture_by_date: furnitureByDate,  // Per-day furniture selections
+                num_people: numPeople,
+                time_slot: 'all_day',
+                notes: notes,
+                preferences: preferences,
+                charge_to_room: chargeToRoom
+            };
+
+            const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+            const response = await fetch(`${this.panel.options.apiBaseUrl}/map/quick-reservation`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.panel.showToast(result.message || 'Reserva creada exitosamente', 'success');
+                this.panel.state.conflictResolutionMode = false;
+                this.panel.state.savedCustomerForRetry = null;  // Clear saved data after success
+                const panelEl = document.getElementById('newReservationPanel');
+                panelEl.classList.remove('minimized');
+                this.panel.close();
+
+                // Notify callback
+                if (this.panel.options.onSave) {
+                    this.panel.options.onSave(result.reservation);
+                }
+            } else {
+                // Still conflicts? Show modal again
+                if (result.unavailable && result.unavailable.length > 0) {
+                    const originalFurniture = Object.values(furnitureByDate)[0] || [];
+                    this.conflictModal.show(
+                        result.unavailable,
+                        selectedDates,
+                        originalFurniture
+                    );
+                } else {
+                    throw new Error(result.error || 'Error al crear reserva');
+                }
+            }
+
+        } catch (error) {
+            console.error('Retry reservation error:', error);
+            this.panel.showToast(error.message, 'error');
+        } finally {
+            // Reset button state
+            const createBtn = document.getElementById('newPanelCreateBtn');
+            createBtn.disabled = false;
+            createBtn.querySelector('.save-text').style.display = 'inline';
+            createBtn.querySelector('.save-loading').style.display = 'none';
+        }
+    }
+}
+
+// --- safeguard-checks.js ---
+/**
+ * SafeguardChecks - Validation checks before creating reservations
+ * SG-01: Duplicate reservation check
+ * SG-02: Furniture availability check
+ * SG-03: Hotel stay dates validation
+ * SG-04: Capacity mismatch warnings
+ * SG-05: Past dates error
+ * SG-07: Furniture contiguity check
+ */
+class SafeguardChecks {
+    constructor(panel) {
+        this.panel = panel;
+    }
+
+    /**
+     * Run all safeguard checks before creating reservation
+     * @returns {Object} { proceed: boolean, viewExisting: number|null }
+     */
+    async runSafeguardChecks(customerId, customerSource, selectedDates) {
+        // SG-05: Check for past dates
+        const pastDateResult = await this.checkPastDates(selectedDates);
+        if (!pastDateResult.proceed) {
+            return { proceed: false };
+        }
+
+        // SG-03: Check hotel stay dates (only for hotel guests)
+        if (customerSource === 'hotel_guest' && this.panel.customerHandler.state.selectedGuest) {
+            const hotelStayResult = await this.checkHotelStayDates(selectedDates);
+            if (!hotelStayResult.proceed) {
+                return { proceed: false };
+            }
+        }
+
+        // SG-04: Check capacity mismatch
+        const capacityResult = await this.checkCapacityMismatch();
+        if (!capacityResult.proceed) {
+            return { proceed: false };
+        }
+
+        // SG-02: Check furniture availability
+        const availabilityResult = await this.checkFurnitureAvailability(selectedDates);
+        if (!availabilityResult.proceed) {
+            return { proceed: false };
+        }
+
+        // SG-01: Check for duplicate reservation
+        const duplicateResult = await this.checkDuplicateReservation(customerId, customerSource, selectedDates);
+        if (!duplicateResult.proceed) {
+            if (duplicateResult.viewExisting) {
+                // User wants to view existing reservation
+                return { proceed: false, viewExisting: duplicateResult.viewExisting };
+            }
+            return { proceed: false };
+        }
+
+        // SG-07: Check furniture contiguity (only for multiple furniture)
+        if (this.panel.state.selectedFurniture.length > 1) {
+            const contiguityResult = await this.checkFurnitureContiguity(selectedDates[0]);
+            if (!contiguityResult.proceed) {
+                return { proceed: false };
+            }
+        }
+
+        return { proceed: true };
+    }
+
+    /**
+     * SG-05: Check for past dates
+     */
+    async checkPastDates(selectedDates) {
+        const today = new Date().toISOString().split('T')[0];
+        const pastDates = selectedDates.filter(d => d < today);
+
+        if (pastDates.length > 0) {
+            await SafeguardModal.showPastDateError(pastDates);
+            return { proceed: false };
+        }
+
+        return { proceed: true };
+    }
+
+    /**
+     * SG-03: Check if selected dates are within hotel guest's stay
+     */
+    async checkHotelStayDates(selectedDates) {
+        const guest = this.panel.customerHandler.state.selectedGuest;
+        if (!guest || !guest.arrival_date || !guest.departure_date) {
+            return { proceed: true }; // No hotel dates to check
+        }
+
+        // Normalize dates to YYYY-MM-DD for consistent comparison
+        const normalizeDate = (dateStr) => {
+            if (!dateStr) return null;
+            // Handle ISO format (2025-12-21T00:00:00) or plain date
+            return dateStr.split('T')[0];
+        };
+
+        const arrivalDate = normalizeDate(guest.arrival_date);
+        const departureDate = normalizeDate(guest.departure_date);
+
+        if (!arrivalDate || !departureDate) {
+            return { proceed: true }; // Invalid dates, skip check
+        }
+
+        const outOfRangeDates = selectedDates.filter(date => {
+            const normalizedDate = normalizeDate(date);
+            return normalizedDate < arrivalDate || normalizedDate > departureDate;
+        });
+
+        if (outOfRangeDates.length > 0) {
+            const action = await SafeguardModal.showHotelStayWarning(guest, outOfRangeDates);
+
+            if (action === 'proceed') {
+                return { proceed: true };
+            }
+            return { proceed: false };
+        }
+
+        return { proceed: true };
+    }
+
+    /**
+     * SG-04: Check if num_people exceeds furniture capacity
+     * SG-04b: Check if furniture capacity exceeds num_people
+     */
+    async checkCapacityMismatch() {
+        const numPeople = parseInt(document.getElementById('newPanelNumPeople')?.value) || 2;
+        const capacity = this.panel.calculateCapacity();
+
+        // SG-04: More people than furniture capacity
+        if (numPeople > capacity) {
+            const action = await SafeguardModal.showCapacityWarning(numPeople, capacity);
+
+            if (action === 'adjust') {
+                document.getElementById('newPanelNumPeople').value = capacity;
+                return { proceed: true };
+            } else if (action === 'keep') {
+                return { proceed: true };
+            }
+            return { proceed: false };
+        }
+
+        // SG-04b: More furniture capacity than people (excess sunbeds)
+        if (capacity > numPeople) {
+            const action = await SafeguardModal.showExcessCapacityWarning(numPeople, capacity);
+
+            if (action === 'proceed') {
+                return { proceed: true };
+            }
+            return { proceed: false };
+        }
+
+        return { proceed: true };
+    }
+
+    /**
+     * SG-02: Check furniture availability for selected dates
+     */
+    async checkFurnitureAvailability(selectedDates) {
+        try {
+            const furnitureIds = this.panel.state.selectedFurniture.map(f => f.id);
+
+            if (furnitureIds.length === 0 || selectedDates.length === 0) {
+                return { proceed: true };
+            }
+
+            const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+            const response = await fetch(`${this.panel.options.apiBaseUrl}/reservations/check-availability`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    furniture_ids: furnitureIds,
+                    dates: selectedDates
+                })
+            });
+
+            if (!response.ok) {
+                console.error('Availability check failed:', response.status);
+                return { proceed: true }; // Fail open
+            }
+
+            const result = await response.json();
+
+            if (!result.all_available && result.unavailable && result.unavailable.length > 0) {
+                console.log('[Safeguard] Furniture conflicts found:', result.unavailable);
+
+                // Get furniture numbers for display
+                const furnitureMap = {};
+                this.panel.state.selectedFurniture.forEach(f => {
+                    furnitureMap[f.id] = f.number;
+                });
+
+                // Enhance conflict data with furniture numbers
+                const conflicts = result.unavailable.map(c => ({
+                    ...c,
+                    furniture_number: furnitureMap[c.furniture_id] || `#${c.furniture_id}`
+                }));
+
+                // For multi-day reservations, use the Conflict Resolution Modal
+                // which allows selecting alternative furniture per day
+                if (selectedDates.length > 1) {
+                    // Trigger the conflict resolution flow
+                    this.panel.conflictResolver.handleConflictError({ unavailable: conflicts }, selectedDates);
+                    return { proceed: false, conflictResolution: true };
+                }
+
+                // For single-day reservations, show simple error modal
+                await SafeguardModal.showFurnitureConflictError(conflicts);
+                return { proceed: false };
+            }
+
+            return { proceed: true };
+
+        } catch (error) {
+            console.error('Furniture availability check error:', error);
+            // On error, allow to proceed (fail open)
+            return { proceed: true };
+        }
+    }
+
+    /**
+     * SG-07: Check if selected furniture is contiguous (no gaps with occupied furniture)
+     */
+    async checkFurnitureContiguity(date) {
+        try {
+            const furnitureIds = this.panel.state.selectedFurniture.map(f => f.id);
+
+            // Only check contiguity when multiple furniture selected
+            if (furnitureIds.length <= 1) {
+                return { proceed: true };
+            }
+
+            const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+            const response = await fetch(`${this.panel.options.apiBaseUrl}/reservations/validate-contiguity`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    furniture_ids: furnitureIds,
+                    date: date
+                })
+            });
+
+            if (!response.ok) {
+                console.error('Contiguity check failed:', response.status);
+                return { proceed: true }; // Fail open
+            }
+
+            const result = await response.json();
+
+            // If not contiguous, show warning
+            if (!result.is_contiguous && result.gap_count > 0) {
+                console.log('[Safeguard] Non-contiguous furniture detected:', result);
+
+                const action = await SafeguardModal.showContiguityWarning(result);
+
+                if (action === 'proceed') {
+                    return { proceed: true };
+                }
+                return { proceed: false };
+            }
+
+            return { proceed: true };
+
+        } catch (error) {
+            console.error('Contiguity check error:', error);
+            // On error, allow to proceed (fail open)
+            return { proceed: true };
+        }
+    }
+
+    /**
+     * SG-01: Check for duplicate reservation (same customer, same date)
+     */
+    async checkDuplicateReservation(customerId, customerSource, selectedDates) {
+        try {
+            // Build query params
+            const params = new URLSearchParams();
+
+            if (customerSource === 'hotel_guest') {
+                params.append('hotel_guest_id', customerId);
+            } else {
+                params.append('customer_id', customerId);
+            }
+
+            // Check each date
+            for (const date of selectedDates) {
+                params.set('date', date);
+
+                const response = await fetch(
+                    `${this.panel.options.apiBaseUrl}/reservations/check-duplicate?${params.toString()}`
+                );
+
+                if (!response.ok) continue;
+
+                const result = await response.json();
+
+                if (result.has_duplicate && result.existing_reservation) {
+                    console.log('[Safeguard] Duplicate found:', result.existing_reservation);
+                    const action = await SafeguardModal.showDuplicateWarning(result.existing_reservation);
+                    console.log('[Safeguard] User action:', action);
+
+                    if (action === 'proceed') {
+                        console.log('[Safeguard] User chose to proceed with duplicate');
+                        return { proceed: true };
+                    } else if (action === 'view') {
+                        console.log('[Safeguard] User chose to view existing');
+                        this.panel.close();
+                        return { proceed: false, viewExisting: result.existing_reservation.id };
+                    }
+                    console.log('[Safeguard] User cancelled duplicate creation');
+                    return { proceed: false };
+                }
+            }
+
+            return { proceed: true };
+
+        } catch (error) {
+            console.error('Duplicate check error:', error);
+            // On error, allow to proceed (fail open)
+            return { proceed: true };
+        }
+    }
+}
+
+// --- panel-core.js ---
+/**
+ * NewReservationPanel - Main panel coordinator
+ * Integrates all specialized modules for creating reservations
+ *
+ * Module Architecture:
+ * - CustomerHandler: Customer selection, creation, display
+ * - DateAvailabilityHandler: Date picker, availability checks
+ * - PricingCalculator: Pricing fetch, display, editing
+ * - ConflictResolver: Conflict modal, per-day selections
+ * - SafeguardChecks: All validation checks (SG-01 to SG-07)
+ *
+ * Dependencies (must be loaded before this file):
+ * - customer-handler.js
+ * - date-availability.js
+ * - pricing-calculator.js
+ * - conflict-resolver.js
+ * - safeguard-checks.js
+ */
+
+class NewReservationPanel {
+    constructor(options = {}) {
+        this.options = {
+            apiBaseUrl: '/beach/api',
+            onSave: null,
+            onCancel: null,
+            ...options
+        };
+
+        // State
+        this.state = {
+            isOpen: false,
+            selectedFurniture: [],
+            currentDate: null,
+            preferences: [],
+            selectedTags: [],
+            conflictResolutionMode: false,
+            furnitureByDate: {},   // {date: [furniture_ids]} - per-day selections
+            savedCustomerForRetry: null,  // Saved customer data during conflict resolution
+            waitlistEntryId: null  // Track waitlist entry ID for conversion
+        };
+
+        // Available characteristics (loaded from API)
+        this.availableCharacteristics = [];
+
+        // Cache DOM elements
+        this.cacheElements();
+
+        // CSRF token
+        this.csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+
+        // Initialize modules
+        this.customerHandler = new CustomerHandler(this);
+        this.dateAvailabilityHandler = new DateAvailabilityHandler(this);
+        this.pricingCalculator = new PricingCalculator(this);
+        this.conflictResolver = new ConflictResolver(this);
+        this.safeguardChecks = new SafeguardChecks(this);
+
+        // Shared components (initialized on first open)
+        this.customerSearch = null;
+        this.datePicker = null;
+
+        // Setup event listeners
+        this.setupEventListeners();
+        this.initCustomerSearch();
+    }
+
+    /**
+     * Cache DOM elements for quick access
+     */
+    cacheElements() {
+        this.panel = document.getElementById('newReservationPanel');
+        this.backdrop = document.getElementById('newReservationPanelBackdrop');
+
+        if (!this.panel || !this.backdrop) {
+            console.warn('NewReservationPanel: Required elements not found');
+            return;
+        }
+
+        // Furniture elements
+        this.dateDisplay = document.getElementById('newPanelDate');
+        this.furnitureChips = document.getElementById('newPanelFurnitureChips');
+        this.furnitureSummary = document.getElementById('newPanelFurnitureSummary');
+
+        // Details elements
+        this.numPeopleInput = document.getElementById('newPanelNumPeople');
+        this.notesInput = document.getElementById('newPanelNotes');
+        this.preferencesInput = document.getElementById('newPanelPreferences');
+        this.preferenceChipsContainer = document.getElementById('newPanelPreferenceChips');
+        this.tagChipsContainer = document.getElementById('newPanelTagChips');
+
+        // Buttons
+        this.closeBtn = document.getElementById('newPanelCloseBtn');
+        this.collapseBtn = document.getElementById('newReservationCollapseBtn');
+        this.collapseBtnHeader = document.getElementById('newReservationCollapseBtnHeader');
+        this.cancelBtn = document.getElementById('newPanelCancelBtn');
+        this.createBtn = document.getElementById('newPanelCreateBtn');
+    }
+
+    /**
+     * Initialize CustomerSearch component
+     */
+    initCustomerSearch() {
+        const searchInput = document.getElementById('newPanelCustomerSearch');
+        const resultsContainer = document.getElementById('newPanelCustomerResults');
+
+        if (searchInput && resultsContainer) {
+            this.customerSearch = new CustomerSearch({
+                inputElement: searchInput,
+                resultsContainer: resultsContainer,
+                apiUrl: `${this.options.apiBaseUrl}/customers/search`,
+                compact: true,
+                showCreateLink: false,
+                showInlineCreate: true,
+                onSelect: (customer) => {
+                    document.getElementById('newPanelCustomerId').value = customer.id;
+                    document.getElementById('newPanelCustomerSource').value = 'customer';
+                    this.customerHandler.autoFillCustomerData(customer);
+                },
+                onHotelGuestSelect: (guest) => {
+                    this.customerHandler.handleHotelGuestSelect(guest);
+                },
+                onShowCreateForm: (prefillData) => {
+                    this.customerHandler.showCreateCustomerForm(prefillData);
+                }
+            });
+        }
+    }
+
+    /**
+     * Load available characteristics from API
+     */
+    async loadCharacteristics() {
+        try {
+            const response = await fetch(`${this.options.apiBaseUrl}/preferences`);
+            if (response.ok) {
+                const result = await response.json();
+                this.availableCharacteristics = result.preferences || [];
+                this.renderPreferenceChips();
+            }
+        } catch (error) {
+            console.warn('Could not load characteristics:', error);
+            if (this.preferenceChipsContainer) {
+                this.preferenceChipsContainer.innerHTML =
+                    '<span class="text-muted small">Error al cargar preferencias</span>';
+            }
+        }
+    }
+
+    /**
+     * Render preference chips dynamically
+     */
+    renderPreferenceChips() {
+        if (!this.preferenceChipsContainer) return;
+
+        if (this.availableCharacteristics.length === 0) {
+            this.preferenceChipsContainer.innerHTML =
+                '<span class="text-muted small">No hay preferencias disponibles</span>';
+            return;
+        }
+
+        const chipsHtml = this.availableCharacteristics.map(char => {
+            // Normalize icon class
+            let icon = char.icon || 'fa-star';
+            if (!icon.startsWith('fas ') && !icon.startsWith('far ') && !icon.startsWith('fab ')) {
+                icon = 'fas ' + icon;
+            }
+            const isActive = this.state.preferences.includes(char.code);
+            return `
+                <button type="button" class="pref-chip ${isActive ? 'active' : ''}" data-pref="${char.code}">
+                    <i class="${icon}"></i> ${char.name}
+                </button>
+            `;
+        }).join('');
+
+        this.preferenceChipsContainer.innerHTML = chipsHtml;
+    }
+
+    /**
+     * Load available tags from API
+     */
+    async loadTags() {
+        try {
+            const response = await fetch(`${this.options.apiBaseUrl}/tags`);
+            if (response.ok) {
+                const result = await response.json();
+                this.availableTags = result.tags || [];
+                this.renderTagChips();
+            }
+        } catch (error) {
+            console.warn('Could not load tags:', error);
+            if (this.tagChipsContainer) {
+                this.tagChipsContainer.innerHTML =
+                    '<span class="text-muted small">Error al cargar etiquetas</span>';
+            }
+        }
+    }
+
+    /**
+     * Render tag chips dynamically
+     */
+    renderTagChips() {
+        if (!this.tagChipsContainer) return;
+
+        if (!this.availableTags || this.availableTags.length === 0) {
+            this.tagChipsContainer.innerHTML =
+                '<span class="text-muted small">No hay etiquetas disponibles</span>';
+            return;
+        }
+
+        const chipsHtml = this.availableTags.map(tag => {
+            const isActive = this.state.selectedTags.includes(tag.id);
+            const color = tag.color || '#6C757D';
+            return `
+                <button type="button" class="tag-chip ${isActive ? 'active' : ''}"
+                        data-tag-id="${tag.id}" style="--tag-color: ${color};">
+                    <i class="fas fa-tag"></i> ${tag.name}
+                </button>
+            `;
+        }).join('');
+
+        this.tagChipsContainer.innerHTML = chipsHtml;
+    }
+
+    /**
+     * Toggle tag chip
+     */
+    toggleTag(chip) {
+        const tagId = parseInt(chip.dataset.tagId);
+        chip.classList.toggle('active');
+
+        if (chip.classList.contains('active')) {
+            if (!this.state.selectedTags.includes(tagId)) {
+                this.state.selectedTags.push(tagId);
+            }
+        } else {
+            this.state.selectedTags = this.state.selectedTags.filter(id => id !== tagId);
+        }
+    }
+
+    /**
+     * Setup event listeners
+     */
+    setupEventListeners() {
+        // Close buttons
+        this.closeBtn?.addEventListener('click', () => this.close());
+        this.cancelBtn?.addEventListener('click', () => this.close());
+        this.backdrop?.addEventListener('click', () => this.close());
+
+        // Collapse buttons
+        this.collapseBtn?.addEventListener('click', () => this.toggleCollapse());
+        this.collapseBtnHeader?.addEventListener('click', () => this.toggleCollapse());
+
+        // Create button
+        this.createBtn?.addEventListener('click', () => this.createReservation());
+
+        // Customer clear button
+        const clearBtn = document.getElementById('newPanelCustomerClearBtn');
+        clearBtn?.addEventListener('click', () => this.customerHandler.clearCustomerSelection());
+
+        // Guest selector change
+        const guestSelector = document.getElementById('newPanelGuestSelector');
+        guestSelector?.addEventListener('change', () => this.customerHandler.onGuestSelectorChange());
+
+        // Preference chips - use event delegation for dynamic chips
+        this.preferenceChipsContainer?.addEventListener('click', (e) => {
+            const chip = e.target.closest('.pref-chip');
+            if (chip) {
+                this.togglePreference(chip);
+            }
+        });
+
+        // Tag chips - use event delegation for dynamic chips
+        this.tagChipsContainer?.addEventListener('click', (e) => {
+            const chip = e.target.closest('.tag-chip');
+            if (chip) {
+                this.toggleTag(chip);
+            }
+        });
+
+        // Load available characteristics and tags
+        this.loadCharacteristics();
+        this.loadTags();
+
+        // Keyboard: Escape to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.state.isOpen) {
+                this.close();
+            }
+        });
+
+        // Track manual edits to num_people
+        this.numPeopleManuallyEdited = false;
+
+        // Track changes to num_people for pricing calculation
+        this.numPeopleInput?.addEventListener('change', () => {
+            // Mark as manually edited when user changes the value
+            this.numPeopleManuallyEdited = true;
+
+            // Calculate pricing when num_people changes
+            this.pricingCalculator.calculateAndDisplayPricing();
+
+            // Show capacity warning if exceeded (but don't prevent it)
+            const capacity = this.calculateCapacity();
+            const numPeople = parseInt(this.numPeopleInput.value) || 0;
+            if (numPeople > capacity) {
+                this.showCapacityWarning(numPeople, capacity);
+            } else {
+                this.hideCapacityWarning();
+            }
+        });
+
+        // Also track input events (typing) as manual edits
+        this.numPeopleInput?.addEventListener('input', () => {
+            this.numPeopleManuallyEdited = true;
+        });
+    }
+
+    /**
+     * Open the panel with selected furniture
+     */
+    open(furniture, date) {
+        if (!furniture || furniture.length === 0) {
+            this.showToast('Selecciona mobiliario primero', 'warning');
+            return;
+        }
+
+        // Set state
+        this.state.isOpen = true;
+        this.state.selectedFurniture = furniture;
+        this.state.currentDate = date;
+        this.state.preferences = [];
+        this.state.selectedTags = [];
+
+        // Notify modal state manager (closes other modals, bottom bar, controls map)
+        if (window.modalStateManager) {
+            window.modalStateManager.openModal('new-reservation', this);
+        }
+
+        // Reset manual edit flag when opening new reservation
+        this.numPeopleManuallyEdited = false;
+
+        // Reset form
+        this.resetForm();
+
+        // Populate furniture chips
+        this.renderFurnitureChips();
+
+        // Set date display
+        this.dateDisplay.textContent = this.formatDateDisplay(date);
+
+        // Initialize DatePicker with current date
+        this.datePicker = this.dateAvailabilityHandler.initDatePicker(date);
+
+        // Set default num_people based on capacity
+        const capacity = this.calculateCapacity();
+        this.numPeopleInput.value = Math.min(2, capacity);
+
+        // Show panel
+        this.panel.classList.add('open');
+        this.backdrop.classList.add('show');
+
+        // Focus on customer search
+        setTimeout(() => {
+            document.getElementById('newPanelCustomerSearch')?.focus();
+        }, 300);
+
+        // Calculate initial pricing if customer already selected
+        if (document.getElementById('newPanelCustomerId').value) {
+            this.pricingCalculator.calculateAndDisplayPricing();
+        }
+    }
+
+    /**
+     * Close the panel
+     */
+    close() {
+        this.state.isOpen = false;
+        this.state.conflictResolutionMode = false;
+        this.state.savedCustomerForRetry = null;
+        this.state.waitlistEntryId = null;  // Clear waitlist entry on close
+
+        // Notify modal state manager
+        if (window.modalStateManager) {
+            window.modalStateManager.closeModal('new-reservation');
+        }
+
+        this.panel.classList.remove('open');
+        this.panel.classList.remove('minimized');
+        this.panel.classList.remove('collapsed');
+        this.backdrop.classList.remove('show');
+
+        // Notify callback
+        if (this.options.onCancel) {
+            this.options.onCancel();
+        }
+    }
+
+    /**
+     * Toggle panel collapsed state
+     */
+    toggleCollapse() {
+        if (!this.panel) return;
+
+        const isCurrentlyCollapsed = this.panel.classList.contains('collapsed');
+        this.panel.classList.toggle('collapsed');
+
+        // Notify modal state manager
+        if (window.modalStateManager) {
+            if (isCurrentlyCollapsed) {
+                window.modalStateManager.expandModal('new-reservation');
+            } else {
+                window.modalStateManager.collapseModal('new-reservation');
+            }
+        }
+    }
+
+    /**
+     * Open the panel pre-filled from a waitlist entry
+     * Called when user clicks "Convertir" on a waitlist entry
+     * @param {Object} entry - Waitlist entry with customer and preference data
+     */
+    async openFromWaitlist(entry) {
+        if (!entry) {
+            console.warn('NewReservationPanel.openFromWaitlist: No entry provided');
+            return;
+        }
+
+        // Store waitlist entry ID for conversion after reservation is created
+        this.state.waitlistEntryId = entry.id;
+
+        // We need furniture selected to open the panel
+        // If preferred zone/type specified, we could suggest furniture
+        // For now, just notify user they need to select furniture
+        this.showToast('Selecciona mobiliario en el mapa para crear la reserva', 'info');
+
+        // Store waitlist data for pre-filling when panel opens
+        this._pendingWaitlistEntry = entry;
+
+        // Dispatch event to notify map that we're in waitlist convert mode
+        document.dispatchEvent(new CustomEvent('waitlist:selectFurnitureForConvert', {
+            detail: { entry }
+        }));
+    }
+
+    /**
+     * Pre-fill the panel with waitlist entry data
+     * Called after furniture is selected
+     * @param {Object} entry - Waitlist entry data
+     */
+    async prefillFromWaitlist(entry) {
+        if (!entry) return;
+
+        // Store waitlist entry ID
+        this.state.waitlistEntryId = entry.id;
+
+        // Pre-fill customer if available
+        if (entry.customer_id) {
+            try {
+                // Fetch full customer data
+                const response = await fetch(`${this.options.apiBaseUrl}/customers/${entry.customer_id}`);
+                const data = await response.json();
+
+                if (data.success && data.customer) {
+                    document.getElementById('newPanelCustomerId').value = data.customer.id;
+                    document.getElementById('newPanelCustomerSource').value = 'customer';
+                    this.customerHandler.autoFillCustomerData(data.customer);
+                }
+            } catch (error) {
+                console.error('Error fetching customer for waitlist conversion:', error);
+            }
+        } else if (entry.customer_name || entry.external_name) {
+            // No customer_id but have name info
+            const isInterno = entry.customer_type === 'interno';
+            const displayName = entry.customer_name || entry.external_name || '';
+            const phone = entry.phone || entry.external_phone || '';
+
+            if (!isInterno) {
+                // External customer: Show create customer form pre-filled
+                // so user can complete the customer profile
+                const nameParts = displayName.split(' ');
+                const firstName = nameParts[0] || '';
+                const lastName = nameParts.slice(1).join(' ') || '';
+
+                this.customerHandler.showCreateCustomerForm({
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone: phone,
+                    email: entry.email || ''
+                });
+            } else {
+                // Internal customer (hotel guest) without customer_id
+                // Display as pending customer info
+                const tempCustomer = {
+                    display_name: displayName,
+                    first_name: displayName.split(' ')[0] || '',
+                    last_name: displayName.split(' ').slice(1).join(' ') || '',
+                    customer_type: 'interno',
+                    room_number: entry.room_number || null,
+                    phone: phone,
+                    source: 'hotel_guest'
+                };
+
+                // Show in display (but don't set customer_id since it doesn't exist yet)
+                this.customerHandler.showCustomerDisplay(tempCustomer);
+            }
+        }
+
+        // Pre-fill number of people
+        if (entry.num_people && this.numPeopleInput) {
+            this.numPeopleInput.value = entry.num_people;
+            this.numPeopleManuallyEdited = true; // Mark as set so it's not overwritten
+        }
+
+        // Pre-fill notes with waitlist context
+        if (entry.notes && this.notesInput) {
+            this.notesInput.value = 'Desde lista de espera: ' + entry.notes;
+        }
+
+        // Pre-fill date if available (initialize DatePicker with the requested date)
+        if (entry.requested_date && this.datePicker) {
+            this.datePicker.setSelectedDates([entry.requested_date]);
+        }
+
+        // Calculate pricing after pre-filling
+        this.pricingCalculator.calculateAndDisplayPricing();
+    }
+
+    /**
+     * Reset the form to initial state
+     */
+    resetForm() {
+        // Clear customer search
+        if (this.customerSearch) {
+            this.customerSearch.clear();
+        }
+        document.getElementById('newPanelCustomerId').value = '';
+        document.getElementById('newPanelCustomerSource').value = 'customer';
+
+        // Hide customer display, show search wrapper
+        const customerDisplay = document.getElementById('newPanelCustomerDisplay');
+        const searchWrapper = document.getElementById('newPanelCustomerWrapper');
+        const clearBtn = document.getElementById('newPanelCustomerClearBtn');
+
+        if (customerDisplay) customerDisplay.style.display = 'none';
+        if (searchWrapper) searchWrapper.style.display = 'block';
+        if (clearBtn) clearBtn.style.display = 'none';
+
+        // Hide guest selector and clear room guests state
+        this.customerHandler.hideGuestSelector();
+        this.customerHandler.state.selectedGuest = null;
+        this.customerHandler.state.selectedCustomer = null;
+
+        // Reset inputs
+        if (this.notesInput) this.notesInput.value = '';
+
+        // Clear payment fields
+        const paymentTicketInput = document.getElementById('newPanelPaymentTicket');
+        const paymentMethodSelect = document.getElementById('newPanelPaymentMethod');
+        if (paymentTicketInput) paymentTicketInput.value = '';
+        if (paymentMethodSelect) paymentMethodSelect.value = '';
+
+        // Clear preferences
+        this.clearPreferences();
+    }
+
+    /**
+     * Render furniture chips
+     */
+    renderFurnitureChips() {
+        if (!this.furnitureChips) return;
+
+        const chipsHtml = this.state.selectedFurniture.map(f => `
+            <span class="furniture-chip">
+                <span class="furniture-type-icon">${this.getFurnitureIcon(f.type_name)}</span>
+                ${f.number}
+            </span>
+        `).join('');
+
+        this.furnitureChips.innerHTML = chipsHtml;
+
+        // Update summary
+        const count = this.state.selectedFurniture.length;
+        const capacity = this.calculateCapacity();
+        this.furnitureSummary.textContent = `${count} item${count !== 1 ? 's' : ''} • Capacidad: ${capacity} personas`;
+    }
+
+    /**
+     * Get furniture icon based on type
+     */
+    getFurnitureIcon(typeName) {
+        if (!typeName) return '🪑';
+        const name = typeName.toLowerCase();
+        if (name.includes('hamaca')) return '🛏️';
+        if (name.includes('balinesa')) return '🛖';
+        if (name.includes('sombrilla')) return '☂️';
+        return '🪑';
+    }
+
+    /**
+     * Calculate total capacity
+     */
+    calculateCapacity() {
+        return this.state.selectedFurniture.reduce((sum, f) => sum + (f.capacity || 2), 0);
+    }
+
+    /**
+     * Format date for display
+     */
+    formatDateDisplay(dateStr) {
+        const date = new Date(dateStr + 'T12:00:00');
+        const options = { weekday: 'short', day: 'numeric', month: 'short' };
+        return date.toLocaleDateString('es-ES', options);
+    }
+
+    /**
+     * Toggle preference chip
+     */
+    togglePreference(chip) {
+        const pref = chip.dataset.pref;
+        chip.classList.toggle('active');
+
+        if (chip.classList.contains('active')) {
+            if (!this.state.preferences.includes(pref)) {
+                this.state.preferences.push(pref);
+            }
+        } else {
+            this.state.preferences = this.state.preferences.filter(p => p !== pref);
+        }
+
+        // Update hidden input
+        this.preferencesInput.value = this.state.preferences.join(',');
+    }
+
+    /**
+     * Clear all preferences
+     */
+    clearPreferences() {
+        // Query all chips within the container (dynamic chips)
+        const chips = this.preferenceChipsContainer?.querySelectorAll('.pref-chip');
+        chips?.forEach(chip => chip.classList.remove('active'));
+        this.state.preferences = [];
+        if (this.preferencesInput) {
+            this.preferencesInput.value = '';
+        }
+
+        // Clear tag chips
+        const tagChips = this.tagChipsContainer?.querySelectorAll('.tag-chip');
+        tagChips?.forEach(chip => chip.classList.remove('active'));
+        this.state.selectedTags = [];
+    }
+
+    /**
+     * Create the reservation
+     */
+    async createReservation() {
+        // Validate customer
+        const customerId = document.getElementById('newPanelCustomerId').value;
+        const customerSource = document.getElementById('newPanelCustomerSource').value;
+
+        if (!customerId) {
+            this.showToast('Selecciona un cliente', 'warning');
+            document.getElementById('newPanelCustomerSearch')?.focus();
+            return;
+        }
+
+        // Get selected dates from DatePicker
+        const selectedDates = this.datePicker ? this.datePicker.getSelectedDates() : [];
+        if (selectedDates.length === 0) {
+            this.showToast('Selecciona al menos una fecha', 'warning');
+            return;
+        }
+
+        // Run safeguard checks before proceeding
+        const safeguardResult = await this.safeguardChecks.runSafeguardChecks(customerId, customerSource, selectedDates);
+        if (!safeguardResult.proceed) {
+            // Check if user wants to view an existing reservation
+            if (safeguardResult.viewExisting) {
+                // Dispatch event to open the existing reservation panel
+                document.dispatchEvent(new CustomEvent('reservation:openExisting', {
+                    detail: { reservationId: safeguardResult.viewExisting }
+                }));
+            }
+            return; // User cancelled or viewing existing
+        }
+
+        // Show loading state
+        this.createBtn.disabled = true;
+        this.createBtn.querySelector('.save-text').style.display = 'none';
+        this.createBtn.querySelector('.save-loading').style.display = 'flex';
+
+        try {
+            let finalCustomerId = parseInt(customerId);
+
+            // If hotel guest, convert to beach customer first
+            if (customerSource === 'hotel_guest') {
+                const convertResponse = await fetch(`${this.options.apiBaseUrl}/customers/from-hotel-guest`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    },
+                    body: JSON.stringify({
+                        hotel_guest_id: finalCustomerId
+                    })
+                });
+
+                const convertData = await convertResponse.json();
+
+                if (!convertData.success) {
+                    throw new Error(convertData.error || 'Error al convertir huesped a cliente');
+                }
+
+                finalCustomerId = convertData.customer.id;
+            }
+
+            // Get selected package_id if any
+            const selectedPackageIdInput = document.getElementById('newPanelSelectedPackageId');
+            const packageId = selectedPackageIdInput?.value || '';
+
+            // Get manual price override if any
+            const priceOverrideInput = document.getElementById('newPanelPriceOverride');
+            const priceOverride = priceOverrideInput?.value || '';
+
+            // Get payment fields
+            const paymentTicketInput = document.getElementById('newPanelPaymentTicket');
+            const paymentMethodSelect = document.getElementById('newPanelPaymentMethod');
+
+            // Get payment values for auto-toggle paid logic
+            const paymentTicketValue = paymentTicketInput?.value.trim() || null;
+            const paymentMethodValue = paymentMethodSelect?.value || null;
+
+            // Create reservation using map quick-reservation endpoint
+            const payload = {
+                customer_id: finalCustomerId,
+                furniture_ids: this.state.selectedFurniture.map(f => f.id),
+                dates: selectedDates,
+                num_people: parseInt(this.numPeopleInput.value) || 2,
+                time_slot: 'all_day',
+                notes: this.notesInput.value.trim(),
+                preferences: this.state.preferences,
+                tag_ids: this.state.selectedTags,
+                charge_to_room: document.getElementById('newPanelChargeToRoom')?.checked || false,
+                payment_ticket_number: paymentTicketValue,
+                payment_method: paymentMethodValue,
+                // Auto-toggle paid when payment details are provided
+                paid: (paymentTicketValue || paymentMethodValue) ? 1 : 0
+            };
+
+            // Add package_id if selected (otherwise use minimum consumption)
+            if (packageId) {
+                payload.package_id = parseInt(packageId);
+            }
+
+            // Add manual price override if user edited the price
+            if (priceOverride) {
+                payload.price_override = parseFloat(priceOverride);
+            }
+
+            const response = await fetch(`${this.options.apiBaseUrl}/map/quick-reservation`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.showToast(result.message || 'Reserva creada exitosamente', 'success');
+
+                // Mark waitlist entry as converted if this reservation came from waitlist
+                // Note: API returns 'reservation_id', not 'parent_id'
+                const reservationId = result.reservation_id || result.parent_id;
+                if (this.state.waitlistEntryId && reservationId) {
+                    await this.markWaitlistAsConverted(this.state.waitlistEntryId, reservationId);
+                }
+
+                this.close();
+
+                // Notify callback
+                if (this.options.onSave) {
+                    this.options.onSave({ id: reservationId, ticket_number: result.ticket_number || result.parent_ticket });
+                }
+            } else {
+                // Check if this is a conflict error (multi-day with unavailable furniture)
+                if (result.unavailable && result.unavailable.length > 0) {
+                    this.conflictResolver.handleConflictError(result, selectedDates);
+                } else {
+                    throw new Error(result.error || 'Error al crear reserva');
+                }
+            }
+
+        } catch (error) {
+            console.error('Create reservation error:', error);
+            this.showToast(error.message, 'error');
+        } finally {
+            // Reset button state
+            this.createBtn.disabled = false;
+            this.createBtn.querySelector('.save-text').style.display = 'inline';
+            this.createBtn.querySelector('.save-loading').style.display = 'none';
+        }
+    }
+
+    /**
+     * Show toast message
+     */
+    showToast(message, type = 'info') {
+        if (window.PuroBeach && window.PuroBeach.showToast) {
+            window.PuroBeach.showToast(message, type);
+        } else {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+    }
+
+    /**
+     * Check if panel is open
+     */
+    isOpen() {
+        return this.state.isOpen;
+    }
+
+    /**
+     * Delegate methods to DateAvailabilityHandler
+     */
+    showCapacityWarning(guestCount, capacity) {
+        this.dateAvailabilityHandler.showCapacityWarning(guestCount, capacity);
+    }
+
+    hideCapacityWarning() {
+        this.dateAvailabilityHandler.hideCapacityWarning();
+    }
+
+    addFurniture(furniture) {
+        this.dateAvailabilityHandler.addFurniture(furniture);
+    }
+
+    /**
+     * Mark a waitlist entry as converted after reservation creation
+     * @param {number} entryId - Waitlist entry ID
+     * @param {number} reservationId - Created reservation ID
+     */
+    async markWaitlistAsConverted(entryId, reservationId) {
+        try {
+            const response = await fetch(`${this.options.apiBaseUrl}/waitlist/${entryId}/convert`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
+                },
+                body: JSON.stringify({ reservation_id: reservationId })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Dispatch event to update waitlist badge count
+                window.dispatchEvent(new CustomEvent('waitlist:countUpdate'));
+            } else {
+                console.error('Error marking waitlist as converted:', data.error);
+            }
+        } catch (error) {
+            console.error('Error marking waitlist as converted:', error);
+        }
+    }
+}
+
+// Export for use
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = NewReservationPanel;
+}
