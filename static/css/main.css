@@ -20,6 +20,7 @@
 
     /* ========== SEMANTIC MAPPING ========== */
     --color-primary: var(--color-gold);
+    --color-primary-dark: #B8960C;
     --color-primary-hover: #B8A166;
     --color-secondary: var(--color-med);
     --color-accent: var(--color-natural);
