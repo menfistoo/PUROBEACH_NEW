@@ -51,7 +51,7 @@ export const PreferencesMixin = (Base) => class extends Base {
 
         // Hide section if no preferences
         if (this.preferencesSection) {
-            this.preferencesSection.style.display = preferences.length > 0 ? 'block' : 'none';
+            this.preferencesSection.style.display = 'block';
         }
 
         if (preferences.length === 0) {

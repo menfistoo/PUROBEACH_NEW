@@ -473,6 +473,43 @@
     box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15) !important;
 }
 
+/* Characteristics chips */
+#quickEditModal .characteristics-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#quickEditModal .char-chip {
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 2px solid #E8E8E8;
+    background: transparent;
+    color: #4B5563;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#quickEditModal .char-chip:hover {
+    border-color: #D4AF37;
+    color: #1A3A5C;
+}
+
+#quickEditModal .char-chip.selected {
+    background: #D4AF37;
+    border-color: #D4AF37;
+    color: #fff;
+}
+
+#quickEditModal .char-chip i {
+    font-size: 12px;
+}
+
 /* Form body */
 #quickEditModal .edit-form-body {
     padding: 1.5rem;
@@ -868,6 +905,16 @@
                             </div>
                         </div>
 
+                        <!-- Characteristics -->
+                        <div class="edit-section">
+                            <div class="edit-section-label">
+                                <i class="fas fa-heart"></i> Características
+                            </div>
+                            <div class="characteristics-chips" id="edit-characteristics-chips">
+                                <span class="text-muted small">Cargando...</span>
+                            </div>
+                        </div>
+
                         <!-- Notes -->
                         <div class="edit-section">
                             <div class="edit-section-label">
@@ -922,6 +969,7 @@
 let quickEditModal = null;
 let deleteModal = null;
 let currentReservation = null;
+let allCharacteristics = [];
 
 // Auto-filter state
 let filterTimeout = null;
@@ -1283,6 +1331,51 @@ function formatDate(dateStr) {
     }
 }
 
+async function loadAllCharacteristics() {
+    if (allCharacteristics.length > 0) return;
+    try {
+        const response = await fetch('/beach/api/map/preferences');
+        if (response.ok) {
+            const result = await response.json();
+            allCharacteristics = result.preferences || [];
+        }
+    } catch (error) {
+        console.error('Failed to load characteristics:', error);
+    }
+}
+
+function renderCharacteristicsChips(selectedCharacteristics) {
+    const container = document.getElementById('edit-characteristics-chips');
+    if (!container || allCharacteristics.length === 0) {
+        if (container) container.innerHTML = '<span class="text-muted small">Sin características disponibles</span>';
+        return;
+    }
+
+    const selectedCodes = (selectedCharacteristics || []).map(c => c.code);
+
+    container.innerHTML = allCharacteristics.map(char => {
+        const isSelected = selectedCodes.includes(char.code);
+        let icon = char.icon || 'fa-heart';
+        if (icon && !icon.startsWith('fas ') && !icon.startsWith('far ') && !icon.startsWith('fab ')) {
+            icon = 'fas ' + icon;
+        }
+        return `
+            <button type="button" class="char-chip ${isSelected ? 'selected' : ''}"
+                    data-code="${char.code}" title="${char.name}">
+                <i class="${icon}"></i>
+                <span>${char.name}</span>
+            </button>
+        `;
+    }).join('');
+
+    // Attach click handlers
+    container.querySelectorAll('.char-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            chip.classList.toggle('selected');
+        });
+    });
+}
+
 async function openQuickEdit(reservationId) {
     try {
         const response = await fetch(`/beach/api/reservations/${reservationId}`);
@@ -1321,6 +1414,10 @@ async function openQuickEdit(reservationId) {
         // Payment details
         document.getElementById('edit-payment-ticket').value = data.payment_ticket_number || '';
         document.getElementById('edit-payment-method').value = data.payment_method || '';
+
+        // Load and render characteristics
+        await loadAllCharacteristics();
+        renderCharacteristicsChips(data.reservation_characteristics || []);
 
         // Select current state
         document.querySelectorAll('.state-chip').forEach(chip => {
@@ -1367,6 +1464,12 @@ async function saveQuickEdit() {
         payment_ticket_number: document.getElementById('edit-payment-ticket').value.trim() || null,
         payment_method: document.getElementById('edit-payment-method').value || null
     };
+
+    // Collect selected characteristics
+    const selectedChars = Array.from(
+        document.querySelectorAll('#edit-characteristics-chips .char-chip.selected')
+    ).map(chip => chip.dataset.code);
+    updates.preferences = selectedChars.join(',');
 
     // Add state if changed
     if (selectedState && selectedState.dataset.stateName !== currentReservation.current_state) {

@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 from utils.decorators import permission_required
 from utils.audit import log_create, log_update, log_delete
 from utils.api_response import api_success, api_error
+from models.characteristic_assignments import get_reservation_characteristics, set_reservation_characteristics_by_codes
 from models.reservation import (
     get_reservation_with_details, get_available_furniture,
     get_status_history, add_reservation_state, remove_reservation_state,
@@ -56,7 +57,8 @@ def register_routes(bp):
             'paid': reservation.get('paid', 0),
             'final_price': reservation.get('final_price', 0),
             'payment_ticket_number': reservation.get('payment_ticket_number'),
-            'payment_method': reservation.get('payment_method')
+            'payment_method': reservation.get('payment_method'),
+            'reservation_characteristics': get_reservation_characteristics(reservation_id),
         })
 
     @bp.route('/reservations/<int:reservation_id>', methods=['PATCH'])
@@ -121,6 +123,12 @@ def register_routes(bp):
                             reservation_id, state['name'],
                             changed_by=current_user.username if current_user else 'system'
                         )
+
+            # Handle preferences/characteristics
+            if 'preferences' in data:
+                pref_value = data['preferences']
+                pref_codes = [c.strip() for c in pref_value.split(',') if c.strip()] if pref_value else []
+                set_reservation_characteristics_by_codes(reservation_id, pref_codes)
 
             # Update other fields
             if updates:
