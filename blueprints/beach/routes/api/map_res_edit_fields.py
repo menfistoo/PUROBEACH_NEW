@@ -12,6 +12,7 @@ from utils.api_response import api_success, api_error
 from models.reservation import get_beach_reservation_by_id
 from models.customer import get_customer_by_id, create_customer_from_hotel_guest
 from database import get_db
+from models.characteristic_assignments import set_reservation_characteristics_by_codes
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -100,10 +101,16 @@ def register_routes(bp: Blueprint) -> None:
             if updates['payment_ticket_number'] == '':
                 updates['payment_ticket_number'] = None
 
-        # preferences should be comma-separated string or empty
+        # preferences - sync to junction table
         if 'preferences' in updates:
-            if updates['preferences'] is None:
-                updates['preferences'] = ''
+            pref_value = updates['preferences']
+            if pref_value is None:
+                pref_value = ''
+            updates['preferences'] = pref_value
+
+            # Also update junction table
+            pref_codes = [c.strip() for c in pref_value.split(',') if c.strip()] if pref_value else []
+            set_reservation_characteristics_by_codes(reservation_id, pref_codes)
 
         # Validate and convert pricing fields
         if 'final_price' in updates:
