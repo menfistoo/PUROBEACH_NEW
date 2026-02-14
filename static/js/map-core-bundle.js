@@ -5016,15 +5016,7 @@ class SearchManager {
  */
 
 
-/**
- * Block type definitions
- */
-const BLOCK_TYPES = {
-    'maintenance': { name: 'Mantenimiento', color: '#9CA3AF', icon: '🔧' },
-    'vip_hold': { name: 'Reserva VIP', color: '#D4AF37', icon: '⭐' },
-    'event': { name: 'Evento', color: '#3B82F6', icon: '📅' },
-    'other': { name: 'Otro', color: '#6B7280', icon: '🚫' }
-};
+// BLOCK_TYPES already defined in context-menu.js section above
 
 /**
  * BlockManager class
