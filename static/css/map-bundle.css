@@ -2831,6 +2831,51 @@
     font-size: 11px;
 }
 
+/* Tag Chips */
+.new-reservation-panel .tag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.new-reservation-panel .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 8px 12px;
+    background: var(--color-white);
+    border: 1px solid var(--tag-color, var(--color-border));
+    border-radius: var(--border-radius-full);
+    font-size: 12px;
+    color: var(--tag-color, var(--color-text-secondary));
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.new-reservation-panel .tag-chip:hover {
+    border-color: var(--tag-color, var(--color-primary));
+}
+
+.new-reservation-panel .tag-chip:focus {
+    outline: none;
+    border-color: var(--tag-color, var(--color-primary));
+}
+
+.new-reservation-panel .tag-chip:focus-visible {
+    outline: 2px solid var(--tag-color, var(--color-primary));
+    outline-offset: 2px;
+}
+
+.new-reservation-panel .tag-chip.active {
+    background: var(--tag-color, var(--color-primary));
+    border-color: var(--tag-color, var(--color-primary));
+    color: var(--color-white);
+}
+
+.new-reservation-panel .tag-chip i {
+    font-size: 11px;
+}
+
 /* =============================================================================
    FOOTER
    ============================================================================= */
