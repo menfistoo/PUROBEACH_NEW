@@ -817,6 +817,10 @@
                             <span id="edit-customer-name">-</span>
                             <span class="info-badge" id="edit-customer-type"></span>
                         </div>
+                        <div class="info-item" id="edit-room-item" style="display: none;">
+                            <i class="fas fa-door-open"></i>
+                            <span id="edit-room">-</span>
+                        </div>
                         <div class="info-item">
                             <i class="fas fa-calendar"></i>
                             <span id="edit-date">-</span>
@@ -1334,7 +1338,7 @@ function formatDate(dateStr) {
 async function loadAllCharacteristics() {
     if (allCharacteristics.length > 0) return;
     try {
-        const response = await fetch('/beach/api/map/preferences');
+        const response = await fetch('/beach/api/preferences');
         if (response.ok) {
             const result = await response.json();
             allCharacteristics = result.preferences || [];
@@ -1381,14 +1385,15 @@ async function openQuickEdit(reservationId) {
         const response = await fetch(`/beach/api/reservations/${reservationId}`);
         if (!response.ok) throw new Error('Error al cargar reserva');
 
-        const data = await response.json();
+        const result = await response.json();
+        const data = result.data || result;
         currentReservation = data;
 
         // Basic info
         document.getElementById('edit-reservation-id').value = reservationId;
         document.getElementById('modal-ticket').textContent = data.ticket_number || `#${reservationId}`;
 
-        // Info bar
+        // Info bar - Customer
         document.getElementById('edit-customer-name').textContent = data.customer_name || '-';
         const typeEl = document.getElementById('edit-customer-type');
         if (data.customer_type === 'interno') {
@@ -1398,17 +1403,36 @@ async function openQuickEdit(reservationId) {
             typeEl.textContent = 'Externo';
             typeEl.style.background = '#1A3A5C';
         }
+
+        // Room number (interno only)
+        const roomItem = document.getElementById('edit-room-item');
+        if (data.customer_type === 'interno' && data.customer_room) {
+            roomItem.style.display = 'flex';
+            document.getElementById('edit-room').textContent = data.customer_room;
+        } else {
+            roomItem.style.display = 'none';
+        }
+
+        // Date
         document.getElementById('edit-date').textContent = formatDate(data.reservation_date || data.start_date);
 
         // Furniture
-        const furnitureNames = data.furniture?.map(f => f.number || f.furniture_type).join(', ') || '-';
-        document.getElementById('edit-furniture').textContent = furnitureNames;
+        const furnitureList = data.furniture || [];
+        let furnitureText = '-';
+        if (furnitureList.length > 0) {
+            furnitureText = furnitureList.map(f => {
+                const name = f.number || f.furniture_type || '';
+                const zone = f.zone_name ? ` (${f.zone_name})` : '';
+                return name + zone;
+            }).join(', ');
+        }
+        document.getElementById('edit-furniture').textContent = furnitureText;
 
         // Editable fields
         document.getElementById('edit-num-people').value = data.num_people || 1;
         document.getElementById('edit-paid').checked = data.paid == 1;
         updatePaidLabel();
-        document.getElementById('edit-notes').value = data.observations || '';
+        document.getElementById('edit-notes').value = data.notes || data.observations || '';
         document.getElementById('edit-price').textContent = `€${(data.final_price || 0).toFixed(2)}`;
 
         // Payment details
