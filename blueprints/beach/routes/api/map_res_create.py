@@ -20,7 +20,7 @@ from models.reservation import (
 )
 from models.reservation_multiday import create_linked_multiday_reservations
 from models.customer import get_customer_by_id
-from models.characteristic_assignments import set_customer_characteristics_by_codes
+from models.characteristic_assignments import set_customer_characteristics_by_codes, set_reservation_characteristics_by_codes
 from blueprints.beach.services.pricing_service import calculate_reservation_pricing
 
 
@@ -271,6 +271,10 @@ def register_routes(bp):
                     if preferences:
                         set_customer_characteristics_by_codes(customer_id, preferences)
 
+                        # Also save characteristics to each reservation
+                        for res_id in result.get('reservation_ids', []):
+                            set_reservation_characteristics_by_codes(res_id, preferences)
+
                     # Log audit entry for each created reservation
                     if result.get('reservation_ids'):
                         for res_id in result['reservation_ids']:
@@ -324,6 +328,9 @@ def register_routes(bp):
                 # Two-way sync: Update customer preferences from reservation
                 if preferences:
                     set_customer_characteristics_by_codes(customer_id, preferences)
+
+                    # Also save characteristics to the reservation
+                    set_reservation_characteristics_by_codes(reservation_id, preferences)
 
                 # Log audit entry for single-day reservation
                 reservation_data = {
