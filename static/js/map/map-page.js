@@ -268,8 +268,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Check on page load (global - next 7 days)
-    checkUnassignedReservationsGlobal();
+    // Check on page load (global - next 7 days) - deferred to reduce initial load pressure
+    setTimeout(() => checkUnassignedReservationsGlobal(), 2000);
 
     // Wire up furniture highlighting for preference matches (tiered)
     moveMode.on('onFurnitureHighlight', (data) => {
