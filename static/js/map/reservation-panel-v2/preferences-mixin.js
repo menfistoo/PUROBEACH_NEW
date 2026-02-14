@@ -45,7 +45,9 @@ export const PreferencesMixin = (Base) => class extends Base {
     renderPreferencesSection(customer) {
         if (!this.preferencesChipsContainer) return;
 
-        const preferences = customer?.preferences || [];
+        // Prefer reservation-specific characteristics over customer defaults
+        const reservationChars = this.state.data?.reservation_characteristics || [];
+        const preferences = reservationChars.length > 0 ? reservationChars : (customer?.preferences || []);
 
         // Hide section if no preferences
         if (this.preferencesSection) {
@@ -87,9 +89,11 @@ export const PreferencesMixin = (Base) => class extends Base {
             await this.loadAllPreferences();
         }
 
-        // Get current customer preferences
+        // Get current preferences - prefer reservation-specific over customer defaults
+        const reservationChars = this.state.data?.reservation_characteristics || [];
         const customerPrefs = this.state.data?.customer?.preferences || [];
-        this.preferencesEditState.selectedCodes = customerPrefs.map(p => p.code);
+        const activePrefs = reservationChars.length > 0 ? reservationChars : customerPrefs;
+        this.preferencesEditState.selectedCodes = activePrefs.map(p => p.code);
         this.preferencesEditState.originalCodes = [...this.preferencesEditState.selectedCodes];
         this.preferencesEditState.isEditing = true;
 

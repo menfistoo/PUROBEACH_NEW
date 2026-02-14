@@ -480,6 +480,23 @@ export const SaveMixin = (Base) => class extends Base {
                 }
             }
 
+            // Also save characteristics to the reservation itself
+            if (preferencesChanged) {
+                await fetch(
+                    `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/update`,
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.csrfToken
+                        },
+                        body: JSON.stringify({
+                            preferences: selectedCodes.join(',')
+                        })
+                    }
+                );
+            }
+
             // -----------------------------------------------------------------
             // Exit edit mode and notify
             // -----------------------------------------------------------------
