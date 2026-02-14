@@ -1,0 +1,148 @@
+<!-- Quick Edit Modal - Shared reservation detail/edit modal -->
+<div class="modal fade quick-edit-modal" id="quickEditModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-pen me-2"></i>
+                    Editar Reserva <span id="modal-ticket"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <form id="quick-edit-form">
+                    <input type="hidden" id="edit-reservation-id">
+
+                    <!-- Reservation Info Bar (Read-only) -->
+                    <div class="edit-info-bar">
+                        <div class="info-item">
+                            <i class="fas fa-user"></i>
+                            <span id="edit-customer-name">-</span>
+                            <span class="info-badge" id="edit-customer-type"></span>
+                        </div>
+                        <div class="info-item" id="edit-room-item" style="display: none;">
+                            <i class="fas fa-door-open"></i>
+                            <span class="room-badge" id="edit-room">-</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-calendar-day"></i>
+                            <span id="edit-date">-</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-umbrella-beach"></i>
+                            <span id="edit-furniture">-</span>
+                        </div>
+                    </div>
+
+                    <div class="edit-form-body">
+                        <!-- State -->
+                        <div class="edit-section">
+                            <div class="edit-section-label">
+                                <i class="fas fa-flag"></i> Estado
+                            </div>
+                            <div class="state-chips" id="state-chips">
+                                {% for state in states %}
+                                <button type="button" class="state-chip"
+                                      data-state-id="{{ state.id }}"
+                                      data-state-name="{{ state.name }}"
+                                      data-color="{{ state.color }}"
+                                      style="--chip-color: {{ state.color }};">
+                                    {{ state.name }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="edit-row">
+                            <!-- Num People -->
+                            <div class="edit-section edit-section-half">
+                                <div class="edit-section-label">
+                                    <i class="fas fa-users"></i> Personas
+                                </div>
+                                <div class="people-control">
+                                    <button type="button" class="people-btn" onclick="adjustPeople(-1)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <input type="number" class="people-input" id="edit-num-people" min="1" max="20" value="2">
+                                    <button type="button" class="people-btn" onclick="adjustPeople(1)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Paid Status -->
+                            <div class="edit-section edit-section-half">
+                                <div class="edit-section-label">
+                                    <i class="fas fa-credit-card"></i> Pago
+                                </div>
+                                <div class="paid-toggle">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="edit-paid">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="paid-label" id="paid-label">Pendiente</span>
+                                </div>
+                                <div class="price-display">
+                                    <span class="price-label">Precio:</span>
+                                    <span class="price-value" id="edit-price">€0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Details -->
+                        <div class="edit-section">
+                            <div class="edit-section-label">
+                                <i class="fas fa-receipt"></i> Detalles de Pago
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label for="edit-payment-ticket" class="form-label">Nº ticket</label>
+                                    <input type="text" class="form-control"
+                                           id="edit-payment-ticket" placeholder="Ej: 12345">
+                                </div>
+                                <div class="col-6">
+                                    <label for="edit-payment-method" class="form-label">Forma de pago</label>
+                                    <select class="form-select" id="edit-payment-method">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="efectivo">Efectivo</option>
+                                        <option value="tarjeta">Tarjeta</option>
+                                        <option value="cargo_habitacion">Cargo a habitación</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Characteristics -->
+                        <div class="edit-section">
+                            <div class="edit-section-label">
+                                <i class="fas fa-heart"></i> Características
+                            </div>
+                            <div class="characteristics-chips" id="edit-characteristics-chips">
+                                <span class="text-muted small">Cargando...</span>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="edit-section">
+                            <div class="edit-section-label">
+                                <i class="fas fa-sticky-note"></i> Notas
+                            </div>
+                            <textarea class="form-control notes-input" id="edit-notes" rows="2"
+                                      placeholder="Observaciones sobre la reserva..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"
+                        aria-label="Cancelar edición">
+                    <i class="fas fa-xmark me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveQuickEdit()"
+                        aria-label="Guardar cambios de la reserva">
+                    <i class="fas fa-check me-1"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

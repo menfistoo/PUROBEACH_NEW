@@ -13,7 +13,7 @@ from models.customer import (
     merge_customers, find_potential_duplicates_for_customer
 )
 from models.characteristic import get_all_characteristics, get_characteristic_by_id
-from models.reservation import sync_preferences_to_customer
+from models.reservation import sync_preferences_to_customer, get_reservation_states
 from models.tag import get_all_tags
 
 customers_bp = Blueprint('customers', __name__)
@@ -138,8 +138,11 @@ def detail(customer_id):
     # Find potential duplicates
     duplicates = find_potential_duplicates_for_customer(customer_id)
 
+    # Load reservation states for the quick edit modal
+    states = get_reservation_states()
+
     return render_template('beach/customer_detail.html',
-                           customer=customer, duplicates=duplicates)
+                           customer=customer, duplicates=duplicates, states=states)
 
 
 @customers_bp.route('/<int:customer_id>/edit', methods=['GET', 'POST'])

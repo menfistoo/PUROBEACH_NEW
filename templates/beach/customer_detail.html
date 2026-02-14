@@ -2,6 +2,10 @@
 
 {% block title %}{{ customer.first_name }} {{ customer.last_name or '' }} - PuroBeach{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/reservation-quick-edit-modal.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -208,9 +212,12 @@
                                 </td>
                                 <td>{{ res.num_people }}</td>
                                 <td>
-                                    <a href="{{ url_for('beach.reservations_detail', reservation_id=res.id) }}" class="btn btn-sm btn-outline-primary" title="Ver reserva">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary"
+                                            onclick="openQuickEdit({{ res.id }})"
+                                            title="Ver/Editar reserva">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -338,4 +345,10 @@
         </div>
     </div>
 </div>
+
+{% include 'beach/_reservation_quick_edit_modal.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/reservation-quick-edit.js') }}"></script>
 {% endblock %}
