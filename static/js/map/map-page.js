@@ -8,17 +8,8 @@
  * - BeachMap, WaitlistManager, ReservationPanel, NewReservationPanel
  * - TouchHandler (global)
  *
- * ES Module imports:
- * - SearchManager, BlockManager, TempFurnitureManager
- * - MoveMode, MoveModePanel, PinchZoomHandler
+ * All dependencies loaded via bundles (map-core-bundle.js, map-panels-bundle.js, etc.)
  */
-
-import { SearchManager } from '/static/js/map/SearchManager.js';
-import { BlockManager } from '/static/js/map/block-manager.js';
-import { TempFurnitureManager } from '/static/js/map/temp-furniture-manager.js';
-import { MoveMode } from '/static/js/map/MoveMode.js';
-import { MoveModePanel } from '/static/js/map/MoveModePanel.js';
-import { PinchZoomHandler } from '/static/js/map/pinch-zoom.js';
 
 document.addEventListener('DOMContentLoaded', function () {
     // ==========================================================================
