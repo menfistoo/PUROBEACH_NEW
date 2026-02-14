@@ -97,9 +97,12 @@
       "Bash(git tag:*)",
       "Bash(git stash:*)",
       "Bash(PYTHONIOENCODING=utf-8 python:*)",
-      "Bash(gh issue create --title \"Etiquetas: falta opción para ver/ocultar inactivas como en Características\" --body \"$\\(cat <<''EOF''\n## Descripción\n\nEn la página de configuración `/beach/config/tags-characteristics`, la sección de **Etiquetas** no tiene la opción de mostrar/ocultar elementos inactivos, mientras que la sección de **Características** sí la tiene.\n\n## Ubicación\n- **URL:** `/beach/config/tags-characteristics`\n- **Componente:** Gestión de Etiquetas \\(Tags\\)\n\n## Comportamiento Actual\n- ✓ Características: Tiene toggle \"Mostrar inactivas\" \n- ✗ Etiquetas: No tiene toggle para mostrar/ocultar inactivas\n- Las etiquetas inactivas se muestran siempre o nunca \\(sin control del usuario\\)\n\n## Comportamiento Esperado\n- Ambas secciones \\(Etiquetas y Características\\) deberían tener la misma funcionalidad\n- Toggle \"Mostrar inactivas\" para filtrar etiquetas activas/inactivas\n- Consistencia en la UI entre ambas secciones\n\n## Impacto\n- 🔴 **Prioridad:** Media-Baja\n- **Tipo:** Mejora de UX / Inconsistencia UI\n- Afecta usabilidad cuando hay muchas etiquetas inactivas\n\n## Solución Propuesta\nAgregar el mismo toggle \"Mostrar inactivas\" que existe en Características:\n1. Checkbox para mostrar/ocultar etiquetas inactivas\n2. Filtrar la lista según el estado del toggle\n3. Mantener consistencia visual con la sección de Características\n\n## Archivos Relacionados\n- `templates/beach/config/tags_characteristics.html` \\(probable\\)\n- `static/js/...` \\(JavaScript para el filtrado\\)\n\n---\n🔍 Detectado durante testing de la interfaz de configuración\nEOF\n\\)\" --label \"enhancement,planning,customers\" --label \"priority:low\")",
       "Bash(gh issue create:*)",
-      "Bash(gh issue list:*)"
+      "Bash(gh issue list:*)",
+      "mcp__plugin_episodic-memory_episodic-memory__search",
+      "Bash(ping:*)",
+      "mcp__plugin_github_github__list_issues",
+      "mcp__plugin_github_github__issue_write"
     ]
   }
 }
