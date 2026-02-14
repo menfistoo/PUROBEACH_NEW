@@ -24,7 +24,7 @@
  * - csrfToken
  */
 
-import { parseDateToYMD } from './utils.js';
+import { escapeHtml, parseDateToYMD } from './utils.js';
 
 // =============================================================================
 // PRICING MIXIN
@@ -73,7 +73,7 @@ export const PricingMixin = (Base) => class extends Base {
         // Show package name if available, otherwise show breakdown
         if (this.detailPricingBreakdown) {
             if (packageName) {
-                this.detailPricingBreakdown.innerHTML = `<span class="package-name">${packageName}</span>`;
+                this.detailPricingBreakdown.innerHTML = `<span class="package-name">${escapeHtml(packageName)}</span>`;
                 this.detailPricingBreakdown.style.display = 'block';
             } else if (priceBreakdown) {
                 this.detailPricingBreakdown.textContent = priceBreakdown;

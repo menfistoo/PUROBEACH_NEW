@@ -9,7 +9,7 @@
  * @module reservation-panel-v2/customer-mixin
  */
 
-import { formatDateShort } from './utils.js';
+import { escapeHtml, formatDateShort } from './utils.js';
 
 // =============================================================================
 // CUSTOMER MIXIN
@@ -223,7 +223,7 @@ export const CustomerMixin = (Base) => class extends Base {
             (customer.arrival_date || customer.departure_date);
 
         if (!isHotelGuest && customer.phone) {
-            this.customerPhone.innerHTML = `<i class="fas fa-phone"></i> ${customer.phone}`;
+            this.customerPhone.innerHTML = `<i class="fas fa-phone"></i> ${escapeHtml(customer.phone)}`;
             this.customerContact.style.display = 'block';
         } else {
             this.customerContact.style.display = 'none';
@@ -303,7 +303,7 @@ export const CustomerMixin = (Base) => class extends Base {
                 const fullName = guest.guest_name || `${guest.first_name || ''} ${guest.last_name || ''}`.trim();
                 // Match by uppercase name comparison
                 const isSelected = fullName.toUpperCase() === currentCustomerName;
-                options += `<option value="${guest.id}" ${isSelected ? 'selected' : ''}>${fullName}</option>`;
+                options += `<option value="${guest.id}" ${isSelected ? 'selected' : ''}>${escapeHtml(fullName)}</option>`;
             });
 
             this.roomGuestSelect.innerHTML = options;
@@ -496,7 +496,7 @@ export const CustomerMixin = (Base) => class extends Base {
      */
     _renderCustomerSearchItem(customer) {
         const typeLabel = customer.customer_type === 'interno'
-            ? `Hab. ${customer.room_number || '?'}`
+            ? `Hab. ${escapeHtml(customer.room_number || '?')}`
             : 'Externo';
         const vipIcon = customer.vip_status
             ? '<i class="fas fa-star text-warning ms-1"></i>'
@@ -504,7 +504,7 @@ export const CustomerMixin = (Base) => class extends Base {
 
         return `
             <div class="customer-search-item" data-customer-id="${customer.id}">
-                <div class="fw-semibold">${customer.first_name} ${customer.last_name}</div>
+                <div class="fw-semibold">${escapeHtml(customer.first_name)} ${escapeHtml(customer.last_name)}</div>
                 <div class="small text-muted">
                     ${typeLabel}
                     ${vipIcon}
@@ -522,9 +522,9 @@ export const CustomerMixin = (Base) => class extends Base {
     _renderHotelGuestSearchItem(guest) {
         return `
             <div class="customer-search-item" data-hotel-guest-id="${guest.id}">
-                <div class="fw-semibold">${guest.first_name} ${guest.last_name}</div>
+                <div class="fw-semibold">${escapeHtml(guest.first_name)} ${escapeHtml(guest.last_name)}</div>
                 <div class="small text-muted">
-                    Huesped - Hab. ${guest.room_number}
+                    Huesped - Hab. ${escapeHtml(guest.room_number)}
                 </div>
             </div>
         `;

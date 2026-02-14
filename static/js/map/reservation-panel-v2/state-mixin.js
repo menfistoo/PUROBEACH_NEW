@@ -10,7 +10,7 @@
  * @module reservation-panel-v2/state-mixin
  */
 
-import { showToast } from './utils.js';
+import { escapeHtml, showToast } from './utils.js';
 
 // =============================================================================
 // STATE MIXIN
@@ -54,7 +54,7 @@ export const StateMixin = (Base) => class extends Base {
         if (activeStates.length === 0) {
             this.stateChipsContainer.innerHTML = `
                 <span class="state-chip active" style="background: ${reservation.display_color || '#6C757D'}; border-color: ${reservation.display_color || '#6C757D'};">
-                    ${currentState || 'Sin estado'}
+                    ${escapeHtml(currentState || 'Sin estado')}
                 </span>
             `;
             return;
@@ -72,7 +72,7 @@ export const StateMixin = (Base) => class extends Base {
                         data-state="${state.name}"
                         data-color="${state.color}"
                         style="background: ${bgColor}; border-color: ${state.color}; color: ${textColor};">
-                    ${state.name}
+                    ${escapeHtml(state.name)}
                 </button>
             `;
         }).join('');
@@ -258,13 +258,13 @@ export const StateMixin = (Base) => class extends Base {
                     </div>
                     <div class="history-content">
                         <span class="history-state" style="color: ${stateColor};">
-                            ${item.status_type}
+                            ${escapeHtml(item.status_type)}
                         </span>
                         <span class="history-meta">
                             ${dateStr}
-                            ${item.changed_by ? `• ${item.changed_by}` : ''}
+                            ${item.changed_by ? `• ${escapeHtml(item.changed_by)}` : ''}
                         </span>
-                        ${item.notes ? `<span class="history-notes">${item.notes}</span>` : ''}
+                        ${item.notes ? `<span class="history-notes">${escapeHtml(item.notes)}</span>` : ''}
                     </div>
                 </div>
             `;

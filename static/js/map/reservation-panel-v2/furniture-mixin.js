@@ -8,7 +8,7 @@
  * - Furniture lock toggle
  */
 
-import { getFurnitureIcon, parseDateToYMD, showToast } from './utils.js';
+import { escapeHtml, getFurnitureIcon, parseDateToYMD, showToast } from './utils.js';
 
 // =============================================================================
 // FURNITURE MIXIN
@@ -53,7 +53,7 @@ export const FurnitureMixin = (Base) => class extends Base {
         const chipsHtml = displayFurniture.map(f => `
             <span class="furniture-chip">
                 <span class="furniture-type-icon">${getFurnitureIcon(f.type_name || f.furniture_type)}</span>
-                ${f.number || f.furniture_number || `#${f.furniture_id || f.id}`}
+                ${escapeHtml(f.number || f.furniture_number || `#${f.furniture_id || f.id}`)}
             </span>
         `).join('');
 

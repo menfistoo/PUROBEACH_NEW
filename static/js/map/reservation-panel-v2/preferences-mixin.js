@@ -10,6 +10,8 @@
  * @module reservation-panel-v2/preferences-mixin
  */
 
+import { escapeHtml } from './utils.js';
+
 // =============================================================================
 // PREFERENCES MIXIN
 // =============================================================================
@@ -62,10 +64,11 @@ export const PreferencesMixin = (Base) => class extends Base {
 
         const chipsHtml = preferences.map(pref => {
             const icon = this._normalizeIconClass(pref.icon);
+            const name = escapeHtml(pref.name);
             return `
-                <span class="preference-chip" title="${pref.name}">
+                <span class="preference-chip" title="${name}">
                     <i class="${icon}"></i>
-                    <span>${pref.name}</span>
+                    <span>${name}</span>
                 </span>
             `;
         }).join('');
@@ -183,12 +186,13 @@ export const PreferencesMixin = (Base) => class extends Base {
         const chipsHtml = allPrefs.map(pref => {
             const isSelected = selectedCodes.includes(pref.code);
             const icon = this._normalizeIconClass(pref.icon);
+            const name = escapeHtml(pref.name);
             return `
                 <span class="preference-chip toggleable ${isSelected ? 'selected' : ''}"
                       data-code="${pref.code}"
-                      title="${pref.name}">
+                      title="${name}">
                     <i class="${icon}"></i>
-                    <span>${pref.name}</span>
+                    <span>${name}</span>
                 </span>
             `;
         }).join('');
@@ -236,6 +240,7 @@ export const PreferencesMixin = (Base) => class extends Base {
         }
         // Re-render chips to update selection state
         this.renderAllPreferencesChips();
+        this.markDirty();
     }
 
     // =========================================================================
