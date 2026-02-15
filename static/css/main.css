@@ -39,6 +39,14 @@
     --color-text-secondary: #666666;
     --color-text-muted: #999999;
 
+    /* ========== NEUTRAL GRAYS ========== */
+    --color-light-gray: #F2F2F2;
+    --color-medium-gray: #999999;
+    --color-dark-gray: #555555;
+    --color-off-white: #F9F8F6;
+    --color-near-black: #222222;
+    --color-warm-sand: #E8DCCC;
+
     /* ========== DERIVED COLORS ========== */
     --color-wood-light: #C29A7D;
     --color-safari-dark: #3E7D52;
