@@ -56,3 +56,60 @@
         <i class="fa-solid fa-angles-left"></i>
     </button>
 </aside>
+
+<!-- Mobile Offcanvas Navigation (visible only on tablet/mobile) -->
+<div class="offcanvas offcanvas-start d-lg-none"
+     tabindex="-1"
+     id="mobileSidebar"
+     aria-labelledby="mobileSidebarLabel"
+     data-bs-scroll="false"
+     data-bs-backdrop="true">
+    <div class="offcanvas-header mobile-sidebar-header">
+        <img src="{{ url_for('static', filename='images/Logo_PBSP_Blanco.svg') }}"
+             alt="PuroBeach"
+             class="mobile-sidebar-logo"
+             style="height: 32px;">
+        <button type="button" class="btn-close btn-close-white"
+                data-bs-dismiss="offcanvas"
+                aria-label="Cerrar menu"></button>
+    </div>
+    <div class="offcanvas-body mobile-sidebar-body">
+        <nav class="mobile-sidebar-nav">
+            {% set mobile_menu_items = get_menu_items(current_user) %}
+            {% if mobile_menu_items %}
+                {% for parent in mobile_menu_items %}
+                    {% set ns = namespace(has_active_child=false) %}
+                    {% for child in parent.children %}
+                        {% if child.url and (request.path == child.url or request.path.startswith(child.url + '/')) %}
+                            {% set ns.has_active_child = true %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <div class="mobile-nav-section">
+                        <a class="mobile-nav-parent {% if ns.has_active_child %}active{% endif %}"
+                           data-bs-toggle="collapse"
+                           href="#mobile-menu-{{ parent.code | replace('.', '-') }}"
+                           role="button"
+                           aria-expanded="{{ 'true' if ns.has_active_child else 'false' }}">
+                            <i class="fa-solid {{ parent.icon or 'fa-folder' }}"></i>
+                            <span>{{ parent.name }}</span>
+                            <i class="fa-solid fa-chevron-down mobile-nav-arrow"></i>
+                        </a>
+
+                        <div class="collapse {% if ns.has_active_child %}show{% endif %}"
+                             id="mobile-menu-{{ parent.code | replace('.', '-') }}">
+                            {% for child in parent.children %}
+                                {% set is_child_active = child.url and (request.path == child.url or request.path.startswith(child.url + '/')) %}
+                                <a href="{{ child.url }}"
+                                   class="mobile-nav-child {% if is_child_active %}active{% endif %}">
+                                    <i class="fa-solid {{ child.icon or 'fa-circle' }}"></i>
+                                    <span>{{ child.name }}</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </nav>
+    </div>
+</div>
