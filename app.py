@@ -208,8 +208,16 @@ def register_cli_commands(app):
         return True, ""
 
     @app.cli.command('init-db')
-    def init_db_command():
+    @click.option('--confirm', is_flag=True, help='Confirmar inicialización (requerido)')
+    def init_db_command(confirm):
         """Initialize database with schema and seed data."""
+        if not confirm:
+            click.echo('ADVERTENCIA: Este comando reinicializa la base de datos.')
+            click.echo('Todos los datos existentes serán eliminados.')
+            click.echo('')
+            click.echo('Para continuar, ejecute: flask init-db --confirm')
+            raise SystemExit(1)
+
         click.echo('Initializing database...')
         with app.app_context():
             try:
