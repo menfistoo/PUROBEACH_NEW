@@ -11,7 +11,7 @@ Handles furniture reassignment operations during move mode:
 from flask import current_app, jsonify, request
 from flask_login import login_required
 from utils.decorators import permission_required
-from utils.api_response import api_error
+from utils.api_response import api_success, api_error
 from models.move_mode import (
     unassign_furniture_for_date,
     assign_furniture_for_date,
@@ -33,16 +33,16 @@ def _validate_furniture_request(data):
         error_response is None if validation passes, otherwise a tuple of (response, status_code)
     """
     if not data:
-        return None, None, None, (jsonify({'success': False, 'error': 'No se recibieron datos'}), 400)
+        return None, None, None, api_error('No se recibieron datos', 400)
 
     reservation_id = data.get('reservation_id')
     furniture_ids = data.get('furniture_ids', [])
     target_date = data.get('date')
 
     if not reservation_id:
-        return None, None, None, (jsonify({'success': False, 'error': 'reservation_id es requerido'}), 400)
+        return None, None, None, api_error('reservation_id es requerido', 400)
     if not target_date:
-        return None, None, None, (jsonify({'success': False, 'error': 'date es requerido'}), 400)
+        return None, None, None, api_error('date es requerido', 400)
 
     return reservation_id, furniture_ids, target_date, None
 
@@ -87,7 +87,7 @@ def register_routes(bp):
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/move-mode/assign', methods=['POST'])
     @login_required
@@ -137,7 +137,7 @@ def register_routes(bp):
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     @bp.route('/move-mode/pool-data', methods=['GET'])
     @login_required
@@ -177,7 +177,7 @@ def register_routes(bp):
             result = get_reservation_pool_data(reservation_id, target_date)
 
             if 'error' in result:
-                return jsonify({'success': False, **result}), 404
+                return api_error(result['error'], 404)
 
             # Auto-sync customer preferences if reservation has none
             if not result.get('preferences') and result.get('customer_id'):
@@ -193,7 +193,7 @@ def register_routes(bp):
                     # Reload pool data with synced preferences
                     result = get_reservation_pool_data(reservation_id, target_date)
 
-            return jsonify({'success': True, **result})
+            return api_success(**result)
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
@@ -243,7 +243,7 @@ def register_routes(bp):
                 zone_id=zone_id
             )
 
-            return jsonify({'success': True, **result})
+            return api_success(**result)
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
@@ -273,11 +273,7 @@ def register_routes(bp):
 
             reservation_ids = get_unassigned_reservations(target_date)
 
-            return jsonify({
-                'success': True,
-                'reservation_ids': reservation_ids,
-                'date': target_date
-            })
+            return api_success(reservation_ids=reservation_ids, date=target_date)
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
@@ -301,7 +297,7 @@ def register_routes(bp):
         try:
             from models.move_mode import get_unassigned_reservations_global
             result = get_unassigned_reservations_global(days_ahead=7)
-            return jsonify({'success': True, **result})
+            return api_success(**result)
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
