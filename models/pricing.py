@@ -357,39 +357,3 @@ def get_price_catalog() -> list:
         ''')
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
-
-
-def calculate_price(furniture_type: str, customer_type: str, zone_id: int, date: str) -> float:
-    """
-    Calculate price for furniture rental.
-    Placeholder - will be implemented in future phases.
-
-    Args:
-        furniture_type: Furniture type code
-        customer_type: Customer type ('interno'/'externo')
-        zone_id: Zone ID
-        date: Date for pricing (YYYY-MM-DD)
-
-    Returns:
-        Price amount (0.0 for now)
-    """
-    # TODO: Implement price calculation logic in Phase 8
-    # Consider: base_price, weekend_price, holiday_price, date ranges
-    return 0.0
-
-
-def get_minimum_consumption(furniture_type: str, customer_type: str, zone_id: int) -> float:
-    """
-    Get minimum consumption amount for furniture.
-    Placeholder - will be implemented in future phases.
-
-    Args:
-        furniture_type: Furniture type code
-        customer_type: Customer type ('interno'/'externo')
-        zone_id: Zone ID
-
-    Returns:
-        Minimum consumption amount (0.0 for now)
-    """
-    # TODO: Implement minimum consumption lookup in Phase 8
-    return 0.0

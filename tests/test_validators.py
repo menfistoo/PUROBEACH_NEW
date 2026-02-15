@@ -173,21 +173,39 @@ class TestValidatePassword:
     """Tests for password validation."""
 
     def test_valid_password(self):
-        """Test valid passwords."""
-        is_valid, msg = validate_password('password123')
+        """Test valid passwords with uppercase, lowercase, and digit."""
+        is_valid, msg = validate_password('Password1')
         assert is_valid is True
         assert msg == ''
 
     def test_valid_password_custom_length(self):
         """Test password with custom minimum length."""
-        is_valid, msg = validate_password('12345678', min_length=8)
+        is_valid, msg = validate_password('Abcdefgh1', min_length=8)
         assert is_valid is True
 
     def test_password_too_short(self):
         """Test password too short."""
-        is_valid, msg = validate_password('12345')
+        is_valid, msg = validate_password('Pass1')
         assert is_valid is False
-        assert 'al menos 6 caracteres' in msg
+        assert 'al menos 8 caracteres' in msg
+
+    def test_password_no_uppercase(self):
+        """Test password without uppercase letter."""
+        is_valid, msg = validate_password('password1')
+        assert is_valid is False
+        assert 'mayúscula' in msg
+
+    def test_password_no_lowercase(self):
+        """Test password without lowercase letter."""
+        is_valid, msg = validate_password('PASSWORD1')
+        assert is_valid is False
+        assert 'minúscula' in msg
+
+    def test_password_no_digit(self):
+        """Test password without digit."""
+        is_valid, msg = validate_password('Passwordx')
+        assert is_valid is False
+        assert 'número' in msg
 
     def test_password_empty(self):
         """Test empty password."""
