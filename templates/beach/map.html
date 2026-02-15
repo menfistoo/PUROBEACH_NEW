@@ -6,7 +6,7 @@
 {% block title %}Mapa - PuroBeach{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/map-bundle.css') }}">
+<link rel="stylesheet" href="{{ versioned_static('css/map-bundle.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -587,13 +587,13 @@
 
 {% block extra_js %}
 <!-- Non-module utilities (CustomerSearch, DatePicker, TouchHandler, SafeguardModal, ConflictModal) -->
-<script src="{{ url_for('static', filename='js/map-bundle.js') }}"></script>
+<script src="{{ versioned_static('js/map-bundle.js') }}"></script>
 <!-- Map core (BeachMap, managers, renderer, offline) -->
-<script src="{{ url_for('static', filename='js/map-core-bundle.js') }}"></script>
+<script src="{{ versioned_static('js/map-core-bundle.js') }}"></script>
 <!-- Reservation panels (V1 create + V2 view/edit) -->
-<script src="{{ url_for('static', filename='js/map-panels-bundle.js') }}"></script>
+<script src="{{ versioned_static('js/map-panels-bundle.js') }}"></script>
 <!-- Waitlist manager -->
-<script src="{{ url_for('static', filename='js/map-waitlist-bundle.js') }}"></script>
+<script src="{{ versioned_static('js/map-waitlist-bundle.js') }}"></script>
 <!-- Map page initialization (entry point) -->
-<script src="{{ url_for('static', filename='js/map/map-page.js') }}"></script>
+<script src="{{ versioned_static('js/map/map-page.js') }}"></script>
 {% endblock %}

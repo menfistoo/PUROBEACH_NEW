@@ -295,12 +295,20 @@ def register_context_processors(app):
         """Inject utility functions into templates."""
         from utils.permissions import get_menu_items
         from datetime import datetime
+        from flask import url_for
+
+        app_version = app.config.get('APP_VERSION', '1.0.0')
+
+        def versioned_static(filename: str) -> str:
+            """Generate versioned static file URL for cache busting."""
+            return url_for('static', filename=filename) + '?v=' + app_version
 
         return {
             'get_menu_items': get_menu_items,
             'current_year': datetime.now().year,
             'app_name': app.config.get('APP_NAME', 'PuroBeach'),
-            'app_version': app.config.get('APP_VERSION', '1.0.0')
+            'app_version': app_version,
+            'versioned_static': versioned_static,
         }
 
     # Add custom template filters

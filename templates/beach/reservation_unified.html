@@ -5,8 +5,8 @@
 {% block title %}{{ page_title }} - PuroBeach{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/reservation-panel.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/customer-search.css') }}">
+<link rel="stylesheet" href="{{ versioned_static('css/reservation-panel.css') }}">
+<link rel="stylesheet" href="{{ versioned_static('css/customer-search.css') }}">
 <style>
 /* Embedded panel mode - full screen layout */
 .unified-page-container {
@@ -143,8 +143,8 @@ window.UNIFIED_PAGE_CONFIG = {
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/customer-search.js') }}"></script>
-<script type="module" src="{{ url_for('static', filename='js/map/reservation-panel-v2/index.js') }}"></script>
+<script src="{{ versioned_static('js/customer-search.js') }}"></script>
+<script type="module" src="{{ versioned_static('js/map/reservation-panel-v2/index.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const config = window.UNIFIED_PAGE_CONFIG;

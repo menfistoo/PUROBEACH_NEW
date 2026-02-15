@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/admin/role-permissions.js') }}"></script>
+<script src="{{ versioned_static('js/admin/role-permissions.js') }}"></script>
 <script>
     initRolePermissions({{ role.id }}, {{ can_edit|tojson }});
 </script>
