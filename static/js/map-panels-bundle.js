@@ -4404,6 +4404,7 @@ class CustomerHandler {
      */
     async autoFillCustomerData(customer) {
         this.state.selectedCustomer = customer;
+        const isInterno = customer.customer_type === 'interno';
 
         // Show customer display with details
         this.showCustomerDisplay(customer);

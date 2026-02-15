@@ -2342,17 +2342,17 @@ class WaitlistManager {
 
     async _loadDropdownOptions() {
         try {
-            // Load zones
-            const zonesResult = await _waitlistApi.loadZones(this.options.apiBaseUrl);
-            if (zonesResult.success && zonesResult.zones) {
-                this.state.zones = zonesResult.zones;
+            // Load zones (loadZones returns a plain array)
+            const zones = await _waitlistApi.loadZones(this.options.apiBaseUrl);
+            if (zones && zones.length > 0) {
+                this.state.zones = zones;
                 _waitlistRenderers.populateZonesDropdown(this.elements.zonePreferenceSelect, this.state.zones);
             }
 
-            // Load furniture types
-            const typesResult = await _waitlistApi.loadFurnitureTypes(this.options.apiBaseUrl);
-            if (typesResult.success && typesResult.furniture_types) {
-                this.state.furnitureTypes = typesResult.furniture_types;
+            // Load furniture types (loadFurnitureTypes returns a plain array)
+            const furnitureTypes = await _waitlistApi.loadFurnitureTypes(this.options.apiBaseUrl);
+            if (furnitureTypes && furnitureTypes.length > 0) {
+                this.state.furnitureTypes = furnitureTypes;
                 _waitlistRenderers.populateFurnitureTypesDropdown(this.elements.furnitureTypeSelect, this.state.furnitureTypes);
             }
         } catch (error) {

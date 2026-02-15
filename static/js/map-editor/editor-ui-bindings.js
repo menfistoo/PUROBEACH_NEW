@@ -213,7 +213,7 @@ export function bindToolbarControls(editor) {
 
     // Delete selected
     el('btn-delete-selected')?.addEventListener('click', function () {
-        PuroBeach.confirmAction({
+        window.PuroBeach.confirmAction({
             title: 'Confirmar eliminación',
             message: '¿Eliminar el elemento seleccionado?',
             confirmText: 'Eliminar',

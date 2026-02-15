@@ -14,6 +14,12 @@
  *   });
  */
 
+function _escapeHtml(str) {
+    if (!str) return '';
+    const s = String(str);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 class CustomerSearch {
     constructor(options = {}) {
         // Required elements
@@ -221,14 +227,14 @@ class CustomerSearch {
     }
 
     _renderCustomerItem(c) {
-        const displayName = c.display_name ||
-            `${c.first_name || ''} ${c.last_name || ''}`.trim();
+        const displayName = _escapeHtml(c.display_name ||
+            `${c.first_name || ''} ${c.last_name || ''}`.trim());
         const isVip = c.vip_status || c.vip_code;
-        const roomInfo = c.room_number ? `Hab. ${c.room_number}` : '';
+        const roomInfo = c.room_number ? `Hab. ${_escapeHtml(c.room_number)}` : '';
         const typeInfo = c.customer_type === 'interno' ?
             `<i class="fas fa-door-open"></i> ${roomInfo}` :
             '<i class="fas fa-user"></i> Externo';
-        const phone = c.phone ? ` - ${c.phone}` : '';
+        const phone = c.phone ? ` - ${_escapeHtml(c.phone)}` : '';
 
         if (this.compact) {
             return `
@@ -237,7 +243,7 @@ class CustomerSearch {
                         ${displayName}
                         ${isVip ? '<span class="cs-badge cs-vip">VIP</span>' : ''}
                     </div>
-                    <div class="cs-item-details">${roomInfo || c.phone || c.email || ''}</div>
+                    <div class="cs-item-details">${roomInfo || _escapeHtml(c.phone) || _escapeHtml(c.email) || ''}</div>
                 </div>
             `;
         }
@@ -261,6 +267,8 @@ class CustomerSearch {
 
     _renderHotelGuestItem(g) {
         const isVip = g.vip_code;
+        const guestName = _escapeHtml(g.guest_name);
+        const roomNumber = _escapeHtml(g.room_number);
         const checkinBadge = g.is_checkin_today ?
             '<span class="cs-badge cs-checkin">Check-in</span>' : '';
         const checkoutBadge = g.is_checkout_today ?
@@ -272,12 +280,12 @@ class CustomerSearch {
             return `
                 <div class="cs-item" data-id="${g.id}" data-source="hotel_guest">
                     <div class="cs-item-name">
-                        ${g.guest_name}
+                        ${guestName}
                         ${isVip ? '<span class="cs-badge cs-vip">VIP</span>' : ''}
                         ${checkinBadge}${checkoutBadge}
                     </div>
                     <div class="cs-item-details">
-                        <i class="fas fa-hotel"></i> Hab. ${g.room_number}
+                        <i class="fas fa-hotel"></i> Hab. ${roomNumber}
                     </div>
                 </div>
             `;
@@ -290,16 +298,16 @@ class CustomerSearch {
                 </div>
                 <div class="cs-info">
                     <div class="cs-name">
-                        ${g.guest_name}
+                        ${guestName}
                         ${mainGuestBadge}
                         ${isVip ? '<span class="cs-badge cs-vip">VIP</span>' : ''}
                         ${checkinBadge}${checkoutBadge}
                     </div>
                     <div class="cs-details">
-                        <i class="fas fa-door-open"></i> Hab. ${g.room_number}
+                        <i class="fas fa-door-open"></i> Hab. ${roomNumber}
                         ${g.arrival_date && g.departure_date ?
                             ` - <i class="fas fa-calendar"></i> ${this._formatDate(g.arrival_date)} - ${this._formatDate(g.departure_date)}` : ''}
-                        ${g.booking_reference ? ` - #${g.booking_reference}` : ''}
+                        ${g.booking_reference ? ` - #${_escapeHtml(g.booking_reference)}` : ''}
                     </div>
                 </div>
                 <div class="cs-action"><i class="fas fa-chevron-right"></i></div>
