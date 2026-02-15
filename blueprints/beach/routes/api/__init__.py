@@ -4,9 +4,13 @@ Split into smaller modules by entity for maintainability.
 """
 
 from flask import Blueprint
+from extensions import limiter
 
 # Create the API blueprint
 api_bp = Blueprint('api', __name__)
+
+# Apply rate limit to all beach API endpoints (120 req/min per IP)
+limiter.limit("120 per minute")(api_bp)
 
 # Import and register routes from submodules
 from blueprints.beach.routes.api import customers
