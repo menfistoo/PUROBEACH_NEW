@@ -375,10 +375,19 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==========================================================================
     const searchManager = new SearchManager();
 
-    // Load search reservations when map renders
+    // Combined onRender handler (BeachMap.on() only keeps the last callback per event)
     map.on('onRender', (data) => {
+        // 1. Reload search reservations
         const zoneId = document.getElementById('zone-select')?.value || null;
         searchManager.loadReservations(map.getCurrentDate(), zoneId ? parseInt(zoneId) : null);
+        // 2. Update canvas info bar
+        if (typeof updateCanvasInfo === 'function') updateCanvasInfo();
+        // 3. Apply zone view filtering
+        if (currentZoneId) {
+            applyZoneView(currentZoneId);
+        } else {
+            populateZoneSelector();
+        }
     });
 
     // Also load initial data after a short delay
@@ -1015,7 +1024,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const quickSwapModal = document.getElementById('quickSwapModal');
     const quickSwapCancelBtn = document.getElementById('quickSwapCancelBtn');
     const quickSwapStartBtn = document.getElementById('quickSwapStartBtn');
-    const quickSwapBackdrop = quickSwapModal.querySelector('.quick-swap-backdrop');
+    const quickSwapBackdrop = quickSwapModal?.querySelector('.quick-swap-backdrop');
 
     // Show quick swap modal when clicking on a conflicting furniture
     function showQuickSwapModal(furnitureId, reservationId, customerName, furnitureLabel) {
@@ -1164,9 +1173,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Bind quick swap modal events
-    quickSwapCancelBtn.addEventListener('click', hideQuickSwapModal);
-    quickSwapBackdrop.addEventListener('click', hideQuickSwapModal);
-    quickSwapStartBtn.addEventListener('click', enterSwapDestinationMode);
+    quickSwapCancelBtn?.addEventListener('click', hideQuickSwapModal);
+    quickSwapBackdrop?.addEventListener('click', hideQuickSwapModal);
+    quickSwapStartBtn?.addEventListener('click', enterSwapDestinationMode);
 
     // ==========================================================================
     // TOUCH HANDLER FOR RESERVATION DETAILS
@@ -1184,6 +1193,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Check if furniture is occupied
         const data = map.getData();
+        if (!data?.availability) return;
         const availability = data.availability[furnitureId];
 
         // Handle move mode - long-press releases ALL furniture from reservation
@@ -1501,10 +1511,7 @@ document.addEventListener('DOMContentLoaded', function () {
         cursorPos.textContent = '-';
     });
 
-    // Update info after render
-    map.on('onRender', () => {
-        updateCanvasInfo();
-    });
+    // (onRender handler consolidated above — see Combined onRender handler)
 
     // ==========================================================================
     // ZOOM CONTROLS
@@ -2024,6 +2031,7 @@ document.addEventListener('DOMContentLoaded', function () {
     map.on('onFurnitureClick', async (item, selectedFurniture) => {
         try {
             const data = map.getData();
+            if (!data?.availability) return;
             const availability = data.availability[item.id];
 
             // Handle move mode - furniture reassignment
@@ -2355,14 +2363,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Apply zone view after every render
-    map.on('onRender', () => {
-        if (currentZoneId) {
-            applyZoneView(currentZoneId);
-        } else {
-            populateZoneSelector();
-        }
-    });
+    // (onRender handler consolidated above — see Combined onRender handler)
 
 });
 

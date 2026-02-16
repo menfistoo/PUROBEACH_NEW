@@ -257,10 +257,10 @@ export function renderCustomerResults(resultsEl, customers, onSelect) {
     const html = customers.map(customer => {
         const name = customer.display_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
         return `
-            <div class="cs-item" data-customer-id="${customer.id}" data-customer-name="${escapeHtml(name)}" data-phone="${customer.phone || ''}">
+            <div class="cs-item" data-customer-id="${customer.id}" data-customer-name="${escapeHtml(name)}" data-phone="${escapeHtml(customer.phone || '')}">
                 <div class="cs-info">
                     <div class="cs-name">${escapeHtml(name)}</div>
-                    <div class="cs-details">${customer.phone ? `<i class="fas fa-phone"></i> ${customer.phone}` : ''}</div>
+                    <div class="cs-details">${customer.phone ? `<i class="fas fa-phone"></i> ${escapeHtml(customer.phone)}` : ''}</div>
                 </div>
             </div>
         `;

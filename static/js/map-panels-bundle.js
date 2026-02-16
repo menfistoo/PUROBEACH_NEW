@@ -1130,7 +1130,7 @@ const PanelLifecycleMixin = (Base) => class extends Base {
             this.contentEl.innerHTML = `
                 <div class="text-center text-danger py-4">
                     <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
-                    <p>${message}</p>
+                    <p>${escapeHtml(message)}</p>
                     <button class="btn btn-outline-primary mt-2" onclick="document.getElementById('reservationPanel').__panel?.close()">
                         Cerrar
                     </button>
@@ -4199,6 +4199,12 @@ window.ReservationPanel = ReservationPanel;
 // =============================================================================
 
 // --- customer-handler.js ---
+function _chEscapeHtml(str) {
+    if (!str) return '';
+    const s = String(str);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 /**
  * CustomerHandler - Manages customer selection, creation, and display
  * Handles customer search, inline creation form, hotel guest integration
@@ -4591,7 +4597,7 @@ class CustomerHandler {
             meta.push('<i class="fas fa-star vip-badge"></i> VIP');
         }
         if (customer.phone) {
-            meta.push(`<i class="fas fa-phone"></i> ${customer.phone}`);
+            meta.push(`<i class="fas fa-phone"></i> ${_chEscapeHtml(customer.phone)}`);
         }
         const metaEl = document.getElementById('newPanelCustomerMeta');
         if (metaEl) {

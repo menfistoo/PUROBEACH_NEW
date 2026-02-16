@@ -52,6 +52,8 @@
     --color-safari-dark: #3E7D52;
     --color-red-dark: #C14830;
     --color-med-dark: #5578A3;
+    --color-danger: var(--color-red);
+    --color-primary-light: #E5C04A;
 
     /* ========== TYPOGRAPHY ========== */
     --font-primary: 'Gilroy', 'Montserrat', 'Inter', -apple-system, sans-serif;
@@ -74,6 +76,7 @@
     --space-12: 48px;
 
     /* ========== BORDERS ========== */
+    --border-radius: 8px;
     --border-radius-sm: 4px;
     --border-radius-md: 8px;
     --border-radius-lg: 12px;

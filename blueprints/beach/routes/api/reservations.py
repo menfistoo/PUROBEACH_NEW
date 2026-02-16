@@ -264,15 +264,13 @@ def register_routes(bp):
         """Get reservation state change history."""
         history = get_status_history(reservation_id)
 
-        return api_success(data={
-            'history': [{
-                'status_type': h.get('status_type'),
-                'action': h.get('action'),
-                'changed_by': h.get('changed_by'),
-                'notes': h.get('notes'),
-                'created_at': h.get('created_at')
-            } for h in history]
-        })
+        return api_success(history=[{
+            'status_type': h.get('status_type'),
+            'action': h.get('action'),
+            'changed_by': h.get('changed_by'),
+            'notes': h.get('notes'),
+            'created_at': h.get('created_at')
+        } for h in history])
 
     @bp.route('/furniture/available')
     @login_required

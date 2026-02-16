@@ -1098,6 +1098,12 @@ window.TouchHandler = TouchHandler;
  * SafeguardModal - Reusable warning modal for reservation safeguards
  * Shows warnings before potentially problematic actions
  */
+function _sgEscape(str) {
+    if (!str) return '';
+    const s = String(str);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 class SafeguardModal {
     constructor() {
         this.modal = null;
@@ -1268,7 +1274,7 @@ class SafeguardModal {
         const res = existingReservation;
 
         const furnitureList = (res.furniture || [])
-            .map(f => f.number || f.furniture_number || `#${f.id}`)
+            .map(f => _sgEscape(f.number || f.furniture_number || `#${f.id}`))
             .join(', ') || 'Sin mobiliario';
 
         return instance.show({
@@ -1280,7 +1286,7 @@ class SafeguardModal {
                 <div class="safeguard-detail-box">
                     <div class="detail-row">
                         <span class="detail-label">Ticket:</span>
-                        <span class="detail-value">#${res.ticket_number || res.id}</span>
+                        <span class="detail-value">#${_sgEscape(res.ticket_number || res.id)}</span>
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Mobiliario:</span>
@@ -1288,7 +1294,7 @@ class SafeguardModal {
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Estado:</span>
-                        <span class="detail-value">${res.current_state || res.state || 'Pendiente'}</span>
+                        <span class="detail-value">${_sgEscape(res.current_state || res.state || 'Pendiente')}</span>
                     </div>
                 </div>
                 <p class="safeguard-question">¿Deseas crear otra reserva de todas formas?</p>
@@ -1465,11 +1471,11 @@ class SafeguardModal {
 
         const conflictList = conflicts.map(c => `
             <div class="conflict-item">
-                <span class="conflict-furniture">${c.furniture_number || 'Mobiliario #' + c.furniture_id}</span>
+                <span class="conflict-furniture">${_sgEscape(c.furniture_number || 'Mobiliario #' + c.furniture_id)}</span>
                 <span class="conflict-date">${formatDate(c.date)}</span>
                 <span class="conflict-reservation">
-                    Reserva #${c.ticket_number || c.reservation_id}
-                    ${c.customer_name ? ` - ${c.customer_name}` : ''}
+                    Reserva #${_sgEscape(c.ticket_number || c.reservation_id)}
+                    ${c.customer_name ? ` - ${_sgEscape(c.customer_name)}` : ''}
                 </span>
             </div>
         `).join('');
@@ -1505,7 +1511,7 @@ class SafeguardModal {
         // Build blocking furniture list
         const blockingList = blockingFurniture.length > 0
             ? blockingFurniture.map(f => `
-                <span class="blocking-item">${f.number || '#' + f.id}</span>
+                <span class="blocking-item">${_sgEscape(f.number || '#' + f.id)}</span>
             `).join('')
             : '<span class="no-blocking">Mobiliario disperso en diferentes filas</span>';
 

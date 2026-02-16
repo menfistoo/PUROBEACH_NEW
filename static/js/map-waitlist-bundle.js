@@ -1157,10 +1157,10 @@ function renderCustomerResults(resultsEl, customers, onSelect) {
     const html = customers.map(customer => {
         const name = customer.display_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
         return `
-            <div class="cs-item" data-customer-id="${customer.id}" data-customer-name="${escapeHtml(name)}" data-phone="${customer.phone || ''}">
+            <div class="cs-item" data-customer-id="${customer.id}" data-customer-name="${escapeHtml(name)}" data-phone="${escapeHtml(customer.phone || '')}">
                 <div class="cs-info">
                     <div class="cs-name">${escapeHtml(name)}</div>
-                    <div class="cs-details">${customer.phone ? `<i class="fas fa-phone"></i> ${customer.phone}` : ''}</div>
+                    <div class="cs-details">${customer.phone ? `<i class="fas fa-phone"></i> ${escapeHtml(customer.phone)}` : ''}</div>
                 </div>
             </div>
         `;
@@ -1566,13 +1566,13 @@ async function onReservationTypeChange(context) {
         if (elements.packageGroup) elements.packageGroup.style.display = 'block';
         // Load packages
         try {
-            const result = await loadPackages(options.apiBaseUrl);
-            if (result.success && result.packages) {
-                state.packages = result.packages;
+            const packages = await loadPackages(options.apiBaseUrl);
+            if (packages && packages.length > 0) {
+                state.packages = packages;
                 // Populate dropdown
                 if (elements.packageSelect) {
                     elements.packageSelect.innerHTML = '<option value="">Seleccionar paquete...</option>';
-                    result.packages.forEach(pkg => {
+                    packages.forEach(pkg => {
                         const option = document.createElement('option');
                         option.value = pkg.id;
                         option.textContent = `${pkg.package_name} - ${pkg.base_price}`;

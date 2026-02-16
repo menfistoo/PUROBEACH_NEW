@@ -1,3 +1,9 @@
+function _chEscapeHtml(str) {
+    if (!str) return '';
+    const s = String(str);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 /**
  * CustomerHandler - Manages customer selection, creation, and display
  * Handles customer search, inline creation form, hotel guest integration
@@ -390,7 +396,7 @@ class CustomerHandler {
             meta.push('<i class="fas fa-star vip-badge"></i> VIP');
         }
         if (customer.phone) {
-            meta.push(`<i class="fas fa-phone"></i> ${customer.phone}`);
+            meta.push(`<i class="fas fa-phone"></i> ${_chEscapeHtml(customer.phone)}`);
         }
         const metaEl = document.getElementById('newPanelCustomerMeta');
         if (metaEl) {
