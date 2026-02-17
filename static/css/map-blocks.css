@@ -228,6 +228,7 @@
 
     .context-menu-item {
         padding: 12px 14px;
+        min-height: 44px;
     }
 }
 

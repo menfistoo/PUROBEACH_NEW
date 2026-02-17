@@ -32,6 +32,19 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
+/**
+ * Sanitize a CSS color value to prevent injection via style attributes
+ * @param {string} color - Color value (hex, rgb, named)
+ * @returns {string|null} Sanitized color or null if invalid
+ */
+function sanitizeColor(color) {
+    if (!color) return null;
+    if (/^#[0-9A-Fa-f]{3,8}$/.test(color)) return color;
+    if (/^(rgb|hsl)a?\([^)]+\)$/.test(color)) return color;
+    if (/^[a-zA-Z]+$/.test(color)) return color;
+    return null;
+}
+
 // =============================================================================
 // NAME UTILITIES
 // =============================================================================
@@ -429,11 +442,22 @@ class ReservationPanelBase {
         // CSRF token
         this.csrfToken = document.getElementById('panelCsrfToken')?.value ||
                          document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        // Back-reference for error state close button
+        if (this.panel) {
+            this.panel.__panel = this;
+        }
     }
 
     // =========================================================================
     // EVENT LISTENERS
     // =========================================================================
+
+    getCsrfToken() {
+        return document.getElementById('panelCsrfToken')?.value ||
+               document.querySelector('meta[name="csrf-token"]')?.content ||
+               this.csrfToken;
+    }
 
     /**
      * Attach event listeners to DOM elements
@@ -1137,6 +1161,11 @@ const PanelLifecycleMixin = (Base) => class extends Base {
                 </div>
             `;
             this.contentEl.style.display = 'block';
+
+            // Restore body scroll so user isn't trapped if close button fails
+            if (!this.isStandalone()) {
+                document.body.style.overflow = '';
+            }
         }
     }
 };
@@ -1390,7 +1419,7 @@ const SaveMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({ new_date: newDate })
                 }
@@ -1505,7 +1534,7 @@ const SaveMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({
                         new_date: newDate,
@@ -1578,7 +1607,7 @@ const SaveMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({ new_date: newDate })
                 }
@@ -1774,7 +1803,7 @@ const SaveMixin = (Base) => class extends Base {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRFToken': this.csrfToken
+                            'X-CSRFToken': this.getCsrfToken()
                         },
                         body: JSON.stringify(updates)
                     }
@@ -1809,7 +1838,7 @@ const SaveMixin = (Base) => class extends Base {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRFToken': this.csrfToken
+                                'X-CSRFToken': this.getCsrfToken()
                             },
                             body: JSON.stringify({ preference_codes: selectedCodes })
                         }
@@ -1841,7 +1870,7 @@ const SaveMixin = (Base) => class extends Base {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRFToken': this.csrfToken
+                            'X-CSRFToken': this.getCsrfToken()
                         },
                         body: JSON.stringify({
                             preferences: selectedCodes.join(',')
@@ -1971,7 +2000,7 @@ const CustomerMixin = (Base) => class extends Base {
     _renderNoCustomer() {
         if (this.customerName) {
             this.customerName.textContent = 'Cliente no encontrado';
-            this.customerName.href = '#';
+            this.customerName.onclick = null;
             this.customerName.removeAttribute('title');
         }
         if (this.customerRoomBadge) {
@@ -1989,23 +2018,30 @@ const CustomerMixin = (Base) => class extends Base {
     }
 
     /**
-     * Render customer name as clickable link to customer details
+     * Render customer name as clickable button to open customer details
+     * Uses window.open for reliable new-tab navigation from a button element
      * @private
      * @param {Object} customer - Customer data
      */
     _renderCustomerName(customer) {
         if (!this.customerName) return;
 
-        this.customerName.textContent = customer.full_name ||
+        const displayName = escapeHtml(
+            customer.full_name ||
             `${customer.first_name || ''} ${customer.last_name || ''}`.trim() ||
-            'Sin nombre';
+            'Sin nombre'
+        );
 
-        // Set link to customer details page
         if (customer.id) {
-            this.customerName.href = `/beach/customers/${customer.id}`;
+            const customerUrl = `/beach/customers/${customer.id}`;
+            this.customerName.innerHTML = `${displayName} <i class="fas fa-external-link-alt"></i>`;
             this.customerName.title = 'Ver detalles del cliente';
+            this.customerName.onclick = () => {
+                window.open(customerUrl, '_blank', 'noopener,noreferrer');
+            };
         } else {
-            this.customerName.href = '#';
+            this.customerName.textContent = displayName;
+            this.customerName.onclick = null;
             this.customerName.removeAttribute('title');
         }
     }
@@ -2241,7 +2277,7 @@ const CustomerMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({
                         customer_id: null,
@@ -2331,9 +2367,16 @@ const CustomerMixin = (Base) => class extends Base {
      * @returns {Promise<void>}
      */
     async searchCustomers(query) {
+        // Cancel previous in-flight request
+        if (this._searchAbortController) {
+            this._searchAbortController.abort();
+        }
+        this._searchAbortController = new AbortController();
+
         try {
             const response = await fetch(
-                `${this.options.apiBaseUrl}/customers/search?q=${encodeURIComponent(query)}`
+                `${this.options.apiBaseUrl}/customers/search?q=${encodeURIComponent(query)}`,
+                { signal: this._searchAbortController.signal }
             );
 
             if (!response.ok) {
@@ -2344,6 +2387,7 @@ const CustomerMixin = (Base) => class extends Base {
             this.renderCustomerSearchResults(result);
 
         } catch (error) {
+            if (error.name === 'AbortError') return;
             console.error('Customer search error:', error);
         }
     }
@@ -2358,7 +2402,21 @@ const CustomerMixin = (Base) => class extends Base {
      */
     renderCustomerSearchResults(result) {
         const customers = result.customers || [];
-        const hotelGuests = result.hotel_guests || [];
+        let hotelGuests = result.hotel_guests || [];
+
+        // Filter out hotel guests that are already beach customers (by room + name)
+        if (customers.length > 0 && hotelGuests.length > 0) {
+            const existingKeys = new Set();
+            customers.forEach(c => {
+                if (c.customer_type === 'interno' && c.room_number) {
+                    existingKeys.add(`${c.room_number}|${(c.first_name || '').toLowerCase()}`);
+                }
+            });
+            hotelGuests = hotelGuests.filter(g => {
+                const key = `${g.room_number}|${(g.first_name || '').toLowerCase()}`;
+                return !existingKeys.has(key);
+            });
+        }
 
         // Show "no results" message if empty
         if (customers.length === 0 && hotelGuests.length === 0) {
@@ -2467,7 +2525,7 @@ const CustomerMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({
                         customer_id: customerId ? parseInt(customerId) : null,
@@ -2503,6 +2561,11 @@ const CustomerMixin = (Base) => class extends Base {
 
         // Re-render customer section with new data
         this.renderCustomerSection(result.customer);
+
+        // Recalculate pricing (customer type affects pricing)
+        if (typeof this.calculateAndUpdatePricing === 'function') {
+            this.calculateAndUpdatePricing();
+        }
 
         // Hide search UI
         this.hideCustomerSearch();
@@ -2623,8 +2686,10 @@ const StateMixin = (Base) => class extends Base {
         const newState = chip.dataset.state;
         const chipColor = chip.dataset.color;
 
-        // Skip if already active
+        // Skip if already active or if a state change is in progress
         if (chip.classList.contains('active')) return;
+        if (this._stateChangeInProgress) return;
+        this._stateChangeInProgress = true;
 
         // Store previous active chip for potential revert
         const prevActive = this.stateChipsContainer.querySelector('.state-chip.active');
@@ -2648,7 +2713,7 @@ const StateMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({ state: newState, action: 'set' })
                 }
@@ -2666,6 +2731,9 @@ const StateMixin = (Base) => class extends Base {
                 if (this.options.onStateChange) {
                     this.options.onStateChange(this.state.reservationId, newState);
                 }
+
+                // Reload state history to show the new entry
+                await this.loadStateHistory(this.state.reservationId);
 
                 showToast(`Estado cambiado a ${newState}`, 'success');
             } else {
@@ -2690,6 +2758,7 @@ const StateMixin = (Base) => class extends Base {
             showToast(error.message, 'error');
         } finally {
             chip.classList.remove('loading');
+            this._stateChangeInProgress = false;
         }
     }
 
@@ -3412,7 +3481,7 @@ const FurnitureMixin = (Base) => class extends Base {
         const furnitureIds = currentFurniture.map(f => f.furniture_id || f.id);
 
         // Close the panel first
-        this.close();
+        await this.close();
 
         // Activate move mode
         window.moveMode.activate(this.state.currentDate);
@@ -3764,7 +3833,7 @@ const PricingMixin = (Base) => class extends Base {
 
             const response = await fetch(url, {
                 headers: {
-                    'X-CSRFToken': this.csrfToken
+                    'X-CSRFToken': this.getCsrfToken()
                 }
             });
 
@@ -3854,7 +3923,7 @@ const PricingMixin = (Base) => class extends Base {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
+                    'X-CSRFToken': this.getCsrfToken()
                 },
                 body: JSON.stringify({
                     customer_type: customerType,
@@ -3983,7 +4052,7 @@ const PricingMixin = (Base) => class extends Base {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
+                    'X-CSRFToken': this.getCsrfToken()
                 },
                 body: JSON.stringify(requestBody)
             });
@@ -4988,7 +5057,7 @@ class DateAvailabilityHandler {
         if (conflictDates.length === 1) {
             const date = conflictDates[0];
             const items = conflictsByDate[date];
-            warningHtml += `<strong>${items.map(i => i.furniture_number).join(', ')}</strong> ocupado el ${formatDate(date)}`;
+            warningHtml += `<strong>${items.map(i => escapeHtml(i.furniture_number)).join(', ')}</strong> ocupado el ${formatDate(date)}`;
         } else {
             warningHtml += `Mobiliario no disponible para ${conflictDates.length} fechas`;
         }
@@ -5555,7 +5624,9 @@ class ConflictResolver {
             chargeToRoom: document.getElementById('newPanelChargeToRoom')?.checked || false,
             numPeople: parseInt(document.getElementById('newPanelNumPeople').value) || 2,
             notes: document.getElementById('newPanelNotes')?.value || '',
-            preferences: [...this.panel.state.preferences]
+            preferences: [...this.panel.state.preferences],
+            tagIds: [...(this.panel.state.selectedTags || [])],
+            packageId: document.getElementById('newPanelSelectedPackageId')?.value || ''
         };
 
         this.conflictModal.show(
@@ -5598,7 +5669,7 @@ class ConflictResolver {
                 conflicts: enhancedConflicts,
                 currentSelection: originalSelection,
                 originalCount: originalSelection.length,  // Total furniture to select
-                conflictingLabels: enhancedConflicts.map(c => c.furniture_number).join(', ')
+                conflictingLabels: enhancedConflicts.map(c => escapeHtml(c.furniture_number)).join(', ')
             }
         }));
     }
@@ -5680,6 +5751,9 @@ class ConflictResolver {
             const preferences = this.panel.state.preferences?.length > 0 ? this.panel.state.preferences : (saved.preferences || []);
             const chargeToRoom = document.getElementById('newPanelChargeToRoom')?.checked ?? saved.chargeToRoom ?? false;
 
+            const tagIds = this.panel.state.selectedTags?.length > 0 ? this.panel.state.selectedTags : (saved.tagIds || []);
+            const packageId = document.getElementById('newPanelSelectedPackageId')?.value || saved.packageId || '';
+
             const payload = {
                 customer_id: finalCustomerId,
                 dates: selectedDates,
@@ -5688,8 +5762,13 @@ class ConflictResolver {
                 time_slot: 'all_day',
                 notes: notes,
                 preferences: preferences,
-                charge_to_room: chargeToRoom
+                charge_to_room: chargeToRoom,
+                tag_ids: tagIds
             };
+
+            if (packageId) {
+                payload.package_id = parseInt(packageId);
+            }
 
             const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
             const response = await fetch(`${this.panel.options.apiBaseUrl}/map/quick-reservation`, {
@@ -5924,7 +6003,7 @@ class SafeguardChecks {
 
             if (!response.ok) {
                 console.error('Availability check failed:', response.status);
-                return { proceed: true }; // Fail open
+                this.panel.showToast('Error verificando disponibilidad. Intenta de nuevo.', 'error'); return { proceed: false };
             }
 
             const result = await response.json();
@@ -5961,8 +6040,7 @@ class SafeguardChecks {
 
         } catch (error) {
             console.error('Furniture availability check error:', error);
-            // On error, allow to proceed (fail open)
-            return { proceed: true };
+            this.panel.showToast('Error verificando disponibilidad. Intenta de nuevo.', 'error'); return { proceed: false };
         }
     }
 
@@ -5993,7 +6071,7 @@ class SafeguardChecks {
 
             if (!response.ok) {
                 console.error('Contiguity check failed:', response.status);
-                return { proceed: true }; // Fail open
+                this.panel.showToast('Error verificando contigüidad. Intenta de nuevo.', 'error'); return { proceed: false };
             }
 
             const result = await response.json();
@@ -6014,8 +6092,7 @@ class SafeguardChecks {
 
         } catch (error) {
             console.error('Contiguity check error:', error);
-            // On error, allow to proceed (fail open)
-            return { proceed: true };
+            this.panel.showToast('Error verificando contigüidad. Intenta de nuevo.', 'error'); return { proceed: false };
         }
     }
 
@@ -6067,8 +6144,7 @@ class SafeguardChecks {
 
         } catch (error) {
             console.error('Duplicate check error:', error);
-            // On error, allow to proceed (fail open)
-            return { proceed: true };
+            this.panel.showToast('Error verificando duplicados. Intenta de nuevo.', 'error'); return { proceed: false };
         }
     }
 }
@@ -6285,11 +6361,11 @@ class NewReservationPanel {
 
         const chipsHtml = this.availableTags.map(tag => {
             const isActive = this.state.selectedTags.includes(tag.id);
-            const color = tag.color || '#6C757D';
+            const color = sanitizeColor(tag.color) || '#6C757D';
             return `
                 <button type="button" class="tag-chip ${isActive ? 'active' : ''}"
                         data-tag-id="${tag.id}" style="--tag-color: ${color};">
-                    <i class="fas fa-tag"></i> ${tag.name}
+                    <i class="fas fa-tag"></i> ${escapeHtml(tag.name)}
                 </button>
             `;
         }).join('');

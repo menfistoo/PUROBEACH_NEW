@@ -52,7 +52,9 @@ class ConflictResolver {
             chargeToRoom: document.getElementById('newPanelChargeToRoom')?.checked || false,
             numPeople: parseInt(document.getElementById('newPanelNumPeople').value) || 2,
             notes: document.getElementById('newPanelNotes')?.value || '',
-            preferences: [...this.panel.state.preferences]
+            preferences: [...this.panel.state.preferences],
+            tagIds: [...(this.panel.state.selectedTags || [])],
+            packageId: document.getElementById('newPanelSelectedPackageId')?.value || ''
         };
 
         this.conflictModal.show(
@@ -95,7 +97,7 @@ class ConflictResolver {
                 conflicts: enhancedConflicts,
                 currentSelection: originalSelection,
                 originalCount: originalSelection.length,  // Total furniture to select
-                conflictingLabels: enhancedConflicts.map(c => c.furniture_number).join(', ')
+                conflictingLabels: enhancedConflicts.map(c => escapeHtml(c.furniture_number)).join(', ')
             }
         }));
     }
@@ -177,6 +179,9 @@ class ConflictResolver {
             const preferences = this.panel.state.preferences?.length > 0 ? this.panel.state.preferences : (saved.preferences || []);
             const chargeToRoom = document.getElementById('newPanelChargeToRoom')?.checked ?? saved.chargeToRoom ?? false;
 
+            const tagIds = this.panel.state.selectedTags?.length > 0 ? this.panel.state.selectedTags : (saved.tagIds || []);
+            const packageId = document.getElementById('newPanelSelectedPackageId')?.value || saved.packageId || '';
+
             const payload = {
                 customer_id: finalCustomerId,
                 dates: selectedDates,
@@ -185,8 +190,13 @@ class ConflictResolver {
                 time_slot: 'all_day',
                 notes: notes,
                 preferences: preferences,
-                charge_to_room: chargeToRoom
+                charge_to_room: chargeToRoom,
+                tag_ids: tagIds
             };
+
+            if (packageId) {
+                payload.package_id = parseInt(packageId);
+            }
 
             const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
             const response = await fetch(`${this.panel.options.apiBaseUrl}/map/quick-reservation`, {

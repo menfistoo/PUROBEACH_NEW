@@ -311,5 +311,10 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
             `;
             this.contentEl.style.display = 'block';
         }
+
+        // Restore body scroll so user isn't trapped if close button fails
+        if (!this.isStandalone()) {
+            document.body.style.overflow = '';
+        }
     }
 };

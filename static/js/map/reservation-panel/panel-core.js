@@ -209,11 +209,11 @@ class NewReservationPanel {
 
         const chipsHtml = this.availableTags.map(tag => {
             const isActive = this.state.selectedTags.includes(tag.id);
-            const color = tag.color || '#6C757D';
+            const color = sanitizeColor(tag.color) || '#6C757D';
             return `
                 <button type="button" class="tag-chip ${isActive ? 'active' : ''}"
                         data-tag-id="${tag.id}" style="--tag-color: ${color};">
-                    <i class="fas fa-tag"></i> ${tag.name}
+                    <i class="fas fa-tag"></i> ${escapeHtml(tag.name)}
                 </button>
             `;
         }).join('');

@@ -1200,6 +1200,7 @@ html.sidebar-collapsed .nav-child.active i {
 /* ==================== Modals ==================== */
 .modal-backdrop {
     background: rgba(26, 26, 26, 0.6);
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
 }
 
@@ -1711,4 +1712,14 @@ html.sidebar-collapsed .nav-child.active i {
 
 #confirmActionModal.fade .modal-dialog {
     transition: transform 0.2s ease-out;
+}
+
+/* ==================== Accessibility: Reduced Motion ==================== */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }

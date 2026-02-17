@@ -241,6 +241,21 @@ export class ReservationPanelBase {
         // CSRF token
         this.csrfToken = document.getElementById('panelCsrfToken')?.value ||
                          document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        // Back-reference for error state close button
+        if (this.panel) {
+            this.panel.__panel = this;
+        }
+    }
+
+    /**
+     * Get fresh CSRF token from DOM (handles session rotation)
+     * @returns {string} Current CSRF token
+     */
+    getCsrfToken() {
+        return document.getElementById('panelCsrfToken')?.value ||
+               document.querySelector('meta[name="csrf-token"]')?.content ||
+               this.csrfToken;
     }
 
     // =========================================================================

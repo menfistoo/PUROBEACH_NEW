@@ -3,7 +3,7 @@
  * Main class that coordinates all map modules
  */
 
-import { loadCSSVariables, formatDateDisplay, showToast } from './utils.js';
+import { loadCSSVariables, formatDateDisplay, showToast, escapeHtml } from './utils.js';
 import { TooltipManager } from './tooltips.js';
 import { SelectionManager } from './selection.js';
 import { NavigationManager } from './navigation.js';
@@ -1006,7 +1006,7 @@ export class BeachMap {
     showError(message) {
         const errorDiv = document.createElement('div');
         errorDiv.className = 'alert alert-danger m-3';
-        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${escapeHtml(message)}`;
         this.container.appendChild(errorDiv);
     }
 

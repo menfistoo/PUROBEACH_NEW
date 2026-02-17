@@ -442,10 +442,12 @@
         gap: 4px;
     }
 
-    /* Smaller toolbar buttons */
+    /* Toolbar buttons: meet 44px touch target minimum */
     .toolbar-btn {
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 36px;
+        min-height: 44px;
+        min-width: 44px;
         font-size: 12px;
     }
 
@@ -476,8 +478,8 @@
     }
 
     .fab-btn {
-        width: 38px;
-        height: 38px;
+        width: 44px;
+        height: 44px;
         font-size: 14px;
     }
 

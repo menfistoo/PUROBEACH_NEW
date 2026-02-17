@@ -183,7 +183,7 @@ export const PricingMixin = (Base) => class extends Base {
 
             const response = await fetch(url, {
                 headers: {
-                    'X-CSRFToken': this.csrfToken
+                    'X-CSRFToken': this.getCsrfToken()
                 }
             });
 
@@ -273,7 +273,7 @@ export const PricingMixin = (Base) => class extends Base {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
+                    'X-CSRFToken': this.getCsrfToken()
                 },
                 body: JSON.stringify({
                     customer_type: customerType,
@@ -402,7 +402,7 @@ export const PricingMixin = (Base) => class extends Base {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': this.csrfToken
+                    'X-CSRFToken': this.getCsrfToken()
                 },
                 body: JSON.stringify(requestBody)
             });

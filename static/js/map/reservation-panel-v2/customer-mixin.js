@@ -69,7 +69,7 @@ export const CustomerMixin = (Base) => class extends Base {
     _renderNoCustomer() {
         if (this.customerName) {
             this.customerName.textContent = 'Cliente no encontrado';
-            this.customerName.href = '#';
+            this.customerName.onclick = null;
             this.customerName.removeAttribute('title');
         }
         if (this.customerRoomBadge) {
@@ -87,23 +87,30 @@ export const CustomerMixin = (Base) => class extends Base {
     }
 
     /**
-     * Render customer name as clickable link to customer details
+     * Render customer name as clickable button to open customer details
+     * Uses window.open for reliable new-tab navigation from a button element
      * @private
      * @param {Object} customer - Customer data
      */
     _renderCustomerName(customer) {
         if (!this.customerName) return;
 
-        this.customerName.textContent = customer.full_name ||
+        const displayName = escapeHtml(
+            customer.full_name ||
             `${customer.first_name || ''} ${customer.last_name || ''}`.trim() ||
-            'Sin nombre';
+            'Sin nombre'
+        );
 
-        // Set link to customer details page
         if (customer.id) {
-            this.customerName.href = `/beach/customers/${customer.id}`;
+            const customerUrl = `/beach/customers/${customer.id}`;
+            this.customerName.innerHTML = `${displayName} <i class="fas fa-external-link-alt"></i>`;
             this.customerName.title = 'Ver detalles del cliente';
+            this.customerName.onclick = () => {
+                window.open(customerUrl, '_blank', 'noopener,noreferrer');
+            };
         } else {
-            this.customerName.href = '#';
+            this.customerName.textContent = displayName;
+            this.customerName.onclick = null;
             this.customerName.removeAttribute('title');
         }
     }
@@ -339,7 +346,7 @@ export const CustomerMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({
                         customer_id: null,
@@ -429,9 +436,16 @@ export const CustomerMixin = (Base) => class extends Base {
      * @returns {Promise<void>}
      */
     async searchCustomers(query) {
+        // Cancel previous in-flight request
+        if (this._searchAbortController) {
+            this._searchAbortController.abort();
+        }
+        this._searchAbortController = new AbortController();
+
         try {
             const response = await fetch(
-                `${this.options.apiBaseUrl}/customers/search?q=${encodeURIComponent(query)}`
+                `${this.options.apiBaseUrl}/customers/search?q=${encodeURIComponent(query)}`,
+                { signal: this._searchAbortController.signal }
             );
 
             if (!response.ok) {
@@ -442,6 +456,7 @@ export const CustomerMixin = (Base) => class extends Base {
             this.renderCustomerSearchResults(result);
 
         } catch (error) {
+            if (error.name === 'AbortError') return;
             console.error('Customer search error:', error);
         }
     }
@@ -456,7 +471,21 @@ export const CustomerMixin = (Base) => class extends Base {
      */
     renderCustomerSearchResults(result) {
         const customers = result.customers || [];
-        const hotelGuests = result.hotel_guests || [];
+        let hotelGuests = result.hotel_guests || [];
+
+        // Filter out hotel guests that are already beach customers (by room + name)
+        if (customers.length > 0 && hotelGuests.length > 0) {
+            const existingKeys = new Set();
+            customers.forEach(c => {
+                if (c.customer_type === 'interno' && c.room_number) {
+                    existingKeys.add(`${c.room_number}|${(c.first_name || '').toLowerCase()}`);
+                }
+            });
+            hotelGuests = hotelGuests.filter(g => {
+                const key = `${g.room_number}|${(g.first_name || '').toLowerCase()}`;
+                return !existingKeys.has(key);
+            });
+        }
 
         // Show "no results" message if empty
         if (customers.length === 0 && hotelGuests.length === 0) {
@@ -565,7 +594,7 @@ export const CustomerMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({
                         customer_id: customerId ? parseInt(customerId) : null,
@@ -601,6 +630,11 @@ export const CustomerMixin = (Base) => class extends Base {
 
         // Re-render customer section with new data
         this.renderCustomerSection(result.customer);
+
+        // Recalculate pricing (customer type affects pricing)
+        if (typeof this.calculateAndUpdatePricing === 'function') {
+            this.calculateAndUpdatePricing();
+        }
 
         // Hide search UI
         this.hideCustomerSearch();

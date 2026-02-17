@@ -3,6 +3,39 @@
  * Color functions, CSS variable loading, and helper utilities
  */
 
+// =============================================================================
+// HTML & SECURITY UTILITIES
+// =============================================================================
+
+/**
+ * Escape HTML entities to prevent XSS when inserting user data into innerHTML
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string safe for HTML insertion
+ */
+export function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+/**
+ * Sanitize a CSS color value to prevent injection via style attributes
+ * @param {string} color - Color value (hex, rgb, named)
+ * @returns {string|null} Sanitized color or null if invalid
+ */
+export function sanitizeColor(color) {
+    if (!color) return null;
+    if (/^#[0-9A-Fa-f]{3,8}$/.test(color)) return color;
+    if (/^(rgb|hsl)a?\([^)]+\)$/.test(color)) return color;
+    if (/^[a-zA-Z]+$/.test(color)) return color;
+    return null;
+}
+
+// =============================================================================
+// CSS & COLOR UTILITIES
+// =============================================================================
+
 /**
  * Load CSS variables for map configuration
  * @returns {Object} Configuration object with colors and numeric values

@@ -10,6 +10,39 @@
  * Color functions, CSS variable loading, and helper utilities
  */
 
+// =============================================================================
+// HTML & SECURITY UTILITIES
+// =============================================================================
+
+/**
+ * Escape HTML entities to prevent XSS when inserting user data into innerHTML
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string safe for HTML insertion
+ */
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+/**
+ * Sanitize a CSS color value to prevent injection via style attributes
+ * @param {string} color - Color value (hex, rgb, named)
+ * @returns {string|null} Sanitized color or null if invalid
+ */
+function sanitizeColor(color) {
+    if (!color) return null;
+    if (/^#[0-9A-Fa-f]{3,8}$/.test(color)) return color;
+    if (/^(rgb|hsl)a?\([^)]+\)$/.test(color)) return color;
+    if (/^[a-zA-Z]+$/.test(color)) return color;
+    return null;
+}
+
+// =============================================================================
+// CSS & COLOR UTILITIES
+// =============================================================================
+
 /**
  * Load CSS variables for map configuration
  * @returns {Object} Configuration object with colors and numeric values
@@ -940,10 +973,11 @@ class TooltipManager {
             this.create();
         }
 
-        let content = `<strong>${availability.customer_name || 'Sin nombre'}</strong>`;
+        const name = this._escape(availability.customer_name || 'Sin nombre');
+        let content = `<strong>${name}</strong>`;
 
         if (availability.customer_type === 'interno' && availability.room_number) {
-            content += `<br><small>Hab. ${availability.room_number}</small>`;
+            content += `<br><small>Hab. ${this._escape(availability.room_number)}</small>`;
         }
 
         if (availability.vip_status) {
@@ -951,7 +985,8 @@ class TooltipManager {
         }
 
         if (availability.num_people) {
-            content += `<br><small>${availability.num_people} persona${availability.num_people > 1 ? 's' : ''}</small>`;
+            const n = parseInt(availability.num_people, 10) || 0;
+            content += `<br><small>${n} persona${n > 1 ? 's' : ''}</small>`;
         }
 
         this.tooltip.innerHTML = content;
@@ -977,20 +1012,21 @@ class TooltipManager {
             'other': 'Bloqueado'
         };
 
-        const typeName = blockTypeNames[blockInfo.block_type] || blockInfo.name || 'Bloqueado';
+        const typeName = blockTypeNames[blockInfo.block_type] || this._escape(blockInfo.name) || 'Bloqueado';
         let content = `<strong>${typeName}</strong>`;
-        content += `<br><small>Mobiliario: ${furnitureNumber}</small>`;
+        content += `<br><small>Mobiliario: ${this._escape(furnitureNumber)}</small>`;
 
         if (blockInfo.reason) {
-            content += `<br><small>Motivo: ${blockInfo.reason}</small>`;
+            content += `<br><small>Motivo: ${this._escape(blockInfo.reason)}</small>`;
         }
 
         if (blockInfo.end_date) {
-            content += `<br><small>Hasta: ${blockInfo.end_date}</small>`;
+            content += `<br><small>Hasta: ${this._escape(blockInfo.end_date)}</small>`;
         }
 
         // Add visual indicator of block color
-        content = `<span style="display: inline-block; width: 10px; height: 10px; background: ${blockInfo.color}; border-radius: 2px; margin-right: 6px;"></span>${content}`;
+        const safeColor = this._sanitizeColor(blockInfo.color) || '#999';
+        content = `<span style="display: inline-block; width: 10px; height: 10px; background: ${safeColor}; border-radius: 2px; margin-right: 6px;"></span>${content}`;
 
         this.tooltip.innerHTML = content;
         this.tooltip.style.display = 'block';
@@ -1056,6 +1092,33 @@ class TooltipManager {
         `;
         this.container.style.position = 'relative';
         this.container.appendChild(this.tooltip);
+    }
+
+    /**
+     * Escape HTML entities to prevent XSS
+     * @param {string} str - String to escape
+     * @returns {string} Escaped string
+     * @private
+     */
+    _escape(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    /**
+     * Sanitize a CSS color value
+     * @param {string} color - Color value
+     * @returns {string|null} Sanitized color or null
+     * @private
+     */
+    _sanitizeColor(color) {
+        if (!color) return null;
+        if (/^#[0-9A-Fa-f]{3,8}$/.test(color)) return color;
+        if (/^(rgb|hsl)a?\([^)]+\)$/.test(color)) return color;
+        if (/^[a-zA-Z]+$/.test(color)) return color;
+        return null;
     }
 
     /**
@@ -3086,12 +3149,15 @@ function updateLegend(data, colors) {
     const legend = document.getElementById('map-legend');
     if (!legend || !data.states) return;
 
+    const safeFill = sanitizeColor(colors.availableFill) || '#F5E6D3';
+    const safeStroke = sanitizeColor(colors.availableStroke) || '#D4AF37';
+
     let html = '<div class="legend-items d-flex flex-wrap gap-2">';
 
     // Available state
     html += `
         <div class="legend-item d-flex align-items-center">
-            <span class="legend-color" style="background-color: ${colors.availableFill}; border: 2px solid ${colors.availableStroke};"></span>
+            <span class="legend-color" style="background-color: ${safeFill}; border: 2px solid ${safeStroke};"></span>
             <span class="ms-1">Disponible</span>
         </div>
     `;
@@ -3099,10 +3165,11 @@ function updateLegend(data, colors) {
     // State colors from database
     data.states.forEach(state => {
         if (state.active) {
+            const stateColor = sanitizeColor(state.color) || '#999';
             html += `
                 <div class="legend-item d-flex align-items-center">
-                    <span class="legend-color" style="background-color: ${state.color};"></span>
-                    <span class="ms-1">${state.name}</span>
+                    <span class="legend-color" style="background-color: ${stateColor};"></span>
+                    <span class="ms-1">${escapeHtml(state.name)}</span>
                 </div>
             `;
         }
@@ -4270,7 +4337,7 @@ class BeachMap {
     showError(message) {
         const errorDiv = document.createElement('div');
         errorDiv.className = 'alert alert-danger m-3';
-        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${escapeHtml(message)}`;
         this.container.appendChild(errorDiv);
     }
 
