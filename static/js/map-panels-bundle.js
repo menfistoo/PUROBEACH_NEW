@@ -5754,6 +5754,12 @@ class ConflictResolver {
             const tagIds = this.panel.state.selectedTags?.length > 0 ? this.panel.state.selectedTags : (saved.tagIds || []);
             const packageId = document.getElementById('newPanelSelectedPackageId')?.value || saved.packageId || '';
 
+            // Read payment fields (same as panel-core.js createReservation)
+            const paymentTicketEl = document.getElementById('newPanelPaymentTicket');
+            const paymentMethodEl = document.getElementById('newPanelPaymentMethod');
+            const paymentTicketValue = paymentTicketEl ? paymentTicketEl.value.trim() : '';
+            const paymentMethodValue = paymentMethodEl ? paymentMethodEl.value.trim() : '';
+
             const payload = {
                 customer_id: finalCustomerId,
                 dates: selectedDates,
@@ -5763,7 +5769,10 @@ class ConflictResolver {
                 notes: notes,
                 preferences: preferences,
                 charge_to_room: chargeToRoom,
-                tag_ids: tagIds
+                tag_ids: tagIds,
+                payment_ticket_number: paymentTicketValue,
+                payment_method: paymentMethodValue,
+                paid: (paymentTicketValue || paymentMethodValue) ? 1 : 0
             };
 
             if (packageId) {
