@@ -65,6 +65,7 @@
         width: 400px;
         top: 60px;
         height: calc(100vh - 80px);
+        height: calc(100dvh - 80px);
         border-radius: 12px 0 0 12px;
     }
 
