@@ -1931,18 +1931,25 @@ class ContextMenuManager {
         const menu = this.emptySpaceMenuElement;
         if (!menu) return;
 
-        const menuRect = menu.getBoundingClientRect();
+        // Temporarily show for measurement (visibility:hidden keeps it invisible to user)
+        menu.style.visibility = 'hidden';
+        menu.classList.add('visible');
+        const menuWidth = menu.offsetWidth || 180;
+        const menuHeight = menu.offsetHeight || 200;
+        menu.classList.remove('visible');
+        menu.style.visibility = '';
+
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
 
         // Adjust X if menu would overflow right
-        if (x + menuRect.width > viewportWidth) {
-            x = viewportWidth - menuRect.width - 10;
+        if (x + menuWidth > viewportWidth) {
+            x = viewportWidth - menuWidth - 10;
         }
 
         // Adjust Y if menu would overflow bottom
-        if (y + menuRect.height > viewportHeight) {
-            y = viewportHeight - menuRect.height - 10;
+        if (y + menuHeight > viewportHeight) {
+            y = viewportHeight - menuHeight - 10;
         }
 
         menu.style.left = `${Math.max(10, x)}px`;
@@ -1965,18 +1972,26 @@ class ContextMenuManager {
      */
     positionMenu(x, y) {
         const menu = this.menuElement;
-        const menuRect = menu.getBoundingClientRect();
+
+        // Temporarily show for measurement (visibility:hidden keeps it invisible to user)
+        menu.style.visibility = 'hidden';
+        menu.classList.add('visible');
+        const menuWidth = menu.offsetWidth || 180;
+        const menuHeight = menu.offsetHeight || 200;
+        menu.classList.remove('visible');
+        menu.style.visibility = '';
+
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
 
         // Adjust X if menu would overflow right
-        if (x + menuRect.width > viewportWidth) {
-            x = viewportWidth - menuRect.width - 10;
+        if (x + menuWidth > viewportWidth) {
+            x = viewportWidth - menuWidth - 10;
         }
 
         // Adjust Y if menu would overflow bottom
-        if (y + menuRect.height > viewportHeight) {
-            y = viewportHeight - menuRect.height - 10;
+        if (y + menuHeight > viewportHeight) {
+            y = viewportHeight - menuHeight - 10;
         }
 
         menu.style.left = `${Math.max(10, x)}px`;
