@@ -1516,8 +1516,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==========================================================================
     // ZOOM CONTROLS
     // ==========================================================================
-    document.getElementById('btn-zoom-in').addEventListener('click', () => { map.zoomIn(); updateZoomDisplay(); });
-    document.getElementById('btn-zoom-out').addEventListener('click', () => { map.zoomOut(); updateZoomDisplay(); });
+    document.getElementById('btn-zoom-in')?.addEventListener('click', () => { map.zoomIn(); updateZoomDisplay(); });
+    document.getElementById('btn-zoom-out')?.addEventListener('click', () => { map.zoomOut(); updateZoomDisplay(); });
 
     // Info bar zoom controls
     document.getElementById('btn-zoom-in-bar')?.addEventListener('click', () => { map.zoomIn(); updateZoomDisplay(); });
