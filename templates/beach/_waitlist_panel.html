@@ -105,8 +105,8 @@
             <form id="waitlistAddForm">
                 <!-- Customer Type Toggle -->
                 <div class="form-group customer-type-toggle">
-                    <label class="form-label">Tipo de Cliente</label>
-                    <div class="btn-group-toggle">
+                    <label class="form-label" id="waitlistTypeLabel">Tipo de Cliente</label>
+                    <div class="btn-group-toggle" role="group" aria-labelledby="waitlistTypeLabel">
                         <button type="button" class="toggle-btn active" data-type="interno" id="waitlistTypeInterno">
                             <i class="fas fa-hotel me-1"></i> Interno
                         </button>
@@ -140,7 +140,7 @@
 
                 <!-- External Guest Entry (Externo) - Simple name and phone -->
                 <div class="form-group customer-search-group" id="waitlistCustomerSearchGroup" style="display: none;">
-                    <label class="form-label">Datos del Cliente</label>
+                    <label class="form-label" for="waitlistExternoName">Datos del Cliente</label>
                     <div class="externo-entry-fields">
                         <div class="form-row">
                             <div class="form-group">
