@@ -572,7 +572,7 @@ class NewReservationPanel {
         const chipsHtml = this.state.selectedFurniture.map(f => `
             <span class="furniture-chip">
                 <span class="furniture-type-icon">${this.getFurnitureIcon(f.type_name)}</span>
-                ${f.number}
+                ${escapeHtml(String(f.number))}
             </span>
         `).join('');
 
