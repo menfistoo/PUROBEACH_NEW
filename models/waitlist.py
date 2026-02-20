@@ -6,6 +6,7 @@ CRUD operations for the beach waiting list.
 from database import get_db
 from typing import Optional, List
 from datetime import date
+from utils.datetime_helpers import get_today
 
 
 # =============================================================================
@@ -99,7 +100,7 @@ def create_waitlist_entry(data: dict, created_by: int) -> int:
 
     # Validate date is not in past
     req_date = date.fromisoformat(data['requested_date'])
-    if req_date < date.today():
+    if req_date < get_today():
         raise ValueError("La fecha debe ser hoy o futura")
 
     num_people = data.get('num_people', 1)
@@ -293,7 +294,7 @@ def update_waitlist_entry(entry_id: int, data: dict) -> bool:
     requested_date = data.get('requested_date', entry['requested_date'])
     if requested_date:
         req_date = date.fromisoformat(requested_date)
-        if req_date < date.today():
+        if req_date < get_today():
             raise ValueError("La fecha debe ser hoy o futura")
 
     # Validate num_people

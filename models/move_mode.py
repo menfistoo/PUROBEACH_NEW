@@ -298,9 +298,10 @@ def get_unassigned_reservations_global(days_ahead: int = 7) -> Dict[str, Any]:
         - by_date: Dict mapping date -> list of reservation IDs
         - first_date: First date with unassigned reservations (for navigation)
     """
-    from datetime import datetime, timedelta
+    from datetime import timedelta
+    from utils.datetime_helpers import get_today
 
-    today = datetime.now().date()
+    today = get_today()
     result = {
         'count': 0,
         'dates': [],

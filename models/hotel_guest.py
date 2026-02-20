@@ -4,7 +4,7 @@ Handles hotel guest CRUD operations and Excel import functionality.
 """
 
 from database import get_db
-from datetime import datetime, date
+from datetime import date
 from typing import Optional, List, Dict, Any
 
 
@@ -433,7 +433,8 @@ def propagate_room_change(
         result['customer_updated'] = cursor.rowcount > 0
 
         # Update current and future reservations (start_date >= today)
-        today = date.today().isoformat()
+        from utils.datetime_helpers import get_today
+        today = get_today().isoformat()
         cursor.execute('''
             UPDATE beach_reservations
             SET updated_at = CURRENT_TIMESTAMP

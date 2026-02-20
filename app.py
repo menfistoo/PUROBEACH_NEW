@@ -302,7 +302,7 @@ def register_context_processors(app):
     def utility_processor():
         """Inject utility functions into templates."""
         from utils.permissions import get_menu_items
-        from datetime import datetime
+        from utils.datetime_helpers import get_now
         from flask import url_for
 
         app_version = app.config.get('APP_VERSION', '1.0.0')
@@ -313,7 +313,7 @@ def register_context_processors(app):
 
         return {
             'get_menu_items': get_menu_items,
-            'current_year': datetime.now().year,
+            'current_year': get_now().year,
             'app_name': app.config.get('APP_NAME', 'PuroBeach'),
             'app_version': app_version,
             'versioned_static': versioned_static,

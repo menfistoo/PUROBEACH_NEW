@@ -3,7 +3,8 @@ Insights API endpoints.
 Provides analytics data for dashboard and advanced views.
 """
 
-from datetime import date, timedelta
+from datetime import timedelta
+from utils.datetime_helpers import get_today
 from flask import current_app, request
 from flask_login import login_required
 from utils.decorators import permission_required
@@ -101,10 +102,10 @@ def register_routes(bp):
         """
         try:
             # Get date range from params, default to last 30 days
-            end_date = request.args.get('end_date', date.today().isoformat())
+            end_date = request.args.get('end_date', get_today().isoformat())
             start_date = request.args.get(
                 'start_date',
-                (date.today() - timedelta(days=29)).isoformat()
+                (get_today() - timedelta(days=29)).isoformat()
             )
 
             stats = get_occupancy_stats(start_date, end_date)
@@ -145,10 +146,10 @@ def register_routes(bp):
         """
         try:
             # Get date range from params, default to last 30 days
-            end_date = request.args.get('end_date', date.today().isoformat())
+            end_date = request.args.get('end_date', get_today().isoformat())
             start_date = request.args.get(
                 'start_date',
-                (date.today() - timedelta(days=29)).isoformat()
+                (get_today() - timedelta(days=29)).isoformat()
             )
 
             stats = get_revenue_stats(start_date, end_date)
@@ -195,10 +196,10 @@ def register_routes(bp):
         """
         try:
             # Get date range from params, default to last 30 days
-            end_date = request.args.get('end_date', date.today().isoformat())
+            end_date = request.args.get('end_date', get_today().isoformat())
             start_date = request.args.get(
                 'start_date',
-                (date.today() - timedelta(days=29)).isoformat()
+                (get_today() - timedelta(days=29)).isoformat()
             )
 
             stats = get_customer_stats(start_date, end_date)
@@ -248,10 +249,10 @@ def register_routes(bp):
         """
         try:
             # Get date range from params, default to last 30 days
-            end_date = request.args.get('end_date', date.today().isoformat())
+            end_date = request.args.get('end_date', get_today().isoformat())
             start_date = request.args.get(
                 'start_date',
-                (date.today() - timedelta(days=29)).isoformat()
+                (get_today() - timedelta(days=29)).isoformat()
             )
 
             stats = get_pattern_stats(start_date, end_date)

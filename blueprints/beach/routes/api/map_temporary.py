@@ -5,7 +5,7 @@ Endpoints for creating/managing temporary furniture (valid for specific dates on
 
 from flask import current_app, request
 from flask_login import login_required
-from datetime import date
+from utils.datetime_helpers import get_today
 
 from utils.decorators import permission_required
 from utils.api_response import api_success, api_error
@@ -268,7 +268,7 @@ def register_routes(bp):
         Returns:
             JSON with temporary furniture list
         """
-        date_str = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+        date_str = request.args.get('date', get_today().strftime('%Y-%m-%d'))
         zone_id = request.args.get('zone_id', type=int)
 
         furniture = get_temporary_furniture_for_date(date_str, zone_id)

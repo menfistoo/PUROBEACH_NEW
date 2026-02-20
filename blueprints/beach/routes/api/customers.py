@@ -16,7 +16,7 @@ from models.characteristic import get_all_characteristics
 from models.reservation import sync_preferences_to_customer
 from models.reservation import get_customer_reservation_history, get_customer_preferred_furniture
 from models.hotel_guest import get_guests_by_room, search_guests
-from datetime import date
+from utils.datetime_helpers import get_today
 
 
 def register_routes(bp):
@@ -122,7 +122,7 @@ def register_routes(bp):
                 }
 
                 if c['customer_type'] == 'interno' and c.get('room_number'):
-                    hotel_guests = get_guests_by_room(c['room_number'], date.today())
+                    hotel_guests = get_guests_by_room(c['room_number'], get_today())
                     if hotel_guests:
                         full_name = f"{c['first_name']} {c.get('last_name', '')}".strip().upper()
                         matching_guest = None
@@ -519,7 +519,7 @@ def register_routes(bp):
         if not room_number:
             return api_success(guests=[], guest_count=0)
 
-        guests = get_guests_by_room(room_number, date.today())
+        guests = get_guests_by_room(room_number, get_today())
 
         return api_success(guest_count=len(guests), guests=[{
             'id': g['id'],

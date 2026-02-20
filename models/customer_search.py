@@ -113,8 +113,8 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
         cursor.execute(customer_query, params)
 
         customer_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number']
-        from datetime import date
-        today = date.today()
+        from utils.datetime_helpers import get_today
+        today = get_today()
 
         for row in cursor.fetchall():
             customer = dict(row)
@@ -214,8 +214,8 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                     guest['display_name'] = guest['guest_name'] + (f" ({guest_count} huéspedes)" if guest_count > 1 else "")
                     guest['customer_type'] = 'interno'  # Hotel guests are always interno
                     # Check-in/Check-out today flags (compare date objects or strings)
-                    from datetime import date
-                    today = date.today()
+                    from utils.datetime_helpers import get_today
+                    today = get_today()
                     arrival = guest.get('arrival_date')
                     departure = guest.get('departure_date')
                     # Handle both date objects and strings

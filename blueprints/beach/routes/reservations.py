@@ -13,7 +13,8 @@ from models.reservation import (
     delete_reservation, cancel_beach_reservation, get_status_history,
     InvalidStateTransitionError,
 )
-from datetime import date, datetime
+from datetime import datetime
+from utils.datetime_helpers import get_today
 import io
 
 reservations_bp = Blueprint('reservations', __name__)
@@ -32,7 +33,7 @@ def list():
     page = request.args.get('page', 1, type=int)
 
     if not date_from:
-        date_from = date.today().strftime('%Y-%m-%d')
+        date_from = get_today().strftime('%Y-%m-%d')
 
     result = get_reservations_filtered(
         date_from=date_from if date_from else None,
@@ -68,7 +69,7 @@ def list():
 def create():
     """Redirect to map for reservation creation."""
     # Pass any query params to the map (date, customer_id, etc.)
-    selected_date = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+    selected_date = request.args.get('date', get_today().strftime('%Y-%m-%d'))
     flash('Use el mapa interactivo para crear nuevas reservas', 'info')
     return redirect(url_for('beach.map', date=selected_date))
 
@@ -95,7 +96,7 @@ def export():
     search = request.args.get('search', '')
 
     if not date_from:
-        date_from = date.today().strftime('%Y-%m-%d')
+        date_from = get_today().strftime('%Y-%m-%d')
 
     # Get all reservations for export (includes zone names)
     reservations = get_reservations_for_export(

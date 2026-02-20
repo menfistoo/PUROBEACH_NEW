@@ -19,7 +19,7 @@ from models.reservation import (
     build_furniture_occupancy_map, validate_cluster_contiguity,
     InvalidStateTransitionError, get_allowed_transitions,
 )
-from datetime import date
+from utils.datetime_helpers import get_today
 
 
 def register_routes(bp):
@@ -282,7 +282,7 @@ def register_routes(bp):
         furniture_type = request.args.get('type')
 
         if not date_str:
-            date_str = date.today().strftime('%Y-%m-%d')
+            date_str = get_today().strftime('%Y-%m-%d')
 
         furniture = get_available_furniture(date_str, zone_id, furniture_type)
 
@@ -645,7 +645,7 @@ def register_routes(bp):
 
         # Default to today if no date_from provided
         if not date_from:
-            date_from = date.today().strftime('%Y-%m-%d')
+            date_from = get_today().strftime('%Y-%m-%d')
 
         result = get_reservations_filtered(
             date_from=date_from if date_from else None,

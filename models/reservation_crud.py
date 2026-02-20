@@ -7,6 +7,7 @@ Phase 6B - Module 4 (Main CRUD with re-exports from specialized modules)
 
 from database import get_db
 from datetime import datetime
+from utils.datetime_helpers import get_now
 from .reservation_state import calculate_reservation_color, update_customer_statistics
 from .state import get_default_state
 from .reservation_availability import check_furniture_availability_bulk
@@ -47,7 +48,7 @@ def generate_reservation_number(reservation_date: str = None, cursor=None, max_r
         ValueError: If unable to generate unique number
     """
     if not reservation_date:
-        reservation_date = datetime.now().strftime('%Y-%m-%d')
+        reservation_date = get_now().strftime('%Y-%m-%d')
 
     date_obj = datetime.strptime(reservation_date, '%Y-%m-%d')
     date_prefix = date_obj.strftime('%y%m%d')  # YYMMDD

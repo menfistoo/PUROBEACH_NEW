@@ -6,7 +6,7 @@ Endpoints for blocking/unblocking furniture (maintenance, VIP hold, etc.).
 import logging
 from flask import current_app, request
 from flask_login import login_required, current_user
-from datetime import date
+from utils.datetime_helpers import get_today
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +199,7 @@ def register_routes(bp):
         Returns:
             JSON with blocks list
         """
-        date_str = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+        date_str = request.args.get('date', get_today().strftime('%Y-%m-%d'))
         zone_id = request.args.get('zone_id', type=int)
 
         blocks = get_blocks_for_date(date_str, zone_id)

@@ -6,7 +6,7 @@ All-reservations endpoint for enhanced search with filters.
 
 from flask import request
 from flask_login import login_required
-from datetime import date
+from utils.datetime_helpers import get_today
 
 from utils.decorators import permission_required
 from utils.api_response import api_success, api_error
@@ -32,7 +32,7 @@ def register_routes(bp):
         Returns:
             JSON with all reservations grouped with furniture codes
         """
-        date_str = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+        date_str = request.args.get('date', get_today().strftime('%Y-%m-%d'))
         zone_id = request.args.get('zone_id', type=int)
 
         with get_db() as conn:
@@ -133,7 +133,7 @@ def register_routes(bp):
             JSON with matching customers and their furniture_ids
         """
         query = request.args.get('q', '').strip()
-        date_str = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+        date_str = request.args.get('date', get_today().strftime('%Y-%m-%d'))
 
         if len(query) < 2:
             return api_success(customers=[], furniture_ids=[])
