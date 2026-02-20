@@ -26,7 +26,7 @@ limiter = Limiter(
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Por favor inicie sesión para acceder a esta página'
 login_manager.login_message_category = 'warning'
-login_manager.session_protection = 'basic'
+login_manager.session_protection = 'strong'
 
 
 @login_manager.unauthorized_handler
