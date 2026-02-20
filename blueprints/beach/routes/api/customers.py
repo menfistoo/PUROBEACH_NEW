@@ -35,10 +35,18 @@ def register_routes(bp):
         customer_type = request.args.get('type', '')
         vip_only = request.args.get('vip', '') == '1'
 
+        # Pagination parameters with clamping
+        limit = request.args.get('limit', 100, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        limit = max(1, min(limit, 200))
+        offset = max(0, offset)
+
         result = get_customers_filtered(
             search=search if search else None,
             customer_type=customer_type if customer_type else None,
-            vip_only=vip_only
+            vip_only=vip_only,
+            limit=limit,
+            offset=offset
         )
 
         # Format customers for JSON response
@@ -56,7 +64,16 @@ def register_routes(bp):
                 'reservation_count': c.get('reservation_count', 0)
             })
 
-        return api_success(customers=customers, total=result['total'], count=len(customers))
+        return api_success(
+            customers=customers,
+            total=result['total'],
+            pagination={
+                'limit': limit,
+                'offset': offset,
+                'count': len(customers),
+                'has_more': len(customers) == limit
+            }
+        )
 
     @bp.route('/customers/search')
     @login_required
