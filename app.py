@@ -7,6 +7,7 @@ import os
 import sys
 import click
 import logging
+import logging.handlers
 from flask import Flask, render_template, g
 from dotenv import load_dotenv
 
@@ -363,7 +364,9 @@ def configure_logging(app):
         if not os.path.exists('logs'):
             os.mkdir('logs')
 
-        file_handler = logging.FileHandler('logs/purobeach.log')
+        file_handler = logging.handlers.RotatingFileHandler(
+            'logs/purobeach.log', maxBytes=10*1024*1024, backupCount=5
+        )
         file_handler.setFormatter(logging.Formatter(
             '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
         ))
