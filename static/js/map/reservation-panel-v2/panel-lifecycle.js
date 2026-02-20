@@ -108,15 +108,13 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
 
         // Check for unsaved changes
         if (this.state.mode === 'edit' && this.state.isDirty) {
-            const confirmed = await (window.PuroBeach
-                ? window.PuroBeach.confirmAction({
-                    title: 'Cambios sin guardar',
-                    message: 'Tienes cambios sin guardar. ¿Seguro que quieres cerrar?',
-                    confirmText: 'Cerrar',
-                    confirmClass: 'btn-warning',
-                    iconClass: 'fa-exclamation-triangle'
-                })
-                : Promise.resolve(confirm('Tienes cambios sin guardar. ¿Seguro que quieres cerrar?')));
+            const confirmed = await confirmAction({
+                title: 'Cambios sin guardar',
+                message: 'Tienes cambios sin guardar. ¿Seguro que quieres cerrar?',
+                confirmText: 'Cerrar',
+                confirmClass: 'btn-warning',
+                iconClass: 'fa-exclamation-triangle'
+            });
             if (!confirmed) return;
         }
 

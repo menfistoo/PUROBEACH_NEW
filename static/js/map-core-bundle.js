@@ -5414,7 +5414,13 @@ class BlockManager {
     async handleMultiUnblock(furnitureIds, furnitureNumbers) {
         // Show confirmation with count
         const count = furnitureIds.length;
-        const confirmed = confirm(`¿Está seguro de desbloquear ${count} mobiliarios?\n\nEsto desbloqueará completamente:\n${furnitureNumbers.join(', ')}`);
+        const confirmed = await confirmAction({
+            title: 'Confirmar desbloqueo',
+            message: `¿Está seguro de desbloquear ${count} mobiliarios?<br><br>Esto desbloqueará completamente:<br>${furnitureNumbers.join(', ')}`,
+            confirmText: 'Desbloquear',
+            confirmClass: 'btn-warning',
+            iconClass: 'fa-unlock'
+        });
 
         if (!confirmed) {
             return;
