@@ -53,6 +53,7 @@
 
 .context-menu-item {
     padding: 10px 14px;
+    min-height: 44px;
     cursor: pointer;
     display: flex;
     align-items: center;

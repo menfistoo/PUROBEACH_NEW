@@ -686,6 +686,8 @@
 .waitlist-modal .modal-close-btn {
     width: 36px;
     height: 36px;
+    min-width: 44px;
+    min-height: 44px;
     background: rgba(255, 255, 255, 0.15);
     border: none;
     border-radius: var(--border-radius-full);
@@ -858,6 +860,8 @@
 .waitlist-modal .btn-clear-customer {
     width: 28px;
     height: 28px;
+    min-width: 44px;
+    min-height: 44px;
     background: var(--color-white);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-full);

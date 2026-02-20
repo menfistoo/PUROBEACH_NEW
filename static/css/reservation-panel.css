@@ -461,6 +461,8 @@
 .new-reservation-panel .customer-clear-btn {
     width: 28px;
     height: 28px;
+    min-width: 44px;
+    min-height: 44px;
     border-radius: var(--border-radius-full);
     border: 1px solid var(--color-border);
     background: var(--color-white);
@@ -554,6 +556,8 @@
 .reservation-panel .preferences-edit-btn {
     width: 28px;
     height: 28px;
+    min-width: 44px;
+    min-height: 44px;
     border-radius: var(--border-radius-full);
     border: 1px solid var(--color-border);
     background: var(--color-white);
