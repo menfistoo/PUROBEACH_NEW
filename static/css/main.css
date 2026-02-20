@@ -1519,11 +1519,86 @@ html.sidebar-collapsed .nav-child.active i {
 
 /* ==================== Print Styles ==================== */
 @media print {
+    /* Hide navigation and interactive elements */
     .sidebar,
     .topbar,
-    .btn,
-    .no-print {
+    .navbar,
+    .offcanvas,
+    .btn:not(.no-print-hide),
+    .no-print,
+    .modal,
+    .toast-container,
+    footer,
+    .pagination,
+    .breadcrumb {
         display: none !important;
+    }
+
+    /* Reset page layout */
+    body {
+        padding: 0 !important;
+        margin: 0 !important;
+        background: white !important;
+        color: black !important;
+        font-size: 12pt;
+    }
+
+    .main-content,
+    .content-wrapper,
+    .container,
+    .container-fluid {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Table styling for reports */
+    table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+    }
+
+    th, td {
+        border: 1px solid #333 !important;
+        padding: 6px 8px !important;
+        font-size: 10pt;
+    }
+
+    th {
+        background-color: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Page break controls */
+    h1, h2, h3 {
+        page-break-after: avoid;
+    }
+
+    table {
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    /* Ensure links show URLs in print */
+    a[href]:after {
+        content: none;  /* Don't show URLs - clutters reports */
+    }
+
+    /* Cards and panels */
+    .card {
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        break-inside: avoid;
     }
 }
 
