@@ -879,7 +879,7 @@ html.sidebar-collapsed .bottom-action-bar {
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    z-index: 1050;
+    z-index: 1055;
     min-width: 180px;
     padding: 8px 0;
     border: 1px solid var(--color-border);

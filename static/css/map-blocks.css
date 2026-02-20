@@ -15,7 +15,7 @@
    ============================================================================= */
 
 :root {
-    --z-context-menu: 1050; /* Above modals (Bootstrap modal is 1050) */
+    --z-context-menu: 1060; /* Furniture context menu – topmost interactive */
 }
 
 /* =============================================================================
