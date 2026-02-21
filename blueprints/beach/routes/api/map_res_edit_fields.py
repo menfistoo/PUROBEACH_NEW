@@ -14,6 +14,7 @@ from models.customer import get_customer_by_id, create_customer_from_hotel_guest
 from database import get_db
 from models.characteristic_assignments import set_reservation_characteristics_by_codes
 from models.tag import set_reservation_tags, sync_reservation_tags_to_customer
+from utils.audit import log_update
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -45,6 +46,9 @@ def register_routes(bp: Blueprint) -> None:
         reservation = get_beach_reservation_by_id(reservation_id)
         if not reservation:
             return api_error('Reserva no encontrada', 404)
+
+        # Capture before-state for audit log
+        before_state = dict(reservation) if reservation else {}
 
         # Allowed fields for partial update
         # Note: For date changes, use the dedicated /change-dates endpoint
@@ -212,6 +216,11 @@ def register_routes(bp: Blueprint) -> None:
                     ''', (reservation_id,))
 
                 conn.commit()
+
+            # Audit log
+            after_reservation = get_beach_reservation_by_id(reservation_id)
+            after_state = dict(after_reservation) if after_reservation else {}
+            log_update('reservation', reservation_id, before=before_state, after=after_state)
 
             return api_success(
                 message='Reserva actualizada',
