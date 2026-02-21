@@ -69,9 +69,10 @@ def register_routes(bp: Blueprint) -> None:
             if db_field in allowed_fields:
                 updates[db_field] = v
 
-        # Check if only tag changes (handled separately below)
+        # Check if only tag/state changes (handled separately below)
         has_tag_changes = 'tag_ids' in data
-        if not updates and not has_tag_changes:
+        has_state_changes = 'state_id' in data
+        if not updates and not has_tag_changes and not has_state_changes:
             return api_success(message='Sin cambios')
 
         # Validate time_slot if provided
@@ -160,7 +161,37 @@ def register_routes(bp: Blueprint) -> None:
                 set_reservation_tags(reservation_id, tag_ids)
                 sync_reservation_tags_to_customer(reservation_id, tag_ids)
 
+        # Validate state_id before the try block (early return on invalid)
+        if 'state_id' in data:
+            try:
+                data['_validated_state_id'] = int(data['state_id'])
+            except (ValueError, TypeError):
+                return api_error('ID de estado no válido')
+
         try:
+            # Handle state change (state_id = ID of the new state)
+            if '_validated_state_id' in data:
+                from flask_login import current_user
+                from models.reservation import get_reservation_with_details
+                from models.reservation_state import add_reservation_state, remove_reservation_state
+
+                state_id = data['_validated_state_id']
+                with get_db() as conn:
+                    state = conn.execute(
+                        'SELECT name FROM beach_reservation_states WHERE id = ?',
+                        (state_id,)
+                    ).fetchone()
+                if not state:
+                    return api_error('Estado no encontrado', 404)
+
+                full_res = get_reservation_with_details(reservation_id)
+                current_states = full_res.get('current_states', '') if full_res else ''
+                current_state_list = [s.strip() for s in current_states.split(',') if s.strip()]
+                changed_by = current_user.username if current_user else 'system'
+                for existing_state in current_state_list:
+                    remove_reservation_state(reservation_id, existing_state, changed_by=changed_by)
+                add_reservation_state(reservation_id, state['name'], changed_by=changed_by)
+
             with get_db() as conn:
                 if updates:
                     # Build dynamic UPDATE query
@@ -172,8 +203,8 @@ def register_routes(bp: Blueprint) -> None:
                         SET {set_clauses}, updated_at = CURRENT_TIMESTAMP
                         WHERE id = ?
                     ''', values)
-                elif has_tag_changes:
-                    # Only tags changed, just touch updated_at
+                elif has_tag_changes or has_state_changes:
+                    # Only tags/state changed, just touch updated_at
                     conn.execute('''
                         UPDATE beach_reservations
                         SET updated_at = CURRENT_TIMESTAMP
