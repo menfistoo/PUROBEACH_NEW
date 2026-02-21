@@ -417,3 +417,130 @@ class TestTicketNumberGeneration:
 
             # Different date prefixes
             assert ticket1[:6] != ticket2[:6]
+
+
+class TestReservationUnifiedUpdate:
+    """Test the unified reservation update endpoint PATCH /beach/api/map/reservations/<id>/update."""
+
+    @pytest.fixture
+    def authenticated_client(self, app, client):
+        """Create authenticated test client with admin session."""
+        client.post('/login', data={
+            'username': 'admin',
+            'password': 'PuroAdmin2026!'
+        }, follow_redirects=True)
+        return client
+
+    @pytest.fixture
+    def test_reservation(self, app):
+        """Create a test reservation and return its ID."""
+        with app.app_context():
+            from models.reservation import create_beach_reservation
+            from models.customer import create_customer
+
+            customer_id = create_customer(
+                customer_type='externo',
+                first_name='Unified',
+                last_name='UpdateTest',
+                phone='555-UPD-001'
+            )
+
+            today = date.today().isoformat()
+
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute('SELECT id FROM beach_furniture WHERE active = 1 LIMIT 1')
+            row = cursor.fetchone()
+
+            if not row:
+                pytest.skip('No active furniture in test database')
+
+            reservation_id, ticket = create_beach_reservation(
+                customer_id=customer_id,
+                reservation_date=today,
+                num_people=2,
+                furniture_ids=[row['id']],
+                created_by='test'
+            )
+            return reservation_id
+
+    def _patch(self, client, reservation_id, data):
+        """Helper to send PATCH request to unified update endpoint."""
+        return client.patch(
+            f'/beach/api/map/reservations/{reservation_id}/update',
+            json=data,
+            content_type='application/json'
+        )
+
+    def test_update_num_people(self, app, authenticated_client, test_reservation):
+        """Test updating num_people (happy path)."""
+        response = self._patch(authenticated_client, test_reservation, {'num_people': 5})
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is True
+        assert 'num_people' in data['updated_fields']
+
+    def test_num_people_zero_rejected(self, app, authenticated_client, test_reservation):
+        """Test that num_people=0 is rejected."""
+        response = self._patch(authenticated_client, test_reservation, {'num_people': 0})
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['success'] is False
+        assert 'no valido' in data['error'].lower() or 'no válido' in data['error'].lower()
+
+    def test_num_people_over_50_rejected(self, app, authenticated_client, test_reservation):
+        """Test that num_people=51 is rejected."""
+        response = self._patch(authenticated_client, test_reservation, {'num_people': 51})
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['success'] is False
+
+    def test_update_payment_fields(self, app, authenticated_client, test_reservation):
+        """Test updating payment fields together."""
+        response = self._patch(authenticated_client, test_reservation, {
+            'paid': 1,
+            'payment_method': 'tarjeta',
+            'payment_ticket_number': 'TKT-12345'
+        })
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is True
+        assert 'paid' in data['updated_fields']
+        assert 'payment_method' in data['updated_fields']
+        assert 'payment_ticket_number' in data['updated_fields']
+
+    def test_observations_maps_to_notes(self, app, authenticated_client, test_reservation):
+        """Test that 'observations' field maps to 'notes' in DB."""
+        response = self._patch(authenticated_client, test_reservation, {
+            'observations': 'Test observation note'
+        })
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is True
+        # The endpoint maps observations -> notes
+        assert 'notes' in data['updated_fields']
+
+    def test_invalid_payment_method_rejected(self, app, authenticated_client, test_reservation):
+        """Test that an invalid payment_method is rejected."""
+        response = self._patch(authenticated_client, test_reservation, {
+            'payment_method': 'bitcoin'
+        })
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['success'] is False
+        assert 'pago' in data['error'].lower()
+
+    def test_nonexistent_reservation_404(self, app, authenticated_client):
+        """Test that updating a nonexistent reservation returns 404."""
+        response = self._patch(authenticated_client, 999999, {'num_people': 3})
+        assert response.status_code == 404
+        data = response.get_json()
+        assert data['success'] is False
+
+    def test_empty_payload_returns_success(self, app, authenticated_client, test_reservation):
+        """Test that an empty payload returns success with 'Sin cambios'."""
+        response = self._patch(authenticated_client, test_reservation, {})
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is True
+        assert data['message'] == 'Sin cambios'
