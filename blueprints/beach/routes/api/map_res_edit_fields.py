@@ -13,6 +13,7 @@ from models.reservation import get_beach_reservation_by_id
 from models.customer import get_customer_by_id, create_customer_from_hotel_guest
 from database import get_db
 from models.characteristic_assignments import set_reservation_characteristics_by_codes
+from models.tag import set_reservation_tags, sync_reservation_tags_to_customer
 
 
 def register_routes(bp: Blueprint) -> None:
@@ -68,7 +69,9 @@ def register_routes(bp: Blueprint) -> None:
             if db_field in allowed_fields:
                 updates[db_field] = v
 
-        if not updates:
+        # Check if only tag changes (handled separately below)
+        has_tag_changes = 'tag_ids' in data
+        if not updates and not has_tag_changes:
             return api_success(message='Sin cambios')
 
         # Validate time_slot if provided
@@ -150,17 +153,32 @@ def register_routes(bp: Blueprint) -> None:
                 except (ValueError, TypeError):
                     updates['minimum_consumption_policy_id'] = None
 
+        # Handle tag_ids separately (junction table, not a column)
+        if 'tag_ids' in data:
+            tag_ids = data['tag_ids']
+            if isinstance(tag_ids, list):
+                set_reservation_tags(reservation_id, tag_ids)
+                sync_reservation_tags_to_customer(reservation_id, tag_ids)
+
         try:
             with get_db() as conn:
-                # Build dynamic UPDATE query
-                set_clauses = ', '.join(f'{k} = ?' for k in updates.keys())
-                values = list(updates.values()) + [reservation_id]
+                if updates:
+                    # Build dynamic UPDATE query
+                    set_clauses = ', '.join(f'{k} = ?' for k in updates.keys())
+                    values = list(updates.values()) + [reservation_id]
 
-                conn.execute(f'''
-                    UPDATE beach_reservations
-                    SET {set_clauses}, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                ''', values)
+                    conn.execute(f'''
+                        UPDATE beach_reservations
+                        SET {set_clauses}, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    ''', values)
+                elif has_tag_changes:
+                    # Only tags changed, just touch updated_at
+                    conn.execute('''
+                        UPDATE beach_reservations
+                        SET updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    ''', (reservation_id,))
 
                 conn.commit()
 

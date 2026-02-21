@@ -7,8 +7,26 @@ import os
 import sys
 import click
 import logging
+from datetime import date, datetime
 from flask import Flask, render_template, g
+from flask.json.provider import DefaultJSONProvider
 from dotenv import load_dotenv
+
+
+class ISODateJSONProvider(DefaultJSONProvider):
+    """Custom JSON provider that serializes dates as ISO format strings.
+
+    Flask's default provider converts date/datetime to HTTP date format
+    (e.g. 'Fri, 23 Jan 2026 00:00:00 GMT') which breaks frontend JS
+    date comparisons. This provider uses ISO format ('2026-01-23').
+    """
+
+    def default(self, o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        if isinstance(o, date):
+            return o.isoformat()
+        return super().default(o)
 
 # Load environment variables
 load_dotenv()
@@ -39,6 +57,8 @@ def create_app(config_name=None):
 
     # Create Flask app
     app = Flask(__name__)
+    app.json_provider_class = ISODateJSONProvider
+    app.json = ISODateJSONProvider(app)
 
     # Load configuration
     app.config.from_object(config[config_name])

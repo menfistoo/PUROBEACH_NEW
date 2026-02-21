@@ -128,7 +128,21 @@
       "Bash(pip install:*)",
       "Bash(pip show:*)",
       "mcp__playwright__browser_console_messages",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(git rm:*)",
+      "Bash(PORT=5001 python app.py:*)",
+      "mcp__playwright__browser_install",
+      "mcp__playwright__browser_select_option",
+      "Bash(if not exist instance mkdir instance)",
+      "Bash(set:*)",
+      "Bash(FLASK_ENV=development python -m flask:*)",
+      "Bash(FLASK_ENV=development python:*)",
+      "mcp__plugin_github_github__get_me",
+      "mcp__plugin_github_github__create_repository",
+      "Bash(git remote add:*)",
+      "Bash(git -C \"C:\\\\Users\\\\catia\\\\programas\\\\Vouchers\" status)",
+      "mcp__plugin_episodic-memory_episodic-memory__read",
+      "Bash(where:*)"
     ]
   }
 }

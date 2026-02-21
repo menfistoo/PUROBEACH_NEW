@@ -405,7 +405,7 @@ export const SaveMixin = (Base) => class extends Base {
 
         // Include tag_ids in the main updates payload to avoid a separate API call
         if (tagsChanged) {
-            updates.tag_ids = this.tagsEditState.selectedIds;
+            updates.tag_ids = [...this.tagsEditState.selectedIds];
             hasChanges = true;
         }
 
