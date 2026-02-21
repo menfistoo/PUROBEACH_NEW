@@ -163,7 +163,7 @@ def register_routes(bp: Blueprint) -> None:
             tag_ids = data['tag_ids']
             if isinstance(tag_ids, list):
                 set_reservation_tags(reservation_id, tag_ids)
-                sync_reservation_tags_to_customer(reservation_id, tag_ids)
+                sync_reservation_tags_to_customer(reservation_id, tag_ids, replace=True)
 
         # Validate state_id before the try block (early return on invalid)
         if 'state_id' in data:
