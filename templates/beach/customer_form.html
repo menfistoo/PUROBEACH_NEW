@@ -111,15 +111,6 @@
                             <input type="text" name="room_number" id="room_number" class="form-control"
                                    value="{{ customer.room_number if customer else (form_data.room_number if form_data else '') }}">
                         </div>
-                        <div class="col-md-6">
-                            <label for="vip_status" class="form-label">Estado VIP</label>
-                            <div class="form-check form-switch mt-2">
-                                <input class="form-check-input" type="checkbox" name="vip_status"
-                                       id="vip_status" value="1"
-                                       {% if customer and customer.vip_status %}checked{% endif %}>
-                                <label class="form-check-label" for="vip_status">Cliente VIP</label>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Notes -->
@@ -177,6 +168,95 @@
                     </div>
                     {% endif %}
 
+                    <!-- Reservation History (edit mode only) -->
+                    {% if mode == 'edit' and customer %}
+                    <h6 class="text-muted mb-3 mt-4"><i class="fas fa-calendar-check me-2"></i>Historial de Reservas</h6>
+
+                    <!-- Stats Row -->
+                    <div class="row mb-3">
+                        <div class="col-auto">
+                            <span class="text-muted">Total:</span>
+                            <span class="badge bg-secondary">{{ customer.total_reservations or 0 }}</span>
+                        </div>
+                        <div class="col-auto">
+                            <span class="text-muted">Activas:</span>
+                            <span class="badge bg-success">{{ customer.active_reservations or 0 }}</span>
+                        </div>
+                        <div class="col-auto">
+                            <span class="text-muted">Visitas:</span>
+                            <span class="badge bg-info">{{ customer.total_visits or 0 }}</span>
+                        </div>
+                        <div class="col-auto">
+                            <span class="text-muted">No-Shows:</span>
+                            <span class="badge {% if customer.no_shows %}bg-danger{% else %}bg-secondary{% endif %}">{{ customer.no_shows or 0 }}</span>
+                        </div>
+                        <div class="col-auto">
+                            <span class="text-muted">Cancelaciones:</span>
+                            <span class="badge {% if customer.cancellations %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ customer.cancellations or 0 }}</span>
+                        </div>
+                    </div>
+
+                    {% if customer.recent_reservations %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-3">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Estado</th>
+                                    <th>Personas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for res in customer.recent_reservations %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ res.start_date }}</strong>
+                                        {% if res.start_date != res.end_date %}- {{ res.end_date }}{% endif %}
+                                    </td>
+                                    <td>
+                                        {% if res.state_name %}
+                                        <span class="badge" style="background-color: {{ res.state_color }};">
+                                            {{ res.state_name }}
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Sin estado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ res.num_people }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3 mb-3">
+                        <i class="fas fa-calendar-times fa-2x mb-2 opacity-50 d-block"></i>
+                        <small>Este cliente no tiene reservas</small>
+                    </div>
+                    {% endif %}
+
+                    <!-- Potential Duplicates -->
+                    {% if duplicates_for_merge %}
+                    <div class="alert alert-warning">
+                        <h6 class="mb-2"><i class="fas fa-exclamation-triangle me-2"></i>Posibles Duplicados</h6>
+                        <ul class="mb-2">
+                            {% for dup in duplicates_for_merge %}
+                            <li>
+                                <strong>{{ dup.first_name }} {{ dup.last_name or '' }}</strong>
+                                {% if dup.room_number %}- Hab. {{ dup.room_number }}{% endif %}
+                                {% if dup.phone %}- Tel. {{ dup.phone }}{% endif %}
+                                <small class="text-muted">({{ dup.reservation_count or 0 }} reservas)</small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <a href="{{ url_for('beach.customers_merge', customer_id=customer.id) }}"
+                           class="btn btn-warning btn-sm">
+                            <i class="fas fa-compress-arrows-alt me-1"></i>Fusionar Clientes
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
                     <!-- Duplicate Warning -->
                     {% if duplicates %}
                     <div class="alert alert-warning mt-4">
@@ -188,7 +268,7 @@
                                 <strong>{{ dup.first_name }} {{ dup.last_name or '' }}</strong>
                                 {% if dup.room_number %}- Hab. {{ dup.room_number }}{% endif %}
                                 {% if dup.phone %}- Tel. {{ dup.phone }}{% endif %}
-                                <a href="{{ url_for('beach.customers_detail', customer_id=dup.id) }}"
+                                <a href="{{ url_for('beach.customers_edit', customer_id=dup.id) }}"
                                    class="btn btn-sm btn-outline-info ms-2" target="_blank">
                                     <i class="fas fa-eye"></i> Ver
                                 </a>
@@ -309,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button type="button" class="list-group-item list-group-item-action"
                         onclick="fillGuestData('${escapeHtml(firstName)}', '${escapeHtml(lastName)}',
                                               '${escapeHtml(guest.room_number)}', '${escapeHtml(guest.email || '')}',
-                                              '${escapeHtml(guest.phone || '')}', ${guest.vip_code ? 'true' : 'false'})">
+                                              '${escapeHtml(guest.phone || '')}')">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <strong>${escapeHtml(guest.guest_name)}</strong>
@@ -328,13 +408,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Make fillGuestData available globally
-    window.fillGuestData = function(firstName, lastName, room, email, phone, isVip) {
+    window.fillGuestData = function(firstName, lastName, room, email, phone) {
         document.getElementById('first_name').value = firstName;
         document.getElementById('last_name').value = lastName;
         document.getElementById('room_number').value = room;
         document.getElementById('email').value = email;
         document.getElementById('phone').value = phone;
-        document.getElementById('vip_status').checked = isVip;
 
         guestResults.style.display = 'none';
 

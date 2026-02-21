@@ -228,6 +228,19 @@ class CustomerHandler {
             }
         }
 
+        // If customer has tags, activate matching tag chips
+        if (customer.tags && customer.tags.length > 0) {
+            customer.tags.forEach(tagId => {
+                const chip = this.panel.tagChipsContainer?.querySelector(`.tag-chip[data-tag-id="${tagId}"]`);
+                if (chip) {
+                    chip.classList.add('active');
+                    if (!this.panel.state.selectedTags.includes(tagId)) {
+                        this.panel.state.selectedTags.push(tagId);
+                    }
+                }
+            });
+        }
+
         // Auto-fill notes from customer record
         const notesInput = document.getElementById('newPanelNotes');
         if (customer.notes && notesInput) {
@@ -389,7 +402,9 @@ class CustomerHandler {
             meta.push('<i class="fas fa-star vip-badge"></i> VIP');
         }
         if (customer.phone) {
-            meta.push(`<i class="fas fa-phone"></i> ${customer.phone}`);
+            const span = document.createElement('span');
+            span.textContent = customer.phone;
+            meta.push(`<i class="fas fa-phone"></i> ${span.innerHTML}`);
         }
         const metaEl = document.getElementById('newPanelCustomerMeta');
         if (metaEl) {

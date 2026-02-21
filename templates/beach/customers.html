@@ -143,7 +143,7 @@
                 {% for customer in customers %}
                 <tr>
                     <td>
-                        <a href="{{ url_for('beach.customers_detail', customer_id=customer.id) }}"
+                        <a href="{{ url_for('beach.customers_edit', customer_id=customer.id) }}"
                            class="text-decoration-none">
                             <strong>{{ customer.first_name }} {{ customer.last_name or '' }}</strong>
                         </a>
@@ -190,12 +190,8 @@
                     </td>
                     <td>
                         <div class="btn-group btn-group-sm">
-                            <a href="{{ url_for('beach.customers_detail', customer_id=customer.id) }}"
-                               class="btn btn-outline-primary" title="Ver detalle">
-                                <i class="fas fa-eye"></i>
-                            </a>
                             <a href="{{ url_for('beach.customers_edit', customer_id=customer.id) }}"
-                               class="btn btn-outline-secondary" title="Editar">
+                               class="btn btn-outline-primary" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <form method="POST"
@@ -318,7 +314,6 @@
      */
     function renderCustomerRow(customer) {
         const fullName = `${customer.first_name} ${customer.last_name || ''}`.trim();
-        const detailUrl = `/beach/customers/${customer.id}`;
         const editUrl = `/beach/customers/${customer.id}/edit`;
         const deleteUrl = `/beach/customers/${customer.id}/delete`;
 
@@ -352,7 +347,7 @@
         return `
             <tr>
                 <td>
-                    <a href="${detailUrl}" class="text-decoration-none">
+                    <a href="${editUrl}" class="text-decoration-none">
                         <strong>${escapeHtml(fullName)}</strong>
                     </a>
                 </td>
@@ -363,10 +358,7 @@
                 <td><span class="badge bg-secondary">${customer.reservation_count || 0}</span></td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <a href="${detailUrl}" class="btn btn-outline-primary" title="Ver detalle">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="${editUrl}" class="btn btn-outline-secondary" title="Editar">
+                        <a href="${editUrl}" class="btn btn-outline-primary" title="Editar">
                             <i class="fas fa-edit"></i>
                         </a>
                         <form method="POST" action="${deleteUrl}" class="d-inline"
