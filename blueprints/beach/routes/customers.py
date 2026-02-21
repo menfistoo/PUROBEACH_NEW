@@ -200,14 +200,16 @@ def edit(customer_id):
             else:
                 preferences_csv = ''
             sync_preferences_to_customer(customer_id, preferences_csv, replace=True)
+            # Also sync to all active/future reservations
+            from models.characteristic_assignments import sync_customer_preferences_to_reservations
+            sync_customer_preferences_to_reservations(customer_id, preferences_csv)
 
             # Update tags and sync to active/future reservations
             tag_ids = request.form.getlist('tags')
             parsed_tag_ids = [int(t) for t in tag_ids] if tag_ids else []
             set_customer_tags(customer_id, parsed_tag_ids)
-            if parsed_tag_ids:
-                from models.tag import sync_customer_tags_to_reservations
-                sync_customer_tags_to_reservations(customer_id, parsed_tag_ids)
+            from models.tag import sync_customer_tags_to_reservations
+            sync_customer_tags_to_reservations(customer_id, parsed_tag_ids, replace=True)
 
             flash('Cliente actualizado exitosamente', 'success')
             return redirect(url_for('beach.customers_edit', customer_id=customer_id))

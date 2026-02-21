@@ -334,17 +334,16 @@ def sync_reservation_tags_to_customer(reservation_id: int, tag_ids: list) -> Non
         conn.commit()
 
 
-def sync_customer_tags_to_reservations(customer_id: int, tag_ids: list) -> None:
+def sync_customer_tags_to_reservations(customer_id: int, tag_ids: list, replace: bool = False) -> None:
     """
-    Sync customer tags to all active/future reservations (merge, not replace).
-    Adds any new tag_ids to reservations without removing existing ones.
+    Sync customer tags to all active/future reservations.
 
     Args:
         customer_id: Customer ID
         tag_ids: List of tag IDs from the customer
+        replace: If True, replaces reservation tags entirely.
+                 If False, only adds new tags (merge/append).
     """
-    if not tag_ids:
-        return
     with get_db() as conn:
         cursor = conn.cursor()
         # Get active/future reservations for this customer
@@ -354,8 +353,15 @@ def sync_customer_tags_to_reservations(customer_id: int, tag_ids: list) -> None:
             AND (reservation_date >= date('now') OR end_date >= date('now'))
         ''', (customer_id,))
         reservation_ids = [r['id'] for r in cursor.fetchall()]
-        # Merge tags into each reservation
+
         for res_id in reservation_ids:
+            if replace:
+                # Remove existing tags first
+                cursor.execute(
+                    'DELETE FROM beach_reservation_tags WHERE reservation_id = ?',
+                    (res_id,)
+                )
+            # Add tags
             for tag_id in tag_ids:
                 cursor.execute('''
                     INSERT OR IGNORE INTO beach_reservation_tags (reservation_id, tag_id)

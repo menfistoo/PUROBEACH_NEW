@@ -626,8 +626,7 @@ def register_routes(bp):
                 if isinstance(tag_ids, list):
                     parsed_ids = [int(t) for t in tag_ids]
                     set_customer_tags(customer_id, parsed_ids)
-                    if parsed_ids:
-                        sync_customer_tags_to_reservations(customer_id, parsed_ids)
+                    sync_customer_tags_to_reservations(customer_id, parsed_ids, replace=True)
 
             # Build response with updated customer data
             updated_customer = get_customer_by_id(customer_id)
