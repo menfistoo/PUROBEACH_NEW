@@ -137,7 +137,11 @@ def detail(customer_id):
 @login_required
 @permission_required('beach.customers.edit')
 def edit(customer_id):
-    """Edit existing customer with reservation history."""
+    """Edit existing customer with reservation history.
+
+    Note: Customer updates are also available via PATCH /beach/api/customers/<id>/update
+    for AJAX-based editing from map panel and other views.
+    """
     customer = get_customer_with_details(customer_id)
     if not customer:
         flash('Cliente no encontrado', 'error')

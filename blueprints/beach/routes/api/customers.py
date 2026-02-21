@@ -9,14 +9,15 @@ from utils.audit import log_create, log_update
 from utils.api_response import api_success, api_error
 from models.customer import (
     find_duplicates, get_customer_by_id, get_customer_preferences,
-    create_customer, set_customer_preferences, search_customers_unified,
+    create_customer, update_customer, set_customer_preferences,
+    set_customer_tags, search_customers_unified,
     create_customer_from_hotel_guest, get_customers_filtered
 )
 from models.characteristic import get_all_characteristics
 from models.reservation import sync_preferences_to_customer
 from models.reservation import get_customer_reservation_history, get_customer_preferred_furniture
 from models.hotel_guest import get_guests_by_room, search_guests
-from models.tag import get_customer_tags
+from models.tag import get_customer_tags, sync_customer_tags_to_reservations
 from datetime import date
 
 
@@ -550,6 +551,116 @@ def register_routes(bp):
                 'success': False,
                 'error': 'Error al actualizar preferencias'
             }), 500
+
+    # ============================================================================
+    # CUSTOMER UPDATE (UNIFIED PATCH ENDPOINT)
+    # ============================================================================
+
+    @bp.route('/customers/<int:customer_id>/update', methods=['PATCH'])
+    @login_required
+    @permission_required('beach.customers.edit')
+    def update_customer_partial(customer_id):
+        """
+        Partial update for customer fields via AJAX.
+        Handles scalar fields, preferences, and tags in a single call.
+
+        Request body (all optional):
+            first_name, last_name, email, phone, room_number,
+            notes, vip_status, language, country_code,
+            preference_codes: list of code strings,
+            tag_ids: list of int IDs
+        """
+        data = request.get_json()
+        if not data:
+            return api_success(message='Sin cambios')
+
+        customer = get_customer_by_id(customer_id)
+        if not customer:
+            return api_error('Cliente no encontrado', 404)
+
+        # Capture before-state for audit
+        before_state = dict(customer)
+
+        # Filter to allowed scalar fields
+        allowed_fields = [
+            'first_name', 'last_name', 'email', 'phone', 'room_number',
+            'notes', 'vip_status', 'language', 'country_code'
+        ]
+        updates = {k: v for k, v in data.items() if k in allowed_fields}
+
+        # Validation
+        if 'first_name' in updates and not (updates['first_name'] or '').strip():
+            return api_error('El nombre es requerido')
+
+        if customer['customer_type'] == 'interno':
+            if 'room_number' in updates and not (updates['room_number'] or '').strip():
+                return api_error('El número de habitación es requerido para clientes internos')
+
+        if 'vip_status' in updates:
+            updates['vip_status'] = 1 if updates['vip_status'] else 0
+
+        has_pref_changes = 'preference_codes' in data
+        has_tag_changes = 'tag_ids' in data
+
+        if not updates and not has_pref_changes and not has_tag_changes:
+            return api_success(message='Sin cambios')
+
+        try:
+            # Update scalar fields
+            if updates:
+                update_customer(customer_id, **updates)
+
+            # Handle preferences with bidirectional sync
+            if has_pref_changes:
+                preference_codes = data['preference_codes']
+                if not isinstance(preference_codes, list):
+                    return api_error('preference_codes debe ser una lista')
+                preferences_csv = ','.join(preference_codes) if preference_codes else ''
+                sync_preferences_to_customer(customer_id, preferences_csv, replace=True)
+                from models.characteristic_assignments import sync_customer_preferences_to_reservations
+                sync_customer_preferences_to_reservations(customer_id, preferences_csv)
+
+            # Handle tags with sync to reservations
+            if has_tag_changes:
+                tag_ids = data['tag_ids']
+                if isinstance(tag_ids, list):
+                    parsed_ids = [int(t) for t in tag_ids]
+                    set_customer_tags(customer_id, parsed_ids)
+                    if parsed_ids:
+                        sync_customer_tags_to_reservations(customer_id, parsed_ids)
+
+            # Build response with updated customer data
+            updated_customer = get_customer_by_id(customer_id)
+            updated_prefs = get_customer_preferences(customer_id)
+            updated_tags = get_customer_tags(customer_id)
+
+            after_state = dict(updated_customer) if updated_customer else {}
+            log_update('customer', customer_id, before=before_state, after=after_state)
+
+            return api_success(
+                message='Cliente actualizado',
+                customer={
+                    'id': updated_customer['id'],
+                    'first_name': updated_customer['first_name'],
+                    'last_name': updated_customer.get('last_name', ''),
+                    'display_name': f"{updated_customer['first_name']} {updated_customer.get('last_name', '')}".strip(),
+                    'customer_type': updated_customer['customer_type'],
+                    'room_number': updated_customer.get('room_number'),
+                    'phone': updated_customer.get('phone'),
+                    'email': updated_customer.get('email'),
+                    'vip_status': updated_customer.get('vip_status', 0),
+                    'language': updated_customer.get('language'),
+                    'country_code': updated_customer.get('country_code'),
+                    'notes': updated_customer.get('notes'),
+                    'preferences': [{'id': p['id'], 'code': p['code'], 'name': p['name']} for p in updated_prefs],
+                    'tags': [{'id': t['id'], 'name': t['name'], 'color': t.get('color')} for t in updated_tags],
+                },
+                updated_fields=list(updates.keys())
+            )
+
+        except Exception as e:
+            current_app.logger.error(f'Error updating customer: {e}', exc_info=True)
+            return api_error('Error interno del servidor', 500)
 
     # ============================================================================
     # HOTEL GUEST API ROUTES
