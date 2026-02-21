@@ -118,7 +118,6 @@ export function showToast(message, type = 'info') {
     if (window.PuroBeach && window.PuroBeach.showToast) {
         window.PuroBeach.showToast(message, type);
     } else {
-        console.log(`[${type}] ${message}`);
     }
 }
 

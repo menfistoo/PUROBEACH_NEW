@@ -135,14 +135,6 @@ class ConflictResolver {
             const customerId = saved.customerId || document.getElementById('newPanelCustomerId').value;
             const customerSource = saved.customerSource || document.getElementById('newPanelCustomerSource').value || 'customer';
 
-            console.log('[RetryReservation] Customer data:', {
-                savedCustomerId: saved.customerId,
-                domCustomerId: document.getElementById('newPanelCustomerId').value,
-                finalCustomerId: customerId,
-                savedSource: saved.customerSource,
-                domSource: document.getElementById('newPanelCustomerSource').value,
-                finalSource: customerSource
-            });
 
             if (!customerId) {
                 throw new Error('Cliente requerido');

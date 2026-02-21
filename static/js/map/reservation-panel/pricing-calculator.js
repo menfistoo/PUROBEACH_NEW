@@ -17,7 +17,6 @@ class PricingCalculator {
      */
     async fetchAvailablePackages(customerType, furnitureIds, reservationDate, numPeople) {
         try {
-            console.log('[Pricing] Fetching available packages:', {customerType, furnitureIds, reservationDate, numPeople});
             const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
             const response = await fetch(`${this.panel.options.apiBaseUrl}/pricing/packages/available`, {
                 method: 'POST',
@@ -34,8 +33,6 @@ class PricingCalculator {
             });
 
             const result = await response.json();
-            console.log('[Pricing] Available packages:', result);
-
             if (result.success) {
                 return result.packages || [];
             }
@@ -101,7 +98,6 @@ class PricingCalculator {
             const selectedValue = pricingTypeSelect.value;
             selectedPackageIdInput.value = selectedValue;
 
-            console.log('[Pricing] Package changed to:', selectedValue || 'Consumo mínimo');
             this.calculatePricingOnly();
         };
         pricingTypeSelect.addEventListener('change', this._packageChangeHandler);
@@ -195,11 +191,8 @@ class PricingCalculator {
         const numPeople = parseInt(document.getElementById('newPanelNumPeople')?.value) || 2;
         const selectedPackageIdInput = document.getElementById('newPanelSelectedPackageId');
 
-        console.log('[Pricing] Calculating pricing:', {customerId, customerSource, furniture, dates, numPeople});
-
         // Clear if not enough data
         if (!customerId || furniture.length === 0 || dates.length === 0) {
-            console.log('[Pricing] Not enough data, clearing display');
             this.updatePricingDisplay(null);
             this.updatePackageSelector([], customerSource);
             return;
@@ -227,8 +220,6 @@ class PricingCalculator {
                 customerType = this.panel.customerHandler?.state?.selectedCustomer?.customer_type || 'externo';
             }
 
-            console.log('[Pricing] Determined customer_type:', customerType);
-
             // First, fetch available packages to populate the selector
             const packages = await this.fetchAvailablePackages(
                 customerType,
@@ -243,7 +234,6 @@ class PricingCalculator {
             // Get selected package_id (empty string for minimum consumption)
             const packageId = selectedPackageIdInput?.value || '';
 
-            console.log('[Pricing] Calling API:', `${this.panel.options.apiBaseUrl}/pricing/calculate`);
             const requestBody = {
                 customer_id: parseInt(customerId),
                 customer_source: customerSource,
@@ -267,9 +257,7 @@ class PricingCalculator {
                 body: JSON.stringify(requestBody)
             });
 
-            console.log('[Pricing] Response status:', response.status);
             const result = await response.json();
-            console.log('[Pricing] Response data:', result);
 
             if (result.success) {
                 this.updatePricingDisplay(result.pricing);

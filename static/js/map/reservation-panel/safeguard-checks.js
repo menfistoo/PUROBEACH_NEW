@@ -186,8 +186,6 @@ class SafeguardChecks {
             const result = await response.json();
 
             if (!result.all_available && result.unavailable && result.unavailable.length > 0) {
-                console.log('[Safeguard] Furniture conflicts found:', result.unavailable);
-
                 // Get furniture numbers for display
                 const furnitureMap = {};
                 this.panel.state.selectedFurniture.forEach(f => {
@@ -257,8 +255,6 @@ class SafeguardChecks {
 
             // If not contiguous, show warning
             if (!result.is_contiguous && result.gap_count > 0) {
-                console.log('[Safeguard] Non-contiguous furniture detected:', result);
-
                 const action = await SafeguardModal.showContiguityWarning(result);
 
                 if (action === 'proceed') {
@@ -303,19 +299,14 @@ class SafeguardChecks {
                 const result = await response.json();
 
                 if (result.has_duplicate && result.existing_reservation) {
-                    console.log('[Safeguard] Duplicate found:', result.existing_reservation);
                     const action = await SafeguardModal.showDuplicateWarning(result.existing_reservation);
-                    console.log('[Safeguard] User action:', action);
 
                     if (action === 'proceed') {
-                        console.log('[Safeguard] User chose to proceed with duplicate');
                         return { proceed: true };
                     } else if (action === 'view') {
-                        console.log('[Safeguard] User chose to view existing');
                         this.panel.close();
                         return { proceed: false, viewExisting: result.existing_reservation.id };
                     }
-                    console.log('[Safeguard] User cancelled duplicate creation');
                     return { proceed: false };
                 }
             }

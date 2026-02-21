@@ -64,8 +64,6 @@ export class InteractionManager {
      */
     setReadOnly(readOnly) {
         this.readOnly = readOnly;
-        console.log(`[InteractionManager] Read-only mode: ${readOnly}`);
-
         // If entering read-only, cancel any ongoing drags
         if (readOnly && this.isDragging) {
             this.cancelDrag();

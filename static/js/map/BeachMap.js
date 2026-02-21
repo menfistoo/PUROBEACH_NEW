@@ -89,7 +89,6 @@ export class BeachMap {
                 interactionManager: this.interaction,
                 selectionManager: this.selection
             });
-            console.log('[BeachMap] Modal State Manager initialized');
         }
 
         // Offline manager

@@ -15,8 +15,6 @@ class ModalStateManager {
         // Manager references
         this.interactionManager = null;
         this.selectionManager = null;
-
-        console.log('[ModalStateManager] Initialized');
     }
 
     /**
@@ -30,8 +28,6 @@ class ModalStateManager {
         // Store manager references
         this.interactionManager = options.interactionManager || null;
         this.selectionManager = options.selectionManager || null;
-
-        console.log('[ModalStateManager] DOM references cached');
     }
 
     /**
@@ -56,12 +52,9 @@ class ModalStateManager {
      * @param {Object} instance - Reference to the modal instance
      */
     openModal(modalName, instance) {
-        console.log(`[ModalStateManager] Opening modal: ${modalName}`);
-
         // 1. Close OTHER modals (not self)
         Object.keys(this.modalInstances).forEach(name => {
             if (name !== modalName && this.modalInstances[name]) {
-                console.log(`[ModalStateManager] Auto-closing modal: ${name}`);
                 try {
                     this.modalInstances[name].close();
                 } catch (error) {
@@ -87,8 +80,6 @@ class ModalStateManager {
      * @param {string} modalName - Name of modal to close
      */
     closeModal(modalName) {
-        console.log(`[ModalStateManager] Closing modal: ${modalName}`);
-
         // Remove from active state
         if (this.activeModal === modalName) {
             this.activeModal = null;
@@ -110,8 +101,6 @@ class ModalStateManager {
      * @param {string} modalName - Name of modal to collapse
      */
     collapseModal(modalName) {
-        console.log(`[ModalStateManager] Collapsing modal: ${modalName}`);
-
         this.collapsedModal = modalName;
 
         // Collapsed modal still keeps map read-only (except move-mode)
@@ -123,8 +112,6 @@ class ModalStateManager {
      * @param {string} modalName - Name of modal to expand
      */
     expandModal(modalName) {
-        console.log(`[ModalStateManager] Expanding modal: ${modalName}`);
-
         if (this.collapsedModal === modalName) {
             this.collapsedModal = null;
         }
@@ -139,7 +126,6 @@ class ModalStateManager {
     closeBottomBar() {
         if (this.bottomBar) {
             this.bottomBar.classList.remove('show');
-            console.log('[ModalStateManager] Bottom bar closed');
 
             // Clear selections if needed
             this.clearMapSelections();
@@ -162,8 +148,6 @@ class ModalStateManager {
         if (!this.mapContainer) return;
 
         const interactive = this.shouldMapBeInteractive();
-
-        console.log(`[ModalStateManager] Map interactive: ${interactive} (active: ${this.activeModal})`);
 
         if (interactive) {
             this.mapContainer.classList.remove('read-only');
@@ -190,8 +174,6 @@ class ModalStateManager {
         if (this.selectionManager && typeof this.selectionManager.setReadOnly === 'function') {
             this.selectionManager.setReadOnly(true);
         }
-
-        console.log('[ModalStateManager] Map interactions disabled');
     }
 
     /**
@@ -207,8 +189,6 @@ class ModalStateManager {
         if (this.selectionManager && typeof this.selectionManager.setReadOnly === 'function') {
             this.selectionManager.setReadOnly(false);
         }
-
-        console.log('[ModalStateManager] Map interactions enabled');
     }
 
     /**

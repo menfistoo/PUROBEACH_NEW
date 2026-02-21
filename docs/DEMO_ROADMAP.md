@@ -1,22 +1,22 @@
-# Demo Roadmap - PuroBeach Beach Club
+# Production Roadmap - PuroBeach Beach Club
 
 > **IMPORTANT: This file must be kept updated.** After every work session, update the status
 > of completed items and add any new issues discovered. This is the single source of truth
-> for demo preparation progress.
+> for production readiness progress.
 >
-> **Last Updated:** 2026-02-20
+> **Last Updated:** 2026-02-21 (Phase 5 completed)
 
 ---
 
-## Overall Status: PRODUCTION READY
+## Overall Status: PRODUCTION-READY
 
 | Phase | Status | Items | Done |
 |-------|--------|-------|------|
 | Phase 1 - Critical | COMPLETED | 6 | 6/6 |
 | Phase 2 - High | COMPLETED | 5 | 5/5 |
 | Phase 3 - Polish | COMPLETED | 4 | 4/4 |
-| Phase 4 - Nice to Have | PARTIALLY DONE | 6 | 3/6 |
-| Production Hardening | COMPLETED | 8 | 8/8 |
+| Phase 4 - Nice to Have | MOSTLY DONE | 6 | 5/6 |
+| Phase 5 - Production Hardening | COMPLETED | 8 | 8/8 |
 
 ---
 
@@ -44,104 +44,146 @@
 ## Phase 3 - POLISH
 
 ### 3.1 [x] Normalize phone numbers for customer deduplication
-- Already implemented in `utils/validators.py` with `normalize_phone()`
+- `utils/validators.py:normalize_phone()` + integrated in customer CRUD, search, and dedup
+- Tests in `tests/test_validators.py`
 
 ### 3.2 [x] Replace browser confirm() with modals
-- All 4 remaining `confirm()` calls replaced with `confirmAction()` modal
+- Modal system in `static/js/main.js:confirmAction()`
+- **Note:** 5 locations in map JS still use native `confirm()` (unsaved changes guards) — acceptable
 
 ### 3.3 [x] Add empty states with helpful messages
-- Already implemented across all list views
+- Reservations list, customer list, and map all have context-aware empty states with CTAs
 
 ### 3.4 [x] Remove backup files from repo
-- No backup files found in current codebase — already clean
+- No `.BACKUP_*` files found in repo
 
 ---
 
 ## Phase 4 - NICE TO HAVE
 
-### 4.1 [ ] Bundle/minify CSS and JS assets
-- Manual bundles already exist, no build system needed at current scale
-- Deferred — not blocking production
+### 4.1 [x] Bundle/minify CSS and JS assets
+- 44 script tags reduced to 5, CSS bundled into `map-bundle.css`
 
 ### 4.2 [x] Add print styles for reports
-- Comprehensive `@media print` block added to `main.css`
+- Comprehensive print styles added
 
-### 4.3 [ ] Improve mobile touch interactions
-- Touch handler exists, 294 hover rules — low impact, deferred
+### 4.3 [x] Improve mobile touch interactions
+- Touch targets (44px min), toolbar flex-wrap, offcanvas nav, dvh fallback for iOS Safari
 
 ### 4.4 [x] Add timezone awareness
-- `utils/datetime_helpers.py` with `get_today()` / `get_now()`
-- All 40+ naive date calls replaced across 25 files
-- Configured for `Europe/Madrid` via `config.py`
+- Europe/Madrid default via `utils/datetime_helpers.py`
 
 ### 4.5 [x] Add pagination to list API endpoints
-- `/customers/list` now accepts `limit`/`offset` query params with pagination metadata
+- `/customers/list` API with limit/offset
 
 ### 4.6 [ ] Cleanup dual reservation panel (v1 vs v2)
-- Large refactor (~6K lines) — deferred to post-launch
+- Both systems still loaded simultaneously
+- **Deferred** — Low risk, only wastes bandwidth
 
 ---
 
-## Production Hardening (added 2026-02-20)
+## Phase 5 - PRODUCTION HARDENING
 
-### [x] Fix all XSS vulnerabilities (GitHub #35)
-- 7 XSS issues fixed with `escapeHtml()` across tooltips, tags, chips, legends
+### 5.1 [x] Add rate limiting to beach API endpoints
+### 5.2 [x] Fix N+1 menu query with request caching
+### 5.3 [x] XSS: escape furniture number in chip rendering
+### 5.4 [x] Cache busting on static asset URLs
+### 5.5 [x] Session protection hardening
 
-### [x] Fix all functional bugs (GitHub #36)
-- 15 bugs fixed: panel conflicts, Ctrl+Click, safeguard fail-open, CSRF refresh, etc.
+### 5.6 [x] Add CSRF token to all fetch() API calls
+- Added CSRF token injection to `fetchJSON()` in `main.js`
+- All POST/PUT/DELETE fetch calls now include `X-CSRFToken` header
 
-### [x] Fix critical UI bugs (GitHub #34)
-- z-index conflicts, toolbar overflow, touch targets, broken customer link
+### 5.7 [x] Remove/guard console.log statements in JS
+- Removed 72 debug `console.log` statements across 15+ source files and 4 bundle files
+- Kept `console.error` (legitimate error handling) and `console.warn` (runtime warnings)
+- Only remaining: 2 JSDoc comment examples (not executable)
 
-### [x] WCAG accessibility improvements (GitHub #37)
-- Touch targets → 44px minimum, ARIA labels/roles, dvh fallbacks, form labels
-
-### [x] Log rotation
-- `RotatingFileHandler` (10MB, 5 backups) prevents unbounded log growth
-
-### [x] Session protection hardened
-- `session_protection = 'strong'` — invalidates sessions on IP/UA change
-
-### [x] Dependencies pinned
-- `requirements/production.lock` with exact versions for reproducible builds
-
-### [x] Nginx domain placeholders restored
-- `deploy.sh` can now properly substitute `${DOMAIN}` at deploy time
+### 5.8 [x] Remove hardcoded IP from docker-compose.yml
+- Replaced `161.97.187.97` with `${SERVER_IP:-0.0.0.0}` env var
+- Deleted production-readiness worktree
 
 ---
 
-## Post-Deploy Checklist
+## Recent Work on `main` (Feb 2 - Feb 21)
 
-```bash
-# 1. Change default admin password immediately
-# The seed password 'PuroAdmin2026!' is in source code — MUST change
+- [x] PuroBeach brand identity UI overhaul (5 phases)
+- [x] Map JS/CSS bundling (44 → 5 script tags)
+- [x] Reservation characteristics feature
+- [x] Unified tag config page (Tags + Characteristics)
+- [x] Bidirectional tag sync (reservations ↔ customers)
+- [x] Customer detail UI simplification
+- [x] Unified PATCH endpoint for customer updates
+- [x] Unified map reservation update endpoint
+- [x] Quick edit modal enrichment (room, dates, full data)
+- [x] Modal state management with read-only map
+- [x] Multi-select context menu fixes
+- [x] Merged `feature/production-readiness` (32 commits: security, mobile, a11y, CI)
+- [x] Phase 5 completion: CSRF on fetchJSON, console.log cleanup (72 removed), hardcoded IP → env var
 
-# 2. Set up off-host backups
-# Current backup script writes to same Docker volume as live DB
-# Add cron job to copy backups to S3, remote server, etc.
+---
 
-# 3. Verify deployment
-docker-compose up -d
-docker exec purobeach-app python -m pytest tests/ -x --tb=short
+## Pending Plans (Not Yet Executed)
 
-# 4. Manual smoke test
-# - Login and change admin password
-# - View map with furniture
-# - Create reservation
-# - Check analytics dashboard
-# - Test on mobile device
-```
+- **Unify reservation editing** — `docs/plans/2026-02-21-unify-reservation-editing.md`
 
 ---
 
 ## Known Strengths (Do NOT break these)
 
 - Modular blueprint architecture
-- Database schema well-designed (22 tables, proper FKs, indexes)
-- Security: CSRF, bcrypt, parameterized SQL, rate limiting, XSS-safe
-- Design system: Professional Mediterranean theme
+- Database schema well-designed (22+ tables, proper FKs, indexes)
+- Security: CSRF, bcrypt, parameterized SQL, rate limiting
+- Design system: Professional PuroBeach brand identity
 - Demo seed script: Creates realistic data (~80 furniture, ~50 reservations)
 - Docker deployment: Dockerfile, nginx, gunicorn, SSL
 - Interactive map: Core feature works (zoom, pan, drag, context menu)
-- Timezone-aware date handling (Europe/Madrid)
-- WCAG 2.1 AA accessibility compliance (touch targets, ARIA, focus)
+- JS/CSS bundled for performance
+- CI: GitHub Actions test workflow
+- Accessibility: ARIA labels, keyboard nav, touch targets
+
+---
+
+## Pre-Deployment Checklist
+
+```bash
+# 1. Phase 5 items completed (5.6, 5.7, 5.8) ✓
+
+# 2. Fresh database
+python -c "from database.schema import init_db; init_db()"
+
+# 3. Run seed
+python scripts/demo_seed.py
+
+# 4. Run tests
+python -m pytest tests/ -x --tb=short
+
+# 5. Start server
+python app.py
+
+# 6. Manual checks:
+# - Login as admin/admin123
+# - View map with furniture
+# - Create reservation from map
+# - Edit reservation from list (quick-edit modal)
+# - Check analytics dashboard
+# - Lock/unlock furniture
+# - Move mode test
+# - Customer search and dedup
+# - Excel export
+# - Mobile/tablet view
+# - Check browser console for errors/logs
+```
+
+---
+
+## Demo Seed Data Checklist
+
+Run `python scripts/demo_seed.py` to populate:
+- [x] 2 zones (Pool Club, Terraza Sur)
+- [x] ~80 furniture pieces
+- [x] ~40 diverse customers
+- [x] ~50 multi-day reservations
+- [x] Pricing and configuration data
+- [x] Reservation states
+- [x] Furniture types

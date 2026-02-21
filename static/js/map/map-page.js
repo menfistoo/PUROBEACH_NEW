@@ -251,7 +251,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (response.ok) {
                 const data = await response.json();
                 globalUnassignedData = data;
-                console.log('[MoveMode] Global unassigned check:', data.count, 'reservations', data.dates);
                 updateUnassignedBadge(data.count || 0, data);
             }
         } catch (error) {
@@ -954,13 +953,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const selectedIds = capturedSelection || map.getSelectedFurniture();
         const requiredCount = parseInt(conflictResolutionContext.requiredCount);
 
-        console.log('[Map] Confirming selection:', {
-            selectedIds: selectedIds,
-            count: selectedIds ? selectedIds.length : 'null',
-            required: requiredCount,
-            capturedFromButton: !!capturedSelection
-        });
-
         // Validate exact count match
         if (selectedIds.length != requiredCount) {
             if (window.PuroBeach && window.PuroBeach.showToast) {
@@ -976,8 +968,6 @@ document.addEventListener('DOMContentLoaded', function () {
         // The modal will show again after this
         // Capture date BEFORE clearing context (setTimeout runs after context is nulled)
         const capturedDate = conflictResolutionContext.date;
-        console.log('[Map] Dispatching alternativeSelected event:', capturedDate, selectedIds);
-
         // Small delay to ensure UI updates have processed
         setTimeout(() => {
             document.dispatchEvent(new CustomEvent('conflictResolution:alternativeSelected', {

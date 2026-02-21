@@ -97,8 +97,6 @@ export class MoveMode {
     async loadUnassignedReservations() {
         try {
             const url = `${this.options.apiBaseUrl}/unassigned?date=${this.currentDate}`;
-            console.log('[MoveMode] Loading unassigned reservations from:', url);
-
             const response = await fetch(url, {
                 headers: { 'X-CSRFToken': getCSRFToken() }
             });
@@ -109,7 +107,6 @@ export class MoveMode {
             }
 
             const data = await response.json();
-            console.log('[MoveMode] Unassigned response:', data);
 
             if (data.reservation_ids && data.reservation_ids.length > 0) {
                 // Load each unassigned reservation into the pool
@@ -143,8 +140,6 @@ export class MoveMode {
      */
     async setDate(newDate) {
         if (!this.active || this.currentDate === newDate) return;
-
-        console.log('[MoveMode] Date changed from', this.currentDate, 'to', newDate);
 
         // Update date
         this.currentDate = newDate;

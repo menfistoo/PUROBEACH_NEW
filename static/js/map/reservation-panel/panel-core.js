@@ -810,7 +810,7 @@ class NewReservationPanel {
         if (window.PuroBeach && window.PuroBeach.showToast) {
             window.PuroBeach.showToast(message, type);
         } else {
-            console.log(`[${type.toUpperCase()}] ${message}`);
+            // Toast system not available
         }
     }
 

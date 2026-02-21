@@ -158,7 +158,7 @@ export function showToast(message, type = 'info', duration = 5000, toastId = nul
     if (window.PuroBeach?.showToast) {
         window.PuroBeach.showToast(message, type, duration, toastId);
     } else {
-        console.log(`[${type}] ${message}`);
+        // Toast system not available
     }
 }
 

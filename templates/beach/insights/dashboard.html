@@ -195,9 +195,12 @@ document.addEventListener('DOMContentLoaded', function() {
     loadDashboardData();
 
     // Refresh button
-    document.getElementById('refresh-btn').addEventListener('click', function() {
-        loadDashboardData();
-    });
+    const refreshBtn = document.getElementById('refresh-btn') || document.querySelector('.refresh-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            loadDashboardData();
+        });
+    }
 });
 
 function loadDashboardData() {

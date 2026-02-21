@@ -125,7 +125,7 @@ function showToast(message, type = 'info') {
     if (window.PuroBeach && window.PuroBeach.showToast) {
         window.PuroBeach.showToast(message, type);
     } else {
-        console.log(`[${type}] ${message}`);
+        // Toast system not available
     }
 }
 
@@ -159,8 +159,6 @@ class ModalStateManager {
         // Manager references
         this.interactionManager = null;
         this.selectionManager = null;
-
-        console.log('[ModalStateManager] Initialized');
     }
 
     /**
@@ -174,8 +172,6 @@ class ModalStateManager {
         // Store manager references
         this.interactionManager = options.interactionManager || null;
         this.selectionManager = options.selectionManager || null;
-
-        console.log('[ModalStateManager] DOM references cached');
     }
 
     /**
@@ -200,12 +196,9 @@ class ModalStateManager {
      * @param {Object} instance - Reference to the modal instance
      */
     openModal(modalName, instance) {
-        console.log(`[ModalStateManager] Opening modal: ${modalName}`);
-
         // 1. Close OTHER modals (not self)
         Object.keys(this.modalInstances).forEach(name => {
             if (name !== modalName && this.modalInstances[name]) {
-                console.log(`[ModalStateManager] Auto-closing modal: ${name}`);
                 try {
                     this.modalInstances[name].close();
                 } catch (error) {
@@ -231,8 +224,6 @@ class ModalStateManager {
      * @param {string} modalName - Name of modal to close
      */
     closeModal(modalName) {
-        console.log(`[ModalStateManager] Closing modal: ${modalName}`);
-
         // Remove from active state
         if (this.activeModal === modalName) {
             this.activeModal = null;
@@ -254,8 +245,6 @@ class ModalStateManager {
      * @param {string} modalName - Name of modal to collapse
      */
     collapseModal(modalName) {
-        console.log(`[ModalStateManager] Collapsing modal: ${modalName}`);
-
         this.collapsedModal = modalName;
 
         // Collapsed modal still keeps map read-only (except move-mode)
@@ -267,8 +256,6 @@ class ModalStateManager {
      * @param {string} modalName - Name of modal to expand
      */
     expandModal(modalName) {
-        console.log(`[ModalStateManager] Expanding modal: ${modalName}`);
-
         if (this.collapsedModal === modalName) {
             this.collapsedModal = null;
         }
@@ -283,7 +270,6 @@ class ModalStateManager {
     closeBottomBar() {
         if (this.bottomBar) {
             this.bottomBar.classList.remove('show');
-            console.log('[ModalStateManager] Bottom bar closed');
 
             // Clear selections if needed
             this.clearMapSelections();
@@ -306,8 +292,6 @@ class ModalStateManager {
         if (!this.mapContainer) return;
 
         const interactive = this.shouldMapBeInteractive();
-
-        console.log(`[ModalStateManager] Map interactive: ${interactive} (active: ${this.activeModal})`);
 
         if (interactive) {
             this.mapContainer.classList.remove('read-only');
@@ -334,8 +318,6 @@ class ModalStateManager {
         if (this.selectionManager && typeof this.selectionManager.setReadOnly === 'function') {
             this.selectionManager.setReadOnly(true);
         }
-
-        console.log('[ModalStateManager] Map interactions disabled');
     }
 
     /**
@@ -351,8 +333,6 @@ class ModalStateManager {
         if (this.selectionManager && typeof this.selectionManager.setReadOnly === 'function') {
             this.selectionManager.setReadOnly(false);
         }
-
-        console.log('[ModalStateManager] Map interactions enabled');
     }
 
     /**
@@ -1170,7 +1150,6 @@ class SelectionManager {
      */
     setReadOnly(readOnly) {
         this.readOnly = readOnly;
-        console.log(`[SelectionManager] Read-only mode: ${readOnly}`);
     }
 
     /**
@@ -1190,7 +1169,6 @@ class SelectionManager {
     select(id, addToSelection = false) {
         // Block selections in read-only mode
         if (this.readOnly) {
-            console.log('[SelectionManager] Selection blocked - read-only mode active');
             return false;
         }
 
@@ -2146,7 +2124,6 @@ class InteractionManager {
      */
     setReadOnly(readOnly) {
         this.readOnly = readOnly;
-        console.log(`[InteractionManager] Read-only mode: ${readOnly}`);
 
         // If entering read-only, cancel any ongoing drags
         if (readOnly && this.isDragging) {
@@ -3435,7 +3412,6 @@ class BeachMap {
                 interactionManager: this.interaction,
                 selectionManager: this.selection
             });
-            console.log('[BeachMap] Modal State Manager initialized');
         }
 
         // Offline manager
@@ -6399,7 +6375,6 @@ class MoveMode {
     async loadUnassignedReservations() {
         try {
             const url = `${this.options.apiBaseUrl}/unassigned?date=${this.currentDate}`;
-            console.log('[MoveMode] Loading unassigned reservations from:', url);
 
             const response = await fetch(url, {
                 headers: { 'X-CSRFToken': getCSRFToken() }
@@ -6411,7 +6386,6 @@ class MoveMode {
             }
 
             const data = await response.json();
-            console.log('[MoveMode] Unassigned response:', data);
 
             if (data.reservation_ids && data.reservation_ids.length > 0) {
                 // Load each unassigned reservation into the pool
@@ -6445,8 +6419,6 @@ class MoveMode {
      */
     async setDate(newDate) {
         if (!this.active || this.currentDate === newDate) return;
-
-        console.log('[MoveMode] Date changed from', this.currentDate, 'to', newDate);
 
         // Update date
         this.currentDate = newDate;

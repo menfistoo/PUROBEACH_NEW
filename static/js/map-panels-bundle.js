@@ -182,7 +182,7 @@ function showToast(message, type = 'info', duration = 5000, toastId = null) {
     if (window.PuroBeach?.showToast) {
         window.PuroBeach.showToast(message, type, duration, toastId);
     } else {
-        console.log(`[${type}] ${message}`);
+        // Toast system not available
     }
 }
 
@@ -5209,7 +5209,6 @@ class PricingCalculator {
      */
     async fetchAvailablePackages(customerType, furnitureIds, reservationDate, numPeople) {
         try {
-            console.log('[Pricing] Fetching available packages:', {customerType, furnitureIds, reservationDate, numPeople});
             const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
             const response = await fetch(`${this.panel.options.apiBaseUrl}/pricing/packages/available`, {
                 method: 'POST',
@@ -5226,7 +5225,6 @@ class PricingCalculator {
             });
 
             const result = await response.json();
-            console.log('[Pricing] Available packages:', result);
 
             if (result.success) {
                 return result.packages || [];
@@ -5293,7 +5291,6 @@ class PricingCalculator {
             const selectedValue = pricingTypeSelect.value;
             selectedPackageIdInput.value = selectedValue;
 
-            console.log('[Pricing] Package changed to:', selectedValue || 'Consumo mínimo');
             this.calculatePricingOnly();
         };
         pricingTypeSelect.addEventListener('change', this._packageChangeHandler);
@@ -5387,11 +5384,8 @@ class PricingCalculator {
         const numPeople = parseInt(document.getElementById('newPanelNumPeople')?.value) || 2;
         const selectedPackageIdInput = document.getElementById('newPanelSelectedPackageId');
 
-        console.log('[Pricing] Calculating pricing:', {customerId, customerSource, furniture, dates, numPeople});
-
         // Clear if not enough data
         if (!customerId || furniture.length === 0 || dates.length === 0) {
-            console.log('[Pricing] Not enough data, clearing display');
             this.updatePricingDisplay(null);
             this.updatePackageSelector([], customerSource);
             return;
@@ -5419,8 +5413,6 @@ class PricingCalculator {
                 customerType = this.panel.customerHandler?.state?.selectedCustomer?.customer_type || 'externo';
             }
 
-            console.log('[Pricing] Determined customer_type:', customerType);
-
             // First, fetch available packages to populate the selector
             const packages = await this.fetchAvailablePackages(
                 customerType,
@@ -5435,7 +5427,6 @@ class PricingCalculator {
             // Get selected package_id (empty string for minimum consumption)
             const packageId = selectedPackageIdInput?.value || '';
 
-            console.log('[Pricing] Calling API:', `${this.panel.options.apiBaseUrl}/pricing/calculate`);
             const requestBody = {
                 customer_id: parseInt(customerId),
                 customer_source: customerSource,
@@ -5459,9 +5450,7 @@ class PricingCalculator {
                 body: JSON.stringify(requestBody)
             });
 
-            console.log('[Pricing] Response status:', response.status);
             const result = await response.json();
-            console.log('[Pricing] Response data:', result);
 
             if (result.success) {
                 this.updatePricingDisplay(result.pricing);
@@ -5716,15 +5705,6 @@ class ConflictResolver {
             // In conflict resolution, always use saved data if available
             const customerId = saved.customerId || document.getElementById('newPanelCustomerId').value;
             const customerSource = saved.customerSource || document.getElementById('newPanelCustomerSource').value || 'customer';
-
-            console.log('[RetryReservation] Customer data:', {
-                savedCustomerId: saved.customerId,
-                domCustomerId: document.getElementById('newPanelCustomerId').value,
-                finalCustomerId: customerId,
-                savedSource: saved.customerSource,
-                domSource: document.getElementById('newPanelCustomerSource').value,
-                finalSource: customerSource
-            });
 
             if (!customerId) {
                 throw new Error('Cliente requerido');
@@ -6028,8 +6008,6 @@ class SafeguardChecks {
             const result = await response.json();
 
             if (!result.all_available && result.unavailable && result.unavailable.length > 0) {
-                console.log('[Safeguard] Furniture conflicts found:', result.unavailable);
-
                 // Get furniture numbers for display
                 const furnitureMap = {};
                 this.panel.state.selectedFurniture.forEach(f => {
@@ -6097,8 +6075,6 @@ class SafeguardChecks {
 
             // If not contiguous, show warning
             if (!result.is_contiguous && result.gap_count > 0) {
-                console.log('[Safeguard] Non-contiguous furniture detected:', result);
-
                 const action = await SafeguardModal.showContiguityWarning(result);
 
                 if (action === 'proceed') {
@@ -6142,19 +6118,14 @@ class SafeguardChecks {
                 const result = await response.json();
 
                 if (result.has_duplicate && result.existing_reservation) {
-                    console.log('[Safeguard] Duplicate found:', result.existing_reservation);
                     const action = await SafeguardModal.showDuplicateWarning(result.existing_reservation);
-                    console.log('[Safeguard] User action:', action);
 
                     if (action === 'proceed') {
-                        console.log('[Safeguard] User chose to proceed with duplicate');
                         return { proceed: true };
                     } else if (action === 'view') {
-                        console.log('[Safeguard] User chose to view existing');
                         this.panel.close();
                         return { proceed: false, viewExisting: result.existing_reservation.id };
                     }
-                    console.log('[Safeguard] User cancelled duplicate creation');
                     return { proceed: false };
                 }
             }
@@ -6981,7 +6952,7 @@ class NewReservationPanel {
         if (window.PuroBeach && window.PuroBeach.showToast) {
             window.PuroBeach.showToast(message, type);
         } else {
-            console.log(`[${type.toUpperCase()}] ${message}`);
+            // Toast system not available
         }
     }
 

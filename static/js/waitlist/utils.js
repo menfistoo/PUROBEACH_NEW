@@ -147,6 +147,6 @@ export function showToast(message, type = 'info') {
     if (window.PuroBeach?.showToast) {
         window.PuroBeach.showToast(message, type);
     } else {
-        console.log(`[${type.toUpperCase()}] ${message}`);
+        // Toast system not available
     }
 }

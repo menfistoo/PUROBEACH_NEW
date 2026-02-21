@@ -129,7 +129,6 @@ class ConflictResolutionModal {
 
         // Listen for cancellation from map (when user clicks "Cancelar" in selection bar)
         document.addEventListener('conflictResolution:cancelled', () => {
-            console.log('[ConflictModal] User cancelled from map, restoring modal');
             // Show the modal again
             this.modal.classList.remove('minimized');
             this.modal.classList.add('open');
@@ -333,8 +332,6 @@ class ConflictResolutionModal {
      * Called when user selects alternative furniture from the map
      */
     updateDateSelection(date, furnitureIds) {
-        console.log('[ConflictModal] updateDateSelection called:', date, furnitureIds);
-
         // Update state
         this.state.furnitureByDate[date] = [...furnitureIds]; // Copy array
         this.state.resolvedDates.add(date);
@@ -354,9 +351,6 @@ class ConflictResolutionModal {
 
         this.state.isOpen = true;
 
-        console.log('[ConflictModal] Modal restored. Classes:', this.modal.className,
-                    'Style:', this.modal.style.cssText,
-                    'ComputedDisplay:', window.getComputedStyle(this.modal).display);
     }
 
     /**

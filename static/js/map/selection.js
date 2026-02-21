@@ -34,7 +34,6 @@ export class SelectionManager {
      */
     setReadOnly(readOnly) {
         this.readOnly = readOnly;
-        console.log(`[SelectionManager] Read-only mode: ${readOnly}`);
     }
 
     /**
@@ -54,7 +53,6 @@ export class SelectionManager {
     select(id, addToSelection = false) {
         // Block selections in read-only mode
         if (this.readOnly) {
-            console.log('[SelectionManager] Selection blocked - read-only mode active');
             return false;
         }
 

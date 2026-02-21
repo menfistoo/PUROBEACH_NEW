@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize confirmation modal for forms with data-confirm attribute
     initializeConfirmForms();
 
-    console.log('PuroBeach initialized successfully');
 });
 
 /**
@@ -386,7 +385,6 @@ function copyToClipboard(text) {
  */
 function initializeDataTable(selector, options = {}) {
     // Placeholder for Phase 2+ when we add advanced table features
-    console.log('DataTables will be initialized in Phase 2');
 }
 
 /**
@@ -397,9 +395,12 @@ function initializeDataTable(selector, options = {}) {
  */
 async function fetchJSON(url, options = {}) {
     try {
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfMeta ? csrfMeta.content : '';
         const response = await fetch(url, {
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
                 ...options.headers
             },
             ...options
