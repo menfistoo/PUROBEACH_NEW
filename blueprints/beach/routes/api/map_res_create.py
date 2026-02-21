@@ -242,6 +242,14 @@ def register_routes(bp):
                     current_app.logger.error(f'Pricing calculation failed: {pricing_error}', exc_info=True)
                     pricing_warning = 'No se pudo calcular el precio. Revise la configuración de precios.'
 
+            # Derive reservation_type from pricing
+            if package_id:
+                reservation_type = 'paquete'
+            elif calculated_min_consumption > 0:
+                reservation_type = 'consumo_minimo'
+            else:
+                reservation_type = 'normal'
+
             # Multi-day reservation
             if len(dates) > 1:
                 result = create_linked_multiday_reservations(
@@ -263,7 +271,8 @@ def register_routes(bp):
                     payment_ticket_number=payment_ticket_number,
                     payment_method=payment_method,
                     minimum_consumption_amount=calculated_min_consumption,
-                    minimum_consumption_policy_id=min_consumption_policy_id
+                    minimum_consumption_policy_id=min_consumption_policy_id,
+                    reservation_type=reservation_type
                 )
 
                 if result.get('success'):
@@ -332,7 +341,8 @@ def register_routes(bp):
                     payment_ticket_number=payment_ticket_number,
                     payment_method=payment_method,
                     minimum_consumption_amount=calculated_min_consumption,
-                    minimum_consumption_policy_id=min_consumption_policy_id
+                    minimum_consumption_policy_id=min_consumption_policy_id,
+                    reservation_type=reservation_type
                 )
 
                 # Two-way sync: Update customer preferences from reservation

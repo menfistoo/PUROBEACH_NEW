@@ -61,8 +61,8 @@ class ProductionConfig(Config):
 
     DEBUG = False
     TESTING = False
-    SESSION_COOKIE_SECURE = True  # Require HTTPS
-    WTF_CSRF_SSL_STRICT = True
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() == 'true'
+    WTF_CSRF_SSL_STRICT = SESSION_COOKIE_SECURE
 
     # Override with strong secret key
     SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -73,8 +73,8 @@ class ProductionConfig(Config):
     if len(SECRET_KEY) < 32:
         raise ValueError("SECRET_KEY must be at least 32 characters in production")
 
-    # HTTPS preference for URL generation
-    PREFERRED_URL_SCHEME = 'https'
+    # URL scheme preference (follows SESSION_COOKIE_SECURE setting)
+    PREFERRED_URL_SCHEME = 'https' if SESSION_COOKIE_SECURE else 'http'
 
     # Ensure DATABASE_PATH is explicitly set (not using default)
     DATABASE_PATH = os.environ.get('DATABASE_PATH')

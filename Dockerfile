@@ -3,7 +3,8 @@ FROM python:3.11-slim
 # Prevent Python from writing .pyc files and enable unbuffered output
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    FLASK_ENV=production
+    FLASK_ENV=production \
+    FLASK_APP=wsgi.py
 
 # Install system dependencies (curl for healthcheck)
 RUN apt-get update && \

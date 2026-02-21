@@ -71,12 +71,51 @@ def register_routes(bp):
             has_ticket=has_ticket
         )
 
+        # Combine first_name + last_name into customer_name for JS
+        for res in reservations:
+            first = res.get('first_name') or ''
+            last = res.get('last_name') or ''
+            res['customer_name'] = f"{first} {last}".strip()
+            # JS expects furniture_names (comma-separated), API returns single
+            if res.get('furniture_name'):
+                res['furniture_names'] = res['furniture_name']
+
         summary = get_payment_summary(selected_date)
+
+        # Transform summary to match JS expected shape
+        by_method = summary.get('by_method', {})
+        pending = summary.get('pending', {})
+        tickets = summary.get('tickets', {})
+
+        js_summary = {
+            'cash': {
+                'amount': by_method.get('efectivo', {}).get('total', 0),
+                'count': by_method.get('efectivo', {}).get('count', 0)
+            },
+            'card': {
+                'amount': by_method.get('tarjeta', {}).get('total', 0),
+                'count': by_method.get('tarjeta', {}).get('count', 0)
+            },
+            'room_charge': {
+                'amount': by_method.get('cargo_habitacion', {}).get('total', 0),
+                'count': by_method.get('cargo_habitacion', {}).get('count', 0)
+            },
+            'pending': {
+                'amount': pending.get('total', 0),
+                'count': pending.get('count', 0)
+            }
+        }
+
+        js_ticket_stats = {
+            'with_ticket': tickets.get('with_ticket', 0),
+            'total': tickets.get('total_paid', 0)
+        }
 
         return jsonify({
             'success': True,
             'reservations': reservations,
-            'summary': summary
+            'summary': js_summary,
+            'ticket_stats': js_ticket_stats
         })
 
     @bp.route('/api/payment-reconciliation/mark-paid', methods=['POST'])

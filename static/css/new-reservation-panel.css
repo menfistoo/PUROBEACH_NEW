@@ -796,30 +796,32 @@
    ============================================================================= */
 .conflict-instruction-panel {
     position: fixed;
-    top: 70px;
+    bottom: 90px;
     left: 50%;
     transform: translateX(-50%);
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     z-index: calc(var(--z-modal, 400) + 50);
-    max-width: 320px;
-    width: 90%;
+    max-width: 280px;
+    width: auto;
+    pointer-events: auto;
 }
 
 .conflict-instruction-header {
     background: var(--color-warning, #E5A33D);
     color: white;
-    padding: 10px 16px;
+    padding: 8px 14px;
     border-radius: 12px 12px 0 0;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 8px;
+    font-size: 13px;
 }
 
 .conflict-instruction-body {
-    padding: 16px;
+    padding: 12px;
     text-align: center;
 }
 
@@ -830,8 +832,8 @@
 }
 
 .conflict-selection-counter {
-    font-size: 1.1rem;
-    margin: 12px 0;
+    font-size: 1rem;
+    margin: 8px 0;
 }
 
 .conflict-selection-counter strong {
