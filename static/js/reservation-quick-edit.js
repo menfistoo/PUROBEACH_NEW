@@ -289,7 +289,7 @@ async function saveQuickEdit() {
     }
 
     try {
-        const response = await fetch(`/beach/api/reservations/${reservationId}`, {
+        const response = await fetch(`/beach/api/map/reservations/${reservationId}/update`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
