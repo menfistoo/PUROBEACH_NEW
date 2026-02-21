@@ -644,6 +644,7 @@ class CustomerHandler {
 
         if (guest) {
             document.getElementById('newPanelCustomerId').value = guest.id;
+            document.getElementById('newPanelCustomerSource').value = 'hotel_guest';
             this.state.selectedGuest = guest;
 
             // Update customer display with new guest info
