@@ -12,6 +12,16 @@
 
 ---
 
+> **STATUS: ABANDONED (2026-02-15)**
+> Branch `refactor/surgical-splits` was deleted after implementation revealed too many
+> integration errors. The concatenation-based bundling (cat/sed) approach was fragile:
+> element ID mismatches between V2 mixins and creation HTML template, export stripping
+> issues, missing initialization wiring in `openForCreation()`, and broken interactive
+> features (customer search, preferences, tags, dates, pricing). Each fix introduced
+> new issues. The approach needs rethinking before another attempt.
+
+---
+
 ## Phase 1: map-page.js Split (8 Modules)
 
 **Current:** `static/js/map/map-page.js` — 2,368 lines, 23+ features in one `DOMContentLoaded` handler

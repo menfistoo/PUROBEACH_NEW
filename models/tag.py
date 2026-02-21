@@ -303,6 +303,67 @@ def set_reservation_tags(reservation_id: int, tag_ids: list) -> None:
         conn.commit()
 
 
+def sync_reservation_tags_to_customer(reservation_id: int, tag_ids: list) -> None:
+    """
+    Sync reservation tags to the customer (merge, not replace).
+    Adds any new tag_ids to the customer without removing existing ones.
+
+    Args:
+        reservation_id: Reservation ID (to look up customer_id)
+        tag_ids: List of tag IDs from the reservation
+    """
+    if not tag_ids:
+        return
+    with get_db() as conn:
+        cursor = conn.cursor()
+        # Get customer_id from reservation
+        cursor.execute(
+            'SELECT customer_id FROM beach_reservations WHERE id = ?',
+            (reservation_id,)
+        )
+        row = cursor.fetchone()
+        if not row or not row['customer_id']:
+            return
+        customer_id = row['customer_id']
+        # Merge: add tags that the customer doesn't already have
+        for tag_id in tag_ids:
+            cursor.execute('''
+                INSERT OR IGNORE INTO beach_customer_tags (customer_id, tag_id)
+                VALUES (?, ?)
+            ''', (customer_id, int(tag_id)))
+        conn.commit()
+
+
+def sync_customer_tags_to_reservations(customer_id: int, tag_ids: list) -> None:
+    """
+    Sync customer tags to all active/future reservations (merge, not replace).
+    Adds any new tag_ids to reservations without removing existing ones.
+
+    Args:
+        customer_id: Customer ID
+        tag_ids: List of tag IDs from the customer
+    """
+    if not tag_ids:
+        return
+    with get_db() as conn:
+        cursor = conn.cursor()
+        # Get active/future reservations for this customer
+        cursor.execute('''
+            SELECT id FROM beach_reservations
+            WHERE customer_id = ?
+            AND (reservation_date >= date('now') OR end_date >= date('now'))
+        ''', (customer_id,))
+        reservation_ids = [r['id'] for r in cursor.fetchall()]
+        # Merge tags into each reservation
+        for res_id in reservation_ids:
+            for tag_id in tag_ids:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO beach_reservation_tags (reservation_id, tag_id)
+                    VALUES (?, ?)
+                ''', (res_id, int(tag_id)))
+        conn.commit()
+
+
 def remove_tag_from_reservation(reservation_id: int, tag_id: int) -> bool:
     """
     Remove a tag from a reservation.

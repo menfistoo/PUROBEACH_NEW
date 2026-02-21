@@ -17,6 +17,7 @@ from models.reservation import sync_preferences_to_customer
 from models.reservation import get_customer_reservation_history, get_customer_preferred_furniture
 from models.hotel_guest import get_guests_by_room, search_guests
 from utils.datetime_helpers import get_today
+from models.tag import get_customer_tags
 
 
 def register_routes(bp):
@@ -117,6 +118,9 @@ def register_routes(bp):
                 preferences = get_customer_preferences(c['id'])
                 pref_codes = [p['code'] for p in preferences]
 
+                tags = get_customer_tags(c['id'])
+                tag_ids = [t['id'] for t in tags]
+
                 customer_data = {
                     'id': c['id'],
                     'source': 'customer',
@@ -134,6 +138,7 @@ def register_routes(bp):
                     'total_spent': c.get('total_spent', 0),
                     'last_visit': c.get('last_visit'),
                     'preferences': pref_codes,
+                    'tags': tag_ids,
                     'is_checkin_today': c.get('is_checkin_today', False),
                     'is_checkout_today': c.get('is_checkout_today', False)
                 }

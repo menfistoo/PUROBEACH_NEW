@@ -275,12 +275,15 @@ def register_routes(bp):
                         for res_id in result.get('reservation_ids', []):
                             set_reservation_characteristics_by_codes(res_id, preferences)
 
-                    # Save tags to each reservation
+                    # Save tags to each reservation and sync to customer
                     tag_ids = data.get('tag_ids', [])
                     if tag_ids:
-                        from models.tag import set_reservation_tags
+                        from models.tag import set_reservation_tags, sync_reservation_tags_to_customer
                         for res_id in result.get('reservation_ids', []):
                             set_reservation_tags(res_id, tag_ids)
+                        # Sync to customer (use first reservation for customer lookup)
+                        if result.get('reservation_ids'):
+                            sync_reservation_tags_to_customer(result['reservation_ids'][0], tag_ids)
 
                     # Log audit entry for each created reservation
                     if result.get('reservation_ids'):
@@ -339,11 +342,12 @@ def register_routes(bp):
                     # Also save characteristics to the reservation
                     set_reservation_characteristics_by_codes(reservation_id, preferences)
 
-                # Save tags to reservation
+                # Save tags to reservation and sync to customer
                 tag_ids = data.get('tag_ids', [])
                 if tag_ids:
-                    from models.tag import set_reservation_tags
+                    from models.tag import set_reservation_tags, sync_reservation_tags_to_customer
                     set_reservation_tags(reservation_id, tag_ids)
+                    sync_reservation_tags_to_customer(reservation_id, tag_ids)
 
                 # Log audit entry for single-day reservation
                 reservation_data = {

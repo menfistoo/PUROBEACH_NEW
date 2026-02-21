@@ -13,7 +13,7 @@ from models.customer import (
     merge_customers, find_potential_duplicates_for_customer
 )
 from models.characteristic import get_all_characteristics, get_characteristic_by_id
-from models.reservation import sync_preferences_to_customer, get_reservation_states
+from models.reservation import sync_preferences_to_customer
 from models.tag import get_all_tags
 
 customers_bp = Blueprint('customers', __name__)
@@ -115,7 +115,7 @@ def create():
                 set_customer_tags(customer_id, [int(t) for t in tag_ids])
 
             flash('Cliente creado exitosamente', 'success')
-            return redirect(url_for('beach.customers_detail', customer_id=customer_id))
+            return redirect(url_for('beach.customers_edit', customer_id=customer_id))
 
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
@@ -129,27 +129,15 @@ def create():
 @login_required
 @permission_required('beach.customers.view')
 def detail(customer_id):
-    """Display customer detail view."""
-    customer = get_customer_with_details(customer_id)
-    if not customer:
-        flash('Cliente no encontrado', 'error')
-        return redirect(url_for('beach.customers'))
-
-    # Find potential duplicates
-    duplicates = find_potential_duplicates_for_customer(customer_id)
-
-    # Load reservation states for the quick edit modal
-    states = get_reservation_states()
-
-    return render_template('beach/customer_detail.html',
-                           customer=customer, duplicates=duplicates, states=states)
+    """Redirect to edit page (detail page removed)."""
+    return redirect(url_for('beach.customers_edit', customer_id=customer_id))
 
 
 @customers_bp.route('/<int:customer_id>/edit', methods=['GET', 'POST'])
 @login_required
 @permission_required('beach.customers.edit')
 def edit(customer_id):
-    """Edit existing customer."""
+    """Edit existing customer with reservation history."""
     customer = get_customer_with_details(customer_id)
     if not customer:
         flash('Cliente no encontrado', 'error')
@@ -157,6 +145,7 @@ def edit(customer_id):
 
     preferences = get_all_characteristics()
     tags = get_all_tags()
+    duplicates_for_merge = find_potential_duplicates_for_customer(customer_id)
 
     if request.method == 'POST':
         first_name = request.form.get('first_name', '').strip()
@@ -172,13 +161,15 @@ def edit(customer_id):
             flash('El nombre es requerido', 'error')
             return render_template('beach/customer_form.html',
                                    mode='edit', customer=customer,
-                                   preferences=preferences, tags=tags)
+                                   preferences=preferences, tags=tags,
+                                   duplicates_for_merge=duplicates_for_merge)
 
         if customer['customer_type'] == 'interno' and not room_number:
             flash('El número de habitación es requerido para clientes internos', 'error')
             return render_template('beach/customer_form.html',
                                    mode='edit', customer=customer,
-                                   preferences=preferences, tags=tags)
+                                   preferences=preferences, tags=tags,
+                                   duplicates_for_merge=duplicates_for_merge)
 
         try:
             update_customer(
@@ -206,12 +197,16 @@ def edit(customer_id):
                 preferences_csv = ''
             sync_preferences_to_customer(customer_id, preferences_csv, replace=True)
 
-            # Update tags
+            # Update tags and sync to active/future reservations
             tag_ids = request.form.getlist('tags')
-            set_customer_tags(customer_id, [int(t) for t in tag_ids] if tag_ids else [])
+            parsed_tag_ids = [int(t) for t in tag_ids] if tag_ids else []
+            set_customer_tags(customer_id, parsed_tag_ids)
+            if parsed_tag_ids:
+                from models.tag import sync_customer_tags_to_reservations
+                sync_customer_tags_to_reservations(customer_id, parsed_tag_ids)
 
             flash('Cliente actualizado exitosamente', 'success')
-            return redirect(url_for('beach.customers_detail', customer_id=customer_id))
+            return redirect(url_for('beach.customers_edit', customer_id=customer_id))
 
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
@@ -219,7 +214,8 @@ def edit(customer_id):
 
     return render_template('beach/customer_form.html',
                            mode='edit', customer=customer,
-                           preferences=preferences, tags=tags)
+                           preferences=preferences, tags=tags,
+                           duplicates_for_merge=duplicates_for_merge)
 
 
 @customers_bp.route('/<int:customer_id>/delete', methods=['POST'])
@@ -260,7 +256,7 @@ def merge(customer_id):
         try:
             merge_customers(customer_id, target_id)
             flash('Clientes fusionados exitosamente', 'success')
-            return redirect(url_for('beach.customers_detail', customer_id=target_id))
+            return redirect(url_for('beach.customers_edit', customer_id=target_id))
 
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)

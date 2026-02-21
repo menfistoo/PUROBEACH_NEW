@@ -9,7 +9,7 @@
             <ol class="breadcrumb mb-2">
                 <li class="breadcrumb-item"><a href="{{ url_for('beach.customers') }}">Clientes</a></li>
                 <li class="breadcrumb-item">
-                    <a href="{{ url_for('beach.customers_detail', customer_id=customer.id) }}">
+                    <a href="{{ url_for('beach.customers_edit', customer_id=customer.id) }}">
                         {{ customer.first_name }} {{ customer.last_name or '' }}
                     </a>
                 </li>
@@ -196,7 +196,7 @@
                     <hr class="my-4">
 
                     <div class="d-flex gap-2 justify-content-end">
-                        <a href="{{ url_for('beach.customers_detail', customer_id=customer.id) }}" class="btn btn-secondary">
+                        <a href="{{ url_for('beach.customers_edit', customer_id=customer.id) }}" class="btn btn-secondary">
                             <i class="fas fa-times"></i> Cancelar
                         </a>
                         <button type="submit" class="btn btn-warning">

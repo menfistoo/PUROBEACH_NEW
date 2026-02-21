@@ -1770,7 +1770,7 @@ const SaveMixin = (Base) => class extends Base {
 
         // Include tag_ids in the main updates payload to avoid a separate API call
         if (tagsChanged) {
-            updates.tag_ids = this.tagsEditState.selectedIds;
+            updates.tag_ids = [...this.tagsEditState.selectedIds];
             hasChanges = true;
         }
 
@@ -4499,6 +4499,19 @@ class CustomerHandler {
             if (prefsInput) {
                 prefsInput.value = this.panel.state.preferences.join(',');
             }
+        }
+
+        // If customer has tags, activate matching tag chips
+        if (customer.tags && customer.tags.length > 0) {
+            customer.tags.forEach(tagId => {
+                const chip = this.panel.tagChipsContainer?.querySelector(`.tag-chip[data-tag-id="${tagId}"]`);
+                if (chip) {
+                    chip.classList.add('active');
+                    if (!this.panel.state.selectedTags.includes(tagId)) {
+                        this.panel.state.selectedTags.push(tagId);
+                    }
+                }
+            });
         }
 
         // Auto-fill notes from customer record
