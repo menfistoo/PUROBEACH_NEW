@@ -73,7 +73,15 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.reservations.edit')
     def reservation_update(reservation_id):
-        """Quick update reservation fields."""
+        """Quick update reservation fields.
+
+        DEPRECATED: Use PATCH /api/map/reservations/<id>/update instead.
+        This endpoint is kept for backward compatibility.
+        """
+        current_app.logger.warning(
+            f'DEPRECATED endpoint: PATCH /api/reservations/{reservation_id} — '
+            'use PATCH /api/map/reservations/<id>/update instead'
+        )
         from models.reservation import update_beach_reservation
 
         reservation = get_reservation_with_details(reservation_id)
