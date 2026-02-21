@@ -20,6 +20,12 @@
  *   });
  */
 
+function _escapeHtml(str) {
+    if (!str) return '';
+    const s = String(str);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 class CustomerSearch {
     constructor(options = {}) {
         // Required elements
@@ -227,14 +233,14 @@ class CustomerSearch {
     }
 
     _renderCustomerItem(c) {
-        const displayName = c.display_name ||
-            `${c.first_name || ''} ${c.last_name || ''}`.trim();
+        const displayName = _escapeHtml(c.display_name ||
+            `${c.first_name || ''} ${c.last_name || ''}`.trim());
         const isVip = c.vip_status || c.vip_code;
-        const roomInfo = c.room_number ? `Hab. ${c.room_number}` : '';
+        const roomInfo = c.room_number ? `Hab. ${_escapeHtml(c.room_number)}` : '';
         const typeInfo = c.customer_type === 'interno' ?
             `<i class="fas fa-door-open"></i> ${roomInfo}` :
             '<i class="fas fa-user"></i> Externo';
-        const phone = c.phone ? ` - ${c.phone}` : '';
+        const phone = c.phone ? ` - ${_escapeHtml(c.phone)}` : '';
 
         if (this.compact) {
             return `
@@ -243,7 +249,7 @@ class CustomerSearch {
                         ${displayName}
                         ${isVip ? '<span class="cs-badge cs-vip">VIP</span>' : ''}
                     </div>
-                    <div class="cs-item-details">${roomInfo || c.phone || c.email || ''}</div>
+                    <div class="cs-item-details">${roomInfo || _escapeHtml(c.phone) || _escapeHtml(c.email) || ''}</div>
                 </div>
             `;
         }
@@ -267,6 +273,8 @@ class CustomerSearch {
 
     _renderHotelGuestItem(g) {
         const isVip = g.vip_code;
+        const guestName = _escapeHtml(g.guest_name);
+        const roomNumber = _escapeHtml(g.room_number);
         const checkinBadge = g.is_checkin_today ?
             '<span class="cs-badge cs-checkin">Check-in</span>' : '';
         const checkoutBadge = g.is_checkout_today ?
@@ -278,12 +286,12 @@ class CustomerSearch {
             return `
                 <div class="cs-item" data-id="${g.id}" data-source="hotel_guest">
                     <div class="cs-item-name">
-                        ${g.guest_name}
+                        ${guestName}
                         ${isVip ? '<span class="cs-badge cs-vip">VIP</span>' : ''}
                         ${checkinBadge}${checkoutBadge}
                     </div>
                     <div class="cs-item-details">
-                        <i class="fas fa-hotel"></i> Hab. ${g.room_number}
+                        <i class="fas fa-hotel"></i> Hab. ${roomNumber}
                     </div>
                 </div>
             `;
@@ -296,16 +304,16 @@ class CustomerSearch {
                 </div>
                 <div class="cs-info">
                     <div class="cs-name">
-                        ${g.guest_name}
+                        ${guestName}
                         ${mainGuestBadge}
                         ${isVip ? '<span class="cs-badge cs-vip">VIP</span>' : ''}
                         ${checkinBadge}${checkoutBadge}
                     </div>
                     <div class="cs-details">
-                        <i class="fas fa-door-open"></i> Hab. ${g.room_number}
+                        <i class="fas fa-door-open"></i> Hab. ${roomNumber}
                         ${g.arrival_date && g.departure_date ?
                             ` - <i class="fas fa-calendar"></i> ${this._formatDate(g.arrival_date)} - ${this._formatDate(g.departure_date)}` : ''}
-                        ${g.booking_reference ? ` - #${g.booking_reference}` : ''}
+                        ${g.booking_reference ? ` - #${_escapeHtml(g.booking_reference)}` : ''}
                     </div>
                 </div>
                 <div class="cs-action"><i class="fas fa-chevron-right"></i></div>
@@ -886,6 +894,7 @@ class TouchHandler {
         this.longPressTimer = null;
         this.currentTarget = null;
         this.isTouchActive = false;
+        this._longPressFired = false;
 
         // Callbacks
         this.callbacks = {
@@ -968,6 +977,14 @@ class TouchHandler {
     }
 
     handleTouchEnd(event) {
+        // After a long-press, prevent the synthetic click event
+        if (this._longPressFired) {
+            event.preventDefault();
+            this.cancelLongPress();
+            this.resetState();
+            return;
+        }
+
         if (!this.isTouchActive) return;
 
         const touchDuration = Date.now() - this.touchStartTime;
@@ -989,6 +1006,16 @@ class TouchHandler {
     }
 
     triggerLongPress(event, target) {
+        // Mark long-press as fired so handleTouchEnd can prevent synthetic click
+        this._longPressFired = true;
+        this.isTouchActive = false;
+
+        // Clean up visual feedback
+        if (target) {
+            target.style.transition = '';
+            target.style.transformOrigin = '';
+        }
+
         // Vibration feedback
         if (this.options.vibrate && navigator.vibrate) {
             navigator.vibrate(50);
@@ -1009,9 +1036,6 @@ class TouchHandler {
                 originalEvent: event
             });
         }
-
-        // Reset after long-press fires
-        this.isTouchActive = false;
     }
 
     triggerTap(event, target) {
@@ -1042,6 +1066,7 @@ class TouchHandler {
 
     resetState() {
         this.isTouchActive = false;
+        this._longPressFired = false;
         this.currentTarget = null;
         this.touchStartTime = 0;
         this.touchStartX = 0;
@@ -1090,6 +1115,12 @@ window.TouchHandler = TouchHandler;
  * SafeguardModal - Reusable warning modal for reservation safeguards
  * Shows warnings before potentially problematic actions
  */
+function _sgEscape(str) {
+    if (!str) return '';
+    const s = String(str);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 class SafeguardModal {
     constructor() {
         this.modal = null;
@@ -1260,7 +1291,7 @@ class SafeguardModal {
         const res = existingReservation;
 
         const furnitureList = (res.furniture || [])
-            .map(f => f.number || f.furniture_number || `#${f.id}`)
+            .map(f => _sgEscape(f.number || f.furniture_number || `#${f.id}`))
             .join(', ') || 'Sin mobiliario';
 
         return instance.show({
@@ -1272,7 +1303,7 @@ class SafeguardModal {
                 <div class="safeguard-detail-box">
                     <div class="detail-row">
                         <span class="detail-label">Ticket:</span>
-                        <span class="detail-value">#${res.ticket_number || res.id}</span>
+                        <span class="detail-value">#${_sgEscape(res.ticket_number || res.id)}</span>
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Mobiliario:</span>
@@ -1280,7 +1311,7 @@ class SafeguardModal {
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Estado:</span>
-                        <span class="detail-value">${res.current_state || res.state || 'Pendiente'}</span>
+                        <span class="detail-value">${_sgEscape(res.current_state || res.state || 'Pendiente')}</span>
                     </div>
                 </div>
                 <p class="safeguard-question">¿Deseas crear otra reserva de todas formas?</p>
@@ -1457,11 +1488,11 @@ class SafeguardModal {
 
         const conflictList = conflicts.map(c => `
             <div class="conflict-item">
-                <span class="conflict-furniture">${c.furniture_number || 'Mobiliario #' + c.furniture_id}</span>
+                <span class="conflict-furniture">${_sgEscape(c.furniture_number || 'Mobiliario #' + c.furniture_id)}</span>
                 <span class="conflict-date">${formatDate(c.date)}</span>
                 <span class="conflict-reservation">
-                    Reserva #${c.ticket_number || c.reservation_id}
-                    ${c.customer_name ? ` - ${c.customer_name}` : ''}
+                    Reserva #${_sgEscape(c.ticket_number || c.reservation_id)}
+                    ${c.customer_name ? ` - ${_sgEscape(c.customer_name)}` : ''}
                 </span>
             </div>
         `).join('');
@@ -1497,7 +1528,7 @@ class SafeguardModal {
         // Build blocking furniture list
         const blockingList = blockingFurniture.length > 0
             ? blockingFurniture.map(f => `
-                <span class="blocking-item">${f.number || '#' + f.id}</span>
+                <span class="blocking-item">${_sgEscape(f.number || '#' + f.id)}</span>
             `).join('')
             : '<span class="no-blocking">Mobiliario disperso en diferentes filas</span>';
 

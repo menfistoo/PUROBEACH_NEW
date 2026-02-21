@@ -211,18 +211,9 @@ export function bindToolbarControls(editor) {
     const zoomLevel = el('zoom-level');
     if (zoomLevel) zoomLevel.textContent = `${Math.round(editor.zoom * 100)}%`;
 
-    // Delete selected
+    // Delete selected (deleteSelectedItems already shows its own confirmation dialog)
     el('btn-delete-selected')?.addEventListener('click', function () {
-        PuroBeach.confirmAction({
-            title: 'Confirmar eliminación',
-            message: '¿Eliminar el elemento seleccionado?',
-            confirmText: 'Eliminar',
-            confirmClass: 'btn-danger',
-            iconClass: 'fa-trash-alt',
-            onConfirm: function() {
-                editor.deleteSelected();
-            }
-        });
+        editor.deleteSelectedItems();
     });
 }
 

@@ -5,7 +5,7 @@ Endpoints for daily position overrides (furniture moved for specific dates).
 
 from flask import current_app, request
 from flask_login import login_required, current_user
-from datetime import date
+from utils.datetime_helpers import get_today
 
 from utils.decorators import permission_required
 from utils.api_response import api_success, api_error
@@ -117,7 +117,7 @@ def register_routes(bp):
         Returns:
             JSON with positions list
         """
-        date_str = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+        date_str = request.args.get('date', get_today().strftime('%Y-%m-%d'))
 
         positions = get_daily_positions_for_date(date_str)
 

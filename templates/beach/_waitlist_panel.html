@@ -36,12 +36,12 @@
     </div>
 
     <!-- Tabs -->
-    <div class="waitlist-tabs">
-        <button type="button" class="waitlist-tab active" data-tab="pending" id="waitlistTabPending">
+    <div class="waitlist-tabs" role="tablist">
+        <button type="button" class="waitlist-tab active" data-tab="pending" id="waitlistTabPending" role="tab" aria-selected="true" aria-controls="waitlistContentPending">
             <span class="tab-text">Pendientes</span>
             <span class="tab-badge" id="waitlistPendingCount">0</span>
         </button>
-        <button type="button" class="waitlist-tab" data-tab="history" id="waitlistTabHistory">
+        <button type="button" class="waitlist-tab" data-tab="history" id="waitlistTabHistory" role="tab" aria-selected="false" aria-controls="waitlistContentHistory">
             <span class="tab-text">Historial</span>
         </button>
     </div>
@@ -55,7 +55,7 @@
         </div>
 
         <!-- Pending Tab Content -->
-        <div class="waitlist-tab-content active" id="waitlistContentPending">
+        <div class="waitlist-tab-content active" id="waitlistContentPending" role="tabpanel" aria-labelledby="waitlistTabPending">
             <div class="waitlist-entries" id="waitlistEntriesPending">
                 <!-- Entries populated dynamically -->
             </div>
@@ -67,7 +67,7 @@
         </div>
 
         <!-- History Tab Content -->
-        <div class="waitlist-tab-content" id="waitlistContentHistory" style="display: none;">
+        <div class="waitlist-tab-content" id="waitlistContentHistory" role="tabpanel" aria-labelledby="waitlistTabHistory" style="display: none;">
             <div class="waitlist-entries" id="waitlistEntriesHistory">
                 <!-- History entries populated dynamically -->
             </div>
@@ -105,8 +105,8 @@
             <form id="waitlistAddForm">
                 <!-- Customer Type Toggle -->
                 <div class="form-group customer-type-toggle">
-                    <label class="form-label">Tipo de Cliente</label>
-                    <div class="btn-group-toggle">
+                    <label class="form-label" id="waitlistTypeLabel">Tipo de Cliente</label>
+                    <div class="btn-group-toggle" role="group" aria-labelledby="waitlistTypeLabel">
                         <button type="button" class="toggle-btn active" data-type="interno" id="waitlistTypeInterno">
                             <i class="fas fa-hotel me-1"></i> Interno
                         </button>
@@ -140,7 +140,7 @@
 
                 <!-- External Guest Entry (Externo) - Simple name and phone -->
                 <div class="form-group customer-search-group" id="waitlistCustomerSearchGroup" style="display: none;">
-                    <label class="form-label">Datos del Cliente</label>
+                    <label class="form-label" for="waitlistExternoName">Datos del Cliente</label>
                     <div class="externo-entry-fields">
                         <div class="form-row">
                             <div class="form-group">

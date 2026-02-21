@@ -95,7 +95,7 @@ export const FurnitureMixin = (Base) => class extends Base {
         const furnitureIds = currentFurniture.map(f => f.furniture_id || f.id);
 
         // Close the panel first
-        this.close();
+        await this.close();
 
         // Activate move mode
         window.moveMode.activate(this.state.currentDate);

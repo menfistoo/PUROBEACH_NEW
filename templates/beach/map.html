@@ -6,7 +6,7 @@
 {% block title %}Mapa - PuroBeach{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/map-bundle.css') }}">
+<link rel="stylesheet" href="{{ versioned_static('css/map-bundle.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -208,10 +208,10 @@
 
     <!-- Floating Zoom Controls (outside scrollable area) -->
     <div class="zoom-fab">
-        <button type="button" class="fab-btn" id="btn-zoom-in" title="Acercar">
+        <button type="button" class="fab-btn" id="btn-zoom-in" title="Acercar" aria-label="Acercar">
             <i class="fas fa-plus"></i>
         </button>
-        <button type="button" class="fab-btn" id="btn-zoom-out" title="Alejar">
+        <button type="button" class="fab-btn" id="btn-zoom-out" title="Alejar" aria-label="Alejar">
             <i class="fas fa-minus"></i>
         </button>
     </div>
@@ -306,39 +306,39 @@
 </div>
 
 <!-- Context Menu -->
-<div class="context-menu d-none" id="contextMenu">
+<div class="context-menu d-none" id="contextMenu" role="menu">
     <div class="context-menu-header" id="context-menu-header">Hamaca #1</div>
 
     <!-- Available furniture menu items -->
     <div id="context-menu-available">
-        <div class="context-menu-item" data-action="view-details">
+        <div class="context-menu-item" data-action="view-details" role="menuitem" tabindex="0">
             <i class="fas fa-info-circle"></i> Ver detalles
         </div>
-        <div class="context-menu-item" data-action="select">
+        <div class="context-menu-item" data-action="select" role="menuitem" tabindex="0">
             <i class="fas fa-check-square"></i> Seleccionar
         </div>
-        <div class="context-menu-item" data-action="new-reservation">
+        <div class="context-menu-item" data-action="new-reservation" role="menuitem" tabindex="0">
             <i class="fas fa-plus"></i> Nueva reserva
         </div>
         <div class="context-menu-divider"></div>
-        <div class="context-menu-item" data-action="block">
+        <div class="context-menu-item" data-action="block" role="menuitem" tabindex="0">
             <i class="fas fa-ban"></i> Bloquear
         </div>
     </div>
 
     <!-- Occupied furniture menu items -->
     <div id="context-menu-occupied" class="d-none">
-        <div class="context-menu-item" data-action="view-details">
+        <div class="context-menu-item" data-action="view-details" role="menuitem" tabindex="0">
             <i class="fas fa-info-circle"></i> Ver detalles
         </div>
-        <div class="context-menu-item" data-action="view-reservation">
+        <div class="context-menu-item" data-action="view-reservation" role="menuitem" tabindex="0">
             <i class="fas fa-eye"></i> Ver reserva
         </div>
-        <div class="context-menu-item" data-action="edit-reservation">
+        <div class="context-menu-item" data-action="edit-reservation" role="menuitem" tabindex="0">
             <i class="fas fa-edit"></i> Editar reserva
         </div>
         <div class="context-menu-divider"></div>
-        <div class="context-menu-item danger" data-action="cancel-reservation">
+        <div class="context-menu-item danger" data-action="cancel-reservation" role="menuitem" tabindex="0">
             <i class="fas fa-times"></i> Cancelar reserva
         </div>
     </div>
@@ -587,13 +587,13 @@
 
 {% block extra_js %}
 <!-- Non-module utilities (CustomerSearch, DatePicker, TouchHandler, SafeguardModal, ConflictModal) -->
-<script src="{{ url_for('static', filename='js/map-bundle.js') }}"></script>
+<script src="{{ versioned_static('js/map-bundle.js') }}"></script>
 <!-- Map core (BeachMap, managers, renderer, offline) -->
-<script src="{{ url_for('static', filename='js/map-core-bundle.js') }}"></script>
+<script src="{{ versioned_static('js/map-core-bundle.js') }}"></script>
 <!-- Reservation panels (V1 create + V2 view/edit) -->
-<script src="{{ url_for('static', filename='js/map-panels-bundle.js') }}"></script>
+<script src="{{ versioned_static('js/map-panels-bundle.js') }}"></script>
 <!-- Waitlist manager -->
-<script src="{{ url_for('static', filename='js/map-waitlist-bundle.js') }}"></script>
+<script src="{{ versioned_static('js/map-waitlist-bundle.js') }}"></script>
 <!-- Map page initialization (entry point) -->
-<script src="{{ url_for('static', filename='js/map/map-page.js') }}"></script>
+<script src="{{ versioned_static('js/map/map-page.js') }}"></script>
 {% endblock %}

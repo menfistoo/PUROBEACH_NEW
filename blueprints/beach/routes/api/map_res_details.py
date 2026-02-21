@@ -6,6 +6,7 @@ Reservation panel details and furniture move operations.
 from flask import current_app, request
 from flask_login import login_required
 from datetime import date, datetime
+from utils.datetime_helpers import get_today
 
 from utils.decorators import permission_required
 from utils.api_response import api_success, api_error
@@ -67,7 +68,7 @@ def register_routes(bp):
         Returns:
             JSON with complete reservation, customer, and furniture info
         """
-        date_str = request.args.get('date', date.today().strftime('%Y-%m-%d'))
+        date_str = request.args.get('date', get_today().strftime('%Y-%m-%d'))
 
         # Get reservation with details
         from models.reservation import get_reservation_with_details
@@ -91,7 +92,7 @@ def register_routes(bp):
             # For interno customers with room number, fetch hotel guest info
             if customer and customer.get('customer_type') == 'interno' and customer.get('room_number'):
                 from models.hotel_guest import get_guests_by_room
-                guests = get_guests_by_room(customer['room_number'], date.today())
+                guests = get_guests_by_room(customer['room_number'], get_today())
                 if guests:
                     # Try to find matching guest by name
                     full_name = f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip().upper()

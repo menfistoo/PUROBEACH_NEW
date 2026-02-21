@@ -47,18 +47,23 @@
 
 .map-search-clear {
     position: absolute;
-    right: 6px;
+    right: 2px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
     color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
-    padding: 4px;
+    padding: 0;
     font-size: 11px;
     line-height: 1;
     border-radius: 50%;
     transition: all 0.15s;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .map-search-clear:hover {
@@ -330,8 +335,8 @@
     border: none;
     border-radius: 50%;
     color: rgba(255, 255, 255, 0.7);
-    width: 26px;
-    height: 26px;
+    width: 44px;
+    height: 44px;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;

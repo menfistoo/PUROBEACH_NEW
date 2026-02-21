@@ -4,8 +4,9 @@ Handles audit log creation, retrieval, filtering, and retention cleanup.
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from database import get_db
+from utils.datetime_helpers import get_now
 
 
 # =============================================================================
@@ -303,7 +304,7 @@ def cleanup_old_logs(days: int = 90) -> int:
         cursor = conn.cursor()
 
         # Calculate cutoff date
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = get_now() - timedelta(days=days)
         cutoff_str = cutoff_date.strftime('%Y-%m-%d %H:%M:%S')
 
         # Delete old logs
@@ -342,7 +343,7 @@ def get_retention_stats() -> dict:
         row = cursor.fetchone()
 
         # Count logs older than 90 days
-        cutoff_date = datetime.utcnow() - timedelta(days=90)
+        cutoff_date = get_now() - timedelta(days=90)
         cutoff_str = cutoff_date.strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute('''
             SELECT COUNT(*) as count FROM audit_log

@@ -3,7 +3,7 @@
  * Handles SVG creation and rendering of zones, furniture, and decorative elements
  */
 
-import { darkenColor, getContrastColor } from './utils.js';
+import { darkenColor, getContrastColor, escapeHtml, sanitizeColor } from './utils.js';
 
 /**
  * SVG namespace for creating elements
@@ -620,12 +620,15 @@ export function updateLegend(data, colors) {
     const legend = document.getElementById('map-legend');
     if (!legend || !data.states) return;
 
+    const safeFill = sanitizeColor(colors.availableFill) || '#F5E6D3';
+    const safeStroke = sanitizeColor(colors.availableStroke) || '#D4AF37';
+
     let html = '<div class="legend-items d-flex flex-wrap gap-2">';
 
     // Available state
     html += `
         <div class="legend-item d-flex align-items-center">
-            <span class="legend-color" style="background-color: ${colors.availableFill}; border: 2px solid ${colors.availableStroke};"></span>
+            <span class="legend-color" style="background-color: ${safeFill}; border: 2px solid ${safeStroke};"></span>
             <span class="ms-1">Disponible</span>
         </div>
     `;
@@ -633,10 +636,11 @@ export function updateLegend(data, colors) {
     // State colors from database
     data.states.forEach(state => {
         if (state.active) {
+            const stateColor = sanitizeColor(state.color) || '#999';
             html += `
                 <div class="legend-item d-flex align-items-center">
-                    <span class="legend-color" style="background-color: ${state.color};"></span>
-                    <span class="ms-1">${state.name}</span>
+                    <span class="legend-color" style="background-color: ${stateColor};"></span>
+                    <span class="ms-1">${escapeHtml(state.name)}</span>
                 </div>
             `;
         }

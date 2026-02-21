@@ -130,13 +130,14 @@ def validate_room_number(room: str) -> bool:
     return bool(re.match(r'^[A-Z0-9]{1,10}$', room.upper()))
 
 
-def validate_password(password: str, min_length: int = 6) -> tuple:
+def validate_password(password: str, min_length: int = 8) -> tuple:
     """
     Validate password strength.
+    Requires minimum length, uppercase, lowercase, and digit.
 
     Args:
         password: Password to validate
-        min_length: Minimum password length
+        min_length: Minimum password length (default 8)
 
     Returns:
         Tuple of (is_valid, error_message)
@@ -146,6 +147,15 @@ def validate_password(password: str, min_length: int = 6) -> tuple:
 
     if len(password) < min_length:
         return False, f'La contraseña debe tener al menos {min_length} caracteres'
+
+    if not re.search(r'[A-Z]', password):
+        return False, 'La contraseña debe contener al menos una letra mayúscula'
+
+    if not re.search(r'[a-z]', password):
+        return False, 'La contraseña debe contener al menos una letra minúscula'
+
+    if not re.search(r'\d', password):
+        return False, 'La contraseña debe contener al menos un número'
 
     return True, ''
 

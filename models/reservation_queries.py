@@ -4,7 +4,7 @@ Handles listing, filtering, statistics, and availability checks.
 """
 
 from database import get_db
-from datetime import datetime
+from utils.datetime_helpers import get_now
 from .reservation_state import calculate_reservation_color, get_active_releasing_states
 
 
@@ -268,7 +268,7 @@ def get_reservation_stats(date_from: str = None, date_to: str = None) -> dict:
 
         # Use today as default
         if not date_from:
-            date_from = datetime.now().strftime('%Y-%m-%d')
+            date_from = get_now().strftime('%Y-%m-%d')
         if not date_to:
             date_to = date_from
 

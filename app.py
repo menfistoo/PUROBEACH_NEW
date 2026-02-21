@@ -7,6 +7,7 @@ import os
 import sys
 import click
 import logging
+import logging.handlers
 from datetime import date, datetime
 from flask import Flask, render_template, g
 from flask.json.provider import DefaultJSONProvider
@@ -228,8 +229,16 @@ def register_cli_commands(app):
         return True, ""
 
     @app.cli.command('init-db')
-    def init_db_command():
+    @click.option('--confirm', is_flag=True, help='Confirmar inicialización (requerido)')
+    def init_db_command(confirm):
         """Initialize database with schema and seed data."""
+        if not confirm:
+            click.echo('ADVERTENCIA: Este comando reinicializa la base de datos.')
+            click.echo('Todos los datos existentes serán eliminados.')
+            click.echo('')
+            click.echo('Para continuar, ejecute: flask init-db --confirm')
+            raise SystemExit(1)
+
         click.echo('Initializing database...')
         with app.app_context():
             try:
@@ -314,13 +323,21 @@ def register_context_processors(app):
     def utility_processor():
         """Inject utility functions into templates."""
         from utils.permissions import get_menu_items
-        from datetime import datetime
+        from utils.datetime_helpers import get_now
+        from flask import url_for
+
+        app_version = app.config.get('APP_VERSION', '1.0.0')
+
+        def versioned_static(filename: str) -> str:
+            """Generate versioned static file URL for cache busting."""
+            return url_for('static', filename=filename) + '?v=' + app_version
 
         return {
             'get_menu_items': get_menu_items,
-            'current_year': datetime.now().year,
+            'current_year': get_now().year,
             'app_name': app.config.get('APP_NAME', 'PuroBeach'),
-            'app_version': app.config.get('APP_VERSION', '1.0.0')
+            'app_version': app_version,
+            'versioned_static': versioned_static,
         }
 
     # Add custom template filters
@@ -367,7 +384,9 @@ def configure_logging(app):
         if not os.path.exists('logs'):
             os.mkdir('logs')
 
-        file_handler = logging.FileHandler('logs/purobeach.log')
+        file_handler = logging.handlers.RotatingFileHandler(
+            'logs/purobeach.log', maxBytes=10*1024*1024, backupCount=5
+        )
         file_handler.setFormatter(logging.Formatter(
             '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
         ))

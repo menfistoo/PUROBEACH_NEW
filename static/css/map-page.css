@@ -50,6 +50,7 @@
     color: white;
     min-height: 44px;
     gap: 8px;
+    flex-wrap: wrap;
     flex-shrink: 0;
     overflow: visible;
 }
@@ -439,13 +440,22 @@
     /* Toolbar: tighter spacing */
     .map-toolbar {
         padding: 4px 6px;
-        gap: 4px;
+        gap: 2px;
     }
 
-    /* Smaller toolbar buttons */
+    /* Hide secondary controls on small screens */
+    .map-filter-dropdowns,
+    #btn-add-temp-furniture,
+    #sync-button {
+        display: none;
+    }
+
+    /* Toolbar buttons: meet 44px touch target minimum */
     .toolbar-btn {
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 36px;
+        min-height: 44px;
+        min-width: 44px;
         font-size: 12px;
     }
 
@@ -476,8 +486,8 @@
     }
 
     .fab-btn {
-        width: 38px;
-        height: 38px;
+        width: 44px;
+        height: 44px;
         font-size: 14px;
     }
 
@@ -877,7 +887,7 @@ html.sidebar-collapsed .bottom-action-bar {
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    z-index: 1050;
+    z-index: 1055;
     min-width: 180px;
     padding: 8px 0;
     border: 1px solid var(--color-border);

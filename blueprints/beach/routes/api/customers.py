@@ -2,7 +2,7 @@
 Customer and hotel guest API routes.
 """
 
-from flask import current_app, request, jsonify
+from flask import current_app, request
 from flask_login import login_required
 from utils.decorators import permission_required
 from utils.audit import log_create, log_update
@@ -17,8 +17,8 @@ from models.characteristic import get_all_characteristics
 from models.reservation import sync_preferences_to_customer
 from models.reservation import get_customer_reservation_history, get_customer_preferred_furniture
 from models.hotel_guest import get_guests_by_room, search_guests
+from utils.datetime_helpers import get_today
 from models.tag import get_customer_tags, sync_customer_tags_to_reservations
-from datetime import date
 
 
 def register_routes(bp):
@@ -37,10 +37,18 @@ def register_routes(bp):
         customer_type = request.args.get('type', '')
         vip_only = request.args.get('vip', '') == '1'
 
+        # Pagination parameters with clamping
+        limit = request.args.get('limit', 100, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        limit = max(1, min(limit, 200))
+        offset = max(0, offset)
+
         result = get_customers_filtered(
             search=search if search else None,
             customer_type=customer_type if customer_type else None,
-            vip_only=vip_only
+            vip_only=vip_only,
+            limit=limit,
+            offset=offset
         )
 
         # Format customers for JSON response
@@ -58,12 +66,16 @@ def register_routes(bp):
                 'reservation_count': c.get('reservation_count', 0)
             })
 
-        return jsonify({
-            'success': True,
-            'customers': customers,
-            'total': result['total'],
-            'count': len(customers)
-        })
+        return api_success(
+            customers=customers,
+            total=result['total'],
+            pagination={
+                'limit': limit,
+                'offset': offset,
+                'count': len(customers),
+                'has_more': len(customers) == limit
+            }
+        )
 
     @bp.route('/customers/search')
     @login_required
@@ -74,7 +86,7 @@ def register_routes(bp):
         customer_type = request.args.get('type', None)
 
         if len(query) < 2:
-            return jsonify({'success': True, 'customers': []})
+            return api_success(customers=[])
 
         results = search_customers_unified(query, customer_type)
 
@@ -133,7 +145,7 @@ def register_routes(bp):
                 }
 
                 if c['customer_type'] == 'interno' and c.get('room_number'):
-                    hotel_guests = get_guests_by_room(c['room_number'], date.today())
+                    hotel_guests = get_guests_by_room(c['room_number'], get_today())
                     if hotel_guests:
                         full_name = f"{c['first_name']} {c.get('last_name', '')}".strip().upper()
                         matching_guest = None
@@ -153,7 +165,7 @@ def register_routes(bp):
 
                 formatted_results.append(customer_data)
 
-        return jsonify({'success': True, 'customers': formatted_results})
+        return api_success(customers=formatted_results)
 
     @bp.route('/customers/check-duplicates')
     @login_required
@@ -166,18 +178,15 @@ def register_routes(bp):
 
         duplicates = find_duplicates(phone, customer_type, room_number)
 
-        return jsonify({
-            'success': True,
-            'duplicates': [{
-                'id': d['id'],
-                'first_name': d['first_name'],
-                'last_name': d['last_name'],
-                'customer_type': d['customer_type'],
-                'room_number': d['room_number'],
-                'phone': d['phone'],
-                'email': d['email']
-            } for d in duplicates]
-        })
+        return api_success(duplicates=[{
+            'id': d['id'],
+            'first_name': d['first_name'],
+            'last_name': d['last_name'],
+            'customer_type': d['customer_type'],
+            'room_number': d['room_number'],
+            'phone': d['phone'],
+            'email': d['email']
+        } for d in duplicates])
 
     @bp.route('/customers/from-hotel-guest', methods=['POST'])
     @login_required
@@ -188,7 +197,7 @@ def register_routes(bp):
         hotel_guest_id = data.get('hotel_guest_id')
 
         if not hotel_guest_id:
-            return jsonify({'success': False, 'error': 'ID de huésped requerido'}), 400
+            return api_error('ID de huésped requerido', 400)
 
         additional_data = {}
         if data.get('phone'):
@@ -211,31 +220,27 @@ def register_routes(bp):
             preferences = get_customer_preferences(customer['id'])
             pref_codes = [p['code'] for p in preferences]
 
-            return jsonify({
-                'success': True,
-                'action': result['action'],
-                'customer': {
-                    'id': customer['id'],
-                    'source': 'customer',
-                    'first_name': customer['first_name'],
-                    'last_name': customer.get('last_name', ''),
-                    'display_name': f"{customer['first_name']} {customer.get('last_name', '')}".strip(),
-                    'customer_type': customer['customer_type'],
-                    'room_number': customer.get('room_number'),
-                    'phone': customer.get('phone'),
-                    'email': customer.get('email'),
-                    'vip_status': customer.get('vip_status', 0),
-                    'language': customer.get('language'),
-                    'country_code': customer.get('country_code'),
-                    'notes': customer.get('notes'),
-                    'preferences': pref_codes
-                }
+            return api_success(action=result['action'], customer={
+                'id': customer['id'],
+                'source': 'customer',
+                'first_name': customer['first_name'],
+                'last_name': customer.get('last_name', ''),
+                'display_name': f"{customer['first_name']} {customer.get('last_name', '')}".strip(),
+                'customer_type': customer['customer_type'],
+                'room_number': customer.get('room_number'),
+                'phone': customer.get('phone'),
+                'email': customer.get('email'),
+                'vip_status': customer.get('vip_status', 0),
+                'language': customer.get('language'),
+                'country_code': customer.get('country_code'),
+                'notes': customer.get('notes'),
+                'preferences': pref_codes
             })
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
+            return api_error('Solicitud inválida', 400)
         except Exception:
-            return jsonify({'success': False, 'error': 'Error al crear cliente'}), 500
+            return api_error('Error al crear cliente', 500)
 
     @bp.route('/customers/create', methods=['POST'])
     @login_required
@@ -248,19 +253,19 @@ def register_routes(bp):
         first_name = data.get('first_name', '').strip()
 
         if not customer_type or customer_type not in ['interno', 'externo']:
-            return jsonify({'success': False, 'error': 'Tipo de cliente inválido'}), 400
+            return api_error('Tipo de cliente inválido', 400)
 
         if not first_name:
-            return jsonify({'success': False, 'error': 'El nombre es requerido'}), 400
+            return api_error('El nombre es requerido', 400)
 
         room_number = data.get('room_number', '').strip() or None
         if customer_type == 'interno' and not room_number:
-            return jsonify({'success': False, 'error': 'El número de habitación es requerido para clientes internos'}), 400
+            return api_error('El número de habitación es requerido para clientes internos', 400)
 
         phone = data.get('phone', '').strip() or None
         email = data.get('email', '').strip() or None
         if customer_type == 'externo' and not (phone or email):
-            return jsonify({'success': False, 'error': 'Se requiere teléfono o email para clientes externos'}), 400
+            return api_error('Se requiere teléfono o email para clientes externos', 400)
 
         try:
             customer_id = create_customer(
@@ -296,46 +301,7 @@ def register_routes(bp):
                 'preferences': pref_codes
             })
 
-            return jsonify({
-                'success': True,
-                'customer': {
-                    'id': customer['id'],
-                    'source': 'customer',
-                    'first_name': customer['first_name'],
-                    'last_name': customer.get('last_name', ''),
-                    'display_name': f"{customer['first_name']} {customer.get('last_name', '')}".strip(),
-                    'customer_type': customer['customer_type'],
-                    'room_number': customer.get('room_number'),
-                    'phone': customer.get('phone'),
-                    'email': customer.get('email'),
-                    'vip_status': customer.get('vip_status', 0),
-                    'language': customer.get('language'),
-                    'country_code': customer.get('country_code'),
-                    'notes': customer.get('notes'),
-                    'preferences': pref_codes
-                }
-            })
-        except ValueError as e:
-            current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Solicitud inválida'}), 400
-        except Exception:
-            return jsonify({'success': False, 'error': 'Error al crear cliente'}), 500
-
-    @bp.route('/customers/<int:customer_id>')
-    @login_required
-    @permission_required('beach.customers.view')
-    def get_customer(customer_id):
-        """Get customer by ID for JSON API."""
-        customer = get_customer_by_id(customer_id)
-        if not customer:
-            return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
-
-        preferences = get_customer_preferences(customer_id)
-        pref_codes = [p['code'] for p in preferences]
-
-        return jsonify({
-            'success': True,
-            'customer': {
+            return api_success(customer={
                 'id': customer['id'],
                 'source': 'customer',
                 'first_name': customer['first_name'],
@@ -350,7 +316,40 @@ def register_routes(bp):
                 'country_code': customer.get('country_code'),
                 'notes': customer.get('notes'),
                 'preferences': pref_codes
-            }
+            })
+        except ValueError as e:
+            current_app.logger.error(f'Error: {e}', exc_info=True)
+            return api_error('Solicitud inválida', 400)
+        except Exception:
+            return api_error('Error al crear cliente', 500)
+
+    @bp.route('/customers/<int:customer_id>')
+    @login_required
+    @permission_required('beach.customers.view')
+    def get_customer(customer_id):
+        """Get customer by ID for JSON API."""
+        customer = get_customer_by_id(customer_id)
+        if not customer:
+            return api_error('Cliente no encontrado', 404)
+
+        preferences = get_customer_preferences(customer_id)
+        pref_codes = [p['code'] for p in preferences]
+
+        return api_success(customer={
+            'id': customer['id'],
+            'source': 'customer',
+            'first_name': customer['first_name'],
+            'last_name': customer.get('last_name', ''),
+            'display_name': f"{customer['first_name']} {customer.get('last_name', '')}".strip(),
+            'customer_type': customer['customer_type'],
+            'room_number': customer.get('room_number'),
+            'phone': customer.get('phone'),
+            'email': customer.get('email'),
+            'vip_status': customer.get('vip_status', 0),
+            'language': customer.get('language'),
+            'country_code': customer.get('country_code'),
+            'notes': customer.get('notes'),
+            'preferences': pref_codes
         })
 
     @bp.route('/customers/<int:customer_id>/history')
@@ -361,12 +360,7 @@ def register_routes(bp):
         limit = request.args.get('limit', 5, type=int)
         history = get_customer_reservation_history(customer_id, limit=min(limit, 20))
 
-        return jsonify({
-            'success': True,
-            'customer_id': customer_id,
-            'history': history,
-            'count': len(history)
-        })
+        return api_success(customer_id=customer_id, history=history, count=len(history))
 
     @bp.route('/customers/<int:customer_id>/preferred-furniture')
     @login_required
@@ -377,7 +371,7 @@ def register_routes(bp):
 
         try:
             preferred = get_customer_preferred_furniture(customer_id, limit=limit)
-            return jsonify({'success': True, 'preferred_furniture': preferred})
+            return api_success(preferred_furniture=preferred)
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
             return api_error('Error interno del servidor', 500)
@@ -391,7 +385,7 @@ def register_routes(bp):
         hotel_guest_id = data.get('hotel_guest_id')
 
         if not hotel_guest_id:
-            return jsonify({'success': False, 'error': 'hotel_guest_id requerido'}), 400
+            return api_error('hotel_guest_id requerido', 400)
 
         try:
             result = create_customer_from_hotel_guest(hotel_guest_id)
@@ -409,17 +403,13 @@ def register_routes(bp):
                     'source_hotel_guest_id': hotel_guest_id
                 })
 
-                return jsonify({
-                    'success': True,
-                    'customer_id': result['id'],
-                    'customer': result
-                })
+                return api_success(customer_id=result['id'], customer=result)
             else:
-                return jsonify({'success': False, 'error': 'Error al crear cliente'}), 500
+                return api_error('Error al crear cliente', 500)
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+            return api_error('Error interno del servidor', 500)
 
     # ============================================================================
     # PREFERENCES API ROUTES
@@ -433,17 +423,14 @@ def register_routes(bp):
         active_only = request.args.get('active', 'true').lower() == 'true'
         characteristics = get_all_characteristics(active_only=active_only)
 
-        return jsonify({
-            'success': True,
-            'preferences': [{
-                'id': c['id'],
-                'code': c['code'],
-                'name': c['name'],
-                'description': c.get('description'),
-                'icon': c.get('icon'),
-                'color': c.get('color')
-            } for c in characteristics]
-        })
+        return api_success(preferences=[{
+            'id': c['id'],
+            'code': c['code'],
+            'name': c['name'],
+            'description': c.get('description'),
+            'icon': c.get('icon'),
+            'color': c.get('color')
+        } for c in characteristics])
 
     @bp.route('/tags')
     @login_required
@@ -454,15 +441,12 @@ def register_routes(bp):
         active_only = request.args.get('active', 'true').lower() == 'true'
         tags = get_all_tags(active_only=active_only)
 
-        return jsonify({
-            'success': True,
-            'tags': [{
-                'id': t['id'],
-                'name': t['name'],
-                'color': t.get('color', '#6C757D'),
-                'description': t.get('description')
-            } for t in tags]
-        })
+        return api_success(tags=[{
+            'id': t['id'],
+            'name': t['name'],
+            'color': t.get('color', '#6C757D'),
+            'description': t.get('description')
+        } for t in tags])
 
     @bp.route('/customers/<int:customer_id>/preferences', methods=['PUT'])
     @login_required
@@ -481,18 +465,18 @@ def register_routes(bp):
         data = request.get_json()
 
         if not data:
-            return jsonify({'success': False, 'error': 'Datos requeridos'}), 400
+            return api_error('Datos requeridos', 400)
 
         preference_codes = data.get('preference_codes', [])
 
         # Validate customer exists
         customer = get_customer_by_id(customer_id)
         if not customer:
-            return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
+            return api_error('Cliente no encontrado', 404)
 
         # Validate preference codes
         if not isinstance(preference_codes, list):
-            return jsonify({'success': False, 'error': 'preference_codes debe ser una lista'}), 400
+            return api_error('preference_codes debe ser una lista', 400)
 
         try:
             # Capture before state for audit log
@@ -527,30 +511,23 @@ def register_routes(bp):
                     }
                 )
 
-                return jsonify({
-                    'success': True,
-                    'customer_id': customer_id,
-                    'preferences': [{
+                return api_success(
+                    customer_id=customer_id,
+                    preferences=[{
                         'id': p['id'],
                         'code': p['code'],
                         'name': p['name'],
                         'icon': p.get('icon')
                     } for p in updated_prefs],
-                    'reservations_updated': reservations_updated,
-                    'message': f'Preferencias actualizadas ({reservations_updated} reservas sincronizadas)'
-                })
+                    reservations_updated=reservations_updated,
+                    message=f'Preferencias actualizadas ({reservations_updated} reservas sincronizadas)'
+                )
             else:
-                return jsonify({
-                    'success': False,
-                    'error': 'Error al actualizar preferencias'
-                }), 500
+                return api_error('Error al actualizar preferencias', 500)
 
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return jsonify({
-                'success': False,
-                'error': 'Error al actualizar preferencias'
-            }), 500
+            return api_error('Error al actualizar preferencias', 500)
 
     # ============================================================================
     # CUSTOMER UPDATE (UNIFIED PATCH ENDPOINT)
@@ -672,32 +649,28 @@ def register_routes(bp):
         """Lookup hotel guests by room number for auto-fill and guest selection."""
         room_number = request.args.get('room', '')
         if not room_number:
-            return jsonify({'success': True, 'guests': [], 'guest_count': 0})
+            return api_success(guests=[], guest_count=0)
 
-        guests = get_guests_by_room(room_number, date.today())
+        guests = get_guests_by_room(room_number, get_today())
 
-        return jsonify({
-            'success': True,
-            'guest_count': len(guests),
-            'guests': [{
-                'id': g['id'],
-                'source': 'hotel_guest',
-                'customer_type': 'interno',
-                'guest_name': g['guest_name'],
-                'room_number': g['room_number'],
-                'arrival_date': g['arrival_date'],
-                'departure_date': g['departure_date'],
-                'vip_code': g['vip_code'],
-                'nationality': g['nationality'],
-                'email': g['email'],
-                'phone': g['phone'],
-                'notes': g.get('notes'),
-                'num_adults': g.get('num_adults', 1),
-                'num_children': g.get('num_children', 0),
-                'is_main_guest': g.get('is_main_guest', 0),
-                'booking_reference': g.get('booking_reference')
-            } for g in guests]
-        })
+        return api_success(guest_count=len(guests), guests=[{
+            'id': g['id'],
+            'source': 'hotel_guest',
+            'customer_type': 'interno',
+            'guest_name': g['guest_name'],
+            'room_number': g['room_number'],
+            'arrival_date': g['arrival_date'],
+            'departure_date': g['departure_date'],
+            'vip_code': g['vip_code'],
+            'nationality': g['nationality'],
+            'email': g['email'],
+            'phone': g['phone'],
+            'notes': g.get('notes'),
+            'num_adults': g.get('num_adults', 1),
+            'num_children': g.get('num_children', 0),
+            'is_main_guest': g.get('is_main_guest', 0),
+            'booking_reference': g.get('booking_reference')
+        } for g in guests])
 
     @bp.route('/hotel-guests/search')
     @login_required
@@ -706,7 +679,7 @@ def register_routes(bp):
         """Search hotel guests for autocomplete - grouped by room."""
         query = request.args.get('q', '')
         if len(query) < 1:
-            return jsonify({'success': True, 'guests': []})
+            return api_success(guests=[])
 
         guests = search_guests(query, limit=20)
 
@@ -739,7 +712,4 @@ def register_routes(bp):
         # Sort by room number
         result = sorted(rooms.values(), key=lambda x: x['room_number'])
 
-        return jsonify({
-            'success': True,
-            'guests': result
-        })
+        return api_success(guests=result)

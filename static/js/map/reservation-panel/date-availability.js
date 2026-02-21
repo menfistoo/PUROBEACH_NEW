@@ -126,7 +126,7 @@ class DateAvailabilityHandler {
         if (conflictDates.length === 1) {
             const date = conflictDates[0];
             const items = conflictsByDate[date];
-            warningHtml += `<strong>${items.map(i => i.furniture_number).join(', ')}</strong> ocupado el ${formatDate(date)}`;
+            warningHtml += `<strong>${items.map(i => escapeHtml(i.furniture_number)).join(', ')}</strong> ocupado el ${formatDate(date)}`;
         } else {
             warningHtml += `Mobiliario no disponible para ${conflictDates.length} fechas`;
         }

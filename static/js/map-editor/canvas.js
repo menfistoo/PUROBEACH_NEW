@@ -82,6 +82,7 @@ export const CanvasMixin = (Base) => class extends Base {
         this.currentZoneId = null;
         this.furniture = [];
         this.selectedItem = null;
+        this.selectedItems.clear();
         if (this.svg) {
             this.svg.remove();
             this.svg = null;
@@ -90,6 +91,7 @@ export const CanvasMixin = (Base) => class extends Base {
         if (this.rulerV) this.rulerV.innerHTML = '';
         this.emit('furnitureChanged', 0);
         this.emit('selectionChanged', null);
+        this.emit('multiSelectionChanged', []);
     }
 
     /**

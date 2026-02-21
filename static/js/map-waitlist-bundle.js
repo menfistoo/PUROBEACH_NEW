@@ -1157,10 +1157,10 @@ function renderCustomerResults(resultsEl, customers, onSelect) {
     const html = customers.map(customer => {
         const name = customer.display_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
         return `
-            <div class="cs-item" data-customer-id="${customer.id}" data-customer-name="${escapeHtml(name)}" data-phone="${customer.phone || ''}">
+            <div class="cs-item" data-customer-id="${customer.id}" data-customer-name="${escapeHtml(name)}" data-phone="${escapeHtml(customer.phone || '')}">
                 <div class="cs-info">
                     <div class="cs-name">${escapeHtml(name)}</div>
-                    <div class="cs-details">${customer.phone ? `<i class="fas fa-phone"></i> ${customer.phone}` : ''}</div>
+                    <div class="cs-details">${customer.phone ? `<i class="fas fa-phone"></i> ${escapeHtml(customer.phone)}` : ''}</div>
                 </div>
             </div>
         `;
@@ -1566,13 +1566,13 @@ async function onReservationTypeChange(context) {
         if (elements.packageGroup) elements.packageGroup.style.display = 'block';
         // Load packages
         try {
-            const result = await loadPackages(options.apiBaseUrl);
-            if (result.success && result.packages) {
-                state.packages = result.packages;
+            const packages = await loadPackages(options.apiBaseUrl);
+            if (packages && packages.length > 0) {
+                state.packages = packages;
                 // Populate dropdown
                 if (elements.packageSelect) {
                     elements.packageSelect.innerHTML = '<option value="">Seleccionar paquete...</option>';
-                    result.packages.forEach(pkg => {
+                    packages.forEach(pkg => {
                         const option = document.createElement('option');
                         option.value = pkg.id;
                         option.textContent = `${pkg.package_name} - ${pkg.base_price}`;
@@ -2342,17 +2342,17 @@ class WaitlistManager {
 
     async _loadDropdownOptions() {
         try {
-            // Load zones
-            const zonesResult = await _waitlistApi.loadZones(this.options.apiBaseUrl);
-            if (zonesResult.success && zonesResult.zones) {
-                this.state.zones = zonesResult.zones;
+            // Load zones (loadZones returns a plain array)
+            const zones = await _waitlistApi.loadZones(this.options.apiBaseUrl);
+            if (zones && zones.length > 0) {
+                this.state.zones = zones;
                 _waitlistRenderers.populateZonesDropdown(this.elements.zonePreferenceSelect, this.state.zones);
             }
 
-            // Load furniture types
-            const typesResult = await _waitlistApi.loadFurnitureTypes(this.options.apiBaseUrl);
-            if (typesResult.success && typesResult.furniture_types) {
-                this.state.furnitureTypes = typesResult.furniture_types;
+            // Load furniture types (loadFurnitureTypes returns a plain array)
+            const furnitureTypes = await _waitlistApi.loadFurnitureTypes(this.options.apiBaseUrl);
+            if (furnitureTypes && furnitureTypes.length > 0) {
+                this.state.furnitureTypes = furnitureTypes;
                 _waitlistRenderers.populateFurnitureTypesDropdown(this.elements.furnitureTypeSelect, this.state.furnitureTypes);
             }
         } catch (error) {

@@ -49,12 +49,12 @@
     position: fixed;
     top: 0;
     right: 0;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
     height: 100dvh; /* Dynamic viewport for mobile */
     background: white;
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
-    z-index: 1050;
+    z-index: 1040;
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
@@ -89,6 +89,7 @@
         width: 400px;
         top: 60px;
         height: calc(100vh - 80px);
+        height: calc(100dvh - 80px);
         border-radius: 12px 0 0 12px;
     }
 
@@ -573,7 +574,7 @@
 }
 
 .filter-btn {
-    padding: 3px 8px;
+    padding: 8px 12px;
     font-size: 10px;
     font-weight: 500;
     border: 1px solid #E8E8E8;
@@ -581,6 +582,9 @@
     color: #6B7280;
     cursor: pointer;
     transition: all 0.15s ease;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
 }
 
 .filter-btn:first-child {
@@ -1227,6 +1231,8 @@
 .move-mode-help-btn {
     width: 32px;
     height: 32px;
+    min-width: 44px;
+    min-height: 44px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.1);
     border: none;

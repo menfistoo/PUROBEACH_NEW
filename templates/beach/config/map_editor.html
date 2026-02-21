@@ -819,7 +819,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script type="module" src="{{ url_for('static', filename='js/map-editor/index.js') }}"></script>
+<script type="module" src="{{ versioned_static('js/map-editor/index.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const editor = new MapEditor('canvas-container', {

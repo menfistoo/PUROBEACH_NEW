@@ -4,8 +4,9 @@ Dashboard metrics and occupancy range analytics.
 """
 
 from database import get_db
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Optional
+from utils.datetime_helpers import get_today
 
 
 # =============================================================================
@@ -23,7 +24,7 @@ def get_occupancy_today() -> dict:
             - rate: float (percentage 0-100)
             - by_type: dict (breakdown by furniture type)
     """
-    today = date.today().isoformat()
+    today = get_today().isoformat()
 
     with get_db() as conn:
         # Total active furniture
@@ -104,7 +105,7 @@ def get_occupancy_by_zone(target_date: Optional[str] = None) -> list:
             - rate: float (0-100)
     """
     if target_date is None:
-        target_date = date.today().isoformat()
+        target_date = get_today().isoformat()
 
     with get_db() as conn:
         cursor = conn.execute('''
@@ -154,7 +155,7 @@ def get_pending_checkins_count(target_date: Optional[str] = None) -> int:
         int: Number of reservations in 'confirmada' or 'pendiente' state
     """
     if target_date is None:
-        target_date = date.today().isoformat()
+        target_date = get_today().isoformat()
 
     with get_db() as conn:
         cursor = conn.execute('''
@@ -179,7 +180,7 @@ def get_occupancy_comparison() -> dict:
             - difference: float (positive = improvement)
             - trend: str ('up', 'down', 'same')
     """
-    today = date.today()
+    today = get_today()
     yesterday = today - timedelta(days=1)
 
     today_data = _get_occupancy_for_date(today.isoformat())

@@ -1,7 +1,8 @@
 """Payment reconciliation report routes."""
-from datetime import date, datetime
+from datetime import datetime
 from flask import render_template, request, jsonify
 from flask_login import login_required
+from utils.datetime_helpers import get_today
 
 from utils.decorators import permission_required
 from models.reports.payment_reconciliation import (
@@ -20,13 +21,13 @@ def register_routes(bp):
     @permission_required('beach.reports.payment_reconciliation')
     def payment_reconciliation_view():
         """Render payment reconciliation report page."""
-        selected_date = request.args.get('date', date.today().isoformat())
+        selected_date = request.args.get('date', get_today().isoformat())
 
         # Validate date format
         try:
             datetime.strptime(selected_date, '%Y-%m-%d')
         except ValueError:
-            selected_date = date.today().isoformat()
+            selected_date = get_today().isoformat()
 
         zones = get_all_zones()
 
@@ -41,7 +42,7 @@ def register_routes(bp):
     @permission_required('beach.reports.payment_reconciliation')
     def payment_reconciliation_data():
         """Get payment reconciliation data as JSON."""
-        selected_date = request.args.get('date', date.today().isoformat())
+        selected_date = request.args.get('date', get_today().isoformat())
 
         # Validate date format
         try:

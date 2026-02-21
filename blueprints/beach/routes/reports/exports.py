@@ -1,6 +1,6 @@
 """Export routes for reports (customers Excel export)."""
-from datetime import date
 from flask import request, redirect, url_for, flash, Response
+from utils.datetime_helpers import get_today
 from flask_login import login_required
 
 from utils.decorators import permission_required
@@ -233,7 +233,7 @@ def export_customers_handler() -> Response:
     output.seek(0)
 
     # Generate filename
-    today = date.today().strftime('%Y-%m-%d')
+    today = get_today().strftime('%Y-%m-%d')
     filename = f"clientes_{today}.xlsx"
 
     return Response(

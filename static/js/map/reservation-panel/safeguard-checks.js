@@ -179,7 +179,8 @@ class SafeguardChecks {
 
             if (!response.ok) {
                 console.error('Availability check failed:', response.status);
-                return { proceed: true }; // Fail open
+                this.panel.showToast('Error verificando disponibilidad. Intenta de nuevo.', 'error');
+                return { proceed: false };
             }
 
             const result = await response.json();
@@ -216,8 +217,8 @@ class SafeguardChecks {
 
         } catch (error) {
             console.error('Furniture availability check error:', error);
-            // On error, allow to proceed (fail open)
-            return { proceed: true };
+            this.panel.showToast('Error verificando disponibilidad. Intenta de nuevo.', 'error');
+            return { proceed: false };
         }
     }
 
@@ -248,7 +249,8 @@ class SafeguardChecks {
 
             if (!response.ok) {
                 console.error('Contiguity check failed:', response.status);
-                return { proceed: true }; // Fail open
+                this.panel.showToast('Error verificando contigüidad. Intenta de nuevo.', 'error');
+                return { proceed: false };
             }
 
             const result = await response.json();
@@ -269,8 +271,8 @@ class SafeguardChecks {
 
         } catch (error) {
             console.error('Contiguity check error:', error);
-            // On error, allow to proceed (fail open)
-            return { proceed: true };
+            this.panel.showToast('Error verificando contigüidad. Intenta de nuevo.', 'error');
+            return { proceed: false };
         }
     }
 
@@ -322,8 +324,8 @@ class SafeguardChecks {
 
         } catch (error) {
             console.error('Duplicate check error:', error);
-            // On error, allow to proceed (fail open)
-            return { proceed: true };
+            this.panel.showToast('Error verificando duplicados. Intenta de nuevo.', 'error');
+            return { proceed: false };
         }
     }
 }

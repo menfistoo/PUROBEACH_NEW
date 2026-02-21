@@ -147,13 +147,13 @@ export async function onReservationTypeChange(context) {
         if (elements.packageGroup) elements.packageGroup.style.display = 'block';
         // Load packages
         try {
-            const result = await loadPackages(options.apiBaseUrl);
-            if (result.success && result.packages) {
-                state.packages = result.packages;
+            const packages = await loadPackages(options.apiBaseUrl);
+            if (packages && packages.length > 0) {
+                state.packages = packages;
                 // Populate dropdown
                 if (elements.packageSelect) {
                     elements.packageSelect.innerHTML = '<option value="">Seleccionar paquete...</option>';
-                    result.packages.forEach(pkg => {
+                    packages.forEach(pkg => {
                         const option = document.createElement('option');
                         option.value = pkg.id;
                         option.textContent = `${pkg.package_name} - ${pkg.base_price}`;

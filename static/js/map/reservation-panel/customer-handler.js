@@ -1,3 +1,9 @@
+function _chEscapeHtml(str) {
+    if (!str) return '';
+    const s = String(str);
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 /**
  * CustomerHandler - Manages customer selection, creation, and display
  * Handles customer search, inline creation form, hotel guest integration
@@ -203,6 +209,7 @@ class CustomerHandler {
      */
     async autoFillCustomerData(customer) {
         this.state.selectedCustomer = customer;
+        const isInterno = customer.customer_type === 'interno';
 
         // Show customer display with details
         this.showCustomerDisplay(customer);
@@ -402,9 +409,7 @@ class CustomerHandler {
             meta.push('<i class="fas fa-star vip-badge"></i> VIP');
         }
         if (customer.phone) {
-            const span = document.createElement('span');
-            span.textContent = customer.phone;
-            meta.push(`<i class="fas fa-phone"></i> ${span.innerHTML}`);
+            meta.push(`<i class="fas fa-phone"></i> ${_chEscapeHtml(customer.phone)}`);
         }
         const metaEl = document.getElementById('newPanelCustomerMeta');
         if (metaEl) {
@@ -652,6 +657,7 @@ class CustomerHandler {
 
         if (guest) {
             document.getElementById('newPanelCustomerId').value = guest.id;
+            document.getElementById('newPanelCustomerSource').value = 'hotel_guest';
             this.state.selectedGuest = guest;
 
             // Update customer display with new guest info

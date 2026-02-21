@@ -6,6 +6,7 @@ Provides common functionality used across the application.
 import random
 import string
 from datetime import datetime
+from utils.datetime_helpers import get_now
 import os
 
 
@@ -97,7 +98,7 @@ def sanitize_filename(filename: str) -> str:
     safe_name = safe_name[:100]
 
     # Add timestamp to ensure uniqueness
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    timestamp = get_now().strftime('%Y%m%d_%H%M%S')
 
     return f'{safe_name}_{timestamp}{ext.lower()}'
 

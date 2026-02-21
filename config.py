@@ -38,9 +38,12 @@ class Config:
     # Pagination
     ITEMS_PER_PAGE = 20
 
+    # Timezone
+    TIMEZONE = 'Europe/Madrid'
+
     # Application settings
     APP_NAME = 'PuroBeach'
-    APP_VERSION = '1.0.0'
+    APP_VERSION = '1.1.0'
 
 
 class DevelopmentConfig(Config):

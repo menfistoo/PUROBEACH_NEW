@@ -6,7 +6,7 @@ Endpoints for managing the beach waiting list.
 import logging
 from flask import current_app, request
 from flask_login import login_required, current_user
-from datetime import date
+from utils.datetime_helpers import get_today
 
 from utils.decorators import permission_required
 from utils.api_response import api_success, api_error
@@ -43,7 +43,7 @@ def register_routes(bp):
         Returns:
             JSON list of entries
         """
-        requested_date = request.args.get('date', date.today().isoformat())
+        requested_date = request.args.get('date', get_today().isoformat())
         include_all = request.args.get('include_all', '').lower() == 'true'
 
         try:
@@ -69,7 +69,7 @@ def register_routes(bp):
         Returns:
             JSON with count
         """
-        requested_date = request.args.get('date', date.today().isoformat())
+        requested_date = request.args.get('date', get_today().isoformat())
 
         try:
             count = get_waitlist_count(requested_date)

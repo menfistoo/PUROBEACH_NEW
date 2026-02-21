@@ -24,6 +24,7 @@ class TouchHandler {
         this.longPressTimer = null;
         this.currentTarget = null;
         this.isTouchActive = false;
+        this._longPressFired = false;
 
         // Callbacks
         this.callbacks = {
@@ -106,6 +107,14 @@ class TouchHandler {
     }
 
     handleTouchEnd(event) {
+        // After a long-press, prevent the synthetic click event
+        if (this._longPressFired) {
+            event.preventDefault();
+            this.cancelLongPress();
+            this.resetState();
+            return;
+        }
+
         if (!this.isTouchActive) return;
 
         const touchDuration = Date.now() - this.touchStartTime;
@@ -127,6 +136,16 @@ class TouchHandler {
     }
 
     triggerLongPress(event, target) {
+        // Mark long-press as fired so handleTouchEnd can prevent synthetic click
+        this._longPressFired = true;
+        this.isTouchActive = false;
+
+        // Clean up visual feedback
+        if (target) {
+            target.style.transition = '';
+            target.style.transformOrigin = '';
+        }
+
         // Vibration feedback
         if (this.options.vibrate && navigator.vibrate) {
             navigator.vibrate(50);
@@ -147,9 +166,6 @@ class TouchHandler {
                 originalEvent: event
             });
         }
-
-        // Reset after long-press fires
-        this.isTouchActive = false;
     }
 
     triggerTap(event, target) {
@@ -180,6 +196,7 @@ class TouchHandler {
 
     resetState() {
         this.isTouchActive = false;
+        this._longPressFired = false;
         this.currentTarget = null;
         this.touchStartTime = 0;
         this.touchStartX = 0;

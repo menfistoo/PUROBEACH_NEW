@@ -9,7 +9,7 @@
  * - Error display
  */
 
-import { formatDate } from './utils.js';
+import { formatDate, escapeHtml } from './utils.js';
 
 // =============================================================================
 // PANEL LIFECYCLE MIXIN
@@ -108,15 +108,13 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
 
         // Check for unsaved changes
         if (this.state.mode === 'edit' && this.state.isDirty) {
-            const confirmed = await (window.PuroBeach
-                ? window.PuroBeach.confirmAction({
-                    title: 'Cambios sin guardar',
-                    message: 'Tienes cambios sin guardar. ¿Seguro que quieres cerrar?',
-                    confirmText: 'Cerrar',
-                    confirmClass: 'btn-warning',
-                    iconClass: 'fa-exclamation-triangle'
-                })
-                : Promise.resolve(confirm('Tienes cambios sin guardar. ¿Seguro que quieres cerrar?')));
+            const confirmed = await confirmAction({
+                title: 'Cambios sin guardar',
+                message: 'Tienes cambios sin guardar. ¿Seguro que quieres cerrar?',
+                confirmText: 'Cerrar',
+                confirmClass: 'btn-warning',
+                iconClass: 'fa-exclamation-triangle'
+            });
             if (!confirmed) return;
         }
 
@@ -303,13 +301,18 @@ export const PanelLifecycleMixin = (Base) => class extends Base {
             this.contentEl.innerHTML = `
                 <div class="text-center text-danger py-4">
                     <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
-                    <p>${message}</p>
+                    <p>${escapeHtml(message)}</p>
                     <button class="btn btn-outline-primary mt-2" onclick="document.getElementById('reservationPanel').__panel?.close()">
                         Cerrar
                     </button>
                 </div>
             `;
             this.contentEl.style.display = 'block';
+        }
+
+        // Restore body scroll so user isn't trapped if close button fails
+        if (!this.isStandalone()) {
+            document.body.style.overflow = '';
         }
     }
 };

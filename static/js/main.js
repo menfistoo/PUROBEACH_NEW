@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize sidebar collapse functionality
     initializeSidebarCollapse();
 
+    // Initialize mobile navigation
+    initializeMobileNav();
+
     // Initialize confirmation modal for forms with data-confirm attribute
     initializeConfirmForms();
 
@@ -581,6 +584,25 @@ function toggleSidebar() {
     if (toggleBtn) {
         toggleBtn.click();
     }
+}
+
+/**
+ * Initialize mobile offcanvas navigation.
+ * Closes the offcanvas when a nav link is clicked.
+ */
+function initializeMobileNav() {
+    const mobileSidebar = document.getElementById('mobileSidebar');
+    if (!mobileSidebar) return;
+
+    const navLinks = mobileSidebar.querySelectorAll('.mobile-nav-child');
+    navLinks.forEach(function(link) {
+        link.addEventListener('click', function() {
+            const offcanvasInstance = bootstrap.Offcanvas.getInstance(mobileSidebar);
+            if (offcanvasInstance) {
+                offcanvasInstance.hide();
+            }
+        });
+    });
 }
 
 /**

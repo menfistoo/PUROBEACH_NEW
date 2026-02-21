@@ -212,7 +212,10 @@ export const FurnitureRendererMixin = (Base) => class extends Base {
             document.removeEventListener('mouseup', handleMouseUp);
         };
 
-        group.addEventListener('mousedown', () => {
+        // Register document-level drag listeners inside the existing mousedown handler
+        // (avoids duplicate handler that would leak event listeners)
+        group.addEventListener('mousedown', (e) => {
+            if (e.button !== 0 || e.ctrlKey || e.metaKey) return;
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         });

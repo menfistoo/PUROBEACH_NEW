@@ -3,7 +3,7 @@
 {% block title %}{{ customer.first_name }} {{ customer.last_name or '' }} - PuroBeach{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/reservation-quick-edit-modal.css') }}">
+<link rel="stylesheet" href="{{ versioned_static('css/reservation-quick-edit-modal.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -350,5 +350,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/reservation-quick-edit.js') }}"></script>
+<script src="{{ versioned_static('js/reservation-quick-edit.js') }}"></script>
 {% endblock %}

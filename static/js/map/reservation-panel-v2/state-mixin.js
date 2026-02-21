@@ -101,8 +101,10 @@ export const StateMixin = (Base) => class extends Base {
         const newState = chip.dataset.state;
         const chipColor = chip.dataset.color;
 
-        // Skip if already active
+        // Skip if already active or if a state change is in progress
         if (chip.classList.contains('active')) return;
+        if (this._stateChangeInProgress) return;
+        this._stateChangeInProgress = true;
 
         // Store previous active chip for potential revert
         const prevActive = this.stateChipsContainer.querySelector('.state-chip.active');
@@ -126,7 +128,7 @@ export const StateMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({ state: newState, action: 'set' })
                 }
@@ -144,6 +146,9 @@ export const StateMixin = (Base) => class extends Base {
                 if (this.options.onStateChange) {
                     this.options.onStateChange(this.state.reservationId, newState);
                 }
+
+                // Reload state history to show the new entry
+                await this.loadStateHistory(this.state.reservationId);
 
                 showToast(`Estado cambiado a ${newState}`, 'success');
             } else {
@@ -168,6 +173,7 @@ export const StateMixin = (Base) => class extends Base {
             showToast(error.message, 'error');
         } finally {
             chip.classList.remove('loading');
+            this._stateChangeInProgress = false;
         }
     }
 

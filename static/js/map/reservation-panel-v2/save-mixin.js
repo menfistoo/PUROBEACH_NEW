@@ -50,7 +50,7 @@ export const SaveMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({ new_date: newDate })
                 }
@@ -165,7 +165,7 @@ export const SaveMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({
                         new_date: newDate,
@@ -238,7 +238,7 @@ export const SaveMixin = (Base) => class extends Base {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': this.csrfToken
+                        'X-CSRFToken': this.getCsrfToken()
                     },
                     body: JSON.stringify({ new_date: newDate })
                 }
@@ -434,7 +434,7 @@ export const SaveMixin = (Base) => class extends Base {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRFToken': this.csrfToken
+                            'X-CSRFToken': this.getCsrfToken()
                         },
                         body: JSON.stringify(updates)
                     }
@@ -469,7 +469,7 @@ export const SaveMixin = (Base) => class extends Base {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'X-CSRFToken': this.csrfToken
+                                'X-CSRFToken': this.getCsrfToken()
                             },
                             body: JSON.stringify({ preference_codes: selectedCodes })
                         }
@@ -501,7 +501,7 @@ export const SaveMixin = (Base) => class extends Base {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRFToken': this.csrfToken
+                            'X-CSRFToken': this.getCsrfToken()
                         },
                         body: JSON.stringify({
                             preferences: selectedCodes.join(',')
