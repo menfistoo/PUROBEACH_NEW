@@ -48,7 +48,7 @@ from models.zone import get_all_zones
 
 
 # =============================================================================
-# SIMULATION DATABASE PATH
+# SIMULATION CONSTANTS
 # =============================================================================
 
 SIM_DB_PATH = os.path.join(
@@ -802,6 +802,10 @@ def main():
                         help='Show debug output including skipped reservations')
 
     args = parser.parse_args()
+
+    if args.month and args.start_date:
+        print("Error: --month and --start-date are mutually exclusive. Use one or the other.")
+        sys.exit(1)
 
     # Set simulation database BEFORE creating Flask app
     if args.sim_db:
