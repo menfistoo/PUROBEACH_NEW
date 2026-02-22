@@ -35,10 +35,9 @@ SEVERITY_COLORS = {
 
 
 def get_connection(db_path: str) -> sqlite3.Connection:
-    """Open a connection to the SQLite database."""
-    conn = sqlite3.connect(db_path)
+    """Open a read-only connection to the SQLite database."""
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA journal_mode=WAL')
     return conn
 
 
@@ -63,13 +62,14 @@ def check_data_integrity(conn: sqlite3.Connection) -> list:
     cur = conn.cursor()
 
     # --- 1. Double bookings ---
-    cur.execute('''
+    _placeholders = ','.join('?' * len(RELEASING_STATES))
+    cur.execute(f'''
         SELECT rf.furniture_id, rf.assignment_date,
                COUNT(DISTINCT rf.reservation_id) as booking_count,
                GROUP_CONCAT(r.ticket_number, ', ') as tickets
         FROM beach_reservation_furniture rf
         JOIN beach_reservations r ON rf.reservation_id = r.id
-        WHERE r.current_state NOT IN (?, ?, ?)
+        WHERE r.current_state NOT IN ({_placeholders})
         GROUP BY rf.furniture_id, rf.assignment_date
         HAVING COUNT(DISTINCT rf.reservation_id) > 1
     ''', RELEASING_STATES)
@@ -128,10 +128,10 @@ def check_data_integrity(conn: sqlite3.Connection) -> list:
     ))
 
     # --- 4. Reservations with no furniture assignment ---
-    cur.execute('''
+    cur.execute(f'''
         SELECT r.id, r.ticket_number, r.reservation_date, r.current_state
         FROM beach_reservations r
-        WHERE r.current_state NOT IN (?, ?, ?)
+        WHERE r.current_state NOT IN ({_placeholders})
           AND r.reservation_type = 'normal'
           AND NOT EXISTS (
               SELECT 1 FROM beach_reservation_furniture rf
