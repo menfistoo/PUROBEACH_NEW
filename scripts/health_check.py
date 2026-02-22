@@ -154,8 +154,115 @@ def check_data_integrity(conn: sqlite3.Connection) -> list:
 
 
 def check_business_logic(conn: sqlite3.Connection) -> list:
-    """Business logic checks — implemented in Task 4."""
-    return []
+    """
+    Check for business logic violations.
+
+    Returns list of issue dicts.
+    """
+    results = []
+    cur = conn.cursor()
+    _placeholders = ','.join('?' * len(RELEASING_STATES))
+    today = datetime.now().strftime('%Y-%m-%d')
+
+    # --- 1. 'Sentada' state on past dates ---
+    cur.execute('''
+        SELECT r.id, r.ticket_number, r.reservation_date, r.current_state
+        FROM beach_reservations r
+        WHERE r.current_state = 'Sentada'
+          AND r.reservation_date < ?
+    ''', (today,))
+    rows = cur.fetchall()
+    results.append(issue(
+        category='Business Logic',
+        check="'Sentada' state on past reservation dates",
+        severity='warn' if rows else 'ok',
+        count=len(rows),
+        details=[
+            f"ticket={r['ticket_number']} on {r['reservation_date']}"
+            for r in rows
+        ]
+    ))
+
+    # --- 2. externo customer charged to room ---
+    cur.execute('''
+        SELECT r.id, r.ticket_number, c.customer_type, r.charge_to_room, r.reservation_date
+        FROM beach_reservations r
+        JOIN beach_customers c ON r.customer_id = c.id
+        WHERE c.customer_type = 'externo' AND r.charge_to_room = 1
+    ''')
+    rows = cur.fetchall()
+    results.append(issue(
+        category='Business Logic',
+        check='External (externo) customer with charge_to_room=1',
+        severity='fail' if rows else 'ok',
+        count=len(rows),
+        details=[
+            f"ticket={r['ticket_number']} on {r['reservation_date']}"
+            for r in rows
+        ]
+    ))
+
+    # --- 3. paid=1 with no payment_method ---
+    cur.execute('''
+        SELECT id, ticket_number, reservation_date, paid, payment_method
+        FROM beach_reservations
+        WHERE paid = 1 AND (payment_method IS NULL OR payment_method = '')
+    ''')
+    rows = cur.fetchall()
+    results.append(issue(
+        category='Business Logic',
+        check='paid=1 with no payment_method set',
+        severity='warn' if rows else 'ok',
+        count=len(rows),
+        details=[
+            f"ticket={r['ticket_number']} on {r['reservation_date']}"
+            for r in rows
+        ]
+    ))
+
+    # --- 4. Furniture blocks overlapping active reservations ---
+    cur.execute(f'''
+        SELECT fb.id as block_id, fb.furniture_id, fb.start_date, fb.end_date,
+               fb.block_type, rf.reservation_id, r.ticket_number, rf.assignment_date
+        FROM beach_furniture_blocks fb
+        JOIN beach_reservation_furniture rf ON rf.furniture_id = fb.furniture_id
+        JOIN beach_reservations r ON rf.reservation_id = r.id
+        WHERE rf.assignment_date BETWEEN fb.start_date AND fb.end_date
+          AND r.current_state NOT IN ({_placeholders})
+    ''', RELEASING_STATES)
+    rows = cur.fetchall()
+    results.append(issue(
+        category='Business Logic',
+        check='Furniture blocks overlapping active reservations',
+        severity='fail' if rows else 'ok',
+        count=len(rows),
+        details=[
+            f"block_id={r['block_id']} ({r['block_type']}) on furniture_id={r['furniture_id']} "
+            f"overlaps ticket={r['ticket_number']} on {r['assignment_date']}"
+            for r in rows
+        ]
+    ))
+
+    # --- 5. Future reservations with releasing state (informational) ---
+    cur.execute(f'''
+        SELECT r.id, r.ticket_number, r.reservation_date, r.current_state
+        FROM beach_reservations r
+        WHERE r.reservation_date > ?
+          AND r.current_state IN ({_placeholders})
+    ''', (today,) + RELEASING_STATES)
+    rows = cur.fetchall()
+    results.append(issue(
+        category='Business Logic',
+        check='Future reservations with releasing state (informational)',
+        severity='warn' if len(rows) > 10 else 'ok',
+        count=len(rows),
+        details=[
+            f"ticket={r['ticket_number']} on {r['reservation_date']} ({r['current_state']})"
+            for r in rows[:5]
+        ]
+    ))
+
+    return results
 
 
 def check_performance(db_path: str) -> list:
@@ -187,6 +294,7 @@ def main():
 
     conn = get_connection(db_path)
     results = check_data_integrity(conn)
+    results += check_business_logic(conn)
     conn.close()
 
     for r in results:
