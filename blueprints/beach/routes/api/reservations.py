@@ -148,10 +148,11 @@ def register_routes(bp):
 
             # Handle tags
             if 'tag_ids' in data:
-                from models.tag import set_reservation_tags
+                from models.tag import set_reservation_tags, sync_reservation_tags_to_customer
                 tag_ids = data['tag_ids']
                 if isinstance(tag_ids, list):
                     set_reservation_tags(reservation_id, tag_ids)
+                    sync_reservation_tags_to_customer(reservation_id, tag_ids, replace=True)
 
             # Update other fields
             if updates:

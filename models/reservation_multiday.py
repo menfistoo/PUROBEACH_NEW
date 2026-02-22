@@ -52,7 +52,8 @@ def create_linked_multiday_reservations(
     minimum_consumption_policy_id: int = None,
     package_id: int = None,
     payment_ticket_number: str = None,
-    payment_method: str = None
+    payment_method: str = None,
+    reservation_type: str = 'normal'
 ) -> dict:
     """
     Create linked reservations for multiple consecutive days.
@@ -205,7 +206,7 @@ def create_linked_multiday_reservations(
                             ?, ?,
                             ?, ?, ?,
                             ?, ?,
-                            NULL, 'normal', ?, CURRENT_TIMESTAMP,
+                            NULL, ?, ?, CURRENT_TIMESTAMP,
                             ?
                         )
                     ''', (
@@ -216,7 +217,7 @@ def create_linked_multiday_reservations(
                         minimum_consumption_amount, minimum_consumption_policy_id,
                         package_id, payment_ticket_number, payment_method,
                         check_in_date, check_out_date,
-                        created_by,
+                        reservation_type, created_by,
                         original_room
                     ))
 
@@ -255,7 +256,7 @@ def create_linked_multiday_reservations(
                             ?, ?,
                             ?, ?, ?,
                             ?, ?,
-                            ?, 'normal', ?, CURRENT_TIMESTAMP,
+                            ?, ?, ?, CURRENT_TIMESTAMP,
                             ?
                         )
                     ''', (
@@ -266,7 +267,7 @@ def create_linked_multiday_reservations(
                         minimum_consumption_amount, minimum_consumption_policy_id,
                         package_id, payment_ticket_number, payment_method,
                         check_in_date, check_out_date,
-                        parent_id, created_by,
+                        parent_id, reservation_type, created_by,
                         original_room
                     ))
 

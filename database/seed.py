@@ -159,7 +159,7 @@ def seed_database(db):
         db.execute('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)',
                    (manager_role_id, perm[0]))
 
-    # Staff gets view + create + edit beach operations
+    # Staff gets view + create + edit beach operations + payment reconciliation report
     staff_perms = db.execute('''
         SELECT id FROM permissions
         WHERE code LIKE "beach.%.view"
@@ -167,6 +167,8 @@ def seed_database(db):
            OR code LIKE "beach.%.edit"
            OR code = "beach.map.interact"
            OR code = "menu.operations"
+           OR code = "beach.reports.payment_reconciliation"
+           OR code = "menu.reports"
     ''').fetchall()
     for perm in staff_perms:
         db.execute('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)',

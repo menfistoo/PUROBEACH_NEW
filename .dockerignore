@@ -2,9 +2,10 @@
 .git
 .gitignore
 
-# Worktrees and auto-claude
+# Worktrees, auto-claude, and temp files
 .worktrees/
 .auto-claude/
+tmpclaude-*/
 
 # Claude and editor config
 .claude/

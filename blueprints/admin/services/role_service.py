@@ -148,6 +148,7 @@ def get_permissions_matrix(role_id: int) -> dict:
         'merge': 'Fusionar',
         'access': 'Acceso',
         'admin': 'Administrar',
+        'payment_reconciliation': 'Conciliación',
     }
 
     # Build structure: group -> features -> actions
@@ -208,7 +209,8 @@ def get_permissions_matrix(role_id: int) -> dict:
 
     # Define column order
     ACTION_ORDER = ['view', 'create', 'edit', 'delete', 'manage', 'change_state',
-                    'merge', 'interact', 'import', 'export', 'access', 'admin']
+                    'merge', 'interact', 'import', 'export', 'access', 'admin',
+                    'payment_reconciliation']
 
     return {
         'groups': sorted_groups,

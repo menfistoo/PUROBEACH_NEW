@@ -28,7 +28,8 @@ from .permissions import (
     migrate_add_furniture_types_menu,
     migrate_add_map_edit_permission,
     migrate_add_map_editor_permission,
-    migrate_zones_to_furniture_manager
+    migrate_zones_to_furniture_manager,
+    migrate_add_staff_payment_reconciliation_permission
 )
 from .zones import migrate_zone_canvas_properties
 from .furniture_manager_menu import migrate_furniture_manager_menu
@@ -121,6 +122,9 @@ MIGRATIONS = [
 
     # Phase 15: Fix reports menu item
     ('fix_reports_menu', migrate_fix_reports_menu),
+
+    # Phase 16: Staff permissions
+    ('add_staff_payment_reconciliation_permission', migrate_add_staff_payment_reconciliation_permission),
 ]
 
 
@@ -213,4 +217,5 @@ __all__ = [
     'migrate_add_insights_permissions',
     'migrate_temp_furniture_date_range',
     'migrate_fix_reports_menu',
+    'migrate_add_staff_payment_reconciliation_permission',
 ]
