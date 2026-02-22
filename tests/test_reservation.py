@@ -544,3 +544,70 @@ class TestReservationUnifiedUpdate:
         data = response.get_json()
         assert data['success'] is True
         assert data['message'] == 'Sin cambios'
+
+
+class TestNoOrphanedReservationOnUnavailableFurniture:
+    """create_beach_reservation must not leave a reservation in the DB if furniture is taken."""
+
+    def _make_furniture(self, conn, zone_id: int, number: str) -> int:
+        cursor = conn.execute(
+            "INSERT INTO beach_furniture (number, zone_id, furniture_type, capacity, active) "
+            "VALUES (?, ?, 'hamaca', 2, 1)",
+            (number, zone_id)
+        )
+        return cursor.lastrowid
+
+    def _make_customer(self, conn, email: str) -> int:
+        cursor = conn.execute(
+            "INSERT INTO beach_customers "
+            "(first_name, last_name, customer_type, email, phone, created_at) "
+            "VALUES ('Orphan', 'Test', 'externo', ?, '600111222', datetime('now'))",
+            (email,)
+        )
+        return cursor.lastrowid
+
+    def test_no_orphaned_reservation_when_furniture_unavailable(self, app):
+        """Second reservation attempt on taken furniture must not commit a bare reservation."""
+        from models.reservation_crud import create_beach_reservation
+
+        with app.app_context():
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute('SELECT id FROM beach_zones LIMIT 1')
+            zone_id = cursor.fetchone()['id']
+
+            furniture_id = self._make_furniture(db, zone_id, 'ORPHANTEST01')
+            cust1 = self._make_customer(db, 'orphan_cust1@test.com')
+            cust2 = self._make_customer(db, 'orphan_cust2@test.com')
+            db.commit()
+
+            # First reservation takes the furniture — must succeed
+            res_id_1, _ = create_beach_reservation(
+                customer_id=cust1,
+                reservation_date='2099-06-15',
+                num_people=2,
+                furniture_ids=[furniture_id],
+                created_by='test'
+            )
+            assert res_id_1 is not None
+
+            # Count total reservations now
+            cursor.execute('SELECT COUNT(*) as cnt FROM beach_reservations')
+            count_before = cursor.fetchone()['cnt']
+
+            # Second reservation on the same furniture/date must raise ValueError
+            with pytest.raises(ValueError):
+                create_beach_reservation(
+                    customer_id=cust2,
+                    reservation_date='2099-06-15',
+                    num_people=2,
+                    furniture_ids=[furniture_id],
+                    created_by='test'
+                )
+
+            # Must not have created any extra reservation (no orphan)
+            cursor.execute('SELECT COUNT(*) as cnt FROM beach_reservations')
+            count_after = cursor.fetchone()['cnt']
+            assert count_after == count_before, (
+                f"Orphaned reservation(s) left in DB: {count_after - count_before} extra"
+            )

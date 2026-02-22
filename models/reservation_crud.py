@@ -234,7 +234,8 @@ def create_beach_reservation(
                 availability = check_furniture_availability_bulk(
                     furniture_ids=furniture_ids,
                     dates=[reservation_date],
-                    exclude_reservation_id=None
+                    exclude_reservation_id=None,
+                    conn=conn   # pass outer transaction conn to prevent premature commit
                 )
                 if not availability.get('all_available'):
                     unavail_items = availability.get('unavailable', [])
