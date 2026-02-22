@@ -410,9 +410,14 @@ def print_summary(all_issues: list) -> None:
             color = c.get(sev, '')
             icon = {'ok': '[OK]', 'warn': '[WARN]', 'fail': '[FAIL]'}.get(sev, '[?]')
             totals[sev] += 1
-            count_str = f"({iss['count']} issues)" if iss['count'] > 0 else ''
+            # For performance checks, details already contain timing info — skip the count label
+            if iss['category'] != 'Performance' and iss['count'] > 0:
+                count_str = f"({iss['count']} issues)"
+            else:
+                count_str = ''
             print(f"  {color}{icon}{c['reset']} {iss['check']} {count_str}")
-            if iss['details'] and sev != 'ok':
+            # Always show details for performance checks (timing info), only for non-ok otherwise
+            if iss['details'] and (iss['category'] == 'Performance' or sev != 'ok'):
                 for detail in iss['details'][:3]:
                     print(f"       -> {detail}")
 
@@ -467,6 +472,7 @@ def write_report(all_issues: list, db_path: str) -> str:
                     lines.append(f'- {detail}')
                 lines.append('')
 
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
     report_path.write_text('\n'.join(lines), encoding='utf-8')
     return str(report_path)
 
