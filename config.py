@@ -64,22 +64,22 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() == 'true'
     WTF_CSRF_SSL_STRICT = SESSION_COOKIE_SECURE
 
-    # Override with strong secret key
-    SECRET_KEY = os.environ.get('SECRET_KEY')
-    if not SECRET_KEY:
-        raise ValueError("SECRET_KEY environment variable must be set in production")
-
-    # Validate SECRET_KEY strength (minimum 32 characters)
-    if len(SECRET_KEY) < 32:
-        raise ValueError("SECRET_KEY must be at least 32 characters in production")
+    SECRET_KEY = os.environ.get('SECRET_KEY') or Config.SECRET_KEY
+    DATABASE_PATH = os.environ.get('DATABASE_PATH') or Config.DATABASE_PATH
 
     # URL scheme preference (follows SESSION_COOKIE_SECURE setting)
     PREFERRED_URL_SCHEME = 'https' if SESSION_COOKIE_SECURE else 'http'
 
-    # Ensure DATABASE_PATH is explicitly set (not using default)
-    DATABASE_PATH = os.environ.get('DATABASE_PATH')
-    if not DATABASE_PATH:
-        raise ValueError("DATABASE_PATH environment variable must be set in production")
+    @classmethod
+    def validate(cls) -> None:
+        """Validate that required production environment variables are set."""
+        secret_key = os.environ.get('SECRET_KEY')
+        if not secret_key:
+            raise ValueError("SECRET_KEY environment variable must be set in production")
+        if len(secret_key) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters in production")
+        if not os.environ.get('DATABASE_PATH'):
+            raise ValueError("DATABASE_PATH environment variable must be set in production")
 
 
 class TestConfig(Config):

@@ -62,7 +62,10 @@ def create_app(config_name=None):
     app.json = ISODateJSONProvider(app)
 
     # Load configuration
-    app.config.from_object(config[config_name])
+    config_class = config[config_name]
+    if hasattr(config_class, 'validate'):
+        config_class.validate()
+    app.config.from_object(config_class)
 
     # Initialize extensions
     initialize_extensions(app)
