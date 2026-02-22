@@ -371,3 +371,135 @@ class TestReassignLockCheck:
             data = response.get_json()
             assert data['success'] is False
             assert data.get('error') == 'locked'
+
+
+class TestCreateFurnitureBlockConflict:
+    """Block creation must reject furniture that has active reservations in the date range."""
+
+    def _create_furniture(self, conn, zone_id: int, number: str) -> int:
+        cursor = conn.execute(
+            "INSERT INTO beach_furniture (number, zone_id, furniture_type, capacity, active) "
+            "VALUES (?, ?, 'hamaca', 2, 1)",
+            (number, zone_id)
+        )
+        return cursor.lastrowid
+
+    def _create_customer(self, conn, email: str) -> int:
+        cursor = conn.execute(
+            "INSERT INTO beach_customers "
+            "(first_name, last_name, customer_type, email, phone, created_at) "
+            "VALUES ('Block', 'Test', 'externo', ?, '600000001', datetime('now'))",
+            (email,)
+        )
+        return cursor.lastrowid
+
+    def _assign_furniture(self, conn, furniture_id: int, date: str) -> None:
+        """Create a minimal Confirmada reservation with furniture on `date`."""
+        cust_id = self._create_customer(conn, f'blk_{date}_{furniture_id}@test.com')
+        cursor = conn.execute(
+            "INSERT INTO beach_reservations "
+            "(customer_id, ticket_number, reservation_date, start_date, end_date, "
+            " num_people, current_state, current_states, state_id, "
+            " reservation_type, created_at) "
+            "VALUES (?, ?, ?, ?, ?, 2, 'Confirmada', 'Confirmada', 1, 'normal', datetime('now'))",
+            (cust_id, f'BLKTEST{furniture_id}{date.replace("-","")}',
+             date, date, date)
+        )
+        res_id = cursor.lastrowid
+        conn.execute(
+            "INSERT INTO beach_reservation_furniture (reservation_id, furniture_id, assignment_date) "
+            "VALUES (?, ?, ?)",
+            (res_id, furniture_id, date)
+        )
+        conn.commit()
+
+    def test_raises_when_active_reservation_exists_in_range(self, app):
+        """create_furniture_block must raise ValueError when furniture is already reserved."""
+        from models.furniture_block import create_furniture_block
+
+        with app.app_context():
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute('SELECT id FROM beach_zones LIMIT 1')
+            zone_id = cursor.fetchone()['id']
+
+            furniture_id = self._create_furniture(db, zone_id, 'BLKCONFLICT01')
+            db.commit()
+
+            # Create a Confirmada reservation for '2026-07-10'
+            self._assign_furniture(db, furniture_id, '2026-07-10')
+
+            # Block overlapping that date must raise
+            with pytest.raises(ValueError, match="reservas activas"):
+                create_furniture_block(
+                    furniture_id=furniture_id,
+                    start_date='2026-07-08',
+                    end_date='2026-07-12',
+                    block_type='maintenance',
+                    created_by='test'
+                )
+
+    def test_succeeds_when_only_releasing_state_reservations_exist(self, app):
+        """Block should be allowed when conflicting reservations are all Cancelada/No-Show/Liberada."""
+        from models.furniture_block import create_furniture_block
+
+        with app.app_context():
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute('SELECT id FROM beach_zones LIMIT 1')
+            zone_id = cursor.fetchone()['id']
+
+            furniture_id = self._create_furniture(db, zone_id, 'BLKNOCONFLICT01')
+            cust_id = self._create_customer(db, 'blk_releasing@test.com')
+            db.commit()
+
+            # Create a Cancelada reservation on '2026-08-05'
+            cursor.execute(
+                "INSERT INTO beach_reservations "
+                "(customer_id, ticket_number, reservation_date, start_date, end_date, "
+                " num_people, current_state, current_states, state_id, "
+                " reservation_type, created_at) "
+                "VALUES (?, 'BLKREL01', '2026-08-05', '2026-08-05', '2026-08-05', "
+                "        2, 'Cancelada', 'Cancelada', 1, 'normal', datetime('now'))",
+                (cust_id,)
+            )
+            res_id = cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO beach_reservation_furniture (reservation_id, furniture_id, assignment_date) "
+                "VALUES (?, ?, '2026-08-05')",
+                (res_id, furniture_id)
+            )
+            db.commit()
+
+            # Block on the same range must succeed (Cancelada is a releasing state)
+            block_id = create_furniture_block(
+                furniture_id=furniture_id,
+                start_date='2026-08-01',
+                end_date='2026-08-10',
+                block_type='maintenance',
+                created_by='test'
+            )
+            assert isinstance(block_id, int)
+            assert block_id > 0
+
+    def test_succeeds_when_no_reservations_in_range(self, app):
+        """Block must succeed when no reservations exist in the date range."""
+        from models.furniture_block import create_furniture_block
+
+        with app.app_context():
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute('SELECT id FROM beach_zones LIMIT 1')
+            zone_id = cursor.fetchone()['id']
+
+            furniture_id = self._create_furniture(db, zone_id, 'BLKEMPTY01')
+            db.commit()
+
+            block_id = create_furniture_block(
+                furniture_id=furniture_id,
+                start_date='2026-09-01',
+                end_date='2026-09-05',
+                block_type='vip_hold',
+                created_by='test'
+            )
+            assert isinstance(block_id, int)

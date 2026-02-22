@@ -57,6 +57,39 @@ def create_furniture_block(
         raise ValueError("Fecha de inicio no puede ser posterior a fecha de fin")
 
     with get_db() as conn:
+        # Fetch releasing states directly on this connection to avoid nested context manager.
+        # (get_db() always returns the same g.db; a nested with-get_db() would commit this transaction.)
+        releasing_rows = conn.execute(
+            'SELECT name FROM beach_reservation_states WHERE is_availability_releasing = 1'
+        ).fetchall()
+        releasing_states = [row['name'] for row in releasing_rows]
+
+        # Check for active reservations that conflict with this block's date range
+        if releasing_states:
+            placeholders = ','.join('?' * len(releasing_states))
+            conflicts = conn.execute(f'''
+                SELECT r.ticket_number
+                FROM beach_reservation_furniture rf
+                JOIN beach_reservations r ON rf.reservation_id = r.id
+                WHERE rf.furniture_id = ?
+                  AND rf.assignment_date BETWEEN ? AND ?
+                  AND r.current_state NOT IN ({placeholders})
+                LIMIT 5
+            ''', [furniture_id, start_date, end_date] + releasing_states).fetchall()
+        else:
+            conflicts = conn.execute('''
+                SELECT r.ticket_number
+                FROM beach_reservation_furniture rf
+                JOIN beach_reservations r ON rf.reservation_id = r.id
+                WHERE rf.furniture_id = ?
+                  AND rf.assignment_date BETWEEN ? AND ?
+                LIMIT 5
+            ''', (furniture_id, start_date, end_date)).fetchall()
+
+        if conflicts:
+            tickets = ', '.join(row['ticket_number'] for row in conflicts)
+            raise ValueError(f"Mobiliario con reservas activas en estas fechas: {tickets}")
+
         cursor = conn.execute('''
             INSERT INTO beach_furniture_blocks
             (furniture_id, start_date, end_date, block_type, reason, notes, created_by)
