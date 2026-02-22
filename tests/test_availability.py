@@ -55,12 +55,32 @@ def setup_test_data(app):
         ''')
         customer_id = cursor.lastrowid
 
+        # Create a confirmed reservation on a fixed far-future date so tests are deterministic
+        date_1 = '2099-06-15'
+        cursor.execute('''
+            INSERT INTO beach_reservations (
+                customer_id, reservation_date, start_date, end_date,
+                num_people, current_state, ticket_number
+            ) VALUES (?, ?, ?, ?, 2, 'Confirmada', 'TEST-001')
+        ''', (customer_id, date_1, date_1, date_1))
+        reservation_id_1 = cursor.lastrowid
+
+        # Assign furniture_id_1 to that reservation on date_1
+        cursor.execute('''
+            INSERT INTO beach_reservation_furniture (reservation_id, furniture_id, assignment_date)
+            VALUES (?, ?, ?)
+        ''', (reservation_id_1, furniture_id_1, date_1))
+
         db.commit()
 
         yield {
             'furniture_ids': [furniture_id_1, furniture_id_2],
+            'furniture_id_1': furniture_id_1,
+            'furniture_id_2': furniture_id_2,
             'customer_id': customer_id,
-            'zone_id': zone_id
+            'zone_id': zone_id,
+            'date_1': date_1,
+            'reservation_id_1': reservation_id_1,
         }
 
 
@@ -231,3 +251,50 @@ class TestGetConflictingReservations:
 
             assert isinstance(result, list)
             assert len(result) == 0
+
+
+class TestCheckFurnitureAvailabilityBulkWithConn:
+    """check_furniture_availability_bulk must work identically with and without conn param."""
+
+    def test_accepts_conn_parameter_and_returns_same_result(self, app, setup_test_data):
+        """Passing conn= should produce identical results to calling without conn."""
+        from models.reservation_availability import check_furniture_availability_bulk
+
+        furniture_id = setup_test_data['furniture_id_1']
+
+        with app.app_context():
+            # Without conn (standalone)
+            result_standalone = check_furniture_availability_bulk(
+                furniture_ids=[furniture_id],
+                dates=['2099-01-15']
+            )
+
+            # With conn (simulating outer transaction context)
+            db = get_db()
+            result_with_conn = check_furniture_availability_bulk(
+                furniture_ids=[furniture_id],
+                dates=['2099-01-15'],
+                conn=db
+            )
+
+            assert result_standalone['all_available'] == result_with_conn['all_available']
+            assert result_standalone['unavailable'] == result_with_conn['unavailable']
+
+    def test_with_conn_detects_conflict_correctly(self, app, setup_test_data):
+        """When called with conn=, conflicts are still detected correctly."""
+        from models.reservation_availability import check_furniture_availability_bulk
+
+        furniture_id = setup_test_data['furniture_id_1']
+        reservation_date = setup_test_data['date_1']
+
+        with app.app_context():
+            db = get_db()
+            result = check_furniture_availability_bulk(
+                furniture_ids=[furniture_id],
+                dates=[reservation_date],
+                conn=db
+            )
+            # furniture_id_1 has a Confirmada reservation on date_1 (from setup_test_data)
+            assert result['all_available'] is False
+            assert len(result['unavailable']) == 1
+            assert result['unavailable'][0]['furniture_id'] == furniture_id
