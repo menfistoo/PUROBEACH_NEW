@@ -601,14 +601,21 @@ def generate_furniture_blocks(
         reason = 'Mantenimiento programado' if block_type == 'maintenance' else 'Reserva VIP especial'
 
         if not dry_run:
-            block_id = create_furniture_block(
-                furniture_id=furn['id'],
-                start_date=start_str,
-                end_date=end_str,
-                block_type=block_type,
-                reason=reason,
-                created_by='simulation'
-            )
+            try:
+                block_id = create_furniture_block(
+                    furniture_id=furn['id'],
+                    start_date=start_str,
+                    end_date=end_str,
+                    block_type=block_type,
+                    reason=reason,
+                    created_by='simulation'
+                )
+            except ValueError as e:
+                # Bug #45 fix: create_furniture_block raises ValueError when active
+                # reservations exist on the requested dates.  Skip this block and
+                # continue — this is the expected, correct behaviour.
+                logger.debug(f"Skipped {block_type} block on {furn['number']} ({start_str}–{end_str}): {e}")
+                continue
 
             created.append({
                 'id': block_id,
@@ -697,16 +704,11 @@ def run_simulation(start_date: datetime, dry_run: bool = False, high_occupancy: 
         print(f"  {'Would create' if dry_run else 'Created'} {tf['number']}: {tf['start_date']} to {tf['end_date']}")
     print()
 
-    # Step 4: Generate furniture blocks
-    print("[4/5] Generating furniture blocks...")
-    blocks = generate_furniture_blocks(start_date, furniture, dry_run)
-    results['furniture_blocks'] = len(blocks)
-    for block in blocks:
-        print(f"  {'Would create' if dry_run else 'Created'} {block['type']} block on {block['furniture_number']}: {block['start_date']} to {block['end_date']}")
-    print()
-
-    # Step 5: Generate reservations
-    print("[5/5] Generating reservations...")
+    # Step 4: Generate reservations (blocks must come AFTER so the conflict
+    # check in create_furniture_block can reject blocks that would overlap
+    # active reservations — this is what Bug #45 protects against)
+    print("[4/5] Generating reservations...")
+    # (furniture blocks generated in step 5, after reservations)
 
     current_week = 0
     week_reservations = 0
@@ -764,6 +766,16 @@ def run_simulation(start_date: datetime, dry_run: bool = False, high_occupancy: 
         results['weekly_stats'][current_week] = week_reservations
         print(f"  Week {current_week} complete: {week_reservations} reservations, ~{int(target_avg)}% target occupancy")
 
+    print()
+
+    # Step 5: Generate furniture blocks AFTER reservations so that
+    # create_furniture_block can correctly reject any block that conflicts
+    # with an active reservation (Bug #45 fix verification).
+    print("[5/5] Generating furniture blocks (after reservations, conflict check active)...")
+    blocks = generate_furniture_blocks(start_date, furniture, dry_run)
+    results['furniture_blocks'] = len(blocks)
+    for block in blocks:
+        print(f"  {'Would create' if dry_run else 'Created'} {block['type']} block on {block['furniture_number']}: {block['start_date']} to {block['end_date']}")
     print()
 
     # Print summary
