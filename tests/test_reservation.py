@@ -561,8 +561,8 @@ class TestNoOrphanedReservationOnUnavailableFurniture:
         cursor = conn.execute(
             "INSERT INTO beach_customers "
             "(first_name, last_name, customer_type, email, phone, created_at) "
-            "VALUES ('Orphan', 'Test', 'externo', ?, '600111222', datetime('now'))",
-            (email,)
+            "VALUES ('Orphan', 'Test', 'externo', ?, ?, datetime('now'))",
+            (email, f'6{abs(hash(email)) % 100000000:08d}')
         )
         return cursor.lastrowid
 
@@ -596,7 +596,7 @@ class TestNoOrphanedReservationOnUnavailableFurniture:
             count_before = cursor.fetchone()['cnt']
 
             # Second reservation on the same furniture/date must raise ValueError
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match="Mobiliario no disponible"):
                 create_beach_reservation(
                     customer_id=cust2,
                     reservation_date='2099-06-15',
