@@ -48,7 +48,9 @@ def create_furniture_block(
         int: Block ID
 
     Raises:
-        ValueError: If validation fails
+        ValueError: If block_type is invalid or dates are in wrong order.
+        ValueError: If active (non-releasing) reservations exist for this
+                    furniture within the requested date range.
     """
     if block_type not in BLOCK_TYPES:
         raise ValueError(f"Tipo de bloqueo inválido: {block_type}")

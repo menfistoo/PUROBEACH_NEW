@@ -396,14 +396,16 @@ class TestCreateFurnitureBlockConflict:
     def _assign_furniture(self, conn, furniture_id: int, date: str) -> None:
         """Create a minimal Confirmada reservation with furniture on `date`."""
         cust_id = self._create_customer(conn, f'blk_{date}_{furniture_id}@test.com')
+        state_row = conn.execute("SELECT id FROM beach_reservation_states LIMIT 1").fetchone()
+        state_id = state_row['id'] if state_row else 1
         cursor = conn.execute(
             "INSERT INTO beach_reservations "
             "(customer_id, ticket_number, reservation_date, start_date, end_date, "
             " num_people, current_state, current_states, state_id, "
             " reservation_type, created_at) "
-            "VALUES (?, ?, ?, ?, ?, 2, 'Confirmada', 'Confirmada', 1, 'normal', datetime('now'))",
+            "VALUES (?, ?, ?, ?, ?, 2, 'Confirmada', 'Confirmada', ?, 'normal', datetime('now'))",
             (cust_id, f'BLKTEST{furniture_id}{date.replace("-","")}',
-             date, date, date)
+             date, date, date, state_id)
         )
         res_id = cursor.lastrowid
         conn.execute(
@@ -454,14 +456,16 @@ class TestCreateFurnitureBlockConflict:
             db.commit()
 
             # Create a Cancelada reservation on '2026-08-05'
+            state_row = db.execute("SELECT id FROM beach_reservation_states LIMIT 1").fetchone()
+            state_id = state_row['id'] if state_row else 1
             cursor.execute(
                 "INSERT INTO beach_reservations "
                 "(customer_id, ticket_number, reservation_date, start_date, end_date, "
                 " num_people, current_state, current_states, state_id, "
                 " reservation_type, created_at) "
                 "VALUES (?, 'BLKREL01', '2026-08-05', '2026-08-05', '2026-08-05', "
-                "        2, 'Cancelada', 'Cancelada', 1, 'normal', datetime('now'))",
-                (cust_id,)
+                "        2, 'Cancelada', 'Cancelada', ?, 'normal', datetime('now'))",
+                (cust_id, state_id)
             )
             res_id = cursor.lastrowid
             cursor.execute(
