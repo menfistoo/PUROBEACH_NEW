@@ -368,7 +368,7 @@ def propagate_room_change(
 
     When a hotel guest changes rooms, this function updates:
     1. The beach_customer record (interno with matching name and old room)
-    2. Current and future reservations (start_date >= today)
+    2. Current and future reservations (end_date >= today)
 
     Past reservations are left unchanged for historical accuracy.
 
@@ -432,14 +432,17 @@ def propagate_room_change(
 
         result['customer_updated'] = cursor.rowcount > 0
 
-        # Update current and future reservations (start_date >= today)
+        # Update current and future reservations (end_date >= today)
+        # Using end_date ensures active multi-day reservations (started before today
+        # but ending today or later) are also updated, and avoids timezone edge cases
+        # when comparing start_date across UTC/local timezone boundaries.
         from utils.datetime_helpers import get_today
         today = get_today().isoformat()
         cursor.execute('''
             UPDATE beach_reservations
             SET updated_at = CURRENT_TIMESTAMP
             WHERE customer_id = ?
-              AND start_date >= ?
+              AND end_date >= ?
         ''', (customer_id, today))
 
         result['reservations_updated'] = cursor.rowcount
