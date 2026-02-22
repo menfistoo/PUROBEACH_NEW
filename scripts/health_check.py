@@ -265,9 +265,210 @@ def check_business_logic(conn: sqlite3.Connection) -> list:
     return results
 
 
+PERF_WARN_MS = 500
+PERF_FAIL_MS = 2000
+
+
 def check_performance(db_path: str) -> list:
-    """Performance checks — implemented in Task 5."""
-    return []
+    """
+    Time 6 representative queries against the database.
+
+    Each query uses a fresh connection to avoid caching effects.
+    Returns list of issue dicts with timing information.
+    """
+    results = []
+    today = datetime.now().strftime('%Y-%m-%d')
+    month_start = datetime.now().strftime('%Y-%m-01')
+
+    queries = [
+        (
+            'Availability check (furniture conflicts for a date)',
+            '''
+            SELECT rf.furniture_id, rf.assignment_date, r.id, r.current_state
+            FROM beach_reservation_furniture rf
+            JOIN beach_reservations r ON rf.reservation_id = r.id
+            WHERE rf.assignment_date = ? AND r.current_state NOT IN ('Cancelada','No-Show','Liberada')
+            ''',
+            (today,)
+        ),
+        (
+            'Reservation list with customer join (last 30 days)',
+            '''
+            SELECT r.id, r.ticket_number, r.reservation_date, r.current_state,
+                   c.first_name, c.last_name, c.customer_type
+            FROM beach_reservations r
+            JOIN beach_customers c ON r.customer_id = c.id
+            WHERE r.reservation_date >= ?
+            ORDER BY r.reservation_date DESC
+            ''',
+            (month_start,)
+        ),
+        (
+            'Map load (all active furniture with today assignments)',
+            '''
+            SELECT f.id, f.number, f.zone_id, f.position_x, f.position_y,
+                   rf.reservation_id, r.current_state
+            FROM beach_furniture f
+            LEFT JOIN beach_reservation_furniture rf
+                ON rf.furniture_id = f.id AND rf.assignment_date = ?
+            LEFT JOIN beach_reservations r ON rf.reservation_id = r.id
+                AND r.current_state NOT IN ('Cancelada','No-Show','Liberada')
+            WHERE f.active = 1
+            ''',
+            (today,)
+        ),
+        (
+            'Customer search (name LIKE)',
+            '''
+            SELECT id, first_name, last_name, customer_type, phone, room_number
+            FROM beach_customers
+            WHERE first_name LIKE ? OR last_name LIKE ? OR phone LIKE ?
+            LIMIT 50
+            ''',
+            ('%garcia%', '%garcia%', '%garcia%')
+        ),
+        (
+            'Daily report aggregation (reservations by date)',
+            '''
+            SELECT reservation_date, current_state, COUNT(*) as count, SUM(paid) as paid_count
+            FROM beach_reservations
+            WHERE reservation_date BETWEEN ? AND ?
+            GROUP BY reservation_date, current_state
+            ORDER BY reservation_date
+            ''',
+            (month_start, today)
+        ),
+        (
+            'Audit log recent entries',
+            '''
+            SELECT * FROM audit_log
+            ORDER BY created_at DESC
+            LIMIT 100
+            ''',
+            ()
+        ),
+    ]
+
+    for label, query, params in queries:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+
+        start = time.perf_counter()
+        try:
+            cur = conn.cursor()
+            cur.execute(query, params)
+            rows = cur.fetchall()
+            elapsed_ms = (time.perf_counter() - start) * 1000
+
+            if elapsed_ms >= PERF_FAIL_MS:
+                severity = 'fail'
+            elif elapsed_ms >= PERF_WARN_MS:
+                severity = 'warn'
+            else:
+                severity = 'ok'
+
+            results.append(issue(
+                category='Performance',
+                check=label,
+                severity=severity,
+                count=len(rows),
+                details=[f"{elapsed_ms:.1f}ms — {len(rows)} rows returned"]
+            ))
+        except Exception as e:
+            results.append(issue(
+                category='Performance',
+                check=label,
+                severity='fail',
+                count=0,
+                details=[f"Query error: {e}"]
+            ))
+        finally:
+            conn.close()
+
+    return results
+
+
+def print_summary(all_issues: list) -> None:
+    """Print a colour-coded summary table to stdout."""
+    c = SEVERITY_COLORS
+    print()
+    print('=' * 70)
+    print('HEALTH CHECK RESULTS')
+    print('=' * 70)
+
+    categories = {}
+    for iss in all_issues:
+        categories.setdefault(iss['category'], []).append(iss)
+
+    totals = {'ok': 0, 'warn': 0, 'fail': 0}
+
+    for category, items in categories.items():
+        print(f"\n  {category}")
+        print('  ' + '-' * 60)
+        for iss in items:
+            sev = iss['severity']
+            color = c.get(sev, '')
+            icon = {'ok': '[OK]', 'warn': '[WARN]', 'fail': '[FAIL]'}.get(sev, '[?]')
+            totals[sev] += 1
+            count_str = f"({iss['count']} issues)" if iss['count'] > 0 else ''
+            print(f"  {color}{icon}{c['reset']} {iss['check']} {count_str}")
+            if iss['details'] and sev != 'ok':
+                for detail in iss['details'][:3]:
+                    print(f"       -> {detail}")
+
+    print()
+    print('=' * 70)
+    print(
+        f"  SUMMARY: "
+        f"{c['ok']}[OK] {totals['ok']}{c['reset']}  "
+        f"{c['warn']}[WARN] {totals['warn']}{c['reset']}  "
+        f"{c['fail']}[FAIL] {totals['fail']}{c['reset']}"
+    )
+    print('=' * 70)
+
+
+def write_report(all_issues: list, db_path: str) -> str:
+    """
+    Write a markdown report to docs/simulation-report-YYYY-MM-DD.md.
+
+    Returns the path of the written report file.
+    """
+    report_date = datetime.now().strftime('%Y-%m-%d')
+    report_path = REPORT_DIR / f'simulation-report-{report_date}.md'
+
+    lines = [
+        '# Simulation Health Check Report',
+        '',
+        f'**Date:** {report_date}',
+        f'**Database:** `{db_path}`',
+        f'**Run at:** {datetime.now().strftime("%H:%M:%S")}',
+        '',
+    ]
+
+    categories = {}
+    for iss in all_issues:
+        categories.setdefault(iss['category'], []).append(iss)
+
+    for category, items in categories.items():
+        lines.append(f'## {category}')
+        lines.append('')
+        lines.append('| Check | Severity | Issues |')
+        lines.append('|-------|----------|--------|')
+        for iss in items:
+            sev_icon = {'ok': 'OK', 'warn': 'WARN', 'fail': 'FAIL'}.get(iss['severity'], '?')
+            lines.append(f"| {iss['check']} | {sev_icon} | {iss['count']} |")
+        lines.append('')
+
+        for iss in items:
+            if iss['details'] and iss['severity'] != 'ok':
+                lines.append(f"### {iss['check']}")
+                lines.append('')
+                for detail in iss['details']:
+                    lines.append(f'- {detail}')
+                lines.append('')
+
+    report_path.write_text('\n'.join(lines), encoding='utf-8')
+    return str(report_path)
 
 
 def main():
@@ -278,6 +479,9 @@ def main():
                         help=f'Use simulation database: {SIM_DB_PATH}')
     parser.add_argument('--db-path', type=str, default=None,
                         help='Path to SQLite database file')
+    parser.add_argument('--no-report', action='store_true',
+                        help='Skip writing the markdown report file')
+
     args = parser.parse_args()
 
     if args.db_path:
@@ -285,23 +489,38 @@ def main():
     elif args.sim_db:
         db_path = str(SIM_DB_PATH)
     else:
-        print("Error: Specify --sim-db or --db-path <path>")
+        print('Error: Specify --sim-db or --db-path <path>')
         sys.exit(1)
 
     if not os.path.exists(db_path):
-        print(f"Error: Database not found: {db_path}")
+        print(f'Error: Database not found: {db_path}')
         sys.exit(1)
 
+    print(f'\nRunning health checks on: {db_path}')
+    print(f'Database size: {os.path.getsize(db_path) / 1024 / 1024:.1f} MB')
+
     conn = get_connection(db_path)
-    results = check_data_integrity(conn)
-    results += check_business_logic(conn)
+    all_issues = []
+
+    print('\n[1/3] Data integrity checks...')
+    all_issues.extend(check_data_integrity(conn))
+
+    print('[2/3] Business logic checks...')
+    all_issues.extend(check_business_logic(conn))
+
     conn.close()
 
-    for r in results:
-        icon = {'ok': '[OK]', 'warn': '[WARN]', 'fail': '[FAIL]'}.get(r['severity'], '[?]')
-        print(f"{icon} {r['check']} ({r['count']} issues)")
-        for d in r['details'][:3]:
-            print(f"    -> {d}")
+    print('[3/3] Performance checks...')
+    all_issues.extend(check_performance(db_path))
+
+    print_summary(all_issues)
+
+    if not args.no_report:
+        report_path = write_report(all_issues, db_path)
+        print(f'\nFull report saved to: {report_path}')
+
+    has_failures = any(iss['severity'] == 'fail' for iss in all_issues)
+    sys.exit(1 if has_failures else 0)
 
 
 if __name__ == '__main__':
