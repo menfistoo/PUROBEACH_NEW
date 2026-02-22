@@ -5,6 +5,8 @@ Handles efficient multi-furniture/multi-date availability queries.
 Phase 6B - Module 1
 """
 
+import sqlite3
+
 from database import get_db
 from .reservation_state import get_active_releasing_states
 
@@ -13,10 +15,85 @@ from .reservation_state import get_active_releasing_states
 # BULK AVAILABILITY
 # =============================================================================
 
-def check_furniture_availability_bulk(
+def _check_availability_with_conn(
+    conn: sqlite3.Connection,
+    releasing_states: list,
     furniture_ids: list,
     dates: list,
     exclude_reservation_id: int = None
+) -> dict:
+    """
+    Execute the availability query on an existing connection.
+    Accepts pre-fetched releasing_states to avoid nested context manager calls.
+    """
+    cursor = conn.cursor()
+
+    placeholders_furniture = ','.join('?' * len(furniture_ids))
+    placeholders_dates = ','.join('?' * len(dates))
+
+    query = f'''
+        SELECT rf.furniture_id, rf.assignment_date, r.id as reservation_id,
+               r.ticket_number, r.current_state,
+               f.number as furniture_number,
+               c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
+               c.room_number
+        FROM beach_reservation_furniture rf
+        JOIN beach_reservations r ON rf.reservation_id = r.id
+        JOIN beach_customers c ON r.customer_id = c.id
+        JOIN beach_furniture f ON rf.furniture_id = f.id
+        WHERE rf.furniture_id IN ({placeholders_furniture})
+          AND rf.assignment_date IN ({placeholders_dates})
+    '''
+    params = list(furniture_ids) + list(dates)
+
+    if releasing_states:
+        placeholders_states = ','.join('?' * len(releasing_states))
+        query += f' AND r.current_state NOT IN ({placeholders_states})'
+        params.extend(releasing_states)
+
+    if exclude_reservation_id:
+        query += ' AND r.id != ?'
+        params.append(exclude_reservation_id)
+
+    cursor.execute(query, params)
+    conflicts = cursor.fetchall()
+
+    unavailable = []
+    conflict_set = set()
+
+    for row in conflicts:
+        assignment_date = row['assignment_date']
+        if hasattr(assignment_date, 'strftime'):
+            assignment_date = assignment_date.strftime('%Y-%m-%d')
+        unavailable.append({
+            'furniture_id': row['furniture_id'],
+            'furniture_number': row['furniture_number'],
+            'date': assignment_date,
+            'reservation_id': row['reservation_id'],
+            'ticket_number': row['ticket_number'],
+            'customer_name': row['customer_name'],
+            'room_number': row['room_number']
+        })
+        conflict_set.add((row['furniture_id'], assignment_date))
+
+    availability_matrix = {}
+    for date in dates:
+        availability_matrix[date] = {}
+        for furn_id in furniture_ids:
+            availability_matrix[date][furn_id] = (furn_id, date) not in conflict_set
+
+    return {
+        'all_available': len(unavailable) == 0,
+        'unavailable': unavailable,
+        'availability_matrix': availability_matrix
+    }
+
+
+def check_furniture_availability_bulk(
+    furniture_ids: list,
+    dates: list,
+    exclude_reservation_id: int = None,
+    conn: sqlite3.Connection | None = None
 ) -> dict:
     """
     Check availability of multiple furniture items for multiple dates.
@@ -26,6 +103,10 @@ def check_furniture_availability_bulk(
         furniture_ids: List of furniture IDs to check
         dates: List of dates (YYYY-MM-DD strings)
         exclude_reservation_id: Reservation ID to exclude (for updates)
+        conn: Optional existing db connection. When provided, uses it directly
+              without opening a new context manager — prevents nested
+              with-get_db() commits from prematurely committing an outer
+              BEGIN IMMEDIATE transaction.
 
     Returns:
         dict: {
@@ -46,76 +127,24 @@ def check_furniture_availability_bulk(
             'availability_matrix': {}
         }
 
-    with get_db() as conn:
-        cursor = conn.cursor()
+    if conn is not None:
+        # Use provided connection — fetch releasing states on the same conn
+        # to avoid any nested context manager that would commit the outer transaction.
+        rows = conn.execute(
+            'SELECT name FROM beach_reservation_states WHERE is_availability_releasing = 1 AND active = 1'
+        ).fetchall()
+        releasing_states = [row['name'] for row in rows]
+        return _check_availability_with_conn(
+            conn, releasing_states, furniture_ids, dates, exclude_reservation_id
+        )
 
-        releasing_states = get_active_releasing_states()
-
-        # Build query to find all conflicts
-        placeholders_furniture = ','.join('?' * len(furniture_ids))
-        placeholders_dates = ','.join('?' * len(dates))
-
-        query = f'''
-            SELECT rf.furniture_id, rf.assignment_date, r.id as reservation_id,
-                   r.ticket_number, r.current_state,
-                   f.number as furniture_number,
-                   c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
-                   c.room_number
-            FROM beach_reservation_furniture rf
-            JOIN beach_reservations r ON rf.reservation_id = r.id
-            JOIN beach_customers c ON r.customer_id = c.id
-            JOIN beach_furniture f ON rf.furniture_id = f.id
-            WHERE rf.furniture_id IN ({placeholders_furniture})
-              AND rf.assignment_date IN ({placeholders_dates})
-        '''
-        params = list(furniture_ids) + list(dates)
-
-        # Exclude releasing states (Cancelada, No-Show, Liberada)
-        if releasing_states:
-            placeholders_states = ','.join('?' * len(releasing_states))
-            query += f' AND r.current_state NOT IN ({placeholders_states})'
-            params.extend(releasing_states)
-
-        # Exclude specific reservation (for updates)
-        if exclude_reservation_id:
-            query += ' AND r.id != ?'
-            params.append(exclude_reservation_id)
-
-        cursor.execute(query, params)
-        conflicts = cursor.fetchall()
-
-        # Build unavailable list
-        # Note: assignment_date may be returned as datetime.date object, convert to string
-        unavailable = []
-        conflict_set = set()  # (furniture_id, date) tuples
-
-        for row in conflicts:
-            assignment_date = row['assignment_date']
-            if hasattr(assignment_date, 'strftime'):
-                assignment_date = assignment_date.strftime('%Y-%m-%d')
-            unavailable.append({
-                'furniture_id': row['furniture_id'],
-                'furniture_number': row['furniture_number'],
-                'date': assignment_date,
-                'reservation_id': row['reservation_id'],
-                'ticket_number': row['ticket_number'],
-                'customer_name': row['customer_name'],
-                'room_number': row['room_number']
-            })
-            conflict_set.add((row['furniture_id'], assignment_date))
-
-        # Build availability matrix
-        availability_matrix = {}
-        for date in dates:
-            availability_matrix[date] = {}
-            for furn_id in furniture_ids:
-                availability_matrix[date][furn_id] = (furn_id, date) not in conflict_set
-
-        return {
-            'all_available': len(unavailable) == 0,
-            'unavailable': unavailable,
-            'availability_matrix': availability_matrix
-        }
+    # Standalone call: safe to fetch releasing states via get_active_releasing_states()
+    # since there is no outer transaction to disturb.
+    releasing_states = get_active_releasing_states()
+    with get_db() as inner_conn:
+        return _check_availability_with_conn(
+            inner_conn, releasing_states, furniture_ids, dates, exclude_reservation_id
+        )
 
 
 # =============================================================================

@@ -82,3 +82,6 @@ tmpclaude-*-cwd
 .auto-claude/
 .playwright-mcp/
 NUL
+
+# Simulation database - never commit
+database/beach_club_sim.db

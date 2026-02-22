@@ -12,6 +12,9 @@ Usage:
     python scripts/simulate_month.py                    # Run simulation
     python scripts/simulate_month.py --dry-run          # Preview what would be created
     python scripts/simulate_month.py --start-date 2026-02-01  # Custom start date
+    python scripts/simulate_month.py --month 2026-03    # Simulate specific month
+    python scripts/simulate_month.py --high-occupancy   # Force 80-100% occupancy
+    python scripts/simulate_month.py --sim-db           # Use simulation database
 """
 
 import sys
@@ -32,9 +35,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import app factory for context
-from app import create_app
-
 # These imports must happen after path setup
 from database import get_db
 from models.customer_crud import create_customer, get_all_customers
@@ -46,8 +46,18 @@ from models.furniture_daily import create_temporary_furniture, get_next_temp_fur
 from models.furniture_block import create_furniture_block
 from models.zone import get_all_zones
 
-# Create Flask app for database context
-app = create_app('development')
+
+# =============================================================================
+# SIMULATION CONSTANTS
+# =============================================================================
+
+SIM_DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    'database', 'beach_club_sim.db'
+)
+
+HIGH_OCCUPANCY_WEEKDAY = (80, 100)
+HIGH_OCCUPANCY_WEEKEND = (95, 100)
 
 
 # =============================================================================
@@ -150,8 +160,10 @@ def weighted_choice(options: dict):
     return random.choices(items, weights=weights, k=1)[0]
 
 
-def get_occupancy_target(week_number: int) -> tuple:
+def get_occupancy_target(week_number: int, high_occupancy: bool = False) -> tuple:
     """Get occupancy target range for a week."""
+    if high_occupancy:
+        return HIGH_OCCUPANCY_WEEKDAY
     return WEEKLY_OCCUPANCY.get(week_number, (50, 70))
 
 
@@ -326,7 +338,7 @@ def generate_reservations_for_date(
                 charge_to_room = 0
 
             paid = 1 if payment_method else 0
-            num_people = random.randint(1, min(4, furn.get('capacity', 4)))
+            num_people = random.randint(1, max(1, min(4, furn.get('capacity', 4))))
 
             if not dry_run:
                 try:
@@ -369,7 +381,7 @@ def generate_reservations_for_date(
                 charge_to_room = 0
 
             paid = 1 if payment_method else 0
-            num_people = random.randint(1, min(4, furn.get('capacity', 4)))
+            num_people = random.randint(1, max(1, min(4, furn.get('capacity', 4))))
 
             if not dry_run:
                 try:
@@ -417,7 +429,7 @@ def generate_reservations_for_date(
                 charge_to_room = 0
 
             paid = 1 if payment_method else 0
-            num_people = random.randint(1, min(4, furn.get('capacity', 4)))
+            num_people = random.randint(1, max(1, min(4, furn.get('capacity', 4))))
 
             if not dry_run:
                 try:
@@ -589,14 +601,21 @@ def generate_furniture_blocks(
         reason = 'Mantenimiento programado' if block_type == 'maintenance' else 'Reserva VIP especial'
 
         if not dry_run:
-            block_id = create_furniture_block(
-                furniture_id=furn['id'],
-                start_date=start_str,
-                end_date=end_str,
-                block_type=block_type,
-                reason=reason,
-                created_by='simulation'
-            )
+            try:
+                block_id = create_furniture_block(
+                    furniture_id=furn['id'],
+                    start_date=start_str,
+                    end_date=end_str,
+                    block_type=block_type,
+                    reason=reason,
+                    created_by='simulation'
+                )
+            except ValueError as e:
+                # Bug #45 fix: create_furniture_block raises ValueError when active
+                # reservations exist on the requested dates.  Skip this block and
+                # continue — this is the expected, correct behaviour.
+                logger.debug(f"Skipped {block_type} block on {furn['number']} ({start_str}–{end_str}): {e}")
+                continue
 
             created.append({
                 'id': block_id,
@@ -620,13 +639,14 @@ def generate_furniture_blocks(
 # MAIN SIMULATION
 # =============================================================================
 
-def run_simulation(start_date: datetime, dry_run: bool = False) -> dict:
+def run_simulation(start_date: datetime, dry_run: bool = False, high_occupancy: bool = False) -> dict:
     """
     Run the full month simulation.
 
     Args:
         start_date: Simulation start date
         dry_run: If True, don't actually create anything
+        high_occupancy: If True, force 80-100% occupancy every day
 
     Returns:
         Summary of created data
@@ -640,6 +660,7 @@ def run_simulation(start_date: datetime, dry_run: bool = False) -> dict:
     print(f"Start Date: {start_date.strftime('%Y-%m-%d')}")
     print(f"End Date: {end_date.strftime('%Y-%m-%d')}")
     print(f"Mode: {'DRY RUN (preview only)' if dry_run else 'LIVE'}")
+    print(f"High Occupancy: {'YES (80-100% weekdays, 95-100% weekends)' if high_occupancy else 'NO (normal pattern)'}")
     print("=" * 60)
     print()
 
@@ -683,16 +704,11 @@ def run_simulation(start_date: datetime, dry_run: bool = False) -> dict:
         print(f"  {'Would create' if dry_run else 'Created'} {tf['number']}: {tf['start_date']} to {tf['end_date']}")
     print()
 
-    # Step 4: Generate furniture blocks
-    print("[4/5] Generating furniture blocks...")
-    blocks = generate_furniture_blocks(start_date, furniture, dry_run)
-    results['furniture_blocks'] = len(blocks)
-    for block in blocks:
-        print(f"  {'Would create' if dry_run else 'Created'} {block['type']} block on {block['furniture_number']}: {block['start_date']} to {block['end_date']}")
-    print()
-
-    # Step 5: Generate reservations
-    print("[5/5] Generating reservations...")
+    # Step 4: Generate reservations (blocks must come AFTER so the conflict
+    # check in create_furniture_block can reject blocks that would overlap
+    # active reservations — this is what Bug #45 protects against)
+    print("[4/5] Generating reservations...")
+    # (furniture blocks generated in step 5, after reservations)
 
     current_week = 0
     week_reservations = 0
@@ -705,7 +721,7 @@ def run_simulation(start_date: datetime, dry_run: bool = False) -> dict:
         # Track weekly progress
         if week_num != current_week:
             if current_week > 0:
-                min_occ, max_occ = get_occupancy_target(current_week)
+                min_occ, max_occ = get_occupancy_target(current_week, high_occupancy)
                 target_avg = (min_occ + max_occ) / 2
                 results['weekly_stats'][current_week] = week_reservations
                 print(f"  Week {current_week} complete: {week_reservations} reservations, ~{int(target_avg)}% target occupancy")
@@ -715,13 +731,12 @@ def run_simulation(start_date: datetime, dry_run: bool = False) -> dict:
             week_start = current_date
 
         # Get occupancy target for current week
-        min_occupancy, max_occupancy = get_occupancy_target(week_num)
-
-        # Weekends have higher occupancy
-        if is_weekend(current_date):
-            occupancy = random.randint(min(95, max_occupancy), min(100, max_occupancy + 10))
+        if high_occupancy and is_weekend(current_date):
+            min_occupancy, max_occupancy = HIGH_OCCUPANCY_WEEKEND
         else:
-            occupancy = random.randint(min_occupancy, max_occupancy)
+            min_occupancy, max_occupancy = get_occupancy_target(week_num, high_occupancy)
+
+        occupancy = random.randint(min_occupancy, max_occupancy)
 
         # Reload furniture for this date (to include temp furniture)
         date_str = current_date.strftime('%Y-%m-%d')
@@ -746,11 +761,21 @@ def run_simulation(start_date: datetime, dry_run: bool = False) -> dict:
 
     # Final week stats
     if current_week > 0:
-        min_occ, max_occ = get_occupancy_target(current_week)
+        min_occ, max_occ = get_occupancy_target(current_week, high_occupancy)
         target_avg = (min_occ + max_occ) / 2
         results['weekly_stats'][current_week] = week_reservations
         print(f"  Week {current_week} complete: {week_reservations} reservations, ~{int(target_avg)}% target occupancy")
 
+    print()
+
+    # Step 5: Generate furniture blocks AFTER reservations so that
+    # create_furniture_block can correctly reject any block that conflicts
+    # with an active reservation (Bug #45 fix verification).
+    print("[5/5] Generating furniture blocks (after reservations, conflict check active)...")
+    blocks = generate_furniture_blocks(start_date, furniture, dry_run)
+    results['furniture_blocks'] = len(blocks)
+    for block in blocks:
+        print(f"  {'Would create' if dry_run else 'Created'} {block['type']} block on {block['furniture_number']}: {block['start_date']} to {block['end_date']}")
     print()
 
     # Print summary
@@ -775,31 +800,49 @@ def main():
     parser = argparse.ArgumentParser(
         description='Generate one month of beach club simulation data'
     )
-    parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Preview what would be created without making changes'
-    )
-    parser.add_argument(
-        '--start-date',
-        type=str,
-        default=None,
-        help='Start date for simulation (YYYY-MM-DD). Default: today'
-    )
-    parser.add_argument(
-        '--verbose', '-v',
-        action='store_true',
-        help='Show debug output including skipped reservations'
-    )
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Preview what would be created without making changes')
+    parser.add_argument('--start-date', type=str, default=None,
+                        help='Start date for simulation (YYYY-MM-DD). Default: today')
+    parser.add_argument('--month', type=str, default=None,
+                        help='Month for simulation (YYYY-MM). Alternative to --start-date')
+    parser.add_argument('--high-occupancy', action='store_true',
+                        help='Force 80-100%% occupancy every day (stress test mode)')
+    parser.add_argument('--sim-db', action='store_true',
+                        help=f'Use simulation database: {SIM_DB_PATH}')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='Show debug output including skipped reservations')
 
     args = parser.parse_args()
 
-    # Set logging level based on verbosity
+    if args.month and args.start_date:
+        print("Error: --month and --start-date are mutually exclusive. Use one or the other.")
+        sys.exit(1)
+
+    # Set simulation database BEFORE creating Flask app
+    if args.sim_db:
+        if not os.path.exists(SIM_DB_PATH):
+            print(f"Error: Simulation database not found at {SIM_DB_PATH}")
+            print("Run: cp instance/beach_club.db database/beach_club_sim.db")
+            sys.exit(1)
+        os.environ['DATABASE_PATH'] = SIM_DB_PATH
+        print(f"Using simulation database: {SIM_DB_PATH}")
+
+    # Create Flask app AFTER setting DATABASE_PATH
+    from app import create_app
+    app = create_app('development')
+
     if args.verbose:
         logging.getLogger(__name__).setLevel(logging.DEBUG)
 
     # Parse start date
-    if args.start_date:
+    if args.month:
+        try:
+            start_date = datetime.strptime(args.month, '%Y-%m')
+        except ValueError:
+            print(f"Error: Invalid month format '{args.month}'. Use YYYY-MM")
+            sys.exit(1)
+    elif args.start_date:
         try:
             start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
         except ValueError:
@@ -808,10 +851,13 @@ def main():
     else:
         start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # Run simulation within Flask app context
     with app.app_context():
         try:
-            results = run_simulation(start_date, dry_run=args.dry_run)
+            results = run_simulation(
+                start_date,
+                dry_run=args.dry_run,
+                high_occupancy=args.high_occupancy
+            )
             sys.exit(0)
         except Exception as e:
             print(f"\nError during simulation: {e}")
