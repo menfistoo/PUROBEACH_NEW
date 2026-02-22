@@ -5,6 +5,8 @@ Handles efficient multi-furniture/multi-date availability queries.
 Phase 6B - Module 1
 """
 
+import sqlite3
+
 from database import get_db
 from .reservation_state import get_active_releasing_states
 
@@ -14,7 +16,7 @@ from .reservation_state import get_active_releasing_states
 # =============================================================================
 
 def _check_availability_with_conn(
-    conn,
+    conn: sqlite3.Connection,
     releasing_states: list,
     furniture_ids: list,
     dates: list,
@@ -91,7 +93,7 @@ def check_furniture_availability_bulk(
     furniture_ids: list,
     dates: list,
     exclude_reservation_id: int = None,
-    conn=None
+    conn: sqlite3.Connection | None = None
 ) -> dict:
     """
     Check availability of multiple furniture items for multiple dates.
@@ -129,7 +131,7 @@ def check_furniture_availability_bulk(
         # Use provided connection — fetch releasing states on the same conn
         # to avoid any nested context manager that would commit the outer transaction.
         rows = conn.execute(
-            'SELECT name FROM beach_reservation_states WHERE is_availability_releasing = 1'
+            'SELECT name FROM beach_reservation_states WHERE is_availability_releasing = 1 AND active = 1'
         ).fetchall()
         releasing_states = [row['name'] for row in rows]
         return _check_availability_with_conn(
