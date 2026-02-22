@@ -54,8 +54,8 @@ def get_reconciliation_data(
         LEFT JOIN beach_packages p ON r.package_id = p.id
         LEFT JOIN beach_reservation_states rs ON r.state_id = rs.id
         WHERE r.start_date = ?
-        AND r.reservation_type IN ('paquete', 'consumo_minimo')
         AND COALESCE(rs.is_availability_releasing, 0) = 0
+        AND r.reservation_type != 'bloqueo'
     """
 
     params: list[Any] = [date]
@@ -106,8 +106,8 @@ def get_payment_summary(date: str) -> dict[str, Any]:
             FROM beach_reservations r
             LEFT JOIN beach_reservation_states rs ON r.state_id = rs.id
             WHERE r.start_date = ?
-            AND r.reservation_type IN ('paquete', 'consumo_minimo')
             AND COALESCE(rs.is_availability_releasing, 0) = 0
+            AND r.reservation_type != 'bloqueo'
             AND r.paid = 1
             GROUP BY r.payment_method
         """, (date,))
@@ -131,8 +131,8 @@ def get_payment_summary(date: str) -> dict[str, Any]:
             FROM beach_reservations r
             LEFT JOIN beach_reservation_states rs ON r.state_id = rs.id
             WHERE r.start_date = ?
-            AND r.reservation_type IN ('paquete', 'consumo_minimo')
             AND COALESCE(rs.is_availability_releasing, 0) = 0
+            AND r.reservation_type != 'bloqueo'
             AND r.paid = 0
         """, (date,))
 
@@ -148,8 +148,8 @@ def get_payment_summary(date: str) -> dict[str, Any]:
             FROM beach_reservations r
             LEFT JOIN beach_reservation_states rs ON r.state_id = rs.id
             WHERE r.start_date = ?
-            AND r.reservation_type IN ('paquete', 'consumo_minimo')
             AND COALESCE(rs.is_availability_releasing, 0) = 0
+            AND r.reservation_type != 'bloqueo'
             AND r.paid = 1
         """, (date,))
 
