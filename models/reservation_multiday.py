@@ -137,7 +137,7 @@ def create_linked_multiday_reservations(
                     # Per-date availability check when using furniture_by_date
                     # Each date has specific furniture, check only those for that date
                     for date, date_furniture_ids in furniture_by_date.items():
-                        avail_result = check_furniture_availability_bulk(date_furniture_ids, [date])
+                        avail_result = check_furniture_availability_bulk(date_furniture_ids, [date], conn=conn)
                         if not avail_result['all_available']:
                             unavail = avail_result['unavailable'][0]
                             raise ValueError(
@@ -146,7 +146,7 @@ def create_linked_multiday_reservations(
                             )
                 else:
                     # Same furniture for all days - check all against all
-                    avail_result = check_furniture_availability_bulk(all_furniture_ids, dates)
+                    avail_result = check_furniture_availability_bulk(all_furniture_ids, dates, conn=conn)
                     if not avail_result['all_available']:
                         unavail = avail_result['unavailable'][0]
                         raise ValueError(

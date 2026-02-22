@@ -611,3 +611,72 @@ class TestNoOrphanedReservationOnUnavailableFurniture:
             assert count_after == count_before, (
                 f"Orphaned reservation(s) left in DB: {count_after - count_before} extra"
             )
+
+
+class TestNoOrphanedMultidayReservationOnUnavailableFurniture:
+    """create_linked_multiday_reservations must not leave orphans when furniture is taken."""
+
+    def _make_furniture(self, conn, zone_id: int, number: str) -> int:
+        cursor = conn.execute(
+            "INSERT INTO beach_furniture (number, zone_id, furniture_type, capacity, active) "
+            "VALUES (?, ?, 'hamaca', 2, 1)",
+            (number, zone_id)
+        )
+        return cursor.lastrowid
+
+    def _make_customer(self, conn, email: str) -> int:
+        cursor = conn.execute(
+            "INSERT INTO beach_customers "
+            "(first_name, last_name, customer_type, email, phone, created_at) "
+            "VALUES ('Multi', 'Test', 'externo', ?, ?, datetime('now'))",
+            (email, f'6{abs(hash(email)) % 100000000:08d}')
+        )
+        return cursor.lastrowid
+
+    def test_no_orphaned_reservation_when_multiday_furniture_unavailable(self, app):
+        """Multiday creation must roll back fully when any date's furniture is taken."""
+        from models.reservation_crud import create_beach_reservation
+        from models.reservation_multiday import create_linked_multiday_reservations
+
+        with app.app_context():
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute('SELECT id FROM beach_zones LIMIT 1')
+            zone_id = cursor.fetchone()['id']
+
+            furniture_id = self._make_furniture(db, zone_id, 'MULTIORPHAN01')
+            cust1 = self._make_customer(db, 'multi_cust1@test.com')
+            cust2 = self._make_customer(db, 'multi_cust2@test.com')
+            db.commit()
+
+            # Block furniture on day 3 of the range with a single-day reservation
+            create_beach_reservation(
+                customer_id=cust1,
+                reservation_date='2099-07-17',
+                num_people=2,
+                furniture_ids=[furniture_id],
+                created_by='test'
+            )
+
+            cursor.execute('SELECT COUNT(*) as cnt FROM beach_reservations')
+            count_before = cursor.fetchone()['cnt']
+
+            # Multiday spanning 2099-07-15 to 2099-07-19 must fail because
+            # furniture is taken on 2099-07-17
+            with pytest.raises(ValueError, match="no disponible"):
+                create_linked_multiday_reservations(
+                    customer_id=cust2,
+                    dates=['2099-07-15', '2099-07-16', '2099-07-17', '2099-07-18', '2099-07-19'],
+                    num_people=2,
+                    furniture_ids=[furniture_id],
+                    created_by='test',
+                    validate_availability=True,
+                    validate_duplicates=False
+                )
+
+            # No orphaned reservations must exist
+            cursor.execute('SELECT COUNT(*) as cnt FROM beach_reservations')
+            count_after = cursor.fetchone()['cnt']
+            assert count_after == count_before, (
+                f"Orphaned multiday reservation(s) in DB: {count_after - count_before} extra"
+            )
