@@ -62,7 +62,7 @@ def create_furniture_block(
         # Fetch releasing states directly on this connection to avoid nested context manager.
         # (get_db() always returns the same g.db; a nested with-get_db() would commit this transaction.)
         releasing_rows = conn.execute(
-            'SELECT name FROM beach_reservation_states WHERE is_availability_releasing = 1'
+            'SELECT name FROM beach_reservation_states WHERE is_availability_releasing = 1 AND active = 1'
         ).fetchall()
         releasing_states = [row['name'] for row in releasing_rows]
 

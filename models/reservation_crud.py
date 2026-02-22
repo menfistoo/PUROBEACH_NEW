@@ -462,10 +462,14 @@ def update_reservation_with_furniture(
             availability = check_furniture_availability_bulk(
                 furniture_ids=furniture_ids,
                 dates=[res_date],
-                exclude_reservation_id=reservation_id
+                exclude_reservation_id=reservation_id,
+                conn=conn
             )
-            if availability.get('conflicts'):
-                conflict_ids = list(availability['conflicts'].keys())
+            if availability.get('unavailable'):
+                unavail_items = availability['unavailable']
+                conflict_ids = list(set(
+                    item['furniture_id'] for item in unavail_items
+                ))
                 raise ValueError(f"Mobiliario no disponible: {conflict_ids}")
 
             # Clear existing assignments
