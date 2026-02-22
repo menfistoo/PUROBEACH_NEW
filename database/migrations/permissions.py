@@ -343,8 +343,12 @@ def migrate_add_payment_reconciliation_permission() -> bool:
         manager_row = cursor.fetchone()
         manager_role_id = manager_row[0] if manager_row else None
 
-        # Assign permission and parent menu to roles
-        for role_name, role_id in [('admin', admin_role_id), ('manager', manager_role_id)]:
+        cursor.execute("SELECT id FROM roles WHERE name = 'staff'")
+        staff_row = cursor.fetchone()
+        staff_role_id = staff_row[0] if staff_row else None
+
+        # Assign permission and parent menu to roles (staff can view reconciliation)
+        for role_name, role_id in [('admin', admin_role_id), ('manager', manager_role_id), ('staff', staff_role_id)]:
             if role_id:
                 cursor.execute("""
                     INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
@@ -358,6 +362,72 @@ def migrate_add_payment_reconciliation_permission() -> bool:
 
         db.commit()
         print("Payment reconciliation permission created successfully")
+        return True
+
+    except Exception as e:
+        db.rollback()
+        print(f"Migration failed: {e}")
+        raise
+
+
+def migrate_add_staff_payment_reconciliation_permission() -> bool:
+    """
+    Grant staff role access to payment reconciliation report.
+
+    This migration runs on existing databases where the permission was created
+    for admin/manager only. Adds beach.reports.payment_reconciliation and
+    the parent menu.reports to the staff role.
+
+    Returns:
+        True if migration applied, False if already applied
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if staff already has this permission
+    cursor.execute('''
+        SELECT 1 FROM role_permissions rp
+        JOIN roles r ON rp.role_id = r.id
+        JOIN permissions p ON rp.permission_id = p.id
+        WHERE r.name = 'staff'
+        AND p.code = 'beach.reports.payment_reconciliation'
+    ''')
+    if cursor.fetchone():
+        print("Staff already has beach.reports.payment_reconciliation permission.")
+        return False
+
+    print("Granting staff access to payment reconciliation...")
+
+    try:
+        cursor.execute("SELECT id FROM roles WHERE name = 'staff'")
+        staff_row = cursor.fetchone()
+        if not staff_row:
+            print("Staff role not found, skipping.")
+            return False
+        staff_role_id = staff_row[0]
+
+        # Grant permission itself
+        cursor.execute("SELECT id FROM permissions WHERE code = 'beach.reports.payment_reconciliation'")
+        perm_row = cursor.fetchone()
+        if perm_row:
+            cursor.execute('''
+                INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+                VALUES (?, ?)
+            ''', (staff_role_id, perm_row[0]))
+            print("  Granted beach.reports.payment_reconciliation to staff")
+
+        # Grant parent menu so it appears in sidebar
+        cursor.execute("SELECT id FROM permissions WHERE code = 'menu.reports'")
+        menu_row = cursor.fetchone()
+        if menu_row:
+            cursor.execute('''
+                INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+                VALUES (?, ?)
+            ''', (staff_role_id, menu_row[0]))
+            print("  Granted menu.reports to staff")
+
+        db.commit()
+        print("Staff payment reconciliation permission granted successfully.")
         return True
 
     except Exception as e:

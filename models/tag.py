@@ -355,7 +355,7 @@ def sync_customer_tags_to_reservations(customer_id: int, tag_ids: list, replace:
         cursor.execute('''
             SELECT id FROM beach_reservations
             WHERE customer_id = ?
-            AND (reservation_date >= date('now') OR end_date >= date('now'))
+            AND (start_date >= date('now') OR end_date >= date('now'))
         ''', (customer_id,))
         reservation_ids = [r['id'] for r in cursor.fetchall()]
 
