@@ -40,6 +40,7 @@ from .furniture_extensions import (
     migrate_furniture_fill_color,
     migrate_add_temporary_furniture_permission
 )
+from .furniture_label import migrate_furniture_label
 from .pricing import (
     migrate_create_beach_packages,
     migrate_minimum_consumption_calculation_type
@@ -128,6 +129,9 @@ MIGRATIONS = [
 
     # Phase 17: Zone-based numbering
     ('zone_number_start', migrate_zone_number_start),
+
+    # Phase 18: Decorative furniture labels
+    ('furniture_label', migrate_furniture_label),
 ]
 
 
@@ -222,4 +226,5 @@ __all__ = [
     'migrate_fix_reports_menu',
     'migrate_add_staff_payment_reconciliation_permission',
     'migrate_zone_number_start',
+    'migrate_furniture_label',
 ]

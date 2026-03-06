@@ -246,6 +246,12 @@ export function bindPropertyPanel(editor, options = {}) {
         });
     });
 
+    // Label input (text, for decorative items)
+    el('prop-label')?.addEventListener('change', function () {
+        const value = this.value.trim() || null;
+        editor.updateSelectedProperty('label', value);
+    });
+
     // Zone selector (special handling - updates zone_id and auto-assigns next number)
     el('prop-zone')?.addEventListener('change', async function () {
         const zoneId = parseInt(this.value);
@@ -468,6 +474,16 @@ export function bindEditorEvents(editor, options = {}) {
             const isDecorative = selected.typeInfo?.is_decorative || selected.is_decorative;
             el('prop-capacity-group').style.display = isDecorative ? 'none' : 'block';
             el('prop-features-group').style.display = isDecorative ? 'none' : 'block';
+
+            // Label field (decorative only)
+            const labelGroup = el('prop-label-group');
+            const labelInput = el('prop-label');
+            if (labelGroup) {
+                labelGroup.style.display = isDecorative ? 'block' : 'none';
+            }
+            if (labelInput) {
+                labelInput.value = selected.label || '';
+            }
         }
 
         if (featureManager) featureManager.renderFeatures(selected.features);

@@ -198,6 +198,16 @@ export const SelectionMixin = (Base) => class extends Base {
             capacityGroup.style.display = type.is_decorative ? 'none' : 'block';
         }
 
+        // Label property (decorative only)
+        const labelGroup = document.getElementById('prop-label-group');
+        const labelInput = document.getElementById('prop-label');
+        if (labelGroup) {
+            labelGroup.style.display = type.is_decorative ? 'block' : 'none';
+        }
+        if (labelInput) {
+            labelInput.value = item.label || '';
+        }
+
         this.propertiesPanel.classList.add('active');
     }
 };

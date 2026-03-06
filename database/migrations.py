@@ -47,6 +47,7 @@ from database.migrations import (
     migrate_add_blocking_permission,
     migrate_furniture_fill_color,
     migrate_add_temporary_furniture_permission,
+    migrate_furniture_label,
 )
 
 __all__ = [
@@ -73,4 +74,5 @@ __all__ = [
     'migrate_add_blocking_permission',
     'migrate_furniture_fill_color',
     'migrate_add_temporary_furniture_permission',
+    'migrate_furniture_label',
 ]

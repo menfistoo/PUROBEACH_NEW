@@ -165,7 +165,7 @@ def register_routes(bp):
         updates = {}
 
         # Allowed fields for update
-        allowed = ['number', 'capacity', 'rotation', 'width', 'height', 'features', 'fill_color', 'zone_id']
+        allowed = ['number', 'capacity', 'rotation', 'width', 'height', 'features', 'fill_color', 'zone_id', 'label']
         for field in allowed:
             if field in data:
                 updates[field] = data[field]

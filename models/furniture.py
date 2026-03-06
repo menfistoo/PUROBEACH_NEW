@@ -137,6 +137,7 @@ def create_furniture(number: str, zone_id: int, furniture_type: str, capacity: i
         is_temporary = kwargs.get('is_temporary', 0)
         valid_date = kwargs.get('valid_date', None)
         fill_color = kwargs.get('fill_color', None)
+        label = kwargs.get('label', None)
 
         # Convert features to JSON string for legacy column
         features_json = _normalize_features_to_json(features_input)
@@ -144,10 +145,10 @@ def create_furniture(number: str, zone_id: int, furniture_type: str, capacity: i
         cursor.execute('''
             INSERT INTO beach_furniture
             (number, zone_id, furniture_type, capacity, position_x, position_y,
-             rotation, width, height, features, is_temporary, valid_date, fill_color)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             rotation, width, height, features, is_temporary, valid_date, fill_color, label)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (number, zone_id, furniture_type, capacity, position_x, position_y,
-              rotation, width, height, features_json, is_temporary, valid_date, fill_color))
+              rotation, width, height, features_json, is_temporary, valid_date, fill_color, label))
 
         furniture_id = cursor.lastrowid
         conn.commit()
@@ -173,7 +174,7 @@ def update_furniture(furniture_id: int, **kwargs) -> bool:
 
     with get_db() as conn:
         allowed_fields = ['number', 'zone_id', 'capacity', 'position_x', 'position_y',
-                          'rotation', 'width', 'height', 'active', 'fill_color']
+                          'rotation', 'width', 'height', 'active', 'fill_color', 'label']
         updates = []
         values = []
 

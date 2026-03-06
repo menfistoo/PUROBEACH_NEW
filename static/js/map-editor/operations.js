@@ -339,6 +339,17 @@ export const OperationsMixin = (Base) => class extends Base {
                 }
             }
             await this.saveFurnitureProperty(item.id, property, value);
+        } else if (property === 'label') {
+            // Update displayed text on the map for decorative items
+            const group = this.furnitureLayer.querySelector(`[data-id="${item.id}"]`);
+            if (group) {
+                const text = group.querySelector('.furniture-number');
+                if (text) {
+                    const displayText = value || item.number;
+                    text.textContent = displayText;
+                }
+            }
+            await this.saveFurnitureProperty(item.id, property, value);
         } else {
             await this.saveFurnitureProperty(item.id, property, value);
         }

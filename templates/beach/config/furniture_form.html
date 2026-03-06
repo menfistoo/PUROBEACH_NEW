@@ -38,6 +38,7 @@
                                             data-default-width="{{ t['default_width'] or 60 }}"
                                             data-default-height="{{ t['default_height'] or 40 }}"
                                             data-fill-color="{{ t['fill_color'] or '#A0522D' }}"
+                                            data-is-decorative="{{ t['is_decorative'] or 0 }}"
                                             {% if furniture and furniture.furniture_type == t.type_code %}selected{% endif %}>
                                         {{ t.display_name }}
                                     </option>
@@ -98,6 +99,24 @@
                                 <input type="number" class="form-control" id="capacity" name="capacity"
                                        value="{{ furniture.capacity if furniture else 2 }}"
                                        min="1" max="20">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Label field (only for decorative types) -->
+                    <div class="row" id="label-row" style="display: none;">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="label" class="form-label">
+                                    <i class="fa-solid fa-tag"></i> Etiqueta en mapa
+                                </label>
+                                <input type="text" class="form-control" id="label" name="label"
+                                       value="{{ furniture.label if furniture and furniture.label else '' }}"
+                                       maxlength="50" placeholder="Ej: Entrada Principal, Bar, Duchas...">
+                                <div class="form-text">
+                                    <i class="fa-solid fa-info-circle"></i>
+                                    Nombre visible en el mapa. Si se deja vacio, se muestra el codigo.
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -414,6 +433,10 @@ document.getElementById('furniture_type').addEventListener('change', function() 
     const option = this.options[this.selectedIndex];
     const isCreateMode = '{{ mode }}' === 'create';
 
+    // Toggle label field visibility based on decorative type
+    const isDecorative = option.value && option.dataset.isDecorative === '1';
+    document.getElementById('label-row').style.display = isDecorative ? '' : 'none';
+
     if (option.value) {
         // Update capacity constraints
         if (option.dataset.min) {
@@ -477,6 +500,9 @@ updatePreview();
     const option = typeSelect.options[typeSelect.selectedIndex];
     if (option && option.dataset.fillColor) {
         updatePreviewColor(option.dataset.fillColor);
+    }
+    if (option && option.dataset.isDecorative === '1') {
+        document.getElementById('label-row').style.display = '';
     }
 })();
 {% endif %}

@@ -39,12 +39,13 @@ export const FurnitureRendererMixin = (Base) => class extends Base {
         const shape = this.createShape(item, type);
         group.appendChild(shape);
 
-        if (item.number) {
+        if (item.number || item.label) {
+            const displayText = item.label || item.number;
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             text.setAttribute('class', 'furniture-number');
             text.setAttribute('x', item.width / 2);
             text.setAttribute('y', item.height / 2);
-            text.textContent = item.number;
+            text.textContent = displayText;
             group.appendChild(text);
         }
 

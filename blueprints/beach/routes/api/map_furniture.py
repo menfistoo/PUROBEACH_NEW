@@ -197,7 +197,8 @@ def register_routes(bp):
                 'position_x': furniture['position_x'],
                 'position_y': furniture['position_y'],
                 'is_temporary': furniture.get('is_temporary', 0),
-                'active': furniture.get('active', 1)
+                'active': furniture.get('active', 1),
+                'label': furniture.get('label')
             },
             reservation=reservation_data,
             customer=customer_data,

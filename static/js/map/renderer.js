@@ -195,16 +195,24 @@ function createDecorativeElement(item, data, colors, svg) {
 
     // Add label for non-pool decorative items
     if (item.furniture_type !== 'piscina') {
+        const displayText = item.label || item.number;
         const label = document.createElementNS(SVG_NS, 'text');
         label.setAttribute('x', width / 2);
         label.setAttribute('y', height / 2);
         label.setAttribute('text-anchor', 'middle');
         label.setAttribute('dominant-baseline', 'middle');
         label.setAttribute('fill', '#666666');
-        label.setAttribute('font-size', '11');
+        // Reduce font size for longer labels
+        let fontSize = 11;
+        if (displayText.length > 12) {
+            fontSize = 7;
+        } else if (displayText.length > 6) {
+            fontSize = 9;
+        }
+        label.setAttribute('font-size', String(fontSize));
         label.setAttribute('font-style', 'italic');
         label.setAttribute('pointer-events', 'none');
-        label.textContent = item.number;
+        label.textContent = displayText;
         group.appendChild(label);
     }
 

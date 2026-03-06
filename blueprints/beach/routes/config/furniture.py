@@ -44,6 +44,7 @@ def register_routes(bp):
             width = request.form.get('width', 60, type=float)
             height = request.form.get('height', 40, type=float)
             features = request.form.get('features', '').strip()
+            label = request.form.get('label', '').strip() or None
 
             # Duplication parameters
             copy_count = request.form.get('copy_count', 1, type=int)
@@ -96,7 +97,8 @@ def register_routes(bp):
                         rotation=rotation,
                         width=width,
                         height=height,
-                        features=features if features else ''
+                        features=features if features else '',
+                        label=label if i == 0 else None
                     )
                     created_count += 1
 
@@ -136,6 +138,7 @@ def register_routes(bp):
             width = request.form.get('width', 60, type=float)
             height = request.form.get('height', 40, type=float)
             features = request.form.get('features', '').strip()
+            label = request.form.get('label', '').strip() or None
             active = 1 if request.form.get('active') == '1' else 0
 
             # Check if this is a duplicate action
@@ -208,7 +211,8 @@ def register_routes(bp):
                         width=width,
                         height=height,
                         features=features if features else '',
-                        active=active
+                        active=active,
+                        label=label
                     )
 
                     if updated:

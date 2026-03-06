@@ -183,6 +183,7 @@ def create_tables(db):
             valid_date DATE,
             features TEXT,
             fill_color TEXT DEFAULT NULL,
+            label TEXT DEFAULT NULL,
             active INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             temp_start_date DATE,
