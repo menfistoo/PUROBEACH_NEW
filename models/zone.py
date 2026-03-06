@@ -60,7 +60,8 @@ def create_zone(
     color: str = '#F5E6D3',
     canvas_width: float = 2000,
     canvas_height: float = 1000,
-    background_color: str = '#FAFAFA'
+    background_color: str = '#FAFAFA',
+    number_start: int = None
 ) -> int:
     """
     Create new beach zone.
@@ -73,6 +74,7 @@ def create_zone(
         canvas_width: Canvas width in pixels for map editor
         canvas_height: Canvas height in pixels for map editor
         background_color: Canvas background color
+        number_start: Starting number for furniture auto-numbering in this zone
 
     Returns:
         New zone ID
@@ -86,10 +88,10 @@ def create_zone(
 
         cursor.execute('''
             INSERT INTO beach_zones (name, description, parent_zone_id, color, display_order,
-                                     canvas_width, canvas_height, background_color)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                     canvas_width, canvas_height, background_color, number_start)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (name, description, parent_zone_id, color, display_order,
-              canvas_width, canvas_height, background_color))
+              canvas_width, canvas_height, background_color, number_start))
 
         conn.commit()
         return cursor.lastrowid
@@ -108,7 +110,7 @@ def update_zone(zone_id: int, **kwargs) -> bool:
         True if updated successfully
     """
     allowed_fields = ['name', 'description', 'color', 'display_order', 'active', 'parent_zone_id',
-                      'canvas_width', 'canvas_height', 'background_color']
+                      'canvas_width', 'canvas_height', 'background_color', 'number_start']
     updates = []
     values = []
 

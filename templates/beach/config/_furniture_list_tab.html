@@ -16,10 +16,17 @@
                     <label class="form-label small">Zona</label>
                     <select name="zone" class="form-select form-select-sm">
                         <option value="">Todas las zonas</option>
-                        {% for z in zones %}
-                        <option value="{{ z.id }}" {% if zone_filter == z.id|string %}selected{% endif %}>
-                            {{ z.name }}
+                        {% for z in zones if not z.parent_zone_id %}
+                        {% set children = zones | selectattr('parent_zone_id', 'equalto', z.id) | list %}
+                        <option value="{{ z.id }}" {% if zone_filter == z.id|string %}selected{% endif %}
+                                {% if children %}style="font-weight: bold;"{% endif %}>
+                            {% if children %}▸ {% endif %}{{ z.name }}
                         </option>
+                        {% for child in children %}
+                        <option value="{{ child.id }}" {% if zone_filter == child.id|string %}selected{% endif %}>
+                            &nbsp;&nbsp;└ {{ child.name }}
+                        </option>
+                        {% endfor %}
                         {% endfor %}
                     </select>
                 </div>

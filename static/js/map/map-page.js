@@ -1341,7 +1341,39 @@ document.addEventListener('DOMContentLoaded', function () {
         const currentValue = zoneSelect.value;
         zoneSelect.innerHTML = '';
 
-        data.zones.forEach(zone => {
+        // Build parent/child hierarchy
+        const parentZones = data.zones.filter(z => !z.parent_zone_id);
+        const childMap = {};
+        data.zones.forEach(z => {
+            if (z.parent_zone_id) {
+                if (!childMap[z.parent_zone_id]) childMap[z.parent_zone_id] = [];
+                childMap[z.parent_zone_id].push(z);
+            }
+        });
+
+        parentZones.forEach(zone => {
+            const children = childMap[zone.id] || [];
+            const option = document.createElement('option');
+            option.value = zone.id;
+            option.textContent = children.length > 0 ? `▸ ${zone.name}` : zone.name;
+            if (children.length > 0) option.style.fontWeight = 'bold';
+            zoneSelect.appendChild(option);
+
+            children.forEach(child => {
+                const childOpt = document.createElement('option');
+                childOpt.value = child.id;
+                childOpt.textContent = `  └ ${child.name}`;
+                zoneSelect.appendChild(childOpt);
+            });
+        });
+
+        // Orphan zones (parent inactive/missing)
+        const renderedIds = new Set();
+        parentZones.forEach(z => {
+            renderedIds.add(z.id);
+            (childMap[z.id] || []).forEach(c => renderedIds.add(c.id));
+        });
+        data.zones.filter(z => !renderedIds.has(z.id)).forEach(zone => {
             const option = document.createElement('option');
             option.value = zone.id;
             option.textContent = zone.name;
@@ -1363,24 +1395,44 @@ document.addEventListener('DOMContentLoaded', function () {
         applyZoneView(currentZoneId);
     });
 
+    /**
+     * Get visible zone IDs for a selected zone.
+     * If the zone has children, returns the parent + all children.
+     */
+    function getVisibleZoneIds(zoneId) {
+        const data = map.getData();
+        if (!data) return new Set([zoneId]);
+
+        const childIds = data.zones
+            .filter(z => z.parent_zone_id === zoneId)
+            .map(z => z.id);
+
+        if (childIds.length > 0) {
+            return new Set([zoneId, ...childIds]);
+        }
+        return new Set([zoneId]);
+    }
+
     function applyZoneView(zoneId) {
         const data = map.getData();
         if (!data) return;
 
-        // Show only furniture in selected zone
+        const visibleZones = getVisibleZoneIds(zoneId);
+
+        // Show only furniture in visible zones
         document.querySelectorAll('.furniture-item').forEach(item => {
             const furnitureId = parseInt(item.dataset.furnitureId);
             const furniture = data.furniture?.find(f => f.id === furnitureId);
             if (!furniture) return;
-            item.style.display = furniture.zone_id === zoneId ? '' : 'none';
+            item.style.display = visibleZones.has(furniture.zone_id) ? '' : 'none';
         });
 
-        // Show only decorative items in selected zone
+        // Show only decorative items in visible zones
         document.querySelectorAll('.decorative-item').forEach(item => {
             const furnitureId = parseInt(item.dataset.furnitureId);
             const furniture = data.furniture?.find(f => f.id === furnitureId);
             if (!furniture) return;
-            item.style.display = furniture.zone_id === zoneId ? '' : 'none';
+            item.style.display = visibleZones.has(furniture.zone_id) ? '' : 'none';
         });
 
         updateStats(zoneId);
@@ -1394,12 +1446,28 @@ document.addEventListener('DOMContentLoaded', function () {
         const svg = document.getElementById('beach-map');
         if (!svg) return;
 
-        // Get zone's canvas dimensions (more accurate than map_dimensions)
         const zone = data.zones?.find(z => z.id === zoneId);
-        const canvasWidth = zone?.canvas_width || data.map_dimensions?.width || 1200;
-        const canvasHeight = zone?.canvas_height || data.map_dimensions?.height || 800;
+        const visibleZones = getVisibleZoneIds(zoneId);
 
-        // Use the zone's full canvas dimensions (matches map editor)
+        let canvasWidth, canvasHeight;
+        if (visibleZones.size > 1) {
+            // Parent zone: use max dimensions across all child zones
+            canvasWidth = 0;
+            canvasHeight = 0;
+            visibleZones.forEach(zId => {
+                const z = data.zones?.find(zn => zn.id === zId);
+                if (z) {
+                    canvasWidth = Math.max(canvasWidth, z.canvas_width || 0);
+                    canvasHeight = Math.max(canvasHeight, z.canvas_height || 0);
+                }
+            });
+            canvasWidth = canvasWidth || data.map_dimensions?.width || 1200;
+            canvasHeight = canvasHeight || data.map_dimensions?.height || 800;
+        } else {
+            canvasWidth = zone?.canvas_width || data.map_dimensions?.width || 1200;
+            canvasHeight = zone?.canvas_height || data.map_dimensions?.height || 800;
+        }
+
         svg.setAttribute('viewBox', `0 0 ${canvasWidth} ${canvasHeight}`);
     }
 
@@ -1417,7 +1485,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         if (zoneId !== null) {
-            furniture = furniture.filter(f => f.zone_id === zoneId);
+            const visibleZones = getVisibleZoneIds(zoneId);
+            furniture = furniture.filter(f => visibleZones.has(f.zone_id));
         }
 
         const total = furniture.length;

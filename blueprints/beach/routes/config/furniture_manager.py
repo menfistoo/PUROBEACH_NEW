@@ -33,10 +33,17 @@ def register_routes(bp):
         furniture_types = get_all_furniture_types(active_only=True)
         furniture_types_all = get_all_furniture_types(active_only=False)
 
-        # Get furniture list data
+        # Get furniture list data — parent zone shows children's furniture too
         zone_id = int(zone_filter) if zone_filter else None
         active_only = active_filter == '1'
-        all_furniture = get_all_furniture(zone_id=zone_id, active_only=active_only)
+        child_zone_ids = [z['id'] for z in zones if z.get('parent_zone_id') == zone_id] if zone_id else []
+        if child_zone_ids:
+            # Parent zone selected: load all furniture, filter to parent + children
+            all_furniture = get_all_furniture(active_only=active_only)
+            visible_ids = {zone_id} | set(child_zone_ids)
+            all_furniture = [f for f in all_furniture if f.get('zone_id') in visible_ids]
+        else:
+            all_furniture = get_all_furniture(zone_id=zone_id, active_only=active_only)
         if type_filter:
             all_furniture = [f for f in all_furniture if f['furniture_type'] == type_filter]
 

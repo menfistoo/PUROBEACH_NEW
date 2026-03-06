@@ -66,12 +66,25 @@
                             <div class="mb-3">
                                 <label for="zone_id" class="form-label">Zona <span class="text-danger">*</span></label>
                                 <select class="form-select" id="zone_id" name="zone_id" required>
-                                    {% for z in zones %}
+                                    {% if not furniture %}
+                                    <option value="" selected disabled>Selecciona zona...</option>
+                                    {% endif %}
+                                    {% for z in zones if not z.parent_zone_id %}
+                                    {% set children = zones | selectattr('parent_zone_id', 'equalto', z.id) | list %}
+                                    {% if children %}
+                                    <option value="" disabled>▸ {{ z.name }}</option>
+                                    {% for child in children %}
+                                    <option value="{{ child.id }}"
+                                            {% if furniture and furniture.zone_id == child.id %}selected{% endif %}>
+                                        &nbsp;&nbsp;└ {{ child.name }}
+                                    </option>
+                                    {% endfor %}
+                                    {% else %}
                                     <option value="{{ z.id }}"
-                                            {% if furniture and furniture.zone_id == z.id %}selected{% endif %}
-                                            {% if not furniture and loop.first %}selected{% endif %}>
+                                            {% if furniture and furniture.zone_id == z.id %}selected{% endif %}>
                                         {{ z.name }}
                                     </option>
+                                    {% endif %}
                                     {% endfor %}
                                 </select>
                             </div>
@@ -355,7 +368,8 @@ async function fetchNextNumber(typeId) {
     if (!typeId) return;
 
     try {
-        const url = `/beach/config/furniture-types/${typeId}/next-number`;
+        const zoneId = document.getElementById('zone_id')?.value || '';
+        const url = `/beach/config/furniture-types/${typeId}/next-number?zone_id=${zoneId}`;
         const response = await fetch(url);
 
         if (!response.ok) return;
@@ -438,6 +452,18 @@ document.getElementById('furniture_type').addEventListener('change', function() 
             document.getElementById('number').placeholder = 'Seleccione un tipo...';
         }
         updatePreview();
+    }
+});
+
+// Re-fetch number when zone changes (zone may have different number_start)
+document.getElementById('zone_id')?.addEventListener('change', function() {
+    const isCreateMode = '{{ mode }}' === 'create';
+    if (isCreateMode) {
+        const typeSelect = document.getElementById('furniture_type');
+        const option = typeSelect.options[typeSelect.selectedIndex];
+        if (option && option.dataset.id) {
+            fetchNextNumber(option.dataset.id);
+        }
     }
 });
 

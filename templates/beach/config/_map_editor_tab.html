@@ -5,13 +5,23 @@
         <div class="d-flex gap-2 align-items-center">
             <select class="form-select form-select-sm" id="zone-selector" style="width: 200px;">
                 <option value="">Selecciona zona...</option>
-                {% for zone in zones %}
+                {% for zone in zones if not zone.parent_zone_id %}
+                {% set children = zones | selectattr('parent_zone_id', 'equalto', zone.id) | list %}
                 <option value="{{ zone.id }}"
                         data-width="{{ zone.canvas_width or 2000 }}"
                         data-height="{{ zone.canvas_height or 1000 }}"
-                        data-bg="{{ zone.background_color or '#FAFAFA' }}">
-                    {{ zone.name }}
+                        data-bg="{{ zone.background_color or '#FAFAFA' }}"
+                        {% if children %}style="font-weight: bold;"{% endif %}>
+                    {% if children %}▸ {% endif %}{{ zone.name }}
                 </option>
+                {% for child in children %}
+                <option value="{{ child.id }}"
+                        data-width="{{ child.canvas_width or 2000 }}"
+                        data-height="{{ child.canvas_height or 1000 }}"
+                        data-bg="{{ child.background_color or '#FAFAFA' }}">
+                    &nbsp;&nbsp;└ {{ child.name }}
+                </option>
+                {% endfor %}
                 {% endfor %}
             </select>
             <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-zone-settings" disabled
@@ -213,6 +223,23 @@
                     <div class="mb-3">
                         <label class="form-label">Número</label>
                         <input type="text" class="form-control form-control-sm" id="prop-number" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Zona</label>
+                        <select class="form-select form-select-sm" id="prop-zone">
+                            <option value="" disabled selected>—</option>
+                            {% for zone in zones if not zone.parent_zone_id %}
+                            {% set children = zones | selectattr('parent_zone_id', 'equalto', zone.id) | list %}
+                            {% if children %}
+                            <option value="" disabled>▸ {{ zone.name }}</option>
+                            {% for child in children %}
+                            <option value="{{ child.id }}">&nbsp;&nbsp;└ {{ child.name }}</option>
+                            {% endfor %}
+                            {% else %}
+                            <option value="{{ zone.id }}">{{ zone.name }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="prop-row mb-3">
                         <div>

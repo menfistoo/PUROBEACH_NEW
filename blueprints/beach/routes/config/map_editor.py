@@ -28,10 +28,20 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.config.map_editor.view')
     def map_editor_zone_data(zone_id):
-        """Get zone data with furniture for editor canvas."""
+        """Get zone data with furniture for editor canvas.
+        If zone has children, includes all child zone furniture too."""
         zone = get_zone_with_furniture(zone_id)
         if not zone:
             return jsonify({'success': False, 'error': 'Zona no encontrada'}), 404
+
+        # If parent zone, also load child zones' furniture
+        all_zones = get_all_zones(active_only=True)
+        child_zone_ids = [z['id'] for z in all_zones if z.get('parent_zone_id') == zone_id]
+        if child_zone_ids:
+            for child_id in child_zone_ids:
+                child_zone = get_zone_with_furniture(child_id)
+                if child_zone and child_zone.get('furniture'):
+                    zone['furniture'].extend(child_zone['furniture'])
 
         furniture_types = get_all_furniture_types(active_only=True)
         types_dict = {ft['type_code']: ft for ft in furniture_types}
@@ -155,7 +165,7 @@ def register_routes(bp):
         updates = {}
 
         # Allowed fields for update
-        allowed = ['number', 'capacity', 'rotation', 'width', 'height', 'features', 'fill_color']
+        allowed = ['number', 'capacity', 'rotation', 'width', 'height', 'features', 'fill_color', 'zone_id']
         for field in allowed:
             if field in data:
                 updates[field] = data[field]

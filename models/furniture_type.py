@@ -286,6 +286,13 @@ def get_next_number_for_type(type_id: int, zone_id: int = None) -> str:
         start = ftype['number_start'] or 1
         type_code = ftype['type_code']
 
+        # Check if zone has its own number_start
+        if zone_id:
+            cursor.execute('SELECT number_start FROM beach_zones WHERE id = ?', (zone_id,))
+            zone_row = cursor.fetchone()
+            if zone_row and zone_row['number_start'] is not None:
+                start = zone_row['number_start']
+
         # Get all existing numbers for this type
         query = '''
             SELECT number FROM beach_furniture

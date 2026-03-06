@@ -245,6 +245,33 @@ export function bindPropertyPanel(editor, options = {}) {
             else editor.updateSelectedProperty(prop, value);
         });
     });
+
+    // Zone selector (special handling - updates zone_id and auto-assigns next number)
+    el('prop-zone')?.addEventListener('change', async function () {
+        const zoneId = parseInt(this.value);
+        if (!zoneId) return;
+
+        const selected = editor.selectedItem;
+        if (!selected) return;
+
+        // Update zone_id
+        editor.updateSelectedProperty('zone_id', zoneId);
+
+        // Fetch next available number for this zone and furniture type
+        const typeCode = selected.furniture_type;
+        if (typeCode) {
+            try {
+                const resp = await fetch(`/beach/config/map-editor/furniture/next-number/${zoneId}/${typeCode}`);
+                const data = await resp.json();
+                if (data.success && data.next_number) {
+                    editor.updateSelectedProperty('number', data.next_number);
+                    el('prop-number').value = data.next_number;
+                }
+            } catch (err) {
+                console.error('Error fetching next number for zone:', err);
+            }
+        }
+    });
 }
 
 // =============================================================================
@@ -424,6 +451,9 @@ export function bindEditorEvents(editor, options = {}) {
         el('prop-rotation').value = selected.rotation || 0;
         el('prop-capacity').value = selected.capacity || 2;
         el('prop-number').value = selected.number || '';
+
+        const propZone = el('prop-zone');
+        if (propZone && selected.zone_id) propZone.value = selected.zone_id;
 
         if (hasSize) {
             el('prop-width').value = selected.width || 60;

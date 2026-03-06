@@ -31,6 +31,17 @@ def register_routes(bp):
         parent_zone_id = request.form.get('parent_zone_id')
         active = 1 if request.form.get('active') == '1' else 0
         redirect_tab = request.form.get('redirect_tab') == '1'
+        number_start_raw = request.form.get('number_start', '').strip()
+        try:
+            number_start = int(number_start_raw) if number_start_raw else None
+        except ValueError:
+            flash('El número inicial debe ser un valor numérico', 'error')
+            if redirect_tab:
+                if zone_id:
+                    return redirect(url_for('beach.beach_config.furniture_manager', tab='zones', zone_id=zone_id))
+                else:
+                    return redirect(url_for('beach.beach_config.furniture_manager', tab='zones', create_zone=1))
+            return redirect(url_for('beach.beach_config.zones'))
 
         if not name:
             flash('El nombre es obligatorio', 'error')
@@ -59,7 +70,8 @@ def register_routes(bp):
                     description=description if description else None,
                     parent_zone_id=parent_id,
                     color=color,
-                    active=active
+                    active=active,
+                    number_start=number_start
                 )
                 if updated:
                     flash('Zona actualizada correctamente', 'success')
@@ -71,7 +83,8 @@ def register_routes(bp):
                     name=name,
                     description=description if description else None,
                     parent_zone_id=parent_id,
-                    color=color
+                    color=color,
+                    number_start=number_start
                 )
                 flash('Zona creada correctamente', 'success')
 

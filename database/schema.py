@@ -121,6 +121,7 @@ def create_tables(db):
             canvas_width REAL DEFAULT 2000,
             canvas_height REAL DEFAULT 1000,
             background_color TEXT DEFAULT '#FAFAFA',
+            number_start INTEGER DEFAULT NULL,
             active INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )

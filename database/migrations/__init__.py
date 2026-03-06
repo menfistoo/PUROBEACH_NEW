@@ -31,7 +31,7 @@ from .permissions import (
     migrate_zones_to_furniture_manager,
     migrate_add_staff_payment_reconciliation_permission
 )
-from .zones import migrate_zone_canvas_properties
+from .zones import migrate_zone_canvas_properties, migrate_zone_number_start
 from .furniture_manager_menu import migrate_furniture_manager_menu
 from .furniture_extensions import (
     migrate_furniture_blocks_table,
@@ -125,6 +125,9 @@ MIGRATIONS = [
 
     # Phase 16: Staff permissions
     ('add_staff_payment_reconciliation_permission', migrate_add_staff_payment_reconciliation_permission),
+
+    # Phase 17: Zone-based numbering
+    ('zone_number_start', migrate_zone_number_start),
 ]
 
 
@@ -218,4 +221,5 @@ __all__ = [
     'migrate_temp_furniture_date_range',
     'migrate_fix_reports_menu',
     'migrate_add_staff_payment_reconciliation_permission',
+    'migrate_zone_number_start',
 ]

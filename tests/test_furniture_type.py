@@ -177,6 +177,57 @@ class TestFurnitureTypeModel:
             # Cleanup
             delete_furniture_type(type_id)
 
+    def test_get_next_number_with_zone_number_start(self, app):
+        """Test that zone's number_start overrides furniture type's number_start."""
+        from models.zone import create_zone, delete_zone
+
+        with app.app_context():
+            # Create a furniture type with prefix 'H' starting at 1
+            type_id = create_furniture_type(
+                type_code='test_zone_num',
+                display_name='Test Zone Numbering',
+                number_prefix='H',
+                number_start=1
+            )
+
+            # Without zone: should start at type's number_start (1)
+            next_num = get_next_number_for_type(type_id)
+            assert next_num == 'H1', f"Expected H1 without zone, got {next_num}"
+
+            # Create a zone with number_start=100
+            zone_id = create_zone(name='Test Row 100', number_start=100)
+
+            # With zone: should start at zone's number_start (100)
+            next_num = get_next_number_for_type(type_id, zone_id=zone_id)
+            assert next_num == 'H100', f"Expected H100 with zone number_start=100, got {next_num}"
+
+            # Cleanup
+            delete_zone(zone_id)
+            delete_furniture_type(type_id)
+
+    def test_get_next_number_zone_without_number_start(self, app):
+        """Test that zone without number_start falls back to type's number_start."""
+        from models.zone import create_zone, delete_zone
+
+        with app.app_context():
+            type_id = create_furniture_type(
+                type_code='test_zone_fallback',
+                display_name='Test Zone Fallback',
+                number_prefix='B',
+                number_start=5
+            )
+
+            # Create zone without number_start
+            zone_id = create_zone(name='Test No Start')
+
+            # Should fall back to type's number_start (5)
+            next_num = get_next_number_for_type(type_id, zone_id=zone_id)
+            assert next_num == 'B5', f"Expected B5 (type fallback), got {next_num}"
+
+            # Cleanup
+            delete_zone(zone_id)
+            delete_furniture_type(type_id)
+
     def test_furniture_type_structure(self, app):
         """Test that furniture type has all expected fields."""
         with app.app_context():
