@@ -145,12 +145,19 @@ export class MoveModePanel {
     setupEventListeners() {
         // Exit button (header)
         this.exitBtn?.addEventListener('click', () => {
-            this.moveMode.deactivate();
+            if (!this.moveMode.deactivate()) {
+                // Deactivation blocked - shake the panel for feedback
+                this.container?.classList.add('shake');
+                setTimeout(() => this.container?.classList.remove('shake'), 500);
+            }
         });
 
         // Exit button (footer)
         this.exitFooterBtn?.addEventListener('click', () => {
-            this.moveMode.deactivate();
+            if (!this.moveMode.deactivate()) {
+                this.container?.classList.add('shake');
+                setTimeout(() => this.container?.classList.remove('shake'), 500);
+            }
         });
 
         // Undo button
@@ -237,7 +244,10 @@ export class MoveModePanel {
 
             const deltaX = this.swipeState.currentX - this.swipeState.startX;
             if (deltaX > 100) { // Threshold to close
-                this.moveMode.deactivate();
+                if (!this.moveMode.deactivate()) {
+                    // Deactivation blocked, snap back
+                    panel.style.transform = '';
+                }
             } else {
                 panel.style.transform = '';
             }
@@ -393,7 +403,7 @@ export class MoveModePanel {
 
                 // If triggered by conflict, cancel and return to conflict view - Issue #7
                 if (this.moveMode.triggeredByConflict) {
-                    const result = this.moveMode.cancelToConflict();
+                    const result = await this.moveMode.cancelToConflict();
                     if (result.conflictContext) {
                         document.dispatchEvent(new CustomEvent('moveMode:returnToConflict', {
                             detail: result.conflictContext

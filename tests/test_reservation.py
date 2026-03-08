@@ -596,7 +596,7 @@ class TestNoOrphanedReservationOnUnavailableFurniture:
             count_before = cursor.fetchone()['cnt']
 
             # Second reservation on the same furniture/date must raise ValueError
-            with pytest.raises(ValueError, match="Mobiliario no disponible"):
+            with pytest.raises(ValueError, match="Furniture not available"):
                 create_beach_reservation(
                     customer_id=cust2,
                     reservation_date='2099-06-15',

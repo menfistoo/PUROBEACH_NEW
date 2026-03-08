@@ -3,7 +3,7 @@
  * Manages furniture reassignment operations during move mode
  */
 
-import { getCSRFToken, showToast } from './utils.js';
+import { getCSRFToken, showToast, escapeHtml } from './utils.js';
 
 /**
  * Move Mode Manager Class
@@ -25,6 +25,18 @@ export class MoveMode {
         this.selectedReservationId = null;
         this.undoStack = [];
         this.triggeredByConflict = null;  // Store conflict context if activated from conflict
+        this._operationInProgress = false;  // Mutex to prevent concurrent operations
+        this._completionTimers = {};  // Track setTimeout IDs for pool removal
+
+        // Warn user if closing tab with active move mode
+        this._beforeUnloadHandler = (e) => {
+            if (this.active && this.pool.some(r => r.assignedCount < r.totalNeeded)) {
+                e.preventDefault();
+                e.returnValue = 'Hay reservas sin asignar en modo mover. ¿Seguro que quieres salir?';
+                return e.returnValue;
+            }
+        };
+        window.addEventListener('beforeunload', this._beforeUnloadHandler);
 
         // Event callbacks (arrays to support multiple listeners)
         this.callbacks = {
@@ -131,15 +143,23 @@ export class MoveMode {
         this.selectedReservationId = null;
         this.undoStack = [];
         this.triggeredByConflict = null;
+        this._operationInProgress = false;
+        // Cancel any pending completion timers
+        Object.values(this._completionTimers).forEach(t => clearTimeout(t));
+        this._completionTimers = {};
     }
 
     /**
      * Change the current date and refresh the pool
-     * Called when user navigates to a different date while in move mode
+     * Called when user navigates to a different date while in move mode.
+     * Restores any unassigned furniture from old date before switching.
      * @param {string} newDate - New date in YYYY-MM-DD format
      */
     async setDate(newDate) {
         if (!this.active || this.currentDate === newDate) return;
+
+        // Restore any unassigned reservations from the old date before switching
+        await this._restoreUnassignedPool();
 
         // Update date
         this.currentDate = newDate;
@@ -184,19 +204,26 @@ export class MoveMode {
     }
 
     /**
-     * Force deactivate (used when user confirms abandoning unassigned reservations)
+     * Force deactivate - restores unassigned furniture before exiting.
+     * Used when user edits a reservation or returns to conflict resolution.
      */
-    forceDeactivate() {
+    async forceDeactivate() {
+        // Restore any unassigned reservations to their original furniture
+        await this._restoreUnassignedPool();
         this._resetState();
         this.emit('onDeactivate', { forced: true });
     }
 
     /**
-     * Cancel move mode and return to conflict resolution if applicable
-     * @returns {Object} Result with conflictContext if was triggered by conflict
+     * Cancel move mode and return to conflict resolution if applicable.
+     * Restores any unassigned furniture before exiting.
+     * @returns {Promise<Object>} Result with conflictContext if was triggered by conflict
      */
-    cancelToConflict() {
+    async cancelToConflict() {
         const conflictContext = this.triggeredByConflict;
+
+        // Restore any unassigned reservations before exiting
+        await this._restoreUnassignedPool();
 
         // Reset state
         this._resetState();
@@ -207,6 +234,50 @@ export class MoveMode {
         });
 
         return { conflictContext };
+    }
+
+    /**
+     * Restore all unassigned reservations in the pool to their original furniture.
+     * Called before date change or force deactivation to prevent data loss.
+     * @private
+     */
+    async _restoreUnassignedPool() {
+        const unassigned = this.pool.filter(r => r.assignedCount < r.totalNeeded);
+        const failures = [];
+
+        for (const res of unassigned) {
+            if (res.initialFurniture && res.initialFurniture.length > 0) {
+                const originalIds = res.initialFurniture.map(f => f.furniture_id || f.id);
+                try {
+                    const result = await this.assignFurnitureInternal(res.reservation_id, originalIds);
+                    if (result.success) {
+                        console.info(
+                            `[MoveMode] Restored furniture for reservation ${res.reservation_id}:`,
+                            originalIds
+                        );
+                    } else {
+                        failures.push(res.customer_name || `#${res.reservation_id}`);
+                        console.error(
+                            `[MoveMode] Failed to restore reservation ${res.reservation_id}:`,
+                            result.error
+                        );
+                    }
+                } catch (error) {
+                    failures.push(res.customer_name || `#${res.reservation_id}`);
+                    console.error(
+                        `[MoveMode] Failed to restore furniture for reservation ${res.reservation_id}:`,
+                        error
+                    );
+                }
+            }
+        }
+
+        if (failures.length > 0) {
+            showToast(
+                `No se pudo restaurar mobiliario para: ${escapeHtml(failures.join(', '))}. Revisa manualmente.`,
+                'error'
+            );
+        }
     }
 
     /**
@@ -275,6 +346,28 @@ export class MoveMode {
     }
 
     /**
+     * Acquire operation mutex. Returns false if another operation is in progress.
+     * @private
+     * @returns {boolean} Whether the lock was acquired
+     */
+    _acquireLock() {
+        if (this._operationInProgress) {
+            console.warn('[MoveMode] Operation blocked - another operation in progress');
+            return false;
+        }
+        this._operationInProgress = true;
+        return true;
+    }
+
+    /**
+     * Release operation mutex.
+     * @private
+     */
+    _releaseLock() {
+        this._operationInProgress = false;
+    }
+
+    /**
      * Unassign furniture from a reservation
      * @param {number} reservationId - Reservation ID
      * @param {Array} furnitureIds - Furniture IDs to unassign
@@ -285,6 +378,9 @@ export class MoveMode {
     async unassignFurniture(reservationId, furnitureIds, isCtrlClick = false, initialFurnitureOverride = null) {
         if (!this.active) {
             return { success: false, error: 'Move mode not active' };
+        }
+        if (!this._acquireLock()) {
+            return { success: false, error: 'Operation in progress' };
         }
 
         try {
@@ -324,6 +420,8 @@ export class MoveMode {
             this.emit('onError', { type: 'unassign', error });
             showToast('Error al liberar mobiliario', 'error');
             return { success: false, error: error.message };
+        } finally {
+            this._releaseLock();
         }
     }
 
@@ -336,6 +434,9 @@ export class MoveMode {
     async assignFurniture(reservationId, furnitureIds) {
         if (!this.active) {
             return { success: false, error: 'Move mode not active' };
+        }
+        if (!this._acquireLock()) {
+            return { success: false, error: 'Operation in progress' };
         }
 
         try {
@@ -352,7 +453,7 @@ export class MoveMode {
                 await this.loadReservationToPool(reservationId);
                 showToast('Asignado a mobiliario', 'success');
             } else if (result.error) {
-                showToast(result.error, 'warning');
+                showToast(escapeHtml(result.error), 'warning');
             }
 
             return result;
@@ -361,6 +462,8 @@ export class MoveMode {
             this.emit('onError', { type: 'assign', error });
             showToast('Error al asignar mobiliario', 'error');
             return { success: false, error: error.message };
+        } finally {
+            this._releaseLock();
         }
     }
 
@@ -435,13 +538,20 @@ export class MoveMode {
             };
 
             if (existingIndex >= 0) {
+                // Cancel any pending completion timer for this reservation
+                if (this._completionTimers[reservationId]) {
+                    clearTimeout(this._completionTimers[reservationId]);
+                    delete this._completionTimers[reservationId];
+                }
+
                 if (poolEntry.isComplete) {
                     // First show the complete state in UI
                     this.pool[existingIndex] = poolEntry;
                     this.emit('onPoolUpdate', { pool: this.pool });
 
                     // Then remove after brief delay for visual feedback
-                    setTimeout(() => {
+                    this._completionTimers[reservationId] = setTimeout(() => {
+                        delete this._completionTimers[reservationId];
                         const currentIndex = this.pool.findIndex(r => r.reservation_id === reservationId);
                         if (currentIndex >= 0) {
                             this.pool.splice(currentIndex, 1);
@@ -500,22 +610,33 @@ export class MoveMode {
             showToast('Nada que deshacer', 'info');
             return false;
         }
+        if (!this._acquireLock()) {
+            return false;
+        }
 
         const action = this.undoStack.pop();
 
         try {
+            let result;
             if (action.type === 'unassign') {
                 // Undo unassign = assign back
-                await this.assignFurnitureInternal(
+                result = await this.assignFurnitureInternal(
                     action.reservation_id,
                     action.furniture_ids
                 );
             } else if (action.type === 'assign') {
                 // Undo assign = unassign
-                await this.unassignFurnitureInternal(
+                result = await this.unassignFurnitureInternal(
                     action.reservation_id,
                     action.furniture_ids
                 );
+            }
+
+            if (!result?.success) {
+                // API call failed - put action back on stack
+                this.undoStack.push(action);
+                showToast(escapeHtml(result?.error || 'Error al deshacer'), 'error');
+                return false;
             }
 
             // Reload pool data
@@ -530,6 +651,8 @@ export class MoveMode {
             this.undoStack.push(action);
             showToast('Error al deshacer', 'error');
             return false;
+        } finally {
+            this._releaseLock();
         }
     }
 
@@ -554,6 +677,18 @@ export class MoveMode {
                 date: this.currentDate
             })
         });
+
+        if (!response.ok) {
+            // Try to parse error body, fallback to status text
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch {
+                errorData = { success: false, error: `Error del servidor (${response.status})` };
+            }
+            return errorData;
+        }
+
         return response.json();
     }
 
@@ -600,15 +735,15 @@ export class MoveMode {
     handleKeyboard(event) {
         if (!this.active) return;
 
-        // Ctrl+Z for undo
+        // Ctrl+Z for undo (mutex prevents rapid-fire)
         if (event.ctrlKey && event.key === 'z') {
             event.preventDefault();
-            this.undo();
+            this.undo();  // Mutex inside prevents concurrent undos
         }
 
         // Escape to exit (if pool empty)
         if (event.key === 'Escape') {
-            this.deactivate();
+            this.deactivate();  // deactivate() already shows toast when blocked
         }
     }
 }

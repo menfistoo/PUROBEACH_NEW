@@ -97,8 +97,8 @@ export const FurnitureMixin = (Base) => class extends Base {
         // Close the panel first
         await this.close();
 
-        // Activate move mode
-        window.moveMode.activate(this.state.currentDate);
+        // Activate move mode (must await to prevent race with unassign below)
+        await window.moveMode.activate(this.state.currentDate);
 
         // Unassign furniture from this reservation to add it to the pool
         // Pass the original furniture array so we can track what needs to be restored

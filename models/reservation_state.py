@@ -188,6 +188,9 @@ def add_reservation_state(reservation_id: int, state_type: str, changed_by: str,
         cursor = conn.cursor()
 
         try:
+            # BEGIN IMMEDIATE to prevent concurrent state changes
+            cursor.execute('BEGIN IMMEDIATE')
+
             # Get current reservation data
             cursor.execute('SELECT customer_id, current_states, current_state FROM beach_reservations WHERE id = ?',
                           (reservation_id,))
@@ -275,11 +278,15 @@ def remove_reservation_state(reservation_id: int, state_type: str, changed_by: s
         cursor = conn.cursor()
 
         try:
+            # BEGIN IMMEDIATE to prevent concurrent state changes
+            cursor.execute('BEGIN IMMEDIATE')
+
             # Get current reservation data
             cursor.execute('SELECT customer_id, current_states FROM beach_reservations WHERE id = ?',
                           (reservation_id,))
             row = cursor.fetchone()
             if not row:
+                conn.rollback()
                 return False
 
             customer_id = row['customer_id']
@@ -356,11 +363,15 @@ def change_reservation_state(reservation_id: int, new_state: str, changed_by: st
         cursor = conn.cursor()
 
         try:
+            # BEGIN IMMEDIATE to prevent concurrent state changes
+            cursor.execute('BEGIN IMMEDIATE')
+
             # Get current state
             cursor.execute('SELECT current_state, customer_id FROM beach_reservations WHERE id = ?',
                           (reservation_id,))
             row = cursor.fetchone()
             if not row:
+                conn.rollback()
                 return False
 
             old_state = row['current_state']

@@ -11,6 +11,7 @@ from utils.datetime_helpers import get_now
 from .reservation_state import calculate_reservation_color, update_customer_statistics
 from .state import get_default_state
 from .reservation_availability import check_furniture_availability_bulk
+from .characteristic_assignments import sync_preferences_to_reservation
 
 # Re-export preference sync functions for backward compatibility
 from .characteristic_assignments import (
@@ -68,7 +69,7 @@ def generate_reservation_number(reservation_date: str = None, cursor=None, max_r
             next_seq = (result['max_seq'] or 0) + 1
 
             if next_seq > 99:
-                raise ValueError(f"Maximo de reservas diarias (99) alcanzado para {reservation_date}")
+                raise ValueError(f"Daily reservation limit (99) reached for {reservation_date}")
 
             ticket_number = f"{date_prefix}{next_seq:02d}"
 
@@ -77,7 +78,7 @@ def generate_reservation_number(reservation_date: str = None, cursor=None, max_r
             if not cur.fetchone():
                 return ticket_number
 
-        raise ValueError("No se pudo generar numero unico despues de varios intentos")
+        raise ValueError("Could not generate unique ticket number after multiple retries")
 
 
 def generate_child_reservation_number(parent_number: str, child_index: int) -> str:
@@ -243,7 +244,7 @@ def create_beach_reservation(
                         item['furniture_id'] for item in unavail_items
                     ))
                     conn.rollback()
-                    raise ValueError(f"Mobiliario no disponible: {conflict_ids}")
+                    raise ValueError(f"Furniture not available: {conflict_ids}")
 
                 for furniture_id in furniture_ids:
                     cursor.execute('''
@@ -265,7 +266,6 @@ def create_beach_reservation(
 
             # Sync preferences to reservation characteristics junction table
             if preferences:
-                from models.characteristic_assignments import sync_preferences_to_reservation
                 sync_preferences_to_reservation(reservation_id, preferences)
 
             # Sync preferences to customer profile
@@ -446,15 +446,35 @@ def update_reservation_with_furniture(
         cursor = conn.cursor()
 
         try:
-            # Update reservation fields
+            # BEGIN IMMEDIATE to prevent TOCTOU race conditions
+            cursor.execute('BEGIN IMMEDIATE')
+
+            # Update reservation fields inline (not via separate function/connection)
             if kwargs:
-                update_beach_reservation(reservation_id, **kwargs)
+                allowed_fields = {
+                    'num_people', 'start_date', 'end_date', 'reservation_date',
+                    'notes', 'preferences', 'customer_id', 'state_id',
+                    'current_state', 'current_states', 'is_furniture_locked'
+                }
+                updates = []
+                values = []
+                for key, value in kwargs.items():
+                    if key in allowed_fields:
+                        updates.append(f'{key} = ?')
+                        values.append(value)
+                if updates:
+                    values.append(reservation_id)
+                    cursor.execute(
+                        f'UPDATE beach_reservations SET {", ".join(updates)} WHERE id = ?',
+                        values
+                    )
 
             # Get reservation date
             cursor.execute('SELECT reservation_date FROM beach_reservations WHERE id = ?',
                           (reservation_id,))
             row = cursor.fetchone()
             if not row:
+                conn.rollback()
                 return False
             res_date = row['reservation_date']
 
@@ -470,7 +490,8 @@ def update_reservation_with_furniture(
                 conflict_ids = list(set(
                     item['furniture_id'] for item in unavail_items
                 ))
-                raise ValueError(f"Mobiliario no disponible: {conflict_ids}")
+                conn.rollback()
+                raise ValueError(f"Furniture not available: {conflict_ids}")
 
             # Clear existing assignments
             cursor.execute('''

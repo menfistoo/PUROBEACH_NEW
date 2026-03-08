@@ -106,9 +106,14 @@ class ConflictResolver {
      * Retry creating reservation with per-day furniture selections
      */
     async retryWithPerDayFurniture(furnitureByDate) {
+        // Prevent double-submit
+        if (this._isRetrying) return;
+        this._isRetrying = true;
+
         const selectedDates = Object.keys(furnitureByDate).sort();
 
         if (selectedDates.length === 0) {
+            this._isRetrying = false;
             this.panel.showToast('No hay fechas seleccionadas', 'warning');
             return;
         }
@@ -241,7 +246,8 @@ class ConflictResolver {
             console.error('Retry reservation error:', error);
             this.panel.showToast(error.message, 'error');
         } finally {
-            // Reset button state
+            // Reset button and submit guard state
+            this._isRetrying = false;
             const createBtn = document.getElementById('newPanelCreateBtn');
             createBtn.disabled = false;
             createBtn.querySelector('.save-text').style.display = 'inline';

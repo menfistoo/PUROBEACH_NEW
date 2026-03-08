@@ -4,6 +4,8 @@ Move mode model functions.
 Handles furniture assignment changes during move mode operations.
 """
 
+import logging
+
 from database import get_db
 from datetime import date, datetime
 from typing import List, Dict, Any, Optional, Union
@@ -39,42 +41,59 @@ def unassign_furniture_for_date(
     Returns:
         Dict with success status and unassigned furniture info
     """
+    if not furniture_ids:
+        return {
+            'success': True,
+            'unassigned_count': 0,
+            'furniture_ids': [],
+            'not_found': [],
+            'reservation_id': reservation_id,
+            'date': assignment_date
+        }
+
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Check if reservation is locked
-        cursor.execute(
-            "SELECT is_furniture_locked FROM beach_reservations WHERE id = ?",
-            (reservation_id,)
-        )
-        row = cursor.fetchone()
-        if row and row['is_furniture_locked']:
-            return {
-                'success': False,
-                'error': 'locked',
-                'message': 'El mobiliario de esta reserva está bloqueado'
-            }
+        # BEGIN IMMEDIATE for consistent read-then-write
+        cursor.execute("BEGIN IMMEDIATE")
 
-        unassigned = []
-        not_found = []
-        for furniture_id in furniture_ids:
-            cursor.execute("""
-                DELETE FROM beach_reservation_furniture
-                WHERE reservation_id = ?
-                AND furniture_id = ?
-                AND assignment_date = ?
-            """, (reservation_id, furniture_id, assignment_date))
+        try:
+            # Check if reservation is locked
+            cursor.execute(
+                "SELECT is_furniture_locked FROM beach_reservations WHERE id = ?",
+                (reservation_id,)
+            )
+            row = cursor.fetchone()
+            if row and row['is_furniture_locked']:
+                conn.rollback()
+                return {
+                    'success': False,
+                    'error': 'locked',
+                    'message': 'El mobiliario de esta reserva está bloqueado'
+                }
 
-            if cursor.rowcount > 0:
-                unassigned.append(furniture_id)
-            else:
-                not_found.append(furniture_id)
+            unassigned = []
+            not_found = []
+            for furniture_id in furniture_ids:
+                cursor.execute("""
+                    DELETE FROM beach_reservation_furniture
+                    WHERE reservation_id = ?
+                    AND furniture_id = ?
+                    AND assignment_date = ?
+                """, (reservation_id, furniture_id, assignment_date))
 
-        conn.commit()
+                if cursor.rowcount > 0:
+                    unassigned.append(furniture_id)
+                else:
+                    not_found.append(furniture_id)
+
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
 
         # Log warning if some furniture wasn't found (helps debug move mode issues)
         if not_found:
-            import logging
             logging.warning(
                 f"[MoveMode] unassign: furniture {not_found} not found for "
                 f"reservation {reservation_id} on {assignment_date}"
@@ -98,6 +117,9 @@ def assign_furniture_for_date(
     """
     Assign furniture to a reservation for a specific date.
 
+    Uses BEGIN IMMEDIATE to prevent TOCTOU race conditions where
+    concurrent requests could double-book the same furniture.
+
     Args:
         reservation_id: The reservation to modify
         furniture_ids: List of furniture IDs to assign
@@ -106,54 +128,82 @@ def assign_furniture_for_date(
     Returns:
         Dict with success status and assigned furniture info
     """
+    if not furniture_ids:
+        return {
+            'success': False,
+            'error': 'No se proporcionaron IDs de mobiliario'
+        }
+
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Check availability first - exclude reservations with availability-releasing states
-        placeholders = ','.join('?' * len(furniture_ids))
-        cursor.execute(f"""
-            SELECT rf.furniture_id, r.id as res_id, c.first_name, c.last_name
-            FROM beach_reservation_furniture rf
-            JOIN beach_reservations r ON rf.reservation_id = r.id
-            JOIN beach_customers c ON r.customer_id = c.id
-            LEFT JOIN beach_reservation_states rs ON r.state_id = rs.id
-            WHERE rf.furniture_id IN ({placeholders})
-            AND rf.assignment_date = ?
-            AND rf.reservation_id != ?
-            AND (rs.is_availability_releasing IS NULL OR rs.is_availability_releasing = 0)
-        """, (*furniture_ids, assignment_date, reservation_id))
+        # BEGIN IMMEDIATE to acquire write lock before check-then-insert
+        cursor.execute("BEGIN IMMEDIATE")
 
-        conflicts = cursor.fetchall()
-        if conflicts:
-            conflict = conflicts[0]
-            return {
-                'success': False,
-                'error': f"Mobiliario ocupado por {conflict['first_name']} {conflict['last_name']}",
-                'conflicts': [dict(c) for c in conflicts]
-            }
+        try:
+            # Check if reservation is locked
+            cursor.execute(
+                "SELECT is_furniture_locked FROM beach_reservations WHERE id = ?",
+                (reservation_id,)
+            )
+            row = cursor.fetchone()
+            if row and row['is_furniture_locked']:
+                conn.rollback()
+                return {
+                    'success': False,
+                    'error': 'locked',
+                    'message': 'El mobiliario de esta reserva está bloqueado'
+                }
 
-        # Assign furniture
-        assigned = []
-        for furniture_id in furniture_ids:
-            # Check if already assigned to this reservation
-            cursor.execute("""
-                SELECT id FROM beach_reservation_furniture
-                WHERE reservation_id = ? AND furniture_id = ? AND assignment_date = ?
-            """, (reservation_id, furniture_id, assignment_date))
+            # Check availability - exclude reservations with availability-releasing states
+            placeholders = ','.join('?' * len(furniture_ids))
+            cursor.execute(f"""
+                SELECT rf.furniture_id, r.id as res_id, c.first_name, c.last_name
+                FROM beach_reservation_furniture rf
+                JOIN beach_reservations r ON rf.reservation_id = r.id
+                JOIN beach_customers c ON r.customer_id = c.id
+                LEFT JOIN beach_reservation_states rs ON r.state_id = rs.id
+                WHERE rf.furniture_id IN ({placeholders})
+                AND rf.assignment_date = ?
+                AND rf.reservation_id != ?
+                AND (rs.is_availability_releasing IS NULL OR rs.is_availability_releasing = 0)
+            """, (*furniture_ids, assignment_date, reservation_id))
 
-            if cursor.fetchone():
-                # Already assigned, skip but count as assigned (idempotent)
+            conflicts = cursor.fetchall()
+            if conflicts:
+                conn.rollback()
+                conflict = conflicts[0]
+                return {
+                    'success': False,
+                    'error': f"Mobiliario ocupado por {conflict['first_name']} {conflict['last_name']}",
+                    'conflicts': [dict(c) for c in conflicts]
+                }
+
+            # Assign furniture
+            assigned = []
+            for furniture_id in furniture_ids:
+                # Check if already assigned to this reservation
+                cursor.execute("""
+                    SELECT id FROM beach_reservation_furniture
+                    WHERE reservation_id = ? AND furniture_id = ? AND assignment_date = ?
+                """, (reservation_id, furniture_id, assignment_date))
+
+                if cursor.fetchone():
+                    # Already assigned, skip but count as assigned (idempotent)
+                    assigned.append(furniture_id)
+                    continue
+
+                cursor.execute("""
+                    INSERT INTO beach_reservation_furniture
+                    (reservation_id, furniture_id, assignment_date)
+                    VALUES (?, ?, ?)
+                """, (reservation_id, furniture_id, assignment_date))
                 assigned.append(furniture_id)
-                continue
 
-            cursor.execute("""
-                INSERT INTO beach_reservation_furniture
-                (reservation_id, furniture_id, assignment_date)
-                VALUES (?, ?, ?)
-            """, (reservation_id, furniture_id, assignment_date))
-            assigned.append(furniture_id)
-
-        conn.commit()
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
 
         return {
             'success': True,
@@ -437,11 +487,14 @@ def get_furniture_preference_matches(
                     furniture_chars[fid] = set()
                 furniture_chars[fid].add(row['code'])
 
-        # Get occupied furniture for the date
+        # Get occupied furniture for the date (exclude availability-releasing states)
         cursor.execute("""
             SELECT DISTINCT rf.furniture_id
             FROM beach_reservation_furniture rf
+            JOIN beach_reservations r ON rf.reservation_id = r.id
+            LEFT JOIN beach_reservation_states rs ON r.state_id = rs.id
             WHERE rf.assignment_date = ?
+            AND (rs.is_availability_releasing IS NULL OR rs.is_availability_releasing = 0)
         """, (target_date,))
 
         occupied_ids = {row['furniture_id'] for row in cursor.fetchall()}

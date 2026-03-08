@@ -559,6 +559,24 @@ a:hover {
     transition: height 0.2s ease;
 }
 
+/* Version Badge */
+.sidebar-version {
+    text-align: center;
+    padding: 0 var(--space-4);
+}
+
+.sidebar-version-tag {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.5px;
+}
+
+.sidebar.collapsed .sidebar-version-tag,
+html.sidebar-collapsed .sidebar-version-tag {
+    font-size: 9px;
+}
+
 /* ==================== Collapsible Sidebar ==================== */
 
 /* Toggle Button */

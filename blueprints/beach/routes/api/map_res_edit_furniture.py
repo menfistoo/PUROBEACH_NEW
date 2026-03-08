@@ -62,36 +62,6 @@ def register_routes(bp: Blueprint) -> None:
         if not date_str:
             date_str = reservation.get('reservation_date')
 
-        # Check new furniture availability (excluding current reservation)
-        with get_db() as conn:
-            # Get current furniture for this reservation on this date
-            cursor = conn.execute('''
-                SELECT furniture_id
-                FROM beach_reservation_furniture
-                WHERE reservation_id = ? AND assignment_date = ?
-            ''', (reservation_id, date_str))
-            current_furniture_ids = [row['furniture_id'] for row in cursor.fetchall()]
-
-            # Check if new furniture is available (excluding what's already assigned to this reservation)
-            new_furniture_ids = [fid for fid in furniture_ids if fid not in current_furniture_ids]
-
-            if new_furniture_ids:
-                availability = check_furniture_availability_bulk(
-                    furniture_ids=new_furniture_ids,
-                    dates=[date_str],
-                    exclude_reservation_id=reservation_id
-                )
-
-                # Check for unavailable furniture (function returns 'unavailable' list, not 'conflicts')
-                unavailable = availability.get('unavailable', [])
-                if unavailable:
-                    conflict_ids = list(set(item['furniture_id'] for item in unavailable))
-                    return api_error(
-                        'Algunos mobiliarios no estan disponibles',
-                        409,
-                        conflicts=conflict_ids
-                    )
-
         # Get furniture capacities and validate against num_people
         furniture_list = get_all_furniture(active_only=True)
         furniture_map = {f['id']: f for f in furniture_list}
@@ -119,22 +89,58 @@ def register_routes(bp: Blueprint) -> None:
             capacity_warning = f'La capacidad total ({total_capacity} personas) es mayor que el numero de personas ({num_people})'
 
         try:
-            # Update furniture assignments for this date
+            # Single connection with BEGIN IMMEDIATE for check + write atomicity
             with get_db() as conn:
-                # Delete existing assignments for this date
-                conn.execute('''
-                    DELETE FROM beach_reservation_furniture
-                    WHERE reservation_id = ? AND assignment_date = ?
-                ''', (reservation_id, date_str))
+                cursor = conn.cursor()
+                cursor.execute('BEGIN IMMEDIATE')
 
-                # Insert new assignments
-                for furniture_id in furniture_ids:
-                    conn.execute('''
-                        INSERT INTO beach_reservation_furniture (reservation_id, furniture_id, assignment_date)
-                        VALUES (?, ?, ?)
-                    ''', (reservation_id, furniture_id, date_str))
+                try:
+                    # Get current furniture for this reservation on this date
+                    cursor.execute('''
+                        SELECT furniture_id
+                        FROM beach_reservation_furniture
+                        WHERE reservation_id = ? AND assignment_date = ?
+                    ''', (reservation_id, date_str))
+                    current_furniture_ids = [row['furniture_id'] for row in cursor.fetchall()]
 
-                conn.commit()
+                    # Check if new furniture is available
+                    new_furniture_ids = [fid for fid in furniture_ids if fid not in current_furniture_ids]
+
+                    if new_furniture_ids:
+                        availability = check_furniture_availability_bulk(
+                            furniture_ids=new_furniture_ids,
+                            dates=[date_str],
+                            exclude_reservation_id=reservation_id,
+                            conn=conn
+                        )
+
+                        unavailable = availability.get('unavailable', [])
+                        if unavailable:
+                            conn.rollback()
+                            conflict_ids = list(set(item['furniture_id'] for item in unavailable))
+                            return api_error(
+                                'Algunos mobiliarios no estan disponibles',
+                                409,
+                                conflicts=conflict_ids
+                            )
+
+                    # Delete existing assignments for this date
+                    cursor.execute('''
+                        DELETE FROM beach_reservation_furniture
+                        WHERE reservation_id = ? AND assignment_date = ?
+                    ''', (reservation_id, date_str))
+
+                    # Insert new assignments
+                    for furniture_id in furniture_ids:
+                        cursor.execute('''
+                            INSERT INTO beach_reservation_furniture (reservation_id, furniture_id, assignment_date)
+                            VALUES (?, ?, ?)
+                        ''', (reservation_id, furniture_id, date_str))
+
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+                    raise
 
             # Get updated furniture info for response
             updated_furniture = [

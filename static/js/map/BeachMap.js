@@ -93,6 +93,7 @@ export class BeachMap {
 
         // Offline manager
         this.offlineManager = null;
+        this.isShowingCachedData = false;
         this.isOfflineMode = false;
 
         // Context menu manager (initialized after container is ready)
@@ -363,6 +364,7 @@ export class BeachMap {
 
             if (result.success) {
                 this.data = result;
+                this.isShowingCachedData = false;
 
                 // Apply map config
                 if (result.map_config) {
@@ -391,6 +393,7 @@ export class BeachMap {
                 const cachedData = await this.offlineManager.loadCachedData();
                 if (cachedData) {
                     this.data = cachedData;
+                    this.isShowingCachedData = true;
                     showToast('Mostrando datos en cache', 'info');
                     return true;
                 }
@@ -478,7 +481,7 @@ export class BeachMap {
         this.selection.updatePanel(this.data);
 
         if (this.callbacks.onFurnitureClick) {
-            this.callbacks.onFurnitureClick(item, this.getSelectedFurniture());
+            this.callbacks.onFurnitureClick(item, this.getSelectedFurniture(), event);
         }
     }
 
@@ -693,14 +696,16 @@ export class BeachMap {
     async refreshAvailability() {
         // Skip refresh if temp furniture drag is in progress
         if (this.interaction.isDraggingTemp) {
-            return;
+            return true;
         }
 
         try {
-            await this.loadData();
+            const success = await this.loadData();
             this.render();
+            return success && !this.isShowingCachedData;
         } catch (error) {
             console.error('Auto-refresh error:', error);
+            return false;
         }
     }
 

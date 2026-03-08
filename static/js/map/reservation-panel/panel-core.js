@@ -653,11 +653,16 @@ class NewReservationPanel {
      * Create the reservation
      */
     async createReservation() {
+        // Prevent double-submit during safeguard checks or API calls
+        if (this._isSubmitting) return;
+        this._isSubmitting = true;
+
         // Validate customer
         const customerId = document.getElementById('newPanelCustomerId').value;
         const customerSource = document.getElementById('newPanelCustomerSource').value;
 
         if (!customerId) {
+            this._isSubmitting = false;
             this.showToast('Selecciona un cliente', 'warning');
             document.getElementById('newPanelCustomerSearch')?.focus();
             return;
@@ -666,6 +671,7 @@ class NewReservationPanel {
         // Get selected dates from DatePicker
         const selectedDates = this.datePicker ? this.datePicker.getSelectedDates() : [];
         if (selectedDates.length === 0) {
+            this._isSubmitting = false;
             this.showToast('Selecciona al menos una fecha', 'warning');
             return;
         }
@@ -673,6 +679,7 @@ class NewReservationPanel {
         // Run safeguard checks before proceeding
         const safeguardResult = await this.safeguardChecks.runSafeguardChecks(customerId, customerSource, selectedDates);
         if (!safeguardResult.proceed) {
+            this._isSubmitting = false;
             // Check if user wants to view an existing reservation
             if (safeguardResult.viewExisting) {
                 // Dispatch event to open the existing reservation panel
@@ -796,7 +803,8 @@ class NewReservationPanel {
             console.error('Create reservation error:', error);
             this.showToast(error.message, 'error');
         } finally {
-            // Reset button state
+            // Reset button and submit guard state
+            this._isSubmitting = false;
             this.createBtn.disabled = false;
             this.createBtn.querySelector('.save-text').style.display = 'inline';
             this.createBtn.querySelector('.save-loading').style.display = 'none';

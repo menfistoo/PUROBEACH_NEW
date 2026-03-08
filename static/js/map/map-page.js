@@ -114,10 +114,17 @@ document.addEventListener('DOMContentLoaded', function () {
     if (moveModeBtn) {
         moveModeBtn.addEventListener('click', async () => {
             if (moveMode.isActive()) {
-                moveMode.deactivate();
+                const deactivated = moveMode.deactivate();
+                if (!deactivated) return; // Pool not empty, deactivation blocked
                 moveModeBtn.classList.remove('active');
                 document.querySelector('.beach-map-container')?.classList.remove('move-mode-active');
             } else {
+                // Block activation when showing cached/stale data
+                if (map.isShowingCachedData) {
+                    showToast('Modo mover no disponible con datos en cache', 'warning');
+                    return;
+                }
+
                 // If there are unassigned reservations, navigate to first problematic date
                 let targetDate = map.getCurrentDate();
                 if (globalUnassignedData && globalUnassignedData.first_date) {
@@ -128,7 +135,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
 
-                moveMode.activate(targetDate);
+                await moveMode.activate(targetDate);
                 moveModeBtn.classList.add('active');
                 document.querySelector('.beach-map-container')?.classList.add('move-mode-active');
 
@@ -151,13 +158,13 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Handle edit reservation from move mode - Issue #8, #14
-    document.addEventListener('moveMode:editReservation', (e) => {
+    document.addEventListener('moveMode:editReservation', async (e) => {
         const { reservationId } = e.detail;
 
         // Force exit move mode to avoid panel overlap - Issue #14
-        // Use forceDeactivate() to skip the "assign all reservations" check
+        // forceDeactivate restores unassigned furniture before exiting
         if (moveMode.isActive()) {
-            moveMode.forceDeactivate();
+            await moveMode.forceDeactivate();
         }
 
         // Open the reservation edit modal
@@ -1091,6 +1098,10 @@ document.addEventListener('DOMContentLoaded', function () {
     async function performQuickSwap(toFurnitureId) {
         if (!quickSwapContext) return;
 
+        // Capture and clear context to prevent re-entry during fetch
+        const swapCtx = quickSwapContext;
+        quickSwapContext = null;
+
         try {
             const response = await fetch('/beach/api/map/move-reservation-furniture', {
                 method: 'POST',
@@ -1099,9 +1110,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                 },
                 body: JSON.stringify({
-                    reservation_id: quickSwapContext.reservationId,
-                    date: quickSwapContext.date,
-                    from_furniture_id: quickSwapContext.fromFurnitureId,
+                    reservation_id: swapCtx.reservationId,
+                    date: swapCtx.date,
+                    from_furniture_id: swapCtx.fromFurnitureId,
                     to_furniture_id: toFurnitureId
                 })
             });
@@ -1120,7 +1131,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (conflictResolutionContext) {
                     // Remove the moved furniture from conflicts list
                     conflictResolutionContext.conflicts = conflictResolutionContext.conflicts.filter(
-                        c => c.furniture_id !== quickSwapContext.fromFurnitureId
+                        c => c.furniture_id !== swapCtx.fromFurnitureId
                     );
 
                     // Update conflicting labels
@@ -1217,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 );
 
                 if (result.success) {
-                    map.refreshAvailability();
+                    await map.refreshAvailability();
                     if (window.PuroBeach && window.PuroBeach.showToast) {
                         window.PuroBeach.showToast(`${furnitureIds.length} mueble(s) liberado(s)`, 'success');
                     }
@@ -1260,7 +1271,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return `${day} ${month.charAt(0).toUpperCase() + month.slice(1)}`;
     }
 
-    map.on('onDateChange', function (dateStr) {
+    map.on('onDateChange', async function (dateStr) {
         // Update UI elements
         dateDisplay.textContent = formatDateCompact(dateStr);
         datePicker.value = dateStr;
@@ -1270,7 +1281,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateWaitlistBadge();
         // Update move mode date if active - refresh pool for new date
         if (moveMode.isActive()) {
-            moveMode.setDate(dateStr);
+            await moveMode.setDate(dateStr);
         }
         // Note: Global unassigned badge is NOT refreshed on date change
         // It only refreshes on page load and after assignments
@@ -2087,7 +2098,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Override map selection callback - handle occupied furniture clicks
-    map.on('onFurnitureClick', async (item, selectedFurniture) => {
+    map.on('onFurnitureClick', async (item, selectedFurniture, clickEvent) => {
         try {
             const data = map.getData();
             if (!data?.availability) return;
@@ -2096,6 +2107,12 @@ document.addEventListener('DOMContentLoaded', function () {
             // Handle move mode - furniture reassignment
             if (moveMode.isActive()) {
                 map.deselectFurniture(item.id); // Don't select during move mode
+
+                // Block operations when showing cached/stale data
+                if (map.isShowingCachedData) {
+                    showToast('Datos en cache - recarga la página', 'warning');
+                    return;
+                }
 
                 const selectedRes = moveMode.getSelectedReservation();
 
@@ -2115,7 +2132,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     // Occupied furniture - unassign from its reservation
                     // Ctrl+click releases ALL furniture, normal click releases just one
-                    const furnitureToUnassign = event?.ctrlKey
+                    const furnitureToUnassign = clickEvent?.ctrlKey
                         ? allFurnitureForReservation.map(f => f.furniture_id)
                         : [item.id];
 
@@ -2126,7 +2143,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         allFurnitureForReservation  // Pass all furniture for correct totalNeeded
                     );
                     if (result.success) {
-                        map.refreshAvailability();
+                        const refreshOk = await map.refreshAvailability();
+                        if (!refreshOk) {
+                            showToast('Guardado. Recarga para datos actuales.', 'warning');
+                        }
                     }
                 } else if (selectedRes && availability?.available) {
                     // Available furniture with reservation selected - assign
@@ -2135,7 +2155,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         [item.id]
                     );
                     if (result.success) {
-                        map.refreshAvailability();
+                        const refreshOk = await map.refreshAvailability();
+                        if (!refreshOk) {
+                            showToast('Guardado. Recarga para datos actuales.', 'warning');
+                        }
                     }
                 } else if (!selectedRes) {
                     // No reservation selected

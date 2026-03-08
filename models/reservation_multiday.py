@@ -20,6 +20,7 @@ from .reservation_availability import (
     check_furniture_availability_bulk,
     check_duplicate_reservation
 )
+from .characteristic_assignments import sync_preferences_to_reservation
 from .state import get_default_state
 
 
@@ -97,10 +98,10 @@ def create_linked_multiday_reservations(
         ValueError: If validation fails
     """
     if not dates:
-        raise ValueError('Se requiere al menos una fecha')
+        raise ValueError('At least one date is required')
 
     if not customer_id:
-        raise ValueError('Se requiere customer_id')
+        raise ValueError('customer_id is required')
 
     # Sort dates to ensure correct order
     dates = sorted(dates)
@@ -117,7 +118,7 @@ def create_linked_multiday_reservations(
         all_furniture_ids = furniture_ids
         furniture_by_date = {d: furniture_ids for d in dates}
     else:
-        raise ValueError('Se requiere furniture_ids o furniture_by_date')
+        raise ValueError('furniture_ids or furniture_by_date is required')
 
     # NOTE: Availability and duplicate checks are performed INSIDE the
     # BEGIN IMMEDIATE transaction to prevent race conditions. The lock is
@@ -141,8 +142,8 @@ def create_linked_multiday_reservations(
                         if not avail_result['all_available']:
                             unavail = avail_result['unavailable'][0]
                             raise ValueError(
-                                f"Mobiliario {unavail['furniture_id']} no disponible el {unavail['date']} "
-                                f"(reserva {unavail['ticket_number']})"
+                                f"Furniture {unavail['furniture_id']} not available on {unavail['date']} "
+                                f"(reservation {unavail['ticket_number']})"
                             )
                 else:
                     # Same furniture for all days - check all against all
@@ -159,7 +160,7 @@ def create_linked_multiday_reservations(
                 is_dup, existing = check_duplicate_reservation(customer_id, dates)
                 if is_dup:
                     raise ValueError(
-                        f"Ya existe una reserva para este cliente el {existing['date']} "
+                        f"Duplicate reservation for this customer on {existing['date']} "
                         f"(ticket {existing['ticket_number']})"
                     )
 
@@ -300,7 +301,6 @@ def create_linked_multiday_reservations(
 
             # Sync preferences to reservation characteristics junction table
             if preferences:
-                from models.characteristic_assignments import sync_preferences_to_reservation
                 # Sync to parent reservation
                 sync_preferences_to_reservation(parent_id, preferences)
                 # Sync to child reservations
@@ -373,6 +373,9 @@ def update_multiday_reservations(
         updates.append('updated_at = CURRENT_TIMESTAMP')
 
         try:
+            # BEGIN IMMEDIATE to prevent concurrent updates
+            cursor.execute('BEGIN IMMEDIATE')
+
             updated_ids = []
 
             # Update parent
@@ -398,7 +401,6 @@ def update_multiday_reservations(
 
             # Sync preferences if updated
             if 'preferences' in fields:
-                from models.characteristic_assignments import sync_preferences_to_reservation
                 # Sync to all updated reservations
                 for res_id in updated_ids:
                     sync_preferences_to_reservation(res_id, fields['preferences'])
@@ -450,6 +452,9 @@ def cancel_multiday_reservations(
         cursor = conn.cursor()
 
         try:
+            # BEGIN IMMEDIATE to prevent concurrent cancellations
+            cursor.execute('BEGIN IMMEDIATE')
+
             cancelled_ids = []
 
             # Get all reservation IDs in the group
