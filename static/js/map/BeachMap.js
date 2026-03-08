@@ -50,6 +50,7 @@ export class BeachMap {
         this.currentDate = this.options.initialDate || new Date().toISOString().split('T')[0];
         this.data = null;
         this.autoRefreshTimer = null;
+        this._refreshInFlight = null;  // Dedup concurrent refreshAvailability calls
 
         // DOM elements
         this.svg = null;
@@ -699,14 +700,28 @@ export class BeachMap {
             return true;
         }
 
-        try {
-            const success = await this.loadData();
-            this.render();
-            return success && !this.isShowingCachedData;
-        } catch (error) {
-            console.error('Auto-refresh error:', error);
-            return false;
+        // Deduplicate concurrent refreshes: if one is already in-flight,
+        // wait for it instead of firing a parallel fetch. This prevents
+        // race conditions where overlapping loadData() calls cause stale
+        // renders to overwrite correct data.
+        if (this._refreshInFlight) {
+            return this._refreshInFlight;
         }
+
+        this._refreshInFlight = (async () => {
+            try {
+                const success = await this.loadData();
+                this.render();
+                return success && !this.isShowingCachedData;
+            } catch (error) {
+                console.error('Auto-refresh error:', error);
+                return false;
+            } finally {
+                this._refreshInFlight = null;
+            }
+        })();
+
+        return this._refreshInFlight;
     }
 
     // =========================================================================

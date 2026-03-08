@@ -213,13 +213,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Wire up pool update to refresh map and update warning badge
+    // Debounced map refresh for move mode pool updates.
+    // Multiple rapid onPoolUpdate events (from loadReservationToPool + completion
+    // timer + callers) collapse into a single refresh, preventing race conditions
+    // where overlapping refreshAvailability() calls cause stale data to overwrite
+    // correct data (making reservations "disappear" after the second move).
+    let _poolRefreshTimer = null;
     moveMode.on('onPoolUpdate', (data) => {
-        map.refreshAvailability();
-
-        // Update badge based on unassigned reservations in pool
+        // Update badge immediately (lightweight)
         const unassignedCount = (data.pool || []).filter(r => r.assignedCount < r.totalNeeded).length;
         updateUnassignedBadge(unassignedCount);
+
+        // Debounce map refresh: cancel any pending refresh and schedule a new one.
+        // This ensures only ONE refresh runs after all rapid pool updates settle.
+        if (_poolRefreshTimer) clearTimeout(_poolRefreshTimer);
+        _poolRefreshTimer = setTimeout(() => {
+            _poolRefreshTimer = null;
+            map.refreshAvailability();
+        }, 100);
     });
 
     /**
