@@ -50,7 +50,7 @@ export class BeachMap {
         this.currentDate = this.options.initialDate || new Date().toISOString().split('T')[0];
         this.data = null;
         this.autoRefreshTimer = null;
-        this._refreshInFlight = null;  // Dedup concurrent refreshAvailability calls
+        this._refreshCounter = 0;  // "Latest wins" guard for concurrent refreshes
 
         // DOM elements
         this.svg = null;
@@ -700,28 +700,23 @@ export class BeachMap {
             return true;
         }
 
-        // Deduplicate concurrent refreshes: if one is already in-flight,
-        // wait for it instead of firing a parallel fetch. This prevents
-        // race conditions where overlapping loadData() calls cause stale
-        // renders to overwrite correct data.
-        if (this._refreshInFlight) {
-            return this._refreshInFlight;
-        }
+        // "Latest wins" pattern: multiple concurrent refreshes can all
+        // fetch data, but only the LAST one to start actually renders.
+        // This prevents stale fetches (e.g. auto-refresh that started
+        // BEFORE an assign/unassign) from overwriting fresh data.
+        const myRefreshId = ++this._refreshCounter;
 
-        this._refreshInFlight = (async () => {
-            try {
-                const success = await this.loadData();
+        try {
+            const success = await this.loadData();
+            // Only render if no newer refresh has started since this one
+            if (myRefreshId === this._refreshCounter) {
                 this.render();
-                return success && !this.isShowingCachedData;
-            } catch (error) {
-                console.error('Auto-refresh error:', error);
-                return false;
-            } finally {
-                this._refreshInFlight = null;
             }
-        })();
-
-        return this._refreshInFlight;
+            return success && !this.isShowingCachedData;
+        } catch (error) {
+            console.error('Auto-refresh error:', error);
+            return false;
+        }
     }
 
     // =========================================================================
