@@ -213,24 +213,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Debounced map refresh for move mode pool updates.
-    // Multiple rapid onPoolUpdate events (from loadReservationToPool + completion
-    // timer + callers) collapse into a single refresh, preventing race conditions
-    // where overlapping refreshAvailability() calls cause stale data to overwrite
-    // correct data (making reservations "disappear" after the second move).
-    let _poolRefreshTimer = null;
+    // Pool update handler: ONLY updates the badge (lightweight UI).
+    // Map refresh is handled exclusively by the click handler after
+    // assign/unassign operations — NO automatic refresh here to prevent
+    // race conditions where overlapping refreshAvailability() calls
+    // cause stale data to overwrite correct data.
     moveMode.on('onPoolUpdate', (data) => {
-        // Update badge immediately (lightweight)
         const unassignedCount = (data.pool || []).filter(r => r.assignedCount < r.totalNeeded).length;
         updateUnassignedBadge(unassignedCount);
-
-        // Debounce map refresh: cancel any pending refresh and schedule a new one.
-        // This ensures only ONE refresh runs after all rapid pool updates settle.
-        if (_poolRefreshTimer) clearTimeout(_poolRefreshTimer);
-        _poolRefreshTimer = setTimeout(() => {
-            _poolRefreshTimer = null;
-            map.refreshAvailability();
-        }, 100);
     });
 
     /**
@@ -2147,29 +2137,41 @@ document.addEventListener('DOMContentLoaded', function () {
                         ? allFurnitureForReservation.map(f => f.furniture_id)
                         : [item.id];
 
-                    const result = await moveMode.unassignFurniture(
-                        availability.reservation_id,
-                        furnitureToUnassign,
-                        false,
-                        allFurnitureForReservation  // Pass all furniture for correct totalNeeded
-                    );
-                    if (result.success) {
-                        const refreshOk = await map.refreshAvailability();
-                        if (!refreshOk) {
-                            showToast('Guardado. Recarga para datos actuales.', 'warning');
+                    // Pause auto-refresh to prevent stale data overwriting
+                    // the explicit refresh we do after the mutation
+                    map.pauseAutoRefresh();
+                    try {
+                        const result = await moveMode.unassignFurniture(
+                            availability.reservation_id,
+                            furnitureToUnassign,
+                            false,
+                            allFurnitureForReservation  // Pass all furniture for correct totalNeeded
+                        );
+                        if (result.success) {
+                            const refreshOk = await map.refreshAvailability();
+                            if (!refreshOk) {
+                                showToast('Guardado. Recarga para datos actuales.', 'warning');
+                            }
                         }
+                    } finally {
+                        map.resumeAutoRefresh();
                     }
                 } else if (selectedRes && availability?.available) {
                     // Available furniture with reservation selected - assign
-                    const result = await moveMode.assignFurniture(
-                        selectedRes.reservation_id,
-                        [item.id]
-                    );
-                    if (result.success) {
-                        const refreshOk = await map.refreshAvailability();
-                        if (!refreshOk) {
-                            showToast('Guardado. Recarga para datos actuales.', 'warning');
+                    map.pauseAutoRefresh();
+                    try {
+                        const result = await moveMode.assignFurniture(
+                            selectedRes.reservation_id,
+                            [item.id]
+                        );
+                        if (result.success) {
+                            const refreshOk = await map.refreshAvailability();
+                            if (!refreshOk) {
+                                showToast('Guardado. Recarga para datos actuales.', 'warning');
+                            }
                         }
+                    } finally {
+                        map.resumeAutoRefresh();
                     }
                 } else if (!selectedRes) {
                     // No reservation selected

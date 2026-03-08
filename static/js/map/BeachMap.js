@@ -50,7 +50,7 @@ export class BeachMap {
         this.currentDate = this.options.initialDate || new Date().toISOString().split('T')[0];
         this.data = null;
         this.autoRefreshTimer = null;
-        this._refreshCounter = 0;  // "Latest wins" guard for concurrent refreshes
+        this._refreshPaused = false;  // Pause auto-refresh during mutations
 
         // DOM elements
         this.svg = null;
@@ -683,7 +683,10 @@ export class BeachMap {
 
         const interval = intervalMs || this.options.autoRefreshInterval;
         this.autoRefreshTimer = setInterval(() => {
-            this.refreshAvailability();
+            // Skip auto-refresh when paused (during move mode mutations)
+            if (!this._refreshPaused) {
+                this.refreshAvailability();
+            }
         }, interval);
     }
 
@@ -694,24 +697,30 @@ export class BeachMap {
         }
     }
 
+    /**
+     * Pause auto-refresh (call before mutations to prevent stale overwrites).
+     * Explicit refreshAvailability() calls still work while paused.
+     */
+    pauseAutoRefresh() {
+        this._refreshPaused = true;
+    }
+
+    /**
+     * Resume auto-refresh after mutation + explicit refresh completes.
+     */
+    resumeAutoRefresh() {
+        this._refreshPaused = false;
+    }
+
     async refreshAvailability() {
         // Skip refresh if temp furniture drag is in progress
         if (this.interaction.isDraggingTemp) {
             return true;
         }
 
-        // "Latest wins" pattern: multiple concurrent refreshes can all
-        // fetch data, but only the LAST one to start actually renders.
-        // This prevents stale fetches (e.g. auto-refresh that started
-        // BEFORE an assign/unassign) from overwriting fresh data.
-        const myRefreshId = ++this._refreshCounter;
-
         try {
             const success = await this.loadData();
-            // Only render if no newer refresh has started since this one
-            if (myRefreshId === this._refreshCounter) {
-                this.render();
-            }
+            this.render();
             return success && !this.isShowingCachedData;
         } catch (error) {
             console.error('Auto-refresh error:', error);
