@@ -4002,7 +4002,10 @@ class BeachMap {
 
         const interval = intervalMs || this.options.autoRefreshInterval;
         this.autoRefreshTimer = setInterval(() => {
-            this.refreshAvailability();
+            // Skip auto-refresh when paused (during move mode mutations)
+            if (!this._refreshPaused) {
+                this.refreshAvailability();
+            }
         }, interval);
     }
 
@@ -4013,17 +4016,34 @@ class BeachMap {
         }
     }
 
+    /**
+     * Pause auto-refresh (call before mutations to prevent stale overwrites).
+     * Explicit refreshAvailability() calls still work while paused.
+     */
+    pauseAutoRefresh() {
+        this._refreshPaused = true;
+    }
+
+    /**
+     * Resume auto-refresh after mutation + explicit refresh completes.
+     */
+    resumeAutoRefresh() {
+        this._refreshPaused = false;
+    }
+
     async refreshAvailability() {
         // Skip refresh if temp furniture drag is in progress
         if (this.interaction.isDraggingTemp) {
-            return;
+            return true;
         }
 
         try {
-            await this.loadData();
+            const success = await this.loadData();
             this.render();
+            return success && !this.isShowingCachedData;
         } catch (error) {
             console.error('Auto-refresh error:', error);
+            return false;
         }
     }
 
