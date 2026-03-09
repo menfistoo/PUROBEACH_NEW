@@ -9,8 +9,9 @@ from extensions import limiter
 # Create the API blueprint
 api_bp = Blueprint('api', __name__)
 
-# Apply rate limit to all beach API endpoints (120 req/min per IP)
-limiter.limit("120 per minute")(api_bp)
+# Apply rate limit to all beach API endpoints (1000 req/min per IP)
+# High limit to allow intensive move mode operations
+limiter.limit("1000 per minute")(api_bp)
 
 # Import and register routes from submodules
 from blueprints.beach.routes.api import customers

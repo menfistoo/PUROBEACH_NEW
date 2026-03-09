@@ -3686,6 +3686,7 @@ class BeachMap {
 
             if (result.success) {
                 this.data = result;
+                this.isShowingCachedData = false;
 
                 // Apply map config
                 if (result.map_config) {
@@ -3714,6 +3715,7 @@ class BeachMap {
                 const cachedData = await this.offlineManager.loadCachedData();
                 if (cachedData) {
                     this.data = cachedData;
+                    this.isShowingCachedData = true;
                     showToast('Mostrando datos en cache', 'info');
                     return true;
                 }
@@ -6395,7 +6397,6 @@ class MoveMode {
     async loadUnassignedReservations() {
         try {
             const url = `${this.options.apiBaseUrl}/unassigned?date=${this.currentDate}`;
-
             const response = await fetch(url, {
                 headers: { 'X-CSRFToken': getCSRFToken() }
             });

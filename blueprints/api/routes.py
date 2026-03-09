@@ -15,7 +15,8 @@ api_bp = Blueprint('api', __name__)
 
 
 # Apply default rate limit to all API endpoints
-limiter.limit("60 per minute")(api_bp)
+# High limit to prevent blocking normal usage
+limiter.limit("1000 per minute")(api_bp)
 
 
 @api_bp.route('/health')
