@@ -1458,29 +1458,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const svg = document.getElementById('beach-map');
         if (!svg) return;
 
-        const zone = data.zones?.find(z => z.id === zoneId);
-        const visibleZones = getVisibleZoneIds(zoneId);
-
-        let canvasWidth, canvasHeight;
-        if (visibleZones.size > 1) {
-            // Parent zone: use max dimensions across all child zones
-            canvasWidth = 0;
-            canvasHeight = 0;
-            visibleZones.forEach(zId => {
-                const z = data.zones?.find(zn => zn.id === zId);
-                if (z) {
-                    canvasWidth = Math.max(canvasWidth, z.canvas_width || 0);
-                    canvasHeight = Math.max(canvasHeight, z.canvas_height || 0);
-                }
-            });
-            canvasWidth = canvasWidth || data.map_dimensions?.width || 1200;
-            canvasHeight = canvasHeight || data.map_dimensions?.height || 800;
-        } else {
-            canvasWidth = zone?.canvas_width || data.map_dimensions?.width || 1200;
-            canvasHeight = zone?.canvas_height || data.map_dimensions?.height || 800;
-        }
+        // Always use fixed map dimensions from backend config so the canvas
+        // never changes size when switching zones.
+        const canvasWidth = data.map_dimensions?.width || 1200;
+        const canvasHeight = data.map_dimensions?.height || 800;
 
         svg.setAttribute('viewBox', `0 0 ${canvasWidth} ${canvasHeight}`);
+
+        // Re-apply zoom to keep SVG pixel dimensions consistent with the viewBox
+        map.applyZoom();
     }
 
     // ==========================================================================
@@ -1534,10 +1520,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = map.getData();
         if (!data) return;
 
-        // Get zone's canvas dimensions
-        const zone = data.zones?.find(z => z.id === currentZoneId);
-        const width = zone?.canvas_width || data.map_dimensions?.width || 1200;
-        const height = zone?.canvas_height || data.map_dimensions?.height || 800;
+        // Use fixed map dimensions (same as canvas)
+        const width = data.map_dimensions?.width || 1200;
+        const height = data.map_dimensions?.height || 800;
 
         canvasDimensions.textContent = `${width} x ${height}`;
 
