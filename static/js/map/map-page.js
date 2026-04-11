@@ -1481,6 +1481,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         svg.setAttribute('viewBox', `0 0 ${canvasWidth} ${canvasHeight}`);
+
+        // Re-apply zoom so inline width/height match the new viewBox
+        map.applyZoom();
     }
 
     // ==========================================================================

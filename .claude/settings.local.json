@@ -142,7 +142,18 @@
       "Bash(git remote add:*)",
       "Bash(git -C \"C:\\\\Users\\\\catia\\\\programas\\\\Vouchers\" status)",
       "mcp__plugin_episodic-memory_episodic-memory__read",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(sudo lsof:*)",
+      "Bash(sudo ss:*)",
+      "Bash(docker ps:*)",
+      "Bash(node --check static/js/map/renderer.js)",
+      "Read(//etc/**)",
+      "Read(//home/catia/**)",
+      "Read(//var/**)",
+      "Bash(snap list:*)",
+      "Bash(docker exec:*)"
     ]
   }
 }
