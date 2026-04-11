@@ -59,6 +59,10 @@ export class TooltipManager {
             content += `<br><small>${n} persona${n > 1 ? 's' : ''}</small>`;
         }
 
+        if (availability.has_notes && availability.notes_preview) {
+            content += `<br><small style="color: rgba(255,255,255,0.7); border-top: 1px solid rgba(255,255,255,0.2); padding-top: 4px; margin-top: 3px; display: block;">📋 ${this._escape(availability.notes_preview)}</small>`;
+        }
+
         this.tooltip.innerHTML = content;
         this.tooltip.style.display = 'block';
         this.move(event);

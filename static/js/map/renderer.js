@@ -509,6 +509,32 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
         group.appendChild(lockIcon);
     }
 
+    // Notes indicator for reservations with notes (bottom-left corner)
+    if (availability && availability.has_notes) {
+        const noteBadge = document.createElementNS(SVG_NS, 'circle');
+        noteBadge.setAttribute('cx', 10);
+        noteBadge.setAttribute('cy', height - 10);
+        noteBadge.setAttribute('r', 5);
+        noteBadge.setAttribute('fill', '#6890C9');
+        noteBadge.setAttribute('stroke', '#FFFFFF');
+        noteBadge.setAttribute('stroke-width', '1.5');
+        noteBadge.setAttribute('pointer-events', 'none');
+        noteBadge.setAttribute('class', 'furniture-note-indicator');
+        group.appendChild(noteBadge);
+
+        const noteIcon = document.createElementNS(SVG_NS, 'text');
+        noteIcon.setAttribute('x', 10);
+        noteIcon.setAttribute('y', height - 10);
+        noteIcon.setAttribute('text-anchor', 'middle');
+        noteIcon.setAttribute('dominant-baseline', 'central');
+        noteIcon.setAttribute('font-size', '6');
+        noteIcon.setAttribute('fill', '#FFFFFF');
+        noteIcon.setAttribute('font-weight', '700');
+        noteIcon.setAttribute('pointer-events', 'none');
+        noteIcon.textContent = 'N';
+        group.appendChild(noteIcon);
+    }
+
     // Event listeners
     group.addEventListener('click', (e) => onFurnitureClick(e, item));
 

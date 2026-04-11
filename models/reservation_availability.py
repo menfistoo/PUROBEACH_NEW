@@ -425,6 +425,7 @@ def get_furniture_availability_map(
         reservations_query = f'''
             SELECT rf.furniture_id, rf.assignment_date, r.id as reservation_id,
                    r.ticket_number, r.current_state, r.num_people, r.is_furniture_locked,
+                   r.notes as reservation_notes,
                    c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
                    c.first_name, c.room_number, c.customer_type, c.vip_status
             FROM beach_reservation_furniture rf
@@ -453,6 +454,7 @@ def get_furniture_availability_map(
             if hasattr(assignment_date, 'strftime'):
                 assignment_date = assignment_date.strftime('%Y-%m-%d')
             key = (row['furniture_id'], assignment_date)
+            notes_stripped = (row['reservation_notes'] or '').strip()
             reservation_map[key] = {
                 'reservation_id': row['reservation_id'],
                 'ticket_number': row['ticket_number'],
@@ -463,7 +465,9 @@ def get_furniture_availability_map(
                 'vip_status': row['vip_status'],
                 'num_people': row['num_people'],
                 'state': row['current_state'],
-                'is_furniture_locked': row['is_furniture_locked']
+                'is_furniture_locked': row['is_furniture_locked'],
+                'has_notes': bool(notes_stripped),
+                'notes_preview': notes_stripped[:80]
             }
 
         # Build availability matrix
@@ -489,7 +493,9 @@ def get_furniture_availability_map(
                         'vip_status': res_info['vip_status'],
                         'num_people': res_info['num_people'],
                         'state': res_info['state'],
-                        'is_furniture_locked': res_info['is_furniture_locked']
+                        'is_furniture_locked': res_info['is_furniture_locked'],
+                        'has_notes': res_info['has_notes'],
+                        'notes_preview': res_info['notes_preview']
                     }
                     summary[date]['occupied'] += 1
                 else:
