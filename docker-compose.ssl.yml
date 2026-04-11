@@ -1,0 +1,19 @@
+services:
+  nginx:
+    ports:
+      - "${SERVER_IP:-0.0.0.0}:443:443"
+    volumes:
+      - certbot-conf:/etc/letsencrypt:ro
+
+  certbot:
+    image: certbot/certbot
+    container_name: purobeach-certbot
+    restart: unless-stopped
+    volumes:
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done'
+
+volumes:
+  certbot-conf:
+    driver: local

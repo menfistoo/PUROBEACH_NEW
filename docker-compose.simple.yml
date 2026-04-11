@@ -1,0 +1,28 @@
+services:
+  # Flask application (Gunicorn)
+  app:
+    build: .
+    container_name: purobeach-app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - FLASK_APP=wsgi.py
+    ports:
+      - "${SERVER_IP:-0.0.0.0}:9080:8000"
+    volumes:
+      - db-data:/app/instance
+      - uploads:/app/static/uploads
+      - logs:/app/logs
+      - static-shared:/app/static-shared
+
+volumes:
+  db-data:
+    driver: local
+  uploads:
+    driver: local
+  logs:
+    driver: local
+  static-shared:
+    driver: local
