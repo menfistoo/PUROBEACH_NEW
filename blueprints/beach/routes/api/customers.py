@@ -669,7 +669,9 @@ def register_routes(bp):
             'num_adults': g.get('num_adults', 1),
             'num_children': g.get('num_children', 0),
             'is_main_guest': g.get('is_main_guest', 0),
-            'booking_reference': g.get('booking_reference')
+            'booking_reference': g.get('booking_reference'),
+            'is_checkin_today': g.get('is_checkin_today', False),
+            'is_checkout_today': g.get('is_checkout_today', False)
         } for g in guests])
 
     @bp.route('/hotel-guests/search')

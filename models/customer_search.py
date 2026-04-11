@@ -126,31 +126,52 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                 customer['is_checkin_today'] = False
                 customer['is_checkout_today'] = False
                 if customer.get('customer_type') == 'interno' and customer.get('room_number'):
+                    # Get all active guests in this room today
                     cursor.execute('''
-                        SELECT arrival_date, departure_date
+                        SELECT guest_name, arrival_date, departure_date
                         FROM hotel_guests
                         WHERE room_number = ?
                           AND departure_date >= date('now')
                           AND arrival_date <= date('now')
-                        ORDER BY (arrival_date = date('now')) DESC,
-                                 (departure_date = date('now')) DESC
-                        LIMIT 1
+                        ORDER BY arrival_date DESC
                     ''', (customer['room_number'],))
-                    hotel_row = cursor.fetchone()
-                    if hotel_row:
-                        arrival = hotel_row['arrival_date']
-                        departure = hotel_row['departure_date']
-                        if isinstance(arrival, str):
-                            customer['is_checkin_today'] = arrival == today.isoformat()
-                        else:
-                            customer['is_checkin_today'] = arrival == today
-                        if isinstance(departure, str):
-                            customer['is_checkout_today'] = departure == today.isoformat()
-                        else:
-                            customer['is_checkout_today'] = departure == today
-                    else:
+                    hotel_rows = cursor.fetchall()
+                    if not hotel_rows:
                         # No active hotel stay - skip this interno customer
                         continue
+
+                    # Match customer name against active hotel guests in this room
+                    customer_name = normalize_text(
+                        f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip()
+                    )
+                    matched_guest = None
+                    for hr in hotel_rows:
+                        guest_name_normalized = normalize_text(hr['guest_name'] or '')
+                        # Check if names match (either direction for "First Last" vs "Last First")
+                        # Require at least 2 common words to avoid false positives on common names
+                        # (e.g. "María López" matching "María García" on just "maria")
+                        common_words = set(customer_name.split()) & set(guest_name_normalized.split())
+                        min_words = min(len(customer_name.split()), len(guest_name_normalized.split()))
+                        if (customer_name in guest_name_normalized
+                                or guest_name_normalized in customer_name
+                                or len(common_words) >= min(2, min_words)):
+                            matched_guest = hr
+                            break
+
+                    if not matched_guest:
+                        # Customer name doesn't match any active guest in this room - skip
+                        continue
+
+                    arrival = matched_guest['arrival_date']
+                    departure = matched_guest['departure_date']
+                    if isinstance(arrival, str):
+                        customer['is_checkin_today'] = arrival == today.isoformat()
+                    else:
+                        customer['is_checkin_today'] = arrival == today
+                    if isinstance(departure, str):
+                        customer['is_checkout_today'] = departure == today.isoformat()
+                    else:
+                        customer['is_checkout_today'] = departure == today
 
                 results.append(customer)
                 if len(results) >= limit:

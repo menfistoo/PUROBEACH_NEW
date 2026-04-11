@@ -78,6 +78,7 @@ def get_guests_by_room(room_number: str, check_date: date = None) -> List[Dict[s
 
     Deduplicates guests by name, preferring records where is_main_guest=1,
     then preferring the most recent record by ID.
+    When check_date is provided, adds is_checkin_today and is_checkout_today flags.
 
     Args:
         room_number: Room number to search
@@ -115,10 +116,22 @@ def get_guests_by_room(room_number: str, check_date: date = None) -> List[Dict[s
             name_key = guest['guest_name'].upper().strip() if guest['guest_name'] else ''
             if name_key and name_key not in seen_names:
                 seen_names.add(name_key)
+                # Add checkin/checkout flags when filtering by date
+                if check_date:
+                    check_str = check_date.isoformat()
+                    arrival = guest.get('arrival_date', '')
+                    departure = guest.get('departure_date', '')
+                    guest['is_checkin_today'] = (arrival == check_str)
+                    guest['is_checkout_today'] = (departure == check_str)
                 unique_guests.append(guest)
 
-        # Sort by is_main_guest DESC, then guest_name for consistent ordering
-        unique_guests.sort(key=lambda g: (-g.get('is_main_guest', 0), g.get('guest_name', '')))
+        # Sort: checkin guests first (arriving), then by is_main_guest, then name
+        unique_guests.sort(key=lambda g: (
+            -g.get('is_checkin_today', False),
+            g.get('is_checkout_today', False),
+            -g.get('is_main_guest', 0),
+            g.get('guest_name', '')
+        ))
 
         return unique_guests
 
@@ -160,6 +173,7 @@ def search_guests(query: str, limit: int = 10) -> List[Dict[str, Any]]:
             SELECT * FROM hotel_guests
             WHERE (guest_name LIKE ? OR room_number LIKE ?)
               AND departure_date >= date("now")
+              AND arrival_date <= date("now")
             ORDER BY room_number, guest_name
             LIMIT ?
         ''', (search_term, search_term, limit))
