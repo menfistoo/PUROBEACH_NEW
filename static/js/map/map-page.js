@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function () {
     map.on('onRender', (data) => {
         // 1. Reload search reservations
         const zoneId = document.getElementById('zone-select')?.value || null;
-        searchManager.loadReservations(map.getCurrentDate(), zoneId ? parseInt(zoneId) : null);
+        searchManager.loadReservations(map.getCurrentDate(), null); // global search across all zones
         // 2. Update canvas info bar
         if (typeof updateCanvasInfo === 'function') updateCanvasInfo();
         // 3. Apply zone view filtering
@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Also load initial data after a short delay
     setTimeout(() => {
         const zoneId = document.getElementById('zone-select')?.value || null;
-        searchManager.loadReservations(map.getCurrentDate(), zoneId ? parseInt(zoneId) : null);
+        searchManager.loadReservations(map.getCurrentDate(), null); // global search across all zones
     }, 500);
 
     // Handle search result selection (active reservations)
@@ -481,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Reload search data when zone changes
     document.getElementById('zone-select')?.addEventListener('change', () => {
         const zoneId = document.getElementById('zone-select')?.value || null;
-        searchManager.loadReservations(map.getCurrentDate(), zoneId ? parseInt(zoneId) : null);
+        searchManager.loadReservations(map.getCurrentDate(), null); // global search across all zones
     });
 
     // Add global keyboard listener for search shortcut (Ctrl+F or /)
