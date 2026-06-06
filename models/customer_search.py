@@ -99,9 +99,10 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                      OR LOWER(c.email) LIKE ?
                      OR c.phone LIKE ?
                      OR c.phone LIKE ?
-                     OR c.room_number LIKE ?)
+                     OR c.room_number LIKE ?
+                     OR c.booking_reference LIKE ?)
             '''
-            params.extend([pattern, pattern, pattern, phone_pattern, pattern])
+            params.extend([pattern, pattern, pattern, phone_pattern, pattern, pattern])
 
         if customer_type:
             customer_query += ' AND c.customer_type = ?'
@@ -112,7 +113,7 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
 
         cursor.execute(customer_query, params)
 
-        customer_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number']
+        customer_fields = ['first_name', 'last_name', 'email', 'phone', 'room_number', 'booking_reference']
         from utils.datetime_helpers import get_today
         today = get_today()
 
@@ -200,9 +201,10 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                     AND (LOWER(h.guest_name) LIKE ?
                          OR h.room_number LIKE ?
                          OR LOWER(h.email) LIKE ?
-                         OR h.phone LIKE ?)
+                         OR h.phone LIKE ?
+                         OR h.booking_reference LIKE ?)
                 '''
-                guest_params.extend([pattern, pattern, pattern, pattern])
+                guest_params.extend([pattern, pattern, pattern, pattern, pattern])
 
             guest_query += '''
                 ORDER BY h.room_number,
@@ -226,7 +228,7 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
             # Track rooms we've already added from hotel_guests (show only main guest per room)
             added_rooms = set()
 
-            guest_fields = ['guest_name', 'room_number', 'email', 'phone']
+            guest_fields = ['guest_name', 'room_number', 'email', 'phone', 'booking_reference']
             for row in cursor.fetchall():
                 guest = dict(row)
                 room = guest['room_number']
