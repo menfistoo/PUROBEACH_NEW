@@ -183,14 +183,18 @@ def create_beach_reservation(
             default_state = get_default_state()
             initial_state = default_state.get('name', 'Confirmada')
 
-            # Get customer's current room for original_room tracking
+            # Get customer's current room for original_room tracking, plus the stable
+            # booking_reference (hotel reservation number) so the reservation is anchored
+            # to the booking even if the physical room later changes or isn't assigned yet.
             cursor.execute('''
-                SELECT room_number, customer_type FROM beach_customers WHERE id = ?
+                SELECT room_number, customer_type, booking_reference FROM beach_customers WHERE id = ?
             ''', (customer_id,))
             customer_row = cursor.fetchone()
             original_room = None
+            booking_reference = None
             if customer_row and customer_row['customer_type'] == 'interno':
                 original_room = customer_row['room_number']
+                booking_reference = customer_row['booking_reference']
 
             # Insert reservation (state_id=1 is "Confirmada" by default)
             cursor.execute('''
@@ -203,7 +207,7 @@ def create_beach_reservation(
                     package_id, payment_ticket_number, payment_method,
                     check_in_date, check_out_date, preferences, notes,
                     parent_reservation_id, reservation_type, created_by, created_at,
-                    original_room
+                    original_room, booking_reference
                 ) VALUES (
                     ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, 1,
@@ -213,7 +217,7 @@ def create_beach_reservation(
                     ?, ?, ?,
                     ?, ?, ?, ?,
                     ?, ?, ?, CURRENT_TIMESTAMP,
-                    ?
+                    ?, ?
                 )
             ''', (
                 customer_id, ticket_number, reservation_date, reservation_date, reservation_date,
@@ -224,7 +228,7 @@ def create_beach_reservation(
                 package_id, payment_ticket_number, payment_method,
                 check_in_date, check_out_date, preferences, observations,
                 parent_reservation_id, reservation_type, created_by,
-                original_room
+                original_room, booking_reference
             ))
 
             reservation_id = cursor.lastrowid

@@ -305,6 +305,16 @@ def create_customer_from_hotel_guest(hotel_guest_id: int, additional_data: dict 
         existing = cursor.fetchone()
 
         if existing:
+            # Ensure the existing customer carries the stable booking_reference
+            # (so room/guest info can always be resolved by it later).
+            if guest.get('booking_reference'):
+                cursor.execute('''
+                    UPDATE beach_customers
+                    SET booking_reference = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                      AND (booking_reference IS NULL OR booking_reference = '')
+                ''', (guest['booking_reference'], existing['id']))
+                conn.commit()
             # Return existing customer instead of creating duplicate
             return {
                 'customer_id': existing['id'],
@@ -343,8 +353,8 @@ def create_customer_from_hotel_guest(hotel_guest_id: int, additional_data: dict 
         # Create beach_customer
         cursor.execute('''
             INSERT INTO beach_customers
-            (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status, language, country_code)
-            VALUES ('interno', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status, language, country_code, booking_reference)
+            VALUES ('interno', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             first_name, last_name,
             email, phone,
@@ -352,7 +362,8 @@ def create_customer_from_hotel_guest(hotel_guest_id: int, additional_data: dict 
             notes,
             vip_status,
             language,
-            country_code
+            country_code,
+            guest.get('booking_reference')
         ))
 
         conn.commit()
