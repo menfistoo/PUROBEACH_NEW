@@ -132,13 +132,30 @@ def get_guests_by_room(room_number: str, check_date: date = None,
                 if not guest.get('is_main_guest', 0):
                     continue
 
-            # Add checkin/checkout flags when filtering by date
+            # Add checkin/checkout flags when filtering by date.
+            # NOTE: arrival_date/departure_date come back as date objects (the SQLite
+            # connection parses DATE columns), so normalise to ISO strings before
+            # comparing — comparing a date to a string is always False (old bug).
             if check_date:
                 check_str = check_date.isoformat()
-                guest['is_checkin_today'] = (guest.get('arrival_date', '') == check_str)
-                guest['is_checkout_today'] = (guest.get('departure_date', '') == check_str)
+                arr = guest.get('arrival_date')
+                dep = guest.get('departure_date')
+                arr_str = arr.isoformat() if hasattr(arr, 'isoformat') else (str(arr) if arr else '')
+                dep_str = dep.isoformat() if hasattr(dep, 'isoformat') else (str(dep) if dep else '')
+                guest['is_checkin_today'] = (arr_str == check_str)
+                guest['is_checkout_today'] = (dep_str == check_str)
 
             unique_guests.append(guest)
+
+        # Changeover day: a guest checking out today (departure == check_date) has left
+        # the room to the incoming guest. For a reservation on this date the incoming /
+        # still-staying guest is the occupant, so drop the checkout-today guests — but
+        # only if there's someone else in the room (don't blank out a room whose sole
+        # guest is leaving today).
+        if check_date:
+            non_checkout = [g for g in unique_guests if not g.get('is_checkout_today')]
+            if non_checkout:
+                unique_guests = non_checkout
 
         # Sort: check-in first, then in-house, then check-out last
         unique_guests.sort(key=lambda g: (
