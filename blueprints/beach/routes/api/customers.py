@@ -236,6 +236,7 @@ def register_routes(bp):
                 'display_name': f"{customer['first_name']} {customer.get('last_name', '')}".strip(),
                 'customer_type': customer['customer_type'],
                 'room_number': customer.get('room_number'),
+                'booking_reference': customer.get('booking_reference'),
                 'phone': customer.get('phone'),
                 'email': customer.get('email'),
                 'vip_status': customer.get('vip_status', 0),
@@ -267,8 +268,10 @@ def register_routes(bp):
             return api_error('El nombre es requerido', 400)
 
         room_number = data.get('room_number', '').strip() or None
-        if customer_type == 'interno' and not room_number:
-            return api_error('El número de habitación es requerido para clientes internos', 400)
+        booking_reference = data.get('booking_reference', '').strip() or None
+        # Interno needs a room OR a reservation number (pre-arrival: room assigned later).
+        if customer_type == 'interno' and not room_number and not booking_reference:
+            return api_error('Se requiere habitación o número de reserva para clientes internos', 400)
 
         phone = data.get('phone', '').strip() or None
         email = data.get('email', '').strip() or None
@@ -283,6 +286,7 @@ def register_routes(bp):
                 email=email,
                 phone=phone,
                 room_number=room_number,
+                booking_reference=booking_reference,
                 notes=data.get('notes', '').strip() or None,
                 language=data.get('language', '').strip() or None,
                 country_code=data.get('country_code', '+34').strip()
@@ -317,6 +321,7 @@ def register_routes(bp):
                 'display_name': f"{customer['first_name']} {customer.get('last_name', '')}".strip(),
                 'customer_type': customer['customer_type'],
                 'room_number': customer.get('room_number'),
+                'booking_reference': customer.get('booking_reference'),
                 'phone': customer.get('phone'),
                 'email': customer.get('email'),
                 'vip_status': customer.get('vip_status', 0),

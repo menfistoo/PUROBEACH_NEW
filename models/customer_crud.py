@@ -118,8 +118,11 @@ def create_customer(customer_type: str, first_name: str, last_name: str = None, 
     Raises:
         ValueError if interno customer missing room_number
     """
-    if customer_type == 'interno' and not kwargs.get('room_number'):
-        raise ValueError('El número de habitación es requerido para clientes internos')
+    # Interno guests need EITHER a room OR a hotel reservation number (booking_reference).
+    # The reservation-number case covers pre-arrival bookings whose room isn't assigned
+    # yet; the room is filled in automatically once the guest checks in (import sync).
+    if customer_type == 'interno' and not kwargs.get('room_number') and not kwargs.get('booking_reference'):
+        raise ValueError('Se requiere habitación o número de reserva para clientes internos')
 
     # Normalize phone before storing
     phone = normalize_phone(kwargs.get('phone'))
@@ -129,12 +132,13 @@ def create_customer(customer_type: str, first_name: str, last_name: str = None, 
 
         cursor.execute('''
             INSERT INTO beach_customers
-            (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status, language, country_code)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (customer_type, first_name, last_name, email, phone, room_number, notes, vip_status, language, country_code, booking_reference)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (customer_type, first_name, last_name,
               kwargs.get('email'), phone, kwargs.get('room_number'),
               kwargs.get('notes'), kwargs.get('vip_status', 0),
-              kwargs.get('language'), kwargs.get('country_code', '+34')))
+              kwargs.get('language'), kwargs.get('country_code', '+34'),
+              kwargs.get('booking_reference')))
 
         conn.commit()
         return cursor.lastrowid
