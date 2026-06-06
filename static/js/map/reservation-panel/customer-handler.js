@@ -433,8 +433,13 @@ class CustomerHandler {
         const roomItem = document.getElementById('newPanelRoomItem');
         if (roomEl) {
             const room = customer.room_number;
+            const isInterno = customer.customer_type === 'interno' || customer.source === 'hotel_guest';
             if (room) {
                 roomEl.textContent = `Hab. ${room}`;
+                if (roomItem) roomItem.style.display = 'inline-flex';
+            } else if (isInterno && customer.booking_reference) {
+                // Pre-arrival booking: room not assigned yet (fills in on check-in).
+                roomEl.textContent = 'Pendiente de habitación';
                 if (roomItem) roomItem.style.display = 'inline-flex';
             } else {
                 if (roomItem) roomItem.style.display = 'none';
