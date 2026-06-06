@@ -12,6 +12,10 @@ services:
     ports:
       - "172.17.0.1:9080:8000"
     volumes:
+      # Serve CSS/JS/img from the host so front-end edits go live with just a
+      # browser refresh (+ APP_VERSION bump) — no image rebuild needed.
+      # uploads stays on its named volume (nested mount below) so it persists.
+      - ./static:/app/static
       - db-data:/app/instance
       - uploads:/app/static/uploads
       - logs:/app/logs

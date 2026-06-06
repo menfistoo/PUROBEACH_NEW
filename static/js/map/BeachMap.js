@@ -291,12 +291,52 @@ export class BeachMap {
             onZoom: () => this.applyZoom()
         });
 
-        // SVG click for deselection
+        // SVG click for deselection.
+        // Furniture clicks call stopPropagation(), so they never reach here; any click
+        // that DOES reach here is empty space, a zone, or a decorative element (the sea,
+        // pool, deck, etc. between sunbeds). All of those should clear the selection.
+        // Previously this only matched the bare SVG or #zones-layer, so tapping a
+        // decorative graphic beside a sunbed left the selection stuck (it accumulated).
         this.svg.addEventListener('click', (e) => {
-            if (e.target === this.svg || e.target.closest('#zones-layer')) {
+            if (!e.target.closest('.furniture-item')) {
+                const hadSelection = this.selection.count() > 0;
                 this.clearSelection();
+                // Notify listeners (e.g. the selection bar) so their UI resets too.
+                if (hadSelection && this.callbacks.onDeselect) {
+                    this.callbacks.onDeselect(null);
+                }
             }
         });
+
+        // Touch deselection.
+        // iOS Safari does NOT fire `click` on non-interactive SVG / decorative areas
+        // (they have cursor:auto, not pointer), so on iPad an empty-space tap never
+        // reaches the `click` handler above and the selection stays stuck. Detect a
+        // stationary single-finger tap that isn't on a furniture item and clear it.
+        this._deselectTapStart = null;
+        this.container.addEventListener('touchstart', (e) => {
+            this._deselectTapStart = (e.touches.length === 1)
+                ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), target: e.target }
+                : null; // multi-touch (pinch-zoom) is not a deselect tap
+        }, { passive: true });
+        this.container.addEventListener('touchend', (e) => {
+            const start = this._deselectTapStart;
+            this._deselectTapStart = null;
+            if (!start) return;
+            const touch = e.changedTouches[0];
+            if (!touch) return;
+            const moved = Math.abs(touch.clientX - start.x) > 10 ||
+                          Math.abs(touch.clientY - start.y) > 10;
+            const isTap = !moved && (Date.now() - start.t) < 500 && e.touches.length === 0;
+            const onFurniture = start.target.closest && start.target.closest('.furniture-item');
+            if (isTap && !onFurniture) {
+                const hadSelection = this.selection.count() > 0;
+                this.clearSelection();
+                if (hadSelection && this.callbacks.onDeselect) {
+                    this.callbacks.onDeselect(null);
+                }
+            }
+        }, { passive: true });
 
         // SVG right-click for empty space context menu
         this.svg.addEventListener('contextmenu', (e) => {

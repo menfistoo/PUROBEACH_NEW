@@ -331,9 +331,22 @@ def register_context_processors(app):
 
         app_version = app.config.get('APP_VERSION', '1.0.0')
 
+        import os as _os
+
         def versioned_static(filename: str) -> str:
-            """Generate versioned static file URL for cache busting."""
-            return url_for('static', filename=filename) + '?v=' + app_version
+            """Generate versioned static file URL for cache busting.
+
+            Uses the file's modification time so each asset busts caches
+            automatically when edited (works great with the ./static volume
+            mount: edit -> reload, no APP_VERSION bump or restart needed).
+            Falls back to APP_VERSION if the file can't be stat'd.
+            """
+            try:
+                mtime = int(_os.path.getmtime(_os.path.join(app.static_folder, filename)))
+                version = str(mtime)
+            except OSError:
+                version = app_version
+            return url_for('static', filename=filename) + '?v=' + version
 
         return {
             'get_menu_items': get_menu_items,

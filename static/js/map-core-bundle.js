@@ -3069,7 +3069,14 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
     } else if (!isAvailable && availability && availability.customer_name) {
         group.addEventListener('mouseenter', (e) => {
             tooltipManager.show(e, availability);
-            applyReservationHoverHighlight(item.id, data, hoveredReservationFurniture, selectedFurniture, highlightedFurniture);
+            // Only apply the reservation hover-glow on devices that truly support hover.
+            // On touch (iPad) `mouseenter` fires on tap but `mouseleave` never does, so
+            // the glow would never clear and would pile up across reservations. On touch
+            // the reservation's furniture is highlighted by the panel instead (which
+            // replaces on open and clears on close).
+            if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                applyReservationHoverHighlight(item.id, data, hoveredReservationFurniture, selectedFurniture, highlightedFurniture);
+            }
         });
         group.addEventListener('mouseleave', () => {
             tooltipManager.hide();
@@ -3642,12 +3649,47 @@ class BeachMap {
             onZoom: () => this.applyZoom()
         });
 
-        // SVG click for deselection
+        // SVG click for deselection.
+        // Furniture clicks call stopPropagation(), so they never reach here; any click
+        // that DOES reach here is empty space, a zone, or a decorative element (the sea,
+        // pool, deck, etc. between sunbeds). All of those should clear the selection.
         this.svg.addEventListener('click', (e) => {
-            if (e.target === this.svg || e.target.closest('#zones-layer')) {
+            if (!e.target.closest('.furniture-item')) {
+                const hadSelection = this.selection.count() > 0;
                 this.clearSelection();
+                if (hadSelection && this.callbacks.onDeselect) {
+                    this.callbacks.onDeselect(null);
+                }
             }
         });
+
+        // Touch deselection. iOS Safari does NOT fire `click` on non-interactive SVG /
+        // decorative areas (cursor:auto), so empty-space taps never reach the click
+        // handler above on iPad. Detect a stationary single-finger tap not on furniture.
+        this._deselectTapStart = null;
+        this.container.addEventListener('touchstart', (e) => {
+            this._deselectTapStart = (e.touches.length === 1)
+                ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), target: e.target }
+                : null;
+        }, { passive: true });
+        this.container.addEventListener('touchend', (e) => {
+            const start = this._deselectTapStart;
+            this._deselectTapStart = null;
+            if (!start) return;
+            const touch = e.changedTouches[0];
+            if (!touch) return;
+            const moved = Math.abs(touch.clientX - start.x) > 10 ||
+                          Math.abs(touch.clientY - start.y) > 10;
+            const isTap = !moved && (Date.now() - start.t) < 500 && e.touches.length === 0;
+            const onFurniture = start.target.closest && start.target.closest('.furniture-item');
+            if (isTap && !onFurniture) {
+                const hadSelection = this.selection.count() > 0;
+                this.clearSelection();
+                if (hadSelection && this.callbacks.onDeselect) {
+                    this.callbacks.onDeselect(null);
+                }
+            }
+        }, { passive: true });
 
         // SVG right-click for empty space context menu
         this.svg.addEventListener('contextmenu', (e) => {

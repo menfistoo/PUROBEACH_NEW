@@ -2254,6 +2254,14 @@ document.addEventListener('DOMContentLoaded', function () {
         updateConflictSelectionCounter();
     });
 
+    // When selection is cleared by tapping empty space / a decorative element on the
+    // map (handled inside BeachMap), refresh the selection bar and counters so the
+    // "X seleccionados" indicator resets instead of showing a stale count.
+    map.on('onDeselect', () => {
+        updateSelectionBar();
+        updateConflictSelectionCounter();
+    });
+
     // ==========================================================================
     // NEW RESERVATION BUTTON
     // ==========================================================================
@@ -2515,4 +2523,5 @@ document.addEventListener('DOMContentLoaded', function () {
     })();
 
 });
+
 

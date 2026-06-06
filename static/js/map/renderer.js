@@ -552,7 +552,14 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
     } else if (!isAvailable && availability && availability.customer_name) {
         group.addEventListener('mouseenter', (e) => {
             tooltipManager.show(e, availability);
-            applyReservationHoverHighlight(item.id, data, hoveredReservationFurniture, selectedFurniture, highlightedFurniture);
+            // Only apply the reservation hover-glow on devices that truly support hover.
+            // On touch (iPad) `mouseenter` fires on tap but `mouseleave` never does, so
+            // the glow would never clear and would pile up across reservations. On touch
+            // the reservation's furniture is highlighted by the panel instead (which
+            // replaces on open and clears on close).
+            if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                applyReservationHoverHighlight(item.id, data, hoveredReservationFurniture, selectedFurniture, highlightedFurniture);
+            }
         });
         group.addEventListener('mouseleave', () => {
             tooltipManager.hide();
