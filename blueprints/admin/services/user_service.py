@@ -9,6 +9,7 @@ from models.role import has_users
 from datetime import datetime
 from typing import Dict, List, Any, Tuple
 import re
+import os
 import openpyxl
 
 
@@ -226,6 +227,17 @@ def import_hotel_guests_from_excel(
         'total': 0,
         'room_changes': []
     }
+
+    # Keep a copy of the most recently imported file for audit / debugging
+    # (the upload/temp file is otherwise deleted right after import).
+    try:
+        import shutil
+        from flask import current_app as _ca
+        _keep = os.path.join(_ca.instance_path, 'last_guest_import.xlsx')
+        os.makedirs(_ca.instance_path, exist_ok=True)
+        shutil.copyfile(file_path, _keep)
+    except Exception:
+        pass  # never let audit-copy failure block an import
 
     try:
         wb = openpyxl.load_workbook(file_path, data_only=True)
