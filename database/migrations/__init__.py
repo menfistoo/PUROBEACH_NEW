@@ -58,7 +58,8 @@ from .fix_reports_menu import migrate_fix_reports_menu
 from .import_log import migrate_import_log_table
 from .booking_reference_link import (
     migrate_customers_booking_reference,
-    migrate_reservations_booking_reference
+    migrate_reservations_booking_reference,
+    migrate_hotel_guests_preferences
 )
 
 
@@ -142,6 +143,7 @@ MIGRATIONS = [
     ('import_log_table', migrate_import_log_table),
     ('customers_booking_reference', migrate_customers_booking_reference),
     ('reservations_booking_reference', migrate_reservations_booking_reference),
+    ('hotel_guests_preferences', migrate_hotel_guests_preferences),
 ]
 
 
@@ -240,4 +242,5 @@ __all__ = [
     'migrate_import_log_table',
     'migrate_customers_booking_reference',
     'migrate_reservations_booking_reference',
+    'migrate_hotel_guests_preferences',
 ]

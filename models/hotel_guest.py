@@ -578,6 +578,34 @@ def sync_customer_room_by_booking(booking_reference: str, room_number: str) -> D
         return result
 
 
+def set_booking_preferences(booking_reference: str, preferences: str) -> int:
+    """Store the PMS preference text on all guests of a booking. Returns rows updated."""
+    if not booking_reference or not preferences:
+        return 0
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE hotel_guests SET preferences = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE booking_reference = ?
+        ''', (preferences, booking_reference))
+        conn.commit()
+        return cursor.rowcount
+
+
+def set_guest_preferences(guest_id: int, preferences: str) -> bool:
+    """Store preference text on a single guest (fallback when there's no booking ref)."""
+    if not guest_id or not preferences:
+        return False
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE hotel_guests SET preferences = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (preferences, guest_id))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
 def delete_hotel_guest(guest_id: int) -> bool:
     """
     Delete hotel guest record.

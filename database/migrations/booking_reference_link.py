@@ -69,3 +69,30 @@ def migrate_reservations_booking_reference() -> bool:
         db.rollback()
         print(f"Migration failed: {e}")
         raise
+
+
+def migrate_hotel_guests_preferences() -> bool:
+    """Add a preferences column to hotel_guests.
+
+    The PMS GuestInHouse report interleaves a 'Preferencias: ...' line after a
+    booking's guest rows (only the Reserva column is filled). We capture that text
+    and store it per guest so reception can see guest requests (sea view, VIP,
+    arrival time, etc.) instead of dropping those rows.
+    """
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("PRAGMA table_info(hotel_guests)")
+    cols = [row['name'] for row in cursor.fetchall()]
+    if 'preferences' in cols:
+        print("Migration already applied - hotel_guests.preferences exists.")
+        return False
+    print("Applying hotel_guests_preferences migration...")
+    try:
+        db.execute('ALTER TABLE hotel_guests ADD COLUMN preferences TEXT')
+        db.commit()
+        print("  Added column: hotel_guests.preferences")
+        return True
+    except Exception as e:
+        db.rollback()
+        print(f"Migration failed: {e}")
+        raise
