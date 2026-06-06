@@ -56,6 +56,10 @@ from .add_insights_permissions import migrate_add_insights_permissions
 from .temp_furniture_date_range import migrate_temp_furniture_date_range
 from .fix_reports_menu import migrate_fix_reports_menu
 from .import_log import migrate_import_log_table
+from .booking_reference_link import (
+    migrate_customers_booking_reference,
+    migrate_reservations_booking_reference
+)
 
 
 # Ordered list of all migrations
@@ -136,6 +140,8 @@ MIGRATIONS = [
 
     # Phase 19: Import log tracking
     ('import_log_table', migrate_import_log_table),
+    ('customers_booking_reference', migrate_customers_booking_reference),
+    ('reservations_booking_reference', migrate_reservations_booking_reference),
 ]
 
 
@@ -232,4 +238,6 @@ __all__ = [
     'migrate_zone_number_start',
     'migrate_furniture_label',
     'migrate_import_log_table',
+    'migrate_customers_booking_reference',
+    'migrate_reservations_booking_reference',
 ]
