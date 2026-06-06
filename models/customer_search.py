@@ -216,8 +216,13 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
 
             cursor.execute(guest_query, guest_params)
 
-            # Get existing customer room numbers to avoid duplicates
-            existing_rooms = {c['room_number'] for c in results if c.get('room_number') and c.get('customer_type') == 'interno'}
+            # Get existing customer room numbers to avoid duplicates.
+            # Exclude checkout-today customers: on a changeover day the room belongs to
+            # the incoming guest, so a departing beach-customer must NOT suppress the
+            # room's new in-house hotel guest from the results.
+            existing_rooms = {c['room_number'] for c in results
+                              if c.get('room_number') and c.get('customer_type') == 'interno'
+                              and not c.get('is_checkout_today')}
             # Track rooms we've already added from hotel_guests (show only main guest per room)
             added_rooms = set()
 
@@ -254,6 +259,14 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                     added_rooms.add(room)
                     if len(results) >= limit:
                         break
+
+        # Changeover day: for a room that has a current (non-checkout) occupant, drop the
+        # checkout-today entries so a new reservation links the incoming guest, not the
+        # one leaving. Keep a checkout entry only if it's the room's sole match.
+        rooms_with_current = {r.get('room_number') for r in results
+                              if r.get('room_number') and not r.get('is_checkout_today')}
+        results = [r for r in results
+                   if not (r.get('is_checkout_today') and r.get('room_number') in rooms_with_current)]
 
         # Sort: check-in-today first, then check-out-today last, preserving order otherwise
         results.sort(key=lambda r: (
