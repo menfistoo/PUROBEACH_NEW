@@ -71,12 +71,29 @@
                 <!-- Inline Create Customer Form (shown when clicking create button) -->
                 <div class="create-customer-inline" id="newPanelCreateCustomerForm" style="display: none;">
                     <div class="create-form-header">
-                        <span><i class="fas fa-user-plus"></i> Nuevo Cliente Externo</span>
+                        <span id="newCustFormTitle"><i class="fas fa-user-plus"></i> Nuevo Cliente</span>
                         <button type="button" class="create-form-cancel" id="newPanelCancelCreateBtn">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="create-form-body">
+                        <!-- Customer type toggle -->
+                        <div class="create-type-toggle btn-group w-100" role="group" style="margin-bottom: 10px;">
+                            <button type="button" class="btn btn-sm btn-primary active" id="newCustTypeExterno" data-cust-type="externo">
+                                <i class="fas fa-user"></i> Externo
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="newCustTypeInterno" data-cust-type="interno">
+                                <i class="fas fa-hotel"></i> Interno
+                            </button>
+                        </div>
+                        <!-- Reservation number (interno pre-arrival only) -->
+                        <div class="create-form-row" id="newCustBookingRefGroup" style="display: none;">
+                            <div class="create-form-group" style="flex: 1;">
+                                <label for="newCustBookingRef">Nº de reserva *</label>
+                                <input type="text" id="newCustBookingRef" class="form-control form-control-sm" placeholder="2026-1234-1">
+                                <small class="text-muted">Sin habitación todavía — se asignará al llegar</small>
+                            </div>
+                        </div>
                         <div class="create-form-row">
                             <div class="create-form-group">
                                 <label for="newCustFirstName">Nombre *</label>

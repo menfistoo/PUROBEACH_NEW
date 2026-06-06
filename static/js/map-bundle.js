@@ -105,7 +105,7 @@ class CustomerSearch {
             <div class="cs-create-option" style="display: none;">
                 <div class="cs-divider"><span>o</span></div>
                 <button type="button" class="cs-btn-show-create" id="csShowCreateBtn">
-                    <i class="fas fa-plus-circle"></i> Crear nuevo cliente externo
+                    <i class="fas fa-plus-circle"></i> Crear nuevo cliente
                 </button>
             </div>
             ` : ''}

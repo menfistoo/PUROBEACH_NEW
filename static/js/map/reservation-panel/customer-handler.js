@@ -30,6 +30,37 @@ class CustomerHandler {
 
         cancelBtn?.addEventListener('click', () => this.hideCreateCustomerForm());
         saveBtn?.addEventListener('click', () => this.saveNewCustomer());
+
+        // Customer type toggle: externo (default) vs interno pre-arrival (reservation #)
+        this.createCustomerType = 'externo';
+        document.getElementById('newCustTypeExterno')?.addEventListener('click', () => this.setCreateCustomerType('externo'));
+        document.getElementById('newCustTypeInterno')?.addEventListener('click', () => this.setCreateCustomerType('interno'));
+    }
+
+    /**
+     * Switch the inline create form between externo and interno (pre-arrival).
+     */
+    setCreateCustomerType(type) {
+        this.createCustomerType = type;
+        const isInterno = type === 'interno';
+        const extBtn = document.getElementById('newCustTypeExterno');
+        const intBtn = document.getElementById('newCustTypeInterno');
+        if (extBtn && intBtn) {
+            extBtn.classList.toggle('btn-primary', !isInterno);
+            extBtn.classList.toggle('active', !isInterno);
+            extBtn.classList.toggle('btn-outline-primary', isInterno);
+            intBtn.classList.toggle('btn-primary', isInterno);
+            intBtn.classList.toggle('active', isInterno);
+            intBtn.classList.toggle('btn-outline-primary', !isInterno);
+        }
+        const bookingGroup = document.getElementById('newCustBookingRefGroup');
+        if (bookingGroup) bookingGroup.style.display = isInterno ? 'flex' : 'none';
+        const phoneLabel = document.querySelector('label[for="newCustPhone"]');
+        if (phoneLabel) phoneLabel.textContent = isInterno ? 'Telefono' : 'Telefono *';
+        const title = document.getElementById('newCustFormTitle');
+        if (title) title.innerHTML = isInterno
+            ? '<i class="fas fa-hotel"></i> Nuevo Cliente Interno (pre-llegada)'
+            : '<i class="fas fa-user-plus"></i> Nuevo Cliente Externo';
     }
 
     /**
@@ -54,6 +85,12 @@ class CustomerHandler {
 
         // Hide search wrapper
         searchWrapper.style.display = 'none';
+
+        // Set the customer type (default externo) and pre-fill the reservation number
+        // if this was triggered for an interno pre-arrival booking.
+        this.setCreateCustomerType(prefillData.customer_type === 'interno' ? 'interno' : 'externo');
+        const bookingRefInput = document.getElementById('newCustBookingRef');
+        if (bookingRefInput) bookingRefInput.value = prefillData.booking_reference || '';
 
         // Pre-fill fields if provided
         if (prefillData.first_name) {
@@ -93,6 +130,9 @@ class CustomerHandler {
         document.getElementById('newCustPhone').value = '';
         document.getElementById('newCustEmail').value = '';
         document.getElementById('newCustLanguage').value = '';
+        const bookingRefEl = document.getElementById('newCustBookingRef');
+        if (bookingRefEl) bookingRefEl.value = '';
+        this.setCreateCustomerType('externo');  // reset toggle for next time
         if (errorEl) errorEl.style.display = 'none';
 
         // Hide form, show search
@@ -105,11 +145,13 @@ class CustomerHandler {
      * Save the new customer from the inline form
      */
     async saveNewCustomer() {
+        const type = this.createCustomerType || 'externo';
         const firstName = document.getElementById('newCustFirstName')?.value.trim() || '';
         const lastName = document.getElementById('newCustLastName')?.value.trim() || '';
         const phone = document.getElementById('newCustPhone')?.value.trim() || '';
         const email = document.getElementById('newCustEmail')?.value.trim() || '';
         const language = document.getElementById('newCustLanguage')?.value || '';
+        const bookingRef = document.getElementById('newCustBookingRef')?.value.trim() || '';
         const saveBtn = document.getElementById('newPanelSaveCustomerBtn');
 
         // Validation
@@ -117,7 +159,12 @@ class CustomerHandler {
             this.showCreateError('El nombre es requerido');
             return;
         }
-        if (!phone && !email) {
+        if (type === 'interno') {
+            if (!bookingRef) {
+                this.showCreateError('El número de reserva es requerido');
+                return;
+            }
+        } else if (!phone && !email) {
             this.showCreateError('Se requiere telefono o email');
             return;
         }
@@ -128,21 +175,25 @@ class CustomerHandler {
 
         try {
             const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
+            const payload = {
+                customer_type: type,
+                first_name: firstName,
+                last_name: lastName,
+                phone: phone,
+                email: email,
+                language: language,
+                country_code: '+34'
+            };
+            if (type === 'interno') {
+                payload.booking_reference = bookingRef;  // pre-arrival: room assigned on check-in
+            }
             const response = await fetch(`${this.panel.options.apiBaseUrl}/customers/create`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({
-                    customer_type: 'externo',
-                    first_name: firstName,
-                    last_name: lastName,
-                    phone: phone,
-                    email: email,
-                    language: language,
-                    country_code: '+34'
-                })
+                body: JSON.stringify(payload)
             });
 
             const result = await response.json();
