@@ -219,20 +219,15 @@ def import_hotel_guests_from_excel(
         Dict with 'created', 'updated', 'errors', 'total' counts
     """
     from models.hotel_guest import (upsert_hotel_guest, propagate_room_change,
-                                     sync_customer_room_by_booking,
-                                     set_booking_preferences, set_guest_preferences)
+                                     sync_customer_room_by_booking)
 
     result = {
         'created': 0,
         'updated': 0,
         'errors': [],
         'total': 0,
-        'room_changes': [],
-        'preferences_captured': 0
+        'room_changes': []
     }
-    # Track the current booking/guest so a following "Preferencias:" line attaches to it
-    current_booking_ref = None
-    current_guest_id = None
 
     # Keep a copy of the most recently imported file for audit / debugging
     # (the upload/temp file is otherwise deleted right after import).
@@ -306,20 +301,12 @@ def import_hotel_guests_from_excel(
                     result['total'] -= 1
                     continue
 
-                # Preference / notes line: no guest name, and the "Reserva" column carries
-                # "Preferencias: ..." text that belongs to the booking listed above.
-                # Capture it onto that booking's guests instead of dropping it.
+                # Room-preference line: no guest name, the "Reserva" column carries
+                # "Preferencias: ..." text. These are HOTEL ROOM preferences, not relevant
+                # to the beach club — skip them silently (not a guest, not an error).
                 if (not guest_name and reserva_value
                         and str(reserva_value).strip().lower().startswith('preferencia')):
-                    pref = re.sub(r'^\s*preferencias?\s*:?\s*', '',
-                                  str(reserva_value).strip(), flags=re.IGNORECASE).strip()
-                    if pref:
-                        if current_booking_ref:
-                            set_booking_preferences(current_booking_ref, pref)
-                        elif current_guest_id:
-                            set_guest_preferences(current_guest_id, pref)
-                        result['preferences_captured'] += 1
-                    result['total'] -= 1  # not a guest row
+                    result['total'] -= 1
                     continue
 
                 if not guest_name:
@@ -384,10 +371,6 @@ def import_hotel_guests_from_excel(
                     result['created'] += 1
                 else:
                     result['updated'] += 1
-
-                # Remember this booking/guest so a following "Preferencias:" line attaches here
-                current_booking_ref = booking_reference
-                current_guest_id = upsert_result.get('id')
 
                 # Keep linked beach_customers' room in sync with the guest list.
                 # Primary path: match on the stable booking_reference (robust to room
