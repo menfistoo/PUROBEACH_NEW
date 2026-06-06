@@ -219,15 +219,17 @@ def import_hotel_guests_from_excel(
         Dict with 'created', 'updated', 'errors', 'total' counts
     """
     from models.hotel_guest import (upsert_hotel_guest, propagate_room_change,
-                                     sync_customer_room_by_booking)
+                                     sync_customer_room_by_booking, reconcile_absent_guests)
 
     result = {
         'created': 0,
         'updated': 0,
         'errors': [],
         'total': 0,
-        'room_changes': []
+        'room_changes': [],
+        'checked_out': 0
     }
+    seen_ids = set()  # hotel_guest ids seen in this import (for stale reconciliation)
 
     # Keep a copy of the most recently imported file for audit / debugging
     # (the upload/temp file is otherwise deleted right after import).
@@ -371,6 +373,8 @@ def import_hotel_guests_from_excel(
                     result['created'] += 1
                 else:
                     result['updated'] += 1
+                if upsert_result.get('id'):
+                    seen_ids.add(upsert_result['id'])
 
                 # Keep linked beach_customers' room in sync with the guest list.
                 # Primary path: match on the stable booking_reference (robust to room
@@ -406,6 +410,16 @@ def import_hotel_guests_from_excel(
                 result['errors'].append(f"Fila {row_num}: error al procesar datos")
 
         wb.close()
+
+        # Stale reconciliation: guests no longer in the report are checked out.
+        # Guarded so a partial/truncated upload can't mass-check-out everyone.
+        try:
+            recon = reconcile_absent_guests(seen_ids, result['created'] + result['updated'])
+            result['checked_out'] = recon.get('checked_out', 0)
+            if recon.get('skipped'):
+                current_app.logger.info(f"Guest reconciliation skipped: {recon.get('reason')}")
+        except Exception as e:
+            current_app.logger.error(f'Guest reconciliation failed: {e}', exc_info=True)
 
     except Exception as e:
         current_app.logger.error(f'Error opening import file: {e}', exc_info=True)

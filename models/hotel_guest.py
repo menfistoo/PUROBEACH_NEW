@@ -578,6 +578,65 @@ def sync_customer_room_by_booking(booking_reference: str, room_number: str) -> D
         return result
 
 
+def reconcile_absent_guests(seen_ids, processed_count: int) -> Dict[str, Any]:
+    """
+    After a full guest-list import, mark guests who were in-house but are ABSENT from
+    the new report as checked out (their departure is set to today).
+
+    The GuestInHouse report is a snapshot of current in-house guests, so a guest who is
+    no longer in it has left or been cancelled. We only touch guests that are in-house
+    *today* (arrival <= today <= departure) and were not seen in this import.
+
+    SAFETY GUARD: only reconcile when the import clearly covered the bulk of guests
+    (processed >= max(50, 60% of currently-active). A truncated/partial upload skips
+    reconciliation so it can never mass-check-out everyone. It also self-heals: a guest
+    wrongly checked out reappears (and is restored) on the next complete import.
+
+    Returns {'checked_out': n, 'skipped': bool, 'reason': str}.
+    """
+    from utils.datetime_helpers import get_today
+    from datetime import timedelta
+    today_d = get_today()
+    today = today_d.isoformat()
+    yesterday = (today_d - timedelta(days=1)).isoformat()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        active = cursor.execute(
+            "SELECT COUNT(*) AS n FROM hotel_guests WHERE arrival_date <= ? AND departure_date >= ?",
+            (today, today)
+        ).fetchone()['n']
+
+        threshold = max(50, int(active * 0.6))
+        if processed_count < threshold:
+            return {'checked_out': 0, 'skipped': True,
+                    'reason': f'import too small to reconcile safely ({processed_count} < {threshold})'}
+        if not seen_ids:
+            return {'checked_out': 0, 'skipped': True, 'reason': 'no guests seen'}
+
+        # Candidates: guests marked in-house (departure >= today) who arrived BEFORE today
+        # (so same-day arrivals not yet in the report are never touched) and were NOT in
+        # this import -> they have left. Close them out as of yesterday so they drop off
+        # the in-house list immediately. Self-heals: if one reappears in a later import,
+        # the upsert restores its real departure date.
+        seen = list(seen_ids)
+        ph = ','.join('?' for _ in seen)
+        rows = cursor.execute(
+            f"""SELECT id FROM hotel_guests
+                WHERE arrival_date < ? AND departure_date >= ?
+                  AND id NOT IN ({ph})""",
+            (today, today, *seen)
+        ).fetchall()
+        ids = [r['id'] for r in rows]
+        if ids:
+            ph2 = ','.join('?' for _ in ids)
+            cursor.execute(
+                f"UPDATE hotel_guests SET departure_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN ({ph2})",
+                (yesterday, *ids)
+            )
+            conn.commit()
+        return {'checked_out': len(ids), 'skipped': False, 'reason': ''}
+
+
 def delete_hotel_guest(guest_id: int) -> bool:
     """
     Delete hotel guest record.
