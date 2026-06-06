@@ -260,13 +260,10 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                     if len(results) >= limit:
                         break
 
-        # Changeover day: for a room that has a current (non-checkout) occupant, drop the
-        # checkout-today entries so a new reservation links the incoming guest, not the
-        # one leaving. Keep a checkout entry only if it's the room's sole match.
-        rooms_with_current = {r.get('room_number') for r in results
-                              if r.get('room_number') and not r.get('is_checkout_today')}
-        results = [r for r in results
-                   if not (r.get('is_checkout_today') and r.get('room_number') in rooms_with_current)]
+        # Changeover day: keep BOTH the incoming and the departing guests selectable
+        # (a checkout guest may still use the beach in the morning) — we only make sure
+        # the incoming guest also surfaces (see existing_rooms above) and order it first;
+        # the checkout guest stays in the list with its CHECK-OUT badge.
 
         # Sort: check-in-today first, then check-out-today last, preserving order otherwise
         results.sort(key=lambda r: (

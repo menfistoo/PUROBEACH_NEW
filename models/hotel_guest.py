@@ -147,15 +147,10 @@ def get_guests_by_room(room_number: str, check_date: date = None,
 
             unique_guests.append(guest)
 
-        # Changeover day: a guest checking out today (departure == check_date) has left
-        # the room to the incoming guest. For a reservation on this date the incoming /
-        # still-staying guest is the occupant, so drop the checkout-today guests — but
-        # only if there's someone else in the room (don't blank out a room whose sole
-        # guest is leaving today).
-        if check_date:
-            non_checkout = [g for g in unique_guests if not g.get('is_checkout_today')]
-            if non_checkout:
-                unique_guests = non_checkout
+        # Changeover day: keep both the incoming and the departing guests (a checkout
+        # guest may still use the beach in the morning, so staff must be able to pick
+        # either). The sort below puts the incoming/staying guest first and the
+        # checkout-today guest last (it carries an is_checkout_today flag for its badge).
 
         # Sort: check-in first, then in-house, then check-out last
         unique_guests.sort(key=lambda g: (
