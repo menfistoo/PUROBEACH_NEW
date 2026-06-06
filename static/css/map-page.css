@@ -114,6 +114,39 @@
     cursor: not-allowed;
 }
 
+/* Import status badge button */
+.import-status-btn {
+    width: auto !important;
+    border-radius: 12px !important;
+    padding: 2px 10px !important;
+    gap: 5px;
+    font-size: 11px !important;
+    white-space: nowrap;
+}
+
+.import-status-btn .import-status-text {
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.import-status-btn.has-errors {
+    background: rgba(228, 94, 65, 0.3) !important;
+    border: 1px solid rgba(228, 94, 65, 0.5);
+}
+
+.import-status-btn.has-errors:hover {
+    background: rgba(228, 94, 65, 0.5) !important;
+}
+
+.import-status-btn.import-ok {
+    background: rgba(85, 153, 109, 0.2) !important;
+}
+
+.import-status-btn.import-ok:hover {
+    background: rgba(85, 153, 109, 0.35) !important;
+}
+
 .date-display {
     font-weight: 600;
     font-size: 13px;

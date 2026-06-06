@@ -55,6 +55,7 @@ from .waitlist import (
 from .add_insights_permissions import migrate_add_insights_permissions
 from .temp_furniture_date_range import migrate_temp_furniture_date_range
 from .fix_reports_menu import migrate_fix_reports_menu
+from .import_log import migrate_import_log_table
 
 
 # Ordered list of all migrations
@@ -132,6 +133,9 @@ MIGRATIONS = [
 
     # Phase 18: Decorative furniture labels
     ('furniture_label', migrate_furniture_label),
+
+    # Phase 19: Import log tracking
+    ('import_log_table', migrate_import_log_table),
 ]
 
 
@@ -227,4 +231,5 @@ __all__ = [
     'migrate_add_staff_payment_reconciliation_permission',
     'migrate_zone_number_start',
     'migrate_furniture_label',
+    'migrate_import_log_table',
 ]

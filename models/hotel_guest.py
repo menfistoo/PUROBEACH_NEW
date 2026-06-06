@@ -72,20 +72,21 @@ def get_hotel_guest_by_id(guest_id: int) -> Optional[Dict[str, Any]]:
         return dict(row) if row else None
 
 
-def get_guests_by_room(room_number: str, check_date: date = None) -> List[Dict[str, Any]]:
+def get_guests_by_room(room_number: str, check_date: date = None,
+                       main_per_booking: bool = False) -> List[Dict[str, Any]]:
     """
-    Get unique hotel guests by room number.
-
-    Deduplicates guests by name, preferring records where is_main_guest=1,
-    then preferring the most recent record by ID.
-    When check_date is provided, adds is_checkin_today and is_checkout_today flags.
+    Get hotel guests by room number.
 
     Args:
         room_number: Room number to search
-        check_date: Optional date to filter active guests
+        check_date: Optional date to filter active guests (adds checkin/checkout flags)
+        main_per_booking: If True, return only the main guest (is_main_guest=1)
+            for each booking_reference. Each booking appears as one entry,
+            representing its principal guest.
 
     Returns:
-        List of unique hotel guest dicts for the room (main guest first)
+        List of hotel guest dicts. When main_per_booking=True, one entry per
+        booking sorted by: check-in today first, then check-out today last.
     """
     with get_db() as conn:
         cursor = conn.cursor()
@@ -96,38 +97,52 @@ def get_guests_by_room(room_number: str, check_date: date = None) -> List[Dict[s
                 WHERE room_number = ?
                   AND arrival_date <= ?
                   AND departure_date >= ?
-                ORDER BY is_main_guest DESC, id DESC
+                ORDER BY arrival_date DESC, is_main_guest DESC, id DESC
             ''', (room_number, check_date.isoformat(), check_date.isoformat()))
         else:
             cursor.execute('''
                 SELECT * FROM hotel_guests
                 WHERE room_number = ?
-                ORDER BY is_main_guest DESC, id DESC
+                ORDER BY arrival_date DESC, is_main_guest DESC, id DESC
             ''', (room_number,))
 
         rows = cursor.fetchall()
 
-        # Deduplicate by guest_name (case-insensitive)
-        # Keep the first occurrence (which is the one with is_main_guest=1 or highest ID)
         seen_names = set()
+        seen_bookings = set()
         unique_guests = []
+
         for row in rows:
             guest = dict(row)
-            name_key = guest['guest_name'].upper().strip() if guest['guest_name'] else ''
-            if name_key and name_key not in seen_names:
-                seen_names.add(name_key)
-                # Add checkin/checkout flags when filtering by date
-                if check_date:
-                    check_str = check_date.isoformat()
-                    arrival = guest.get('arrival_date', '')
-                    departure = guest.get('departure_date', '')
-                    guest['is_checkin_today'] = (arrival == check_str)
-                    guest['is_checkout_today'] = (departure == check_str)
-                unique_guests.append(guest)
 
-        # Sort: checkin guests first (arriving), then by is_main_guest, then name
+            # Deduplicate by guest_name (case-insensitive)
+            name_key = guest['guest_name'].upper().strip() if guest['guest_name'] else ''
+            if not name_key or name_key in seen_names:
+                continue
+            seen_names.add(name_key)
+
+            # When main_per_booking: 1 main guest per booking_reference
+            if main_per_booking:
+                booking = guest.get('booking_reference')
+                if booking:
+                    if booking in seen_bookings:
+                        continue
+                    seen_bookings.add(booking)
+                # Skip non-main guests (they won't represent the booking)
+                if not guest.get('is_main_guest', 0):
+                    continue
+
+            # Add checkin/checkout flags when filtering by date
+            if check_date:
+                check_str = check_date.isoformat()
+                guest['is_checkin_today'] = (guest.get('arrival_date', '') == check_str)
+                guest['is_checkout_today'] = (guest.get('departure_date', '') == check_str)
+
+            unique_guests.append(guest)
+
+        # Sort: check-in first, then in-house, then check-out last
         unique_guests.sort(key=lambda g: (
-            -g.get('is_checkin_today', False),
+            not g.get('is_checkin_today', False),
             g.get('is_checkout_today', False),
             -g.get('is_main_guest', 0),
             g.get('guest_name', '')

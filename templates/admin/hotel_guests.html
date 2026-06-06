@@ -18,6 +18,31 @@
 ] %}
 {% include 'components/_page_header.html' %}
 
+<!-- Last Import Status -->
+{% if last_import %}
+<div class="alert {% if last_import.error_count > 0 %}alert-warning{% else %}alert-success{% endif %} d-flex align-items-center justify-content-between mb-4" role="alert">
+    <div>
+        <i class="fas {% if last_import.error_count > 0 %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %} me-2"></i>
+        <strong>Ultima importacion:</strong>
+        {{ last_import.imported_at|format_datetime }}
+        {% if last_import.imported_by_name %}
+        por <strong>{{ last_import.imported_by_name }}</strong>
+        {% endif %}
+        &mdash;
+        {{ last_import.total_records }} registros
+        ({{ last_import.created_count }} nuevos, {{ last_import.updated_count }} actualizados)
+        {% if last_import.error_count > 0 %}
+        &mdash; <strong class="text-danger">{{ last_import.error_count }} error(es)</strong>
+        {% endif %}
+    </div>
+    {% if last_import.error_count > 0 %}
+    <a href="{{ url_for('admin.hotel_guests_import_log_export') }}" class="btn btn-sm btn-outline-danger ms-3" title="Descargar CSV con errores">
+        <i class="fas fa-download me-1"></i>Exportar Errores
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Stats Cards -->
 <div class="row mb-4">
     <div class="col-md-3">
@@ -180,4 +205,59 @@
     <small>Mostrando {{ guests|length }} huésped(es)</small>
 </div>
 {% endif %}
+
+<!-- PMS Import Instructions -->
+<div class="card mt-4">
+    <div class="card-header d-flex align-items-center justify-content-between" role="button"
+         data-bs-toggle="collapse" data-bs-target="#pmsInstructions" aria-expanded="false">
+        <h6 class="card-title mb-0">
+            <i class="fas fa-question-circle me-2 text-muted"></i>Como exportar el Guest In House Report
+        </h6>
+        <i class="fas fa-chevron-down text-muted"></i>
+    </div>
+    <div class="collapse" id="pmsInstructions">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <ol class="mb-0">
+                        <li class="mb-2">
+                            Acceder al report:
+                            <a href="https://guest.purogroup.com/BackOffice/Reports/GuestsInHouseRpt.aspx?sid=PMS"
+                               target="_blank" rel="noopener">
+                                Guest In House Report <i class="fas fa-external-link-alt fa-xs"></i>
+                            </a>
+                        </li>
+                        <li class="mb-2"><strong>Seleccionar el dia</strong> para el que se quiere exportar</li>
+                        <li class="mb-2">
+                            En <strong>Columnas</strong>: <span class="text-danger"><strong>NO</strong> seleccionar Preferencias</span>
+                        </li>
+                        <li class="mb-2">
+                            En <strong>Estado de Reserva</strong>, seleccionar:
+                            <ul class="mt-1">
+                                <li><span class="badge bg-success">Check-in</span></li>
+                                <li><span class="badge bg-primary">Confirmada</span></li>
+                                <li><span class="badge bg-warning text-dark">Pendiente de confirmacion</span></li>
+                            </ul>
+                        </li>
+                        <li class="mb-2">Pulsar <strong>Actualizar</strong> para generar el report</li>
+                        <li class="mb-2">Pulsar <strong>Exportar en Excel</strong></li>
+                        <li>
+                            Subir el archivo descargado en
+                            <a href="{{ url_for('admin.hotel_guests_import') }}">Importar Excel</a>
+                        </li>
+                    </ol>
+                </div>
+                <div class="col-md-4">
+                    <div class="alert alert-info mb-0">
+                        <h6 class="alert-heading"><i class="fas fa-lightbulb me-1"></i> Consejo</h6>
+                        <p class="small mb-0">
+                            Se recomienda importar el report al inicio de cada dia para tener los datos de huespedes actualizados
+                            (check-ins, check-outs y reservas confirmadas).
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

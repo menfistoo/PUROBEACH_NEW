@@ -241,6 +241,10 @@ class CustomerSearch {
             `<i class="fas fa-door-open"></i> ${roomInfo}` :
             '<i class="fas fa-user"></i> Externo';
         const phone = c.phone ? ` - ${_escapeHtml(c.phone)}` : '';
+        const checkinBadge = c.is_checkin_today ?
+            '<span class="cs-badge cs-checkin">Check-in</span>' : '';
+        const checkoutBadge = c.is_checkout_today ?
+            '<span class="cs-badge cs-checkout">Check-out</span>' : '';
 
         if (this.compact) {
             return `
@@ -248,6 +252,7 @@ class CustomerSearch {
                     <div class="cs-item-name">
                         ${displayName}
                         ${isVip ? '<span class="cs-badge cs-vip">VIP</span>' : ''}
+                        ${checkinBadge}${checkoutBadge}
                     </div>
                     <div class="cs-item-details">${roomInfo || _escapeHtml(c.phone) || _escapeHtml(c.email) || ''}</div>
                 </div>
@@ -263,6 +268,7 @@ class CustomerSearch {
                     <div class="cs-name">
                         ${displayName}
                         ${isVip ? '<span class="cs-badge cs-vip">VIP</span>' : ''}
+                        ${checkinBadge}${checkoutBadge}
                     </div>
                     <div class="cs-details">${typeInfo}${phone}</div>
                 </div>

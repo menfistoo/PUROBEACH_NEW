@@ -2463,5 +2463,56 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // (onRender handler consolidated above — see Combined onRender handler)
 
+    // ==========================================================================
+    // IMPORT STATUS BADGE
+    // ==========================================================================
+    (function loadImportStatus() {
+        const btn = document.getElementById('importStatusBtn');
+        const textEl = document.getElementById('importStatusText');
+        if (!btn || !textEl) return;
+
+        fetch('/beach/api/import-status')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success || !data.has_import) {
+                    textEl.textContent = 'Sin importar';
+                    return;
+                }
+
+                // Format the date/time
+                const dt = new Date(data.imported_at);
+                const now = new Date();
+                const diffMs = now - dt;
+                const diffHours = diffMs / (1000 * 60 * 60);
+
+                let timeStr;
+                if (diffHours < 24) {
+                    timeStr = dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                } else {
+                    const diffDays = Math.floor(diffHours / 24);
+                    timeStr = `hace ${diffDays}d`;
+                }
+
+                // Show error count if any
+                if (data.error_count > 0) {
+                    textEl.textContent = `${timeStr} (${data.error_count} err)`;
+                    btn.classList.add('has-errors');
+                    btn.title = `Ultima importacion: ${dt.toLocaleString('es-ES')} - ${data.total_records} registros, ${data.error_count} errores`;
+                } else {
+                    textEl.textContent = timeStr;
+                    btn.classList.add('import-ok');
+                    btn.title = `Ultima importacion: ${dt.toLocaleString('es-ES')} - ${data.total_records} registros OK`;
+                }
+            })
+            .catch(() => {
+                textEl.textContent = '';
+            });
+
+        // Click opens the hotel guests admin page
+        btn.addEventListener('click', () => {
+            window.open('/admin/hotel-guests', '_blank');
+        });
+    })();
+
 });
 

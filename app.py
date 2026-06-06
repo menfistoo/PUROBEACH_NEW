@@ -359,6 +359,25 @@ def register_context_processors(app):
         except (ValueError, TypeError, AttributeError):
             return date_str
 
+    @app.template_filter('format_datetime')
+    def format_datetime_filter(dt_str, format='%d/%m/%Y %H:%M'):
+        """Format datetime string for display."""
+        from datetime import datetime
+        if not dt_str:
+            return ''
+        try:
+            if isinstance(dt_str, str):
+                # Try common formats
+                for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S'):
+                    try:
+                        dt_obj = datetime.strptime(dt_str, fmt)
+                        return dt_obj.strftime(format)
+                    except ValueError:
+                        continue
+            return dt_str
+        except (ValueError, TypeError, AttributeError):
+            return dt_str
+
     @app.template_filter('from_json')
     def from_json_filter(json_str):
         """Parse JSON string into Python object."""

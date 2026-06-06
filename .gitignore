@@ -85,3 +85,6 @@ NUL
 
 # Simulation database - never commit
 database/beach_club_sim.db
+
+# Local sync credentials (never commit)
+scripts/.sync_env

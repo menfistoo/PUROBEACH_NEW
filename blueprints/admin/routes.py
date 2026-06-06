@@ -18,6 +18,7 @@ from models.user import (get_all_users, get_user_by_id, create_user, update_user
 from models.role import (get_all_roles, get_role_by_id, get_role_permissions,
                           bulk_set_permissions, update_role, delete_role)
 from models.permission import get_all_permissions
+from models.import_log import save_import_log, get_last_import, get_import_log_list
 from models.hotel_guest import (get_all_hotel_guests, get_hotel_guest_by_id,
                                   get_guest_count, get_distinct_rooms, delete_hotel_guest)
 from blueprints.admin.services import (validate_user_creation, can_delete_user,
@@ -405,13 +406,17 @@ def hotel_guests():
     # Get distinct rooms for filter
     rooms = get_distinct_rooms()
 
+    # Get last import info
+    last_import = get_last_import('hotel_guests')
+
     return render_template('hotel_guests.html',
                            guests=guests,
                            stats=stats,
                            rooms=rooms,
                            search=search,
                            room_filter=room_filter,
-                           active_only=active_only)
+                           active_only=active_only,
+                           last_import=last_import)
 
 
 @admin_bp.route('/hotel-guests/import', methods=['GET', 'POST'])
@@ -445,6 +450,21 @@ def hotel_guests_import():
         try:
             # Import guests
             result = import_hotel_guests_from_excel(temp_path, source_name=filename)
+
+            # Save import result to log
+            try:
+                save_import_log(
+                    import_type='hotel_guests',
+                    source_file=filename,
+                    total_records=result['total'],
+                    created_count=result['created'],
+                    updated_count=result['updated'],
+                    errors=result.get('errors', []),
+                    room_changes=result.get('room_changes', []),
+                    imported_by=current_user.id if current_user.is_authenticated else None
+                )
+            except Exception as log_err:
+                current_app.logger.warning(f'Failed to save import log: {log_err}')
 
             # Build result message
             if result['created'] or result['updated']:
@@ -573,3 +593,89 @@ def hotel_guests_preview():
                 break
             except PermissionError:
                 time.sleep(0.1)
+
+
+@admin_bp.route('/hotel-guests/import-log', methods=['GET'])
+@login_required
+@permission_required('admin.hotel_guests.view')
+def hotel_guests_import_log():
+    """View import log history as JSON."""
+    entries = get_import_log_list('hotel_guests', limit=50)
+
+    # Clean up JSON fields for response
+    result = []
+    for entry in entries:
+        result.append({
+            'id': entry['id'],
+            'source_file': entry.get('source_file'),
+            'imported_at': entry['imported_at'],
+            'imported_by': entry.get('imported_by_name'),
+            'total_records': entry['total_records'],
+            'created_count': entry['created_count'],
+            'updated_count': entry['updated_count'],
+            'error_count': entry['error_count'],
+            'errors': entry.get('errors', []),
+            'room_changes': entry.get('room_changes', [])
+        })
+
+    return jsonify(result)
+
+
+@admin_bp.route('/hotel-guests/import-log/export', methods=['GET'])
+@login_required
+@permission_required('admin.hotel_guests.view')
+def hotel_guests_import_log_export():
+    """Export import log errors as CSV for analysis."""
+    from io import StringIO
+    import csv
+
+    entries = get_import_log_list('hotel_guests', limit=100)
+
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow([
+        'Fecha Importacion', 'Archivo', 'Usuario',
+        'Total', 'Creados', 'Actualizados', 'Errores',
+        'Detalle Error'
+    ])
+
+    for entry in entries:
+        errors = entry.get('errors', [])
+        room_changes = entry.get('room_changes', [])
+
+        if errors:
+            for error in errors:
+                writer.writerow([
+                    entry['imported_at'],
+                    entry.get('source_file', ''),
+                    entry.get('imported_by_name', ''),
+                    entry['total_records'],
+                    entry['created_count'],
+                    entry['updated_count'],
+                    entry['error_count'],
+                    error
+                ])
+        else:
+            # Still include imports with no errors
+            writer.writerow([
+                entry['imported_at'],
+                entry.get('source_file', ''),
+                entry.get('imported_by_name', ''),
+                entry['total_records'],
+                entry['created_count'],
+                entry['updated_count'],
+                entry['error_count'],
+                ''
+            ])
+
+    from flask import Response
+    response = Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': 'attachment; filename=import_log_errors.csv'
+        }
+    )
+    return response

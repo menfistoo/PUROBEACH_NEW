@@ -288,9 +288,13 @@ class CustomerHandler {
      */
     async fetchRoomGuests(customer) {
         try {
-            const response = await fetch(
-                `${this.panel.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(customer.room_number)}`
-            );
+            // Pass booking_reference to filter guests from the same booking only
+            const bookingRef = customer.booking_reference || '';
+            let url = `${this.panel.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(customer.room_number)}`;
+            if (bookingRef) {
+                url += `&booking=${encodeURIComponent(bookingRef)}`;
+            }
+            const response = await fetch(url);
             const data = await response.json();
 
             this.state.roomGuests = data.guests || [];
@@ -570,9 +574,13 @@ class CustomerHandler {
      */
     async fetchRoomGuestsForGuest(guest) {
         try {
-            const response = await fetch(
-                `${this.panel.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(guest.room_number)}`
-            );
+            // Pass booking_reference to filter guests from the same booking only
+            const bookingRef = guest.booking_reference || '';
+            let url = `${this.panel.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(guest.room_number)}`;
+            if (bookingRef) {
+                url += `&booking=${encodeURIComponent(bookingRef)}`;
+            }
+            const response = await fetch(url);
             const data = await response.json();
 
             this.state.roomGuests = data.guests || [];

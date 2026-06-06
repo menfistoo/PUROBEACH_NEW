@@ -287,15 +287,20 @@ export const CustomerMixin = (Base) => class extends Base {
         if (!this.roomGuestSelector || !this.roomGuestSelect) return;
 
         try {
-            // Fetch room guests
-            const response = await fetch(
-                `${this.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(roomNumber)}`
-            );
+            // Get booking_reference from current reservation's customer data
+            // This filters the guest list to only guests from the SAME booking
+            const bookingRef = this.state.data?.customer?.booking_reference || '';
+            let url = `${this.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(roomNumber)}`;
+            if (bookingRef) {
+                url += `&booking=${encodeURIComponent(bookingRef)}`;
+            }
+
+            const response = await fetch(url);
             const data = await response.json();
 
             const guests = data.guests || [];
 
-            // Only show if there are multiple guests
+            // Only show if there are multiple guests in this booking
             if (guests.length <= 1) {
                 this.roomGuestSelector.style.display = 'none';
                 return;

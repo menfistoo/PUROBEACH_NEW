@@ -2214,15 +2214,20 @@ const CustomerMixin = (Base) => class extends Base {
         if (!this.roomGuestSelector || !this.roomGuestSelect) return;
 
         try {
-            // Fetch room guests
-            const response = await fetch(
-                `${this.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(roomNumber)}`
-            );
+            // Get booking_reference from current reservation's customer data
+            // This filters the guest list to only guests from the SAME booking
+            const bookingRef = this.state.data?.customer?.booking_reference || '';
+            let url = `${this.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(roomNumber)}`;
+            if (bookingRef) {
+                url += `&booking=${encodeURIComponent(bookingRef)}`;
+            }
+
+            const response = await fetch(url);
             const data = await response.json();
 
             const guests = data.guests || [];
 
-            // Only show if there are multiple guests
+            // Only show if there are multiple guests in this booking
             if (guests.length <= 1) {
                 this.roomGuestSelector.style.display = 'none';
                 return;
@@ -4554,9 +4559,13 @@ class CustomerHandler {
      */
     async fetchRoomGuests(customer) {
         try {
-            const response = await fetch(
-                `${this.panel.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(customer.room_number)}`
-            );
+            // Pass booking_reference to filter guests from the same booking only
+            const bookingRef = customer.booking_reference || '';
+            let url = `${this.panel.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(customer.room_number)}`;
+            if (bookingRef) {
+                url += `&booking=${encodeURIComponent(bookingRef)}`;
+            }
+            const response = await fetch(url);
             const data = await response.json();
 
             this.state.roomGuests = data.guests || [];
@@ -4836,8 +4845,13 @@ class CustomerHandler {
      */
     async fetchRoomGuestsForGuest(guest) {
         try {
-            const response = await fetch(
-                `${this.panel.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(guest.room_number)}`
+            // Pass booking_reference to filter guests from the same booking only
+            const bookingRef = guest.booking_reference || '';
+            let url = `${this.panel.options.apiBaseUrl}/hotel-guests/lookup?room=${encodeURIComponent(guest.room_number)}`;
+            if (bookingRef) {
+                url += `&booking=${encodeURIComponent(bookingRef)}`;
+            }
+            const response = await fetch(url
             );
             const data = await response.json();
 

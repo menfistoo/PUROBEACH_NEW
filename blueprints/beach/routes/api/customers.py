@@ -17,6 +17,7 @@ from models.characteristic import get_all_characteristics
 from models.reservation import sync_preferences_to_customer
 from models.reservation import get_customer_reservation_history, get_customer_preferred_furniture
 from models.hotel_guest import get_guests_by_room, search_guests
+from models.import_log import get_last_import
 from utils.datetime_helpers import get_today
 from models.tag import get_customer_tags, sync_customer_tags_to_reservations
 
@@ -145,7 +146,7 @@ def register_routes(bp):
                 }
 
                 if c['customer_type'] == 'interno' and c.get('room_number'):
-                    hotel_guests = get_guests_by_room(c['room_number'], get_today())
+                    hotel_guests = get_guests_by_room(c['room_number'], get_today(), main_per_booking=True)
                     if hotel_guests:
                         full_name = f"{c['first_name']} {c.get('last_name', '')}".strip().upper()
                         matching_guest = None
@@ -160,7 +161,14 @@ def register_routes(bp):
                         customer_data['departure_date'] = matching_guest.get('departure_date')
                         customer_data['nationality'] = matching_guest.get('nationality')
                         customer_data['booking_reference'] = matching_guest.get('booking_reference')
-                        customer_data['room_guest_count'] = len(hotel_guests)
+                        # Count only guests from same booking, not all guests in room
+                        booking_ref = matching_guest.get('booking_reference')
+                        if booking_ref:
+                            customer_data['room_guest_count'] = sum(
+                                1 for hg in hotel_guests if hg.get('booking_reference') == booking_ref
+                            )
+                        else:
+                            customer_data['room_guest_count'] = 1
                         customer_data['vip_code'] = matching_guest.get('vip_code')
 
                 formatted_results.append(customer_data)
@@ -646,12 +654,23 @@ def register_routes(bp):
     @login_required
     @permission_required('beach.customers.view')
     def hotel_guest_lookup():
-        """Lookup hotel guests by room number for auto-fill and guest selection."""
+        """Lookup hotel guests by room number for auto-fill and guest selection.
+
+        Optional booking_reference parameter filters to guests from a specific
+        booking only. Without it, returns main guest per booking (for selection).
+        """
         room_number = request.args.get('room', '')
+        booking_ref = request.args.get('booking', '')
         if not room_number:
             return api_success(guests=[], guest_count=0)
 
-        guests = get_guests_by_room(room_number, get_today())
+        if booking_ref:
+            # Filter to specific booking: return all guests from this booking
+            guests = get_guests_by_room(room_number, get_today())
+            guests = [g for g in guests if g.get('booking_reference') == booking_ref]
+        else:
+            # No booking specified: return 1 main guest per booking (for selection)
+            guests = get_guests_by_room(room_number, get_today(), main_per_booking=True)
 
         return api_success(guest_count=len(guests), guests=[{
             'id': g['id'],
@@ -715,3 +734,31 @@ def register_routes(bp):
         result = sorted(rooms.values(), key=lambda x: x['room_number'])
 
         return api_success(guests=result)
+
+    # ============================================================================
+    # IMPORT STATUS
+    # ============================================================================
+
+    @bp.route('/import-status', methods=['GET'])
+    @login_required
+    def import_status():
+        """Get the last hotel guest import status for display on the map."""
+        try:
+            last_import = get_last_import('hotel_guests')
+
+            if not last_import:
+                return api_success(has_import=False)
+
+            return api_success(
+                has_import=True,
+                imported_at=last_import['imported_at'],
+                source_file=last_import.get('source_file'),
+                total_records=last_import['total_records'],
+                created_count=last_import['created_count'],
+                updated_count=last_import['updated_count'],
+                error_count=last_import['error_count'],
+                imported_by=last_import.get('imported_by_name')
+            )
+        except Exception as e:
+            current_app.logger.error(f'Error getting import status: {e}')
+            return api_success(has_import=False)

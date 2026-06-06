@@ -126,30 +126,28 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                 customer['is_checkin_today'] = False
                 customer['is_checkout_today'] = False
                 if customer.get('customer_type') == 'interno' and customer.get('room_number'):
-                    # Get all active guests in this room today
+                    # Get all active bookings' main guests for this room today
                     cursor.execute('''
-                        SELECT guest_name, arrival_date, departure_date
+                        SELECT guest_name, arrival_date, departure_date,
+                               is_main_guest, booking_reference
                         FROM hotel_guests
                         WHERE room_number = ?
                           AND departure_date >= date('now')
                           AND arrival_date <= date('now')
-                        ORDER BY arrival_date DESC
+                        ORDER BY arrival_date DESC, is_main_guest DESC
                     ''', (customer['room_number'],))
                     hotel_rows = cursor.fetchall()
                     if not hotel_rows:
                         # No active hotel stay - skip this interno customer
                         continue
 
-                    # Match customer name against active hotel guests in this room
+                    # Match customer name against active hotel guests
                     customer_name = normalize_text(
                         f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip()
                     )
                     matched_guest = None
                     for hr in hotel_rows:
                         guest_name_normalized = normalize_text(hr['guest_name'] or '')
-                        # Check if names match (either direction for "First Last" vs "Last First")
-                        # Require at least 2 common words to avoid false positives on common names
-                        # (e.g. "María López" matching "María García" on just "maria")
                         common_words = set(customer_name.split()) & set(guest_name_normalized.split())
                         min_words = min(len(customer_name.split()), len(guest_name_normalized.split()))
                         if (customer_name in guest_name_normalized
@@ -159,7 +157,11 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                             break
 
                     if not matched_guest:
-                        # Customer name doesn't match any active guest in this room - skip
+                        # Customer name doesn't match any active guest - skip
+                        continue
+
+                    # Only show main guest per booking (skip secondary guests)
+                    if not matched_guest['is_main_guest']:
                         continue
 
                     arrival = matched_guest['arrival_date']
@@ -184,7 +186,7 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                        'hotel_guest' as source,
                        (SELECT COUNT(*) FROM hotel_guests h2
                         WHERE h2.room_number = h.room_number
-                          AND h2.arrival_date = h.arrival_date
+                          AND h2.booking_reference = h.booking_reference
                           AND h2.departure_date >= date('now')) as room_guest_count
                 FROM hotel_guests h
                 WHERE h.departure_date >= date('now')
@@ -252,6 +254,12 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
                     added_rooms.add(room)
                     if len(results) >= limit:
                         break
+
+        # Sort: check-in-today first, then check-out-today last, preserving order otherwise
+        results.sort(key=lambda r: (
+            not r.get('is_checkin_today', False),   # checkin first
+            r.get('is_checkout_today', False),       # checkout last
+        ))
 
         return results[:limit]
 
