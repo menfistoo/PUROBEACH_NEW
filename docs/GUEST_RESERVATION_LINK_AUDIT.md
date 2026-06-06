@@ -31,16 +31,27 @@ room is assigned (pre-arrival). We anchor sunbed reservations to it.
 - **#7** `sync_customer_room_by_booking()` + wired into the import.
 
 ## Remaining
-### #8 Pre-arrival + search by reservation number (UI — needs iPad testing)
-- Let the customer search match/enter a **reservation number** (find in-house guests by it,
-  or accept a typed number for a not-yet-arrived booking).
-- Allow creating an **interno** reservation with a `booking_reference` but **no room yet**
-  (today `room_number` is required for interno + the importer rejects room-less rows).
-- Show **"Pendiente de habitación"** when interno + has `booking_reference` + no room.
-  When the guest later appears in the import with a room, #7's sync auto-fills it.
-- Files: `blueprints/beach/routes/api/customers.py`, `models/customer_search.py`,
-  bundled panel JS (`static/js/map-panels-bundle.js` + sources under
-  `static/js/map/reservation-panel*/`), `static/js/customer-search.js`.
+### #8 Pre-arrival + search by reservation number
+DONE:
+- Search matches reservation number (`search_customers_unified` matches booking_reference;
+  works on the map panel via `/customers/search`).
+- Backend pre-arrival: `create_customer` + `/customers/create` accept `booking_reference`
+  and allow interno with NO room (validation requires room OR reservation number). Room
+  auto-fills on check-in via #7's `sync_customer_room_by_booking`.
+- "Pendiente de habitación" shown in the NewReservationPanel render (source
+  `reservation-panel/customer-handler.js` + bundle `map-panels-bundle.js`).
+
+REMAINING (needs iPad testing):
+- The **create-pre-arrival affordance on the MAP**: the map's NewReservationPanel has its
+  OWN search render (`map-panels-bundle.js` → `renderCustomerSearchResults`, no-results
+  branch ~line 2423). Add a "Crear reserva pendiente: <nº>" button when the typed query
+  looks like a reservation number and there are no hits; on click POST `/customers/create`
+  ({customer_type:'interno', first_name:<nº>, booking_reference:<nº>}) with X-CSRFToken
+  (from meta[name=csrf-token] or #newPanelCsrfToken), then select the returned customer
+  via the panel's existing select path. (NOTE: the shared `customer-search.js` CustomerSearch
+  class is used on OTHER pages, not the map — don't confuse the two.)
+- Optional: when a guest checks in, also refresh a placeholder customer name (currently
+  the pre-arrival name defaults to the reservation number; sync only updates room).
 
 ### #9 Import hardening (lower priority)
 - Normalize `guest_name` for matching (trim, collapse spaces, strip accents, case-fold,
