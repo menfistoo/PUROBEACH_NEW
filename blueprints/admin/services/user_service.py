@@ -278,17 +278,37 @@ def import_hotel_guests_from_excel(
                 first_name = get_value('first_name') or ''
                 last_name = get_value('last_name') or ''
                 guest_name = f"{first_name} {last_name}".strip()
+                room_value = get_value('room_number')
+                reserva_value = get_value('reservation_code')
+
+                # Skip non-guest rows that some PMS exports interleave (repeated column
+                # headers on each page) — don't count them as errors.
+                if (str(first_name).strip().lower() in ('nombre', 'name', 'guest')
+                        or str(last_name).strip().lower() in ('apellidos', 'surname')):
+                    result['total'] -= 1
+                    continue
 
                 if not guest_name:
-                    result['errors'].append(f"Fila {row_num}: Nombre vacío")
+                    # A row with no name but a room/reservation is a REAL guest the PMS
+                    # exported without a name — surface what it was so it's diagnosable.
+                    # A row with no name and no room/reservation is a blank/total/footer
+                    # row — skip it silently (don't inflate the error count).
+                    ctx = []
+                    if room_value:
+                        ctx.append(f"hab={str(room_value).strip()}")
+                    if reserva_value:
+                        ctx.append(f"reserva={str(reserva_value).strip()}")
+                    if not ctx:
+                        result['total'] -= 1
+                        continue
+                    result['errors'].append(f"Fila {row_num}: Nombre vacío ({', '.join(ctx)})")
                     continue
 
                 # Get room number
-                room_number = get_value('room_number')
-                if not room_number:
-                    result['errors'].append(f"Fila {row_num}: Habitación vacía")
+                if not room_value:
+                    result['errors'].append(f"Fila {row_num}: Habitación vacía (nombre={guest_name})")
                     continue
-                room_number = str(room_number).strip()
+                room_number = str(room_value).strip()
 
                 # Parse dates
                 arrival_date = parse_date(get_value('arrival_date'))

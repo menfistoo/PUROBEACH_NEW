@@ -6,6 +6,27 @@ Handles hotel guest CRUD operations and Excel import functionality.
 from database import get_db
 from datetime import date
 from typing import Optional, List, Dict, Any
+import unicodedata
+
+
+def normalize_guest_name(name: str) -> str:
+    """Normalize a guest name for robust matching across PMS exports.
+
+    Lowercases, trims, collapses whitespace, strips accents, and converts
+    "Last, First" to "first last". Conservative (no fuzzy/substring matching),
+    so it only unifies the same name written differently — e.g.
+    "José García", "JOSE GARCIA", "GARCIA, JOSE" all normalize equal.
+    """
+    if not name:
+        return ''
+    s = str(name).strip().lower()
+    if ',' in s:
+        parts = [p.strip() for p in s.split(',', 1)]
+        if len(parts) == 2 and parts[0] and parts[1]:
+            s = f"{parts[1]} {parts[0]}"
+    s = unicodedata.normalize('NFKD', s)
+    s = ''.join(c for c in s if not unicodedata.combining(c))
+    return ' '.join(s.split())
 
 
 def get_all_hotel_guests(
@@ -309,13 +330,19 @@ def upsert_hotel_guest(
         room_changed = False
         old_room = None
 
-        # Priority 1: Match by booking_reference + guest_name (if booking_reference provided)
+        # Priority 1: Match by booking_reference + guest_name (if booking_reference provided).
+        # Compare names NORMALIZED so spelling/accents/"Last, First" differences between
+        # exports don't create duplicate guests or miss a room change.
         if booking_reference:
             cursor.execute('''
-                SELECT id, room_number, is_main_guest FROM hotel_guests
-                WHERE booking_reference = ? AND guest_name = ?
-            ''', (booking_reference, guest_name))
-            existing = cursor.fetchone()
+                SELECT id, room_number, is_main_guest, guest_name FROM hotel_guests
+                WHERE booking_reference = ?
+            ''', (booking_reference,))
+            target_name = normalize_guest_name(guest_name)
+            for cand in cursor.fetchall():
+                if normalize_guest_name(cand['guest_name']) == target_name:
+                    existing = cand
+                    break
 
             if existing and existing['room_number'] != room_number:
                 room_changed = True
