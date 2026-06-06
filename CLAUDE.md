@@ -1,5 +1,17 @@
 # Beach Club Management System
 
+> ## ⚠️ NETWORKING & ACCESS — MANDATORY, READ FIRST
+> Public URL: **https://beach.purobeach-ops.com** (served via **Cloudflare Tunnel**, NOT
+> DuckDNS). **TLS terminates at Cloudflare; nginx/this app receive plain HTTP** with
+> `X-Forwarded-Proto: https`. No inbound ports; no Let's Encrypt cert in the path.
+> **Authoritative spec: `puro-beach-stack/INFRASTRUCTURE.md` — obey it on every edit.**
+> Rules for this app: keep `SESSION_COOKIE_SECURE=true` (config reads it from env —
+> production must be `true`); never force an in-app HTTP→HTTPS redirect; build absolute
+> URLs from request/`X-Forwarded-*` (never hardcode duckdns or `localhost:port`); read
+> real client IP from `CF-Connecting-IP`; include `beach.purobeach-ops.com` in any
+> Host/CSP allowlist. This app's container is `purobeach-app`, published on host `:9080`,
+> reached by nginx upstream `beachclub` (`172.17.0.1:9080`).
+
 ## Overview
 Sistema profesional de gestión y reservas de beach club. Gestiona hamacas/balinesas, clientes internos (huéspedes) y externos, reservas multi-día, precios diferenciados, estados configurables, y mapa interactivo con disponibilidad en tiempo real.
 
