@@ -43,7 +43,7 @@ class Config:
 
     # Application settings
     APP_NAME = 'PuroBeach'
-    APP_VERSION = '1.2.0'
+    APP_VERSION = '1.2.1'
 
 
 class DevelopmentConfig(Config):
