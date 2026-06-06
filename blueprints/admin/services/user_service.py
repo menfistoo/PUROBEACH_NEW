@@ -217,7 +217,7 @@ def import_hotel_guests_from_excel(
     Returns:
         Dict with 'created', 'updated', 'errors', 'total' counts
     """
-    from models.hotel_guest import upsert_hotel_guest, propagate_room_change
+    from models.hotel_guest import upsert_hotel_guest, propagate_room_change, sync_customer_room_by_booking
 
     result = {
         'created': 0,
@@ -331,8 +331,21 @@ def import_hotel_guests_from_excel(
                 else:
                     result['updated'] += 1
 
-                # Handle room change if detected
-                if upsert_result.get('room_changed'):
+                # Keep linked beach_customers' room in sync with the guest list.
+                # Primary path: match on the stable booking_reference (robust to room
+                # changes, room-first-assignment, and name spelling differences).
+                if booking_reference:
+                    sync_res = sync_customer_room_by_booking(booking_reference, room_number)
+                    for ch in sync_res['changes']:
+                        result['room_changes'].append({
+                            'guest_name': guest_name,
+                            'old_room': ch['old_room'],
+                            'new_room': ch['new_room'],
+                            'customer_updated': True,
+                            'reservations_updated': None
+                        })
+                # Fallback for guests with no booking reference: legacy room+name match.
+                elif upsert_result.get('room_changed'):
                     propagate_result = propagate_room_change(
                         guest_name=guest_name,
                         old_room=upsert_result['old_room'],

@@ -480,6 +480,65 @@ def propagate_room_change(
         return result
 
 
+def sync_customer_room_by_booking(booking_reference: str, room_number: str) -> Dict[str, Any]:
+    """
+    Keep interno beach_customers' room in sync with the hotel guest list, matched on
+    the STABLE booking_reference (hotel reservation number).
+
+    This is the robust replacement for propagate_room_change(): because the public
+    reservation number never changes when the physical room changes (or when a room is
+    first assigned to a pre-arrival booking), matching on it reliably updates the room
+    for the right customer — and the room then flows to every reservation/display that
+    joins beach_customers.room_number.
+
+    Returns {'updated': n, 'changes': [{'customer_id', 'old_room', 'new_room'}, ...]}.
+
+    Scope: only customers that have a CURRENT/FUTURE reservation anchored to this exact
+    booking_reference. We deliberately do NOT match on beach_customers.booking_reference
+    alone, because a room can be reused by many guests over time and that column can be
+    ambiguous; the reservation's booking_reference (set accurately at creation) is the
+    trustworthy anchor, and past reservations are left untouched.
+    """
+    result = {'updated': 0, 'changes': []}
+    if not booking_reference or not room_number:
+        return result
+
+    from utils.datetime_helpers import get_today
+    today = get_today().isoformat()
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        # Customers tied to an active reservation for this booking, whose room is stale.
+        cursor.execute('''
+            SELECT DISTINCT c.id, c.room_number
+            FROM beach_customers c
+            JOIN beach_reservations r ON r.customer_id = c.id
+            WHERE c.customer_type = 'interno'
+              AND r.booking_reference = ?
+              AND r.end_date >= ?
+              AND (c.room_number IS NULL OR c.room_number = '' OR c.room_number != ?)
+        ''', (booking_reference, today, room_number))
+        stale = cursor.fetchall()
+        if not stale:
+            return result
+
+        ids = [r['id'] for r in stale]
+        placeholders = ','.join('?' for _ in ids)
+        cursor.execute(f'''
+            UPDATE beach_customers
+            SET room_number = ?, booking_reference = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id IN ({placeholders})
+        ''', (room_number, booking_reference, *ids))
+        conn.commit()
+
+        result['updated'] = len(stale)
+        result['changes'] = [
+            {'customer_id': r['id'], 'old_room': r['room_number'], 'new_room': room_number}
+            for r in stale
+        ]
+        return result
+
+
 def delete_hotel_guest(guest_id: int) -> bool:
     """
     Delete hotel guest record.

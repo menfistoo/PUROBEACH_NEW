@@ -32,27 +32,10 @@ def migrate_customers_booking_reference() -> bool:
     try:
         db.execute('ALTER TABLE beach_customers ADD COLUMN booking_reference TEXT')
         print("  Added column: beach_customers.booking_reference")
-
-        # Best-effort backfill: only when the customer's current room maps to
-        # EXACTLY ONE active booking_reference in hotel_guests (no ambiguity).
-        db.execute('''
-            UPDATE beach_customers
-            SET booking_reference = (
-                SELECT MAX(hg.booking_reference)
-                FROM hotel_guests hg
-                WHERE hg.room_number = beach_customers.room_number
-                  AND hg.booking_reference IS NOT NULL
-                  AND hg.booking_reference != ''
-                  AND hg.departure_date >= date('now')
-                HAVING COUNT(DISTINCT hg.booking_reference) = 1
-            )
-            WHERE customer_type = 'interno'
-              AND room_number IS NOT NULL
-              AND room_number != ''
-              AND (booking_reference IS NULL OR booking_reference = '')
-        ''')
-        print("  Backfilled customers.booking_reference for unambiguous room matches")
-
+        # NOTE: no backfill. A room can be reused by many guests over time, so
+        # backfilling by room alone over-assigns the current booking to historical
+        # occupants. booking_reference is populated accurately going forward when a
+        # reservation is linked to a hotel guest.
         db.commit()
         print("Migration customers_booking_reference applied successfully!")
         return True
@@ -77,21 +60,8 @@ def migrate_reservations_booking_reference() -> bool:
     try:
         db.execute('ALTER TABLE beach_reservations ADD COLUMN booking_reference TEXT')
         print("  Added column: beach_reservations.booking_reference")
-
-        # Backfill current/future reservations from their customer's booking_reference.
-        # Past reservations are left untouched (historical accuracy).
-        db.execute('''
-            UPDATE beach_reservations
-            SET booking_reference = (
-                SELECT c.booking_reference
-                FROM beach_customers c
-                WHERE c.id = beach_reservations.customer_id
-            )
-            WHERE (booking_reference IS NULL OR booking_reference = '')
-              AND end_date >= date('now')
-        ''')
-        print("  Backfilled reservations.booking_reference from customers")
-
+        # NOTE: no backfill (see customers migration). Populated accurately going
+        # forward when a reservation is created/linked to a hotel guest.
         db.commit()
         print("Migration reservations_booking_reference applied successfully!")
         return True
