@@ -430,7 +430,7 @@ def get_furniture_availability_map(
                    r.notes as reservation_notes,
                    c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
                    c.first_name, c.room_number, c.customer_type, c.vip_status,
-                   c.booking_reference
+                   COALESCE(NULLIF(r.booking_reference, ''), c.booking_reference) AS booking_reference
             FROM beach_reservation_furniture rf
             JOIN beach_reservations r ON rf.reservation_id = r.id
             JOIN beach_customers c ON r.customer_id = c.id
