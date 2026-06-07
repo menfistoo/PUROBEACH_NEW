@@ -319,25 +319,36 @@ def create_customer_from_hotel_guest(hotel_guest_id: int, additional_data: dict 
 
         guest = dict(guest)
 
-        # Check if customer already exists for this room with this name
-        cursor.execute('''
-            SELECT id FROM beach_customers
-            WHERE customer_type = 'interno' AND room_number = ?
-              AND (first_name || ' ' || COALESCE(last_name, '')) LIKE ?
-        ''', (guest['room_number'], f"%{guest['guest_name']}%"))
-        existing = cursor.fetchone()
+        # Find an existing beach customer for this guest. Identity is the stable
+        # reservation number (booking_reference) FIRST, so the same guest stays one
+        # customer across room changes; fall back to room + name when there's no ref.
+        existing = None
+        if guest.get('booking_reference'):
+            cursor.execute('''
+                SELECT id FROM beach_customers
+                WHERE customer_type = 'interno' AND booking_reference = ?
+            ''', (guest['booking_reference'],))
+            existing = cursor.fetchone()
+        if not existing:
+            cursor.execute('''
+                SELECT id FROM beach_customers
+                WHERE customer_type = 'interno' AND room_number = ?
+                  AND (first_name || ' ' || COALESCE(last_name, '')) LIKE ?
+            ''', (guest['room_number'], f"%{guest['guest_name']}%"))
+            existing = cursor.fetchone()
 
         if existing:
-            # Ensure the existing customer carries the stable booking_reference
-            # (so room/guest info can always be resolved by it later).
-            if guest.get('booking_reference'):
-                cursor.execute('''
-                    UPDATE beach_customers
-                    SET booking_reference = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                      AND (booking_reference IS NULL OR booking_reference = '')
-                ''', (guest['booking_reference'], existing['id']))
-                conn.commit()
+            # Same person (matched by reservation number or room+name): keep the one
+            # customer record, ensure it carries the stable booking_reference, and let
+            # its room follow the guest's current room (groundwork for room-change history).
+            cursor.execute('''
+                UPDATE beach_customers
+                SET room_number = ?,
+                    booking_reference = COALESCE(NULLIF(booking_reference, ''), ?),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (guest['room_number'], guest.get('booking_reference'), existing['id']))
+            conn.commit()
             # Return existing customer instead of creating duplicate
             return {
                 'customer_id': existing['id'],
