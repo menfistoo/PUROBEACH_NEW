@@ -2450,17 +2450,18 @@ const CustomerMixin = (Base) => class extends Base {
         const typeLabel = customer.customer_type === 'interno'
             ? `Hab. ${escapeHtml(customer.room_number || '?')}`
             : 'Externo';
-        const vipIcon = customer.vip_status
-            ? '<i class="fas fa-star text-warning ms-1"></i>'
-            : '';
+        // Same badges as the new-reservation search (CustomerSearch component).
+        const vipBadge = (customer.vip_status || customer.vip_code)
+            ? '<span class="cs-badge cs-vip">VIP</span>' : '';
+        const checkinBadge = customer.is_checkin_today
+            ? '<span class="cs-badge cs-checkin">Check-in</span>' : '';
+        const checkoutBadge = customer.is_checkout_today
+            ? '<span class="cs-badge cs-checkout">Check-out</span>' : '';
 
         return `
             <div class="customer-search-item" data-customer-id="${customer.id}">
-                <div class="fw-semibold">${escapeHtml(customer.first_name)} ${escapeHtml(customer.last_name)}</div>
-                <div class="small text-muted">
-                    ${typeLabel}
-                    ${vipIcon}
-                </div>
+                <div class="fw-semibold">${escapeHtml(customer.first_name)} ${escapeHtml(customer.last_name)} ${vipBadge}${checkinBadge}${checkoutBadge}</div>
+                <div class="small text-muted">${typeLabel}</div>
             </div>
         `;
     }
@@ -2472,12 +2473,16 @@ const CustomerMixin = (Base) => class extends Base {
      * @returns {string} HTML string for the result item
      */
     _renderHotelGuestSearchItem(guest) {
+        const name = guest.guest_name || `${guest.first_name || ''} ${guest.last_name || ''}`.trim();
+        // Same badges as the new-reservation search (CustomerSearch component).
+        const vipBadge = guest.vip_code ? '<span class="cs-badge cs-vip">VIP</span>' : '';
+        const mainBadge = guest.is_main_guest ? '<span class="cs-badge cs-main">Principal</span>' : '';
+        const checkinBadge = guest.is_checkin_today ? '<span class="cs-badge cs-checkin">Check-in</span>' : '';
+        const checkoutBadge = guest.is_checkout_today ? '<span class="cs-badge cs-checkout">Check-out</span>' : '';
         return `
             <div class="customer-search-item" data-hotel-guest-id="${guest.id}">
-                <div class="fw-semibold">${escapeHtml(guest.guest_name || `${guest.first_name || ''} ${guest.last_name || ''}`.trim())}</div>
-                <div class="small text-muted">
-                    Huesped - Hab. ${escapeHtml(guest.room_number)}
-                </div>
+                <div class="fw-semibold">${escapeHtml(name)} ${vipBadge}${mainBadge}${checkinBadge}${checkoutBadge}</div>
+                <div class="small text-muted">Huesped - Hab. ${escapeHtml(guest.room_number)}</div>
             </div>
         `;
     }

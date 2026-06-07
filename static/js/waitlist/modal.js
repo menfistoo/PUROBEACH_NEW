@@ -211,17 +211,28 @@ export function clearSelectedCustomer(context) {
  */
 export function selectGuest(context, item) {
     const { elements, state } = context;
-    const guestId = item.dataset.guestId;
-    const guestName = item.dataset.guestName;
+    const source = item.dataset.source;
+    const guestName = item.dataset.guestName || item.dataset.customerName || '';
     const roomNumber = item.dataset.room;
     const phone = item.dataset.phone || '';
 
-    // Update state
-    state.selectedHotelGuestId = guestId;
+    // The unified interno search can return an existing beach customer or a hotel
+    // guest. Route each to the right hidden field so submit handles it correctly
+    // (customer_id used directly; hotel_guest_id converted to a customer on submit).
+    if (source === 'customer') {
+        const customerId = item.dataset.customerId;
+        state.selectedCustomerId = customerId;
+        state.selectedHotelGuestId = null;
+        if (elements.customerIdInput) elements.customerIdInput.value = customerId;
+        if (elements.hotelGuestIdInput) elements.hotelGuestIdInput.value = '';
+    } else {
+        const guestId = item.dataset.guestId;
+        state.selectedHotelGuestId = guestId;
+        state.selectedCustomerId = null;
+        if (elements.hotelGuestIdInput) elements.hotelGuestIdInput.value = guestId;
+        if (elements.customerIdInput) elements.customerIdInput.value = '';
+    }
     state.selectedGuestPhone = phone;
-
-    // Update hidden fields
-    if (elements.hotelGuestIdInput) elements.hotelGuestIdInput.value = guestId;
 
     // Show selected guest with phone
     if (elements.selectedGuestEl) {
@@ -234,7 +245,8 @@ export function selectGuest(context, item) {
                 div.textContent = str;
                 return div.innerHTML;
             };
-            elements.guestRoomEl.innerHTML = `Hab. ${roomNumber}${phone ? ` <span class="guest-phone"><i class="fas fa-phone"></i> ${escapeHtml(phone)}</span>` : ''}`;
+            const roomLabel = roomNumber ? `Hab. ${roomNumber}` : 'Externo';
+            elements.guestRoomEl.innerHTML = `${roomLabel}${phone ? ` <span class="guest-phone"><i class="fas fa-phone"></i> ${escapeHtml(phone)}</span>` : ''}`;
         }
     }
 

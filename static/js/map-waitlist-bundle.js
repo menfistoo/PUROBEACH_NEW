@@ -1104,27 +1104,48 @@ function populatePackagesDropdown(selectEl, packages) {
  * @param {Array} guests - Guest data array
  * @param {Function} onSelect - Callback when guest selected
  */
-function renderRoomResults(resultsEl, guests, onSelect) {
+function renderRoomResults(resultsEl, results, onSelect) {
     if (!resultsEl) return;
 
-    if (guests.length === 0) {
-        resultsEl.innerHTML = '<div class="p-3 text-muted">No se encontraron huespedes</div>';
+    if (!results || results.length === 0) {
+        resultsEl.innerHTML = '<div class="p-3 text-muted">No se encontraron resultados</div>';
         resultsEl.classList.add('show');
         return;
     }
 
-    const html = guests.map(guest => {
-        const guestName = guest.guest_name || `${guest.first_name || ''} ${guest.last_name || ''}`.trim();
-        const phone = guest.phone || '';
-        const guestCount = guest.guest_count || 1;
-        const countDisplay = guestCount > 1 ? ` - x${guestCount}` : '';
-        return `
-            <div class="cs-item" data-guest-id="${guest.id}" data-guest-name="${escapeHtml(guestName)}" data-room="${guest.room_number}" data-phone="${escapeHtml(phone)}" data-guest-count="${guestCount}">
-                <div class="cs-info">
-                    <div class="cs-name">Hab. ${guest.room_number} - ${escapeHtml(guestName)}${countDisplay}</div>
-                    <div class="cs-details">
-                        ${phone ? `<i class="fas fa-phone"></i> ${escapeHtml(phone)}` : ''}
+    // Same badges as the new-reservation search.
+    const badges = (r) => {
+        let b = '';
+        if (r.vip_status || r.vip_code) b += '<span class="cs-badge cs-vip">VIP</span>';
+        if (r.is_main_guest) b += '<span class="cs-badge cs-main">Principal</span>';
+        if (r.is_checkin_today) b += '<span class="cs-badge cs-checkin">Check-in</span>';
+        if (r.is_checkout_today) b += '<span class="cs-badge cs-checkout">Check-out</span>';
+        return b;
+    };
+
+    const html = results.map(r => {
+        const phone = r.phone || '';
+        if (r.source === 'hotel_guest') {
+            const guestName = r.guest_name || `${r.first_name || ''} ${r.last_name || ''}`.trim();
+            const guestCount = r.room_guest_count || r.guest_count || 1;
+            const countDisplay = guestCount > 1 ? ` - x${guestCount}` : '';
+            return `
+                <div class="cs-item" data-source="hotel_guest" data-guest-id="${r.id}" data-guest-name="${escapeHtml(guestName)}" data-room="${escapeHtml(r.room_number || '')}" data-phone="${escapeHtml(phone)}" data-guest-count="${guestCount}">
+                    <div class="cs-info">
+                        <div class="cs-name">Hab. ${escapeHtml(r.room_number || '')} - ${escapeHtml(guestName)}${countDisplay} ${badges(r)}</div>
+                        <div class="cs-details">${phone ? `<i class="fas fa-phone"></i> ${escapeHtml(phone)}` : ''}</div>
                     </div>
+                </div>
+            `;
+        }
+        // Existing beach customer
+        const name = r.display_name || `${r.first_name || ''} ${r.last_name || ''}`.trim();
+        const roomInfo = r.room_number ? `Hab. ${escapeHtml(r.room_number)}` : (r.customer_type === 'externo' ? 'Externo' : '');
+        return `
+            <div class="cs-item" data-source="customer" data-customer-id="${r.id}" data-customer-name="${escapeHtml(name)}" data-room="${escapeHtml(r.room_number || '')}" data-phone="${escapeHtml(phone)}">
+                <div class="cs-info">
+                    <div class="cs-name">${escapeHtml(name)} ${badges(r)}</div>
+                    <div class="cs-details">${roomInfo}${phone ? ` <i class="fas fa-phone"></i> ${escapeHtml(phone)}` : ''}</div>
                 </div>
             </div>
         `;
@@ -1630,17 +1651,28 @@ function clearSelectedCustomer(context) {
  */
 function selectGuest(context, item) {
     const { elements, state } = context;
-    const guestId = item.dataset.guestId;
-    const guestName = item.dataset.guestName;
+    const source = item.dataset.source;
+    const guestName = item.dataset.guestName || item.dataset.customerName || '';
     const roomNumber = item.dataset.room;
     const phone = item.dataset.phone || '';
 
-    // Update state
-    state.selectedHotelGuestId = guestId;
+    // The unified interno search can return an existing beach customer or a hotel
+    // guest. Route each to the right hidden field so submit handles it correctly
+    // (customer_id used directly; hotel_guest_id converted to a customer on submit).
+    if (source === 'customer') {
+        const customerId = item.dataset.customerId;
+        state.selectedCustomerId = customerId;
+        state.selectedHotelGuestId = null;
+        if (elements.customerIdInput) elements.customerIdInput.value = customerId;
+        if (elements.hotelGuestIdInput) elements.hotelGuestIdInput.value = '';
+    } else {
+        const guestId = item.dataset.guestId;
+        state.selectedHotelGuestId = guestId;
+        state.selectedCustomerId = null;
+        if (elements.hotelGuestIdInput) elements.hotelGuestIdInput.value = guestId;
+        if (elements.customerIdInput) elements.customerIdInput.value = '';
+    }
     state.selectedGuestPhone = phone;
-
-    // Update hidden fields
-    if (elements.hotelGuestIdInput) elements.hotelGuestIdInput.value = guestId;
 
     // Show selected guest with phone
     if (elements.selectedGuestEl) {
@@ -1653,7 +1685,8 @@ function selectGuest(context, item) {
                 div.textContent = str;
                 return div.innerHTML;
             };
-            elements.guestRoomEl.innerHTML = `Hab. ${roomNumber}${phone ? ` <span class="guest-phone"><i class="fas fa-phone"></i> ${escapeHtml(phone)}</span>` : ''}`;
+            const roomLabel = roomNumber ? `Hab. ${roomNumber}` : 'Externo';
+            elements.guestRoomEl.innerHTML = `${roomLabel}${phone ? ` <span class="guest-phone"><i class="fas fa-phone"></i> ${escapeHtml(phone)}</span>` : ''}`;
         }
     }
 
@@ -1742,15 +1775,18 @@ async function performRoomSearch(context, query) {
     const { elements, options } = context;
 
     try {
-        const result = await searchHotelGuests(options.apiBaseUrl, query);
-
-        if (result.success || result.guests) {
-            renderRoomResults(
-                elements.roomResults,
-                result.guests || [],
-                (item) => selectGuest(context, item)
-            );
-        }
+        // Unified search (same endpoint as the new-reservation panel) so the
+        // interno results are identical: beach customers + hotel guests, with
+        // badges, searchable by name / room / reservation number.
+        const response = await fetch(
+            `${options.apiBaseUrl}/customers/search?q=${encodeURIComponent(query)}`
+        );
+        const data = await response.json();
+        renderRoomResults(
+            elements.roomResults,
+            data.customers || [],
+            (item) => selectGuest(context, item)
+        );
     } catch (error) {
         console.error('WaitlistManager: Error searching rooms', error);
     }

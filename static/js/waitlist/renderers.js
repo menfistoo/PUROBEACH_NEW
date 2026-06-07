@@ -204,27 +204,48 @@ export function populatePackagesDropdown(selectEl, packages) {
  * @param {Array} guests - Guest data array
  * @param {Function} onSelect - Callback when guest selected
  */
-export function renderRoomResults(resultsEl, guests, onSelect) {
+export function renderRoomResults(resultsEl, results, onSelect) {
     if (!resultsEl) return;
 
-    if (guests.length === 0) {
-        resultsEl.innerHTML = '<div class="p-3 text-muted">No se encontraron huespedes</div>';
+    if (!results || results.length === 0) {
+        resultsEl.innerHTML = '<div class="p-3 text-muted">No se encontraron resultados</div>';
         resultsEl.classList.add('show');
         return;
     }
 
-    const html = guests.map(guest => {
-        const guestName = guest.guest_name || `${guest.first_name || ''} ${guest.last_name || ''}`.trim();
-        const phone = guest.phone || '';
-        const guestCount = guest.guest_count || 1;
-        const countDisplay = guestCount > 1 ? ` - x${guestCount}` : '';
-        return `
-            <div class="cs-item" data-guest-id="${guest.id}" data-guest-name="${escapeHtml(guestName)}" data-room="${guest.room_number}" data-phone="${escapeHtml(phone)}" data-guest-count="${guestCount}">
-                <div class="cs-info">
-                    <div class="cs-name">Hab. ${guest.room_number} - ${escapeHtml(guestName)}${countDisplay}</div>
-                    <div class="cs-details">
-                        ${phone ? `<i class="fas fa-phone"></i> ${escapeHtml(phone)}` : ''}
+    // Same badges as the new-reservation search.
+    const badges = (r) => {
+        let b = '';
+        if (r.vip_status || r.vip_code) b += '<span class="cs-badge cs-vip">VIP</span>';
+        if (r.is_main_guest) b += '<span class="cs-badge cs-main">Principal</span>';
+        if (r.is_checkin_today) b += '<span class="cs-badge cs-checkin">Check-in</span>';
+        if (r.is_checkout_today) b += '<span class="cs-badge cs-checkout">Check-out</span>';
+        return b;
+    };
+
+    const html = results.map(r => {
+        const phone = r.phone || '';
+        if (r.source === 'hotel_guest') {
+            const guestName = r.guest_name || `${r.first_name || ''} ${r.last_name || ''}`.trim();
+            const guestCount = r.room_guest_count || r.guest_count || 1;
+            const countDisplay = guestCount > 1 ? ` - x${guestCount}` : '';
+            return `
+                <div class="cs-item" data-source="hotel_guest" data-guest-id="${r.id}" data-guest-name="${escapeHtml(guestName)}" data-room="${escapeHtml(r.room_number || '')}" data-phone="${escapeHtml(phone)}" data-guest-count="${guestCount}">
+                    <div class="cs-info">
+                        <div class="cs-name">Hab. ${escapeHtml(r.room_number || '')} - ${escapeHtml(guestName)}${countDisplay} ${badges(r)}</div>
+                        <div class="cs-details">${phone ? `<i class="fas fa-phone"></i> ${escapeHtml(phone)}` : ''}</div>
                     </div>
+                </div>
+            `;
+        }
+        // Existing beach customer
+        const name = r.display_name || `${r.first_name || ''} ${r.last_name || ''}`.trim();
+        const roomInfo = r.room_number ? `Hab. ${escapeHtml(r.room_number)}` : (r.customer_type === 'externo' ? 'Externo' : '');
+        return `
+            <div class="cs-item" data-source="customer" data-customer-id="${r.id}" data-customer-name="${escapeHtml(name)}" data-room="${escapeHtml(r.room_number || '')}" data-phone="${escapeHtml(phone)}">
+                <div class="cs-info">
+                    <div class="cs-name">${escapeHtml(name)} ${badges(r)}</div>
+                    <div class="cs-details">${roomInfo}${phone ? ` <i class="fas fa-phone"></i> ${escapeHtml(phone)}` : ''}</div>
                 </div>
             </div>
         `;

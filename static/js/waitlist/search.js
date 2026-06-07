@@ -41,15 +41,18 @@ async function performRoomSearch(context, query) {
     const { elements, options } = context;
 
     try {
-        const result = await searchHotelGuests(options.apiBaseUrl, query);
-
-        if (result.success || result.guests) {
-            renderRoomResults(
-                elements.roomResults,
-                result.guests || [],
-                (item) => selectGuest(context, item)
-            );
-        }
+        // Unified search (same endpoint as the new-reservation panel) so the
+        // interno results are identical: beach customers + hotel guests, with
+        // badges, searchable by name / room / reservation number.
+        const response = await fetch(
+            `${options.apiBaseUrl}/customers/search?q=${encodeURIComponent(query)}`
+        );
+        const data = await response.json();
+        renderRoomResults(
+            elements.roomResults,
+            data.customers || [],
+            (item) => selectGuest(context, item)
+        );
     } catch (error) {
         console.error('WaitlistManager: Error searching rooms', error);
     }
