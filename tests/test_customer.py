@@ -21,15 +21,22 @@ from models.customer import (
 
 @pytest.fixture
 def app():
-    """Create application for testing."""
+    """Create test application with migrations."""
     from database import init_db
+    from database.migrations import run_all_migrations
+
+    # Use conftest.py's test database path
+    test_db = os.environ.get('DATABASE_PATH', 'instance/test_beach_club.db')
 
     app = create_app('test')
     app.config['TESTING'] = True
     app.config['WTF_CSRF_ENABLED'] = False
+    app.config['DATABASE_PATH'] = test_db
 
     with app.app_context():
         init_db()
+        # Run all migrations to ensure schema is complete (adds booking_reference, etc.)
+        run_all_migrations()
         yield app
 
 
