@@ -2398,26 +2398,17 @@ const CustomerMixin = (Base) => class extends Base {
      * Shows both beach club customers and hotel guests
      *
      * @param {Object} result - API response with search results
-     * @param {Array} result.customers - Beach club customers
-     * @param {Array} result.hotel_guests - Hotel guests (not yet customers)
+     * @param {Array} result.customers - One list mixing beach customers and hotel
+     *   guests, each tagged by `source` ('customer' | 'hotel_guest')
      */
     renderCustomerSearchResults(result) {
-        const customers = result.customers || [];
-        let hotelGuests = result.hotel_guests || [];
-
-        // Filter out hotel guests that are already beach customers (by room + name)
-        if (customers.length > 0 && hotelGuests.length > 0) {
-            const existingKeys = new Set();
-            customers.forEach(c => {
-                if (c.customer_type === 'interno' && c.room_number) {
-                    existingKeys.add(`${c.room_number}|${(c.first_name || '').toLowerCase()}`);
-                }
-            });
-            hotelGuests = hotelGuests.filter(g => {
-                const key = `${g.room_number}|${(g.first_name || '').toLowerCase()}`;
-                return !existingKeys.has(key);
-            });
-        }
+        // The unified endpoint returns ONE list mixing beach customers and hotel
+        // guests, tagged by `source`. Split it the same way the new-reservation
+        // search does, so changing the guest finds the same results (the backend
+        // already drops hotel guests that are already beach customers).
+        const all = result.customers || [];
+        const customers = all.filter(c => c.source !== 'hotel_guest');
+        const hotelGuests = all.filter(c => c.source === 'hotel_guest');
 
         // Show "no results" message if empty
         if (customers.length === 0 && hotelGuests.length === 0) {
@@ -2483,7 +2474,7 @@ const CustomerMixin = (Base) => class extends Base {
     _renderHotelGuestSearchItem(guest) {
         return `
             <div class="customer-search-item" data-hotel-guest-id="${guest.id}">
-                <div class="fw-semibold">${escapeHtml(guest.first_name)} ${escapeHtml(guest.last_name)}</div>
+                <div class="fw-semibold">${escapeHtml(guest.guest_name || `${guest.first_name || ''} ${guest.last_name || ''}`.trim())}</div>
                 <div class="small text-muted">
                     Huesped - Hab. ${escapeHtml(guest.room_number)}
                 </div>
