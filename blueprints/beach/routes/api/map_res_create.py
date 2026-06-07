@@ -9,6 +9,7 @@ from flask_login import login_required, current_user
 from utils.decorators import permission_required
 from utils.audit import log_create
 from utils.api_response import api_success, api_error
+from utils.error_messages import friendly_reservation_error
 from utils.validators import (
     validate_positive_integer, validate_integer_list,
     validate_date_list, validate_furniture_by_date,
@@ -318,7 +319,7 @@ def register_routes(bp):
                     return jsonify(response_data)
                 else:
                     return api_error(
-                        result.get('error', 'Error al crear reserva multi-dia'), 400
+                        friendly_reservation_error(result.get('error')), 400
                     )
 
             # Single-day reservation
@@ -381,7 +382,7 @@ def register_routes(bp):
 
         except ValueError as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
-            return api_error('Solicitud inválida', 400)
+            return api_error(friendly_reservation_error(str(e)), 400)
         except Exception as e:
             current_app.logger.error(f'Error: {e}', exc_info=True)
             return api_error('Error interno del servidor', 500)
