@@ -54,6 +54,13 @@ export class TooltipManager {
             content += ` <span class="badge bg-warning text-dark" style="font-size: 9px;">VIP</span>`;
         }
 
+        if (availability.is_checkin_today) {
+            content += `<br><small><span style="color:#7FD1A0;">●</span> Check-in hoy</small>`;
+        }
+        if (availability.is_checkout_today) {
+            content += `<br><small><span style="color:#F0876E;">●</span> Check-out hoy</small>`;
+        }
+
         if (availability.num_people) {
             const n = parseInt(availability.num_people, 10) || 0;
             content += `<br><small>${n} persona${n > 1 ? 's' : ''}</small>`;

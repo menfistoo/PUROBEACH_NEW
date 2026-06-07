@@ -357,7 +357,9 @@ def get_furniture_availability_map(
                         'customer_type': str or None ('interno'/'externo'),
                         'vip_status': int or None,
                         'num_people': int or None,
-                        'state': str or None
+                        'state': str or None,
+                        'is_checkin_today': bool,   # guest arrives the hotel this day
+                        'is_checkout_today': bool   # guest departs the hotel this day
                     }
                 }
             },
@@ -427,7 +429,8 @@ def get_furniture_availability_map(
                    r.ticket_number, r.current_state, r.num_people, r.is_furniture_locked,
                    r.notes as reservation_notes,
                    c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
-                   c.first_name, c.room_number, c.customer_type, c.vip_status
+                   c.first_name, c.room_number, c.customer_type, c.vip_status,
+                   c.booking_reference
             FROM beach_reservation_furniture rf
             JOIN beach_reservations r ON rf.reservation_id = r.id
             JOIN beach_customers c ON r.customer_id = c.id
@@ -467,8 +470,81 @@ def get_furniture_availability_map(
                 'state': row['current_state'],
                 'is_furniture_locked': row['is_furniture_locked'],
                 'has_notes': bool(notes_stripped),
-                'notes_preview': notes_stripped[:80]
+                'notes_preview': notes_stripped[:80],
+                'booking_reference': row['booking_reference']
             }
+
+        # ---------------------------------------------------------------
+        # Hotel check-in / check-out markers (hotel stay dates)
+        # Flag, per occupied furniture and date, whether the occupying guest
+        # ARRIVES (check-in) or DEPARTS (check-out) the hotel that day, so the
+        # map can mark those sunbeds. Linked to the PMS hotel_guests by
+        # booking_reference (stable) with room_number as fallback. Purely
+        # additive / read-only; externo or unmatched customers stay unflagged.
+        # ---------------------------------------------------------------
+        def _as_date_str(value):
+            return value.strftime('%Y-%m-%d') if hasattr(value, 'strftime') else value
+
+        booking_refs = [r['booking_reference'] for r in reservation_map.values()
+                        if r.get('booking_reference')]
+        rooms_no_ref = [r['room_number'] for r in reservation_map.values()
+                        if r.get('room_number') and not r.get('booking_reference')]
+
+        stay_by_ref = {}    # booking_reference -> (arrival_str, departure_str)
+        stays_by_room = {}  # room_number -> list[(arrival_str, departure_str)]
+
+        if booking_refs or rooms_no_ref:
+            # Only stays overlapping the requested window, and only the
+            # booking_refs / rooms actually present, to keep the result tight.
+            guest_query = '''
+                SELECT booking_reference, room_number, arrival_date, departure_date
+                FROM hotel_guests
+                WHERE departure_date >= ? AND arrival_date <= ?
+            '''
+            guest_params = [date_from, date_to]
+
+            or_clauses = []
+            if booking_refs:
+                or_clauses.append(
+                    f"booking_reference IN ({','.join('?' * len(booking_refs))})"
+                )
+                guest_params.extend(booking_refs)
+            if rooms_no_ref:
+                or_clauses.append(
+                    f"room_number IN ({','.join('?' * len(rooms_no_ref))})"
+                )
+                guest_params.extend(rooms_no_ref)
+            if or_clauses:
+                guest_query += ' AND (' + ' OR '.join(or_clauses) + ')'
+
+            cursor.execute(guest_query, guest_params)
+            for g in cursor.fetchall():
+                arrival = _as_date_str(g['arrival_date'])
+                departure = _as_date_str(g['departure_date'])
+                ref = g['booking_reference']
+                room = g['room_number']
+                if ref and ref not in stay_by_ref:
+                    stay_by_ref[ref] = (arrival, departure)
+                if room:
+                    stays_by_room.setdefault(room, []).append((arrival, departure))
+
+        def _checkin_checkout_flags(res_info, date):
+            """Return (is_checkin_today, is_checkout_today) for a reservation on a date."""
+            ref = res_info.get('booking_reference')
+            room = res_info.get('room_number')
+            stay = None
+            if ref and ref in stay_by_ref:
+                stay = stay_by_ref[ref]
+            elif room and room in stays_by_room:
+                # Pick the stay covering this date (room may host several over time).
+                for arr, dep in stays_by_room[room]:
+                    if (arr is None or arr <= date) and (dep is None or dep >= date):
+                        stay = (arr, dep)
+                        break
+            if not stay:
+                return False, False
+            arrival, departure = stay
+            return arrival == date, departure == date
 
         # Build availability matrix
         availability = {}
@@ -482,6 +558,7 @@ def get_furniture_availability_map(
                 key = (furn_id, date)
                 if key in reservation_map:
                     res_info = reservation_map[key]
+                    is_checkin_today, is_checkout_today = _checkin_checkout_flags(res_info, date)
                     availability[furn_id][date] = {
                         'available': False,
                         'reservation_id': res_info['reservation_id'],
@@ -495,7 +572,9 @@ def get_furniture_availability_map(
                         'state': res_info['state'],
                         'is_furniture_locked': res_info['is_furniture_locked'],
                         'has_notes': res_info['has_notes'],
-                        'notes_preview': res_info['notes_preview']
+                        'notes_preview': res_info['notes_preview'],
+                        'is_checkin_today': is_checkin_today,
+                        'is_checkout_today': is_checkout_today
                     }
                     summary[date]['occupied'] += 1
                 else:

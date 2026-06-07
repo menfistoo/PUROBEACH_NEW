@@ -535,6 +535,45 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
         group.appendChild(noteIcon);
     }
 
+    // Hotel check-in / check-out markers (top-left corner)
+    // Green down-arrow = guest ARRIVES the hotel today (check-in);
+    // Red up-arrow = guest DEPARTS the hotel today (check-out).
+    if (availability && (availability.is_checkin_today || availability.is_checkout_today)) {
+        const stayMarkers = [];
+        if (availability.is_checkin_today) {
+            stayMarkers.push({ color: '#55996D', glyph: '↓', cls: 'furniture-checkin-indicator' });
+        }
+        if (availability.is_checkout_today) {
+            stayMarkers.push({ color: '#E45E41', glyph: '↑', cls: 'furniture-checkout-indicator' });
+        }
+
+        stayMarkers.forEach((marker, i) => {
+            const cx = 10 + i * 15;
+            const badge = document.createElementNS(SVG_NS, 'circle');
+            badge.setAttribute('cx', cx);
+            badge.setAttribute('cy', 10);
+            badge.setAttribute('r', 6);
+            badge.setAttribute('fill', marker.color);
+            badge.setAttribute('stroke', '#FFFFFF');
+            badge.setAttribute('stroke-width', '1.5');
+            badge.setAttribute('pointer-events', 'none');
+            badge.setAttribute('class', marker.cls);
+            group.appendChild(badge);
+
+            const icon = document.createElementNS(SVG_NS, 'text');
+            icon.setAttribute('x', cx);
+            icon.setAttribute('y', 10);
+            icon.setAttribute('text-anchor', 'middle');
+            icon.setAttribute('dominant-baseline', 'central');
+            icon.setAttribute('font-size', '9');
+            icon.setAttribute('fill', '#FFFFFF');
+            icon.setAttribute('font-weight', '700');
+            icon.setAttribute('pointer-events', 'none');
+            icon.textContent = marker.glyph;
+            group.appendChild(icon);
+        });
+    }
+
     // Event listeners
     group.addEventListener('click', (e) => onFurnitureClick(e, item));
 
