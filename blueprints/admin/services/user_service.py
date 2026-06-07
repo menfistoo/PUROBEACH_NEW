@@ -219,7 +219,8 @@ def import_hotel_guests_from_excel(
         Dict with 'created', 'updated', 'errors', 'total' counts
     """
     from models.hotel_guest import (upsert_hotel_guest, propagate_room_change,
-                                     sync_customer_room_by_booking, reconcile_absent_guests)
+                                     sync_customer_room_by_booking, reconcile_absent_guests,
+                                     backfill_missing_anchors)
 
     result = {
         'created': 0,
@@ -420,6 +421,20 @@ def import_hotel_guests_from_excel(
                 current_app.logger.info(f"Guest reconciliation skipped: {recon.get('reason')}")
         except Exception as e:
             current_app.logger.error(f'Guest reconciliation failed: {e}', exc_info=True)
+
+        # Anchor reservations: now that the guest list is fresh, fill booking_reference on
+        # current/future interno reservations that can be resolved (self-heals pre-arrival
+        # bookings once their guest appears). Never overwrites an existing anchor.
+        try:
+            anchor = backfill_missing_anchors()
+            result['anchored'] = anchor.get('updated', 0)
+            result['anchor_pending'] = anchor.get('no_pms_record', 0) + anchor.get('ambiguous', 0)
+            current_app.logger.info(
+                f"Anchor backfill: {result['anchored']} anchored, "
+                f"{result['anchor_pending']} still pending"
+            )
+        except Exception as e:
+            current_app.logger.error(f'Anchor backfill failed: {e}', exc_info=True)
 
     except Exception as e:
         current_app.logger.error(f'Error opening import file: {e}', exc_info=True)

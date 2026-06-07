@@ -22,6 +22,7 @@ from .reservation_availability import (
 )
 from .characteristic_assignments import sync_preferences_to_reservation
 from .state import get_default_state
+from .hotel_guest import resolve_booking_reference
 
 
 # =============================================================================
@@ -170,7 +171,9 @@ def create_linked_multiday_reservations(
 
             # Get customer's current room for original_room tracking + stable booking_reference
             cursor.execute('''
-                SELECT room_number, customer_type, booking_reference FROM beach_customers WHERE id = ?
+                SELECT room_number, customer_type, booking_reference,
+                       first_name, last_name
+                FROM beach_customers WHERE id = ?
             ''', (customer_id,))
             customer_row = cursor.fetchone()
             original_room = None
@@ -178,6 +181,21 @@ def create_linked_multiday_reservations(
             if customer_row and customer_row['customer_type'] == 'interno':
                 original_room = customer_row['room_number']
                 booking_reference = customer_row['booking_reference']
+                # Anchor every interno reservation: if no booking_reference yet but a room
+                # is known, resolve the hotel reservation number from the PMS guest list
+                # (using the stay's start date) and propagate it back to the customer.
+                if not booking_reference and original_room:
+                    guest_name = f"{customer_row['first_name'] or ''} {customer_row['last_name'] or ''}".strip()
+                    resolved = resolve_booking_reference(
+                        original_room, dates[0], guest_name, conn=conn
+                    )
+                    if resolved:
+                        booking_reference = resolved
+                        cursor.execute('''
+                            UPDATE beach_customers
+                            SET booking_reference = ?, updated_at = CURRENT_TIMESTAMP
+                            WHERE id = ? AND (booking_reference IS NULL OR booking_reference = '')
+                        ''', (resolved, customer_id))
 
             parent_id = None
             parent_ticket = None

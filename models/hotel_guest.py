@@ -725,3 +725,145 @@ def get_distinct_rooms() -> List[str]:
             ORDER BY CAST(room_number AS INTEGER), room_number
         ''')
         return [row['room_number'] for row in cursor.fetchall()]
+
+
+# =============================================================================
+# RESERVATION ANCHOR (booking_reference) RESOLUTION & BACKFILL
+# =============================================================================
+
+def resolve_booking_reference(
+    room_number: str,
+    on_date: str,
+    guest_name: str = None,
+    conn=None
+) -> Optional[str]:
+    """
+    Resolve the stable hotel reservation number (booking_reference) for an interno
+    stay from the PMS hotel_guests list, by room + the stay covering ``on_date``.
+
+    This is the single source of truth used both at reservation-creation time and by
+    the backfill job, so a sunbed reservation can be anchored to the booking even when
+    staff only typed a room number.
+
+    Matching:
+      - Consider hotel_guests for ``room_number`` whose stay covers ``on_date``
+        (arrival_date <= on_date <= departure_date) and that carry a booking_reference.
+      - Exactly one distinct booking_reference -> return it.
+      - Several (changeover / room reuse)       -> if ``guest_name`` is given, keep only
+        the rows whose normalized name matches; return it only if that leaves exactly one.
+      - None resolvable                         -> return None (caller leaves it pending).
+
+    Args:
+        room_number: Room number of the interno stay.
+        on_date: Date the reservation is for (YYYY-MM-DD).
+        guest_name: Optional full name to disambiguate a changeover day.
+        conn: Optional existing DB connection (to run inside a transaction).
+
+    Returns:
+        The resolved booking_reference, or None when it can't be resolved unambiguously.
+    """
+    if not room_number or not on_date:
+        return None
+
+    def _run(c):
+        rows = c.execute('''
+            SELECT booking_reference, guest_name
+            FROM hotel_guests
+            WHERE room_number = ?
+              AND arrival_date <= ?
+              AND departure_date >= ?
+              AND booking_reference IS NOT NULL
+              AND booking_reference != ''
+        ''', (room_number, on_date, on_date)).fetchall()
+
+        refs = {r['booking_reference'] for r in rows}
+        if len(refs) == 1:
+            return next(iter(refs))
+        if len(refs) > 1 and guest_name:
+            target = normalize_guest_name(guest_name)
+            matched = {r['booking_reference'] for r in rows
+                       if normalize_guest_name(r['guest_name'] or '') == target}
+            if len(matched) == 1:
+                return next(iter(matched))
+        return None
+
+    if conn is not None:
+        return _run(conn)
+    with get_db() as c:
+        return _run(c)
+
+
+def backfill_missing_anchors(conn=None) -> Dict[str, Any]:
+    """
+    Fill booking_reference on current/future interno reservations that are missing it,
+    using resolve_booking_reference(). Also propagates the anchor to the customer when
+    the customer has none.
+
+    Safety: only writes where the anchor is currently empty (never overwrites an existing
+    one), never touches past reservations, and is idempotent (re-running finds nothing to
+    do). Intended to run on demand and after every PMS guest import.
+
+    Returns:
+        {'updated': n, 'ambiguous': n, 'no_pms_record': n, 'scanned': n,
+         'changes': [{'reservation_id', 'booking_reference', 'room_number'}, ...]}
+    """
+    from utils.datetime_helpers import get_today
+    today = get_today().isoformat()
+    summary = {'updated': 0, 'ambiguous': 0, 'no_pms_record': 0, 'scanned': 0, 'changes': []}
+
+    def _run(c):
+        rows = c.execute('''
+            SELECT r.id AS reservation_id, r.reservation_date, r.customer_id,
+                   c.room_number,
+                   TRIM(c.first_name || ' ' || COALESCE(c.last_name, '')) AS guest_name,
+                   c.booking_reference AS customer_ref
+            FROM beach_reservations r
+            JOIN beach_customers c ON r.customer_id = c.id
+            WHERE c.customer_type = 'interno'
+              AND r.end_date >= ?
+              AND (r.booking_reference IS NULL OR r.booking_reference = '')
+        ''', (today,)).fetchall()
+
+        for row in rows:
+            summary['scanned'] += 1
+            on_date = row['reservation_date']
+            ref = resolve_booking_reference(
+                row['room_number'], on_date, row['guest_name'], conn=c
+            )
+            if not ref:
+                # Distinguish "no PMS record yet" from "ambiguous" for the report.
+                has_pms = c.execute('''
+                    SELECT 1 FROM hotel_guests
+                    WHERE room_number = ? AND arrival_date <= ? AND departure_date >= ?
+                      AND booking_reference IS NOT NULL AND booking_reference != ''
+                    LIMIT 1
+                ''', (row['room_number'], on_date, on_date)).fetchone()
+                summary['ambiguous' if has_pms else 'no_pms_record'] += 1
+                continue
+
+            c.execute('''
+                UPDATE beach_reservations
+                SET booking_reference = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (ref, row['reservation_id']))
+            # Propagate to the customer only when it has no anchor yet.
+            if not row['customer_ref']:
+                c.execute('''
+                    UPDATE beach_customers
+                    SET booking_reference = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND (booking_reference IS NULL OR booking_reference = '')
+                ''', (ref, row['customer_id']))
+            summary['updated'] += 1
+            summary['changes'].append({
+                'reservation_id': row['reservation_id'],
+                'booking_reference': ref,
+                'room_number': row['room_number']
+            })
+
+    if conn is not None:
+        _run(conn)
+    else:
+        with get_db() as c:
+            _run(c)
+            c.commit()
+    return summary

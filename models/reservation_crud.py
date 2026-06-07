@@ -12,6 +12,7 @@ from .reservation_state import calculate_reservation_color, update_customer_stat
 from .state import get_default_state
 from .reservation_availability import check_furniture_availability_bulk
 from .characteristic_assignments import sync_preferences_to_reservation
+from .hotel_guest import resolve_booking_reference
 
 # Re-export preference sync functions for backward compatibility
 from .characteristic_assignments import (
@@ -187,7 +188,9 @@ def create_beach_reservation(
             # booking_reference (hotel reservation number) so the reservation is anchored
             # to the booking even if the physical room later changes or isn't assigned yet.
             cursor.execute('''
-                SELECT room_number, customer_type, booking_reference FROM beach_customers WHERE id = ?
+                SELECT room_number, customer_type, booking_reference,
+                       first_name, last_name
+                FROM beach_customers WHERE id = ?
             ''', (customer_id,))
             customer_row = cursor.fetchone()
             original_room = None
@@ -195,6 +198,21 @@ def create_beach_reservation(
             if customer_row and customer_row['customer_type'] == 'interno':
                 original_room = customer_row['room_number']
                 booking_reference = customer_row['booking_reference']
+                # If the customer has no anchor yet but a room is known, resolve the hotel
+                # reservation number from the PMS guest list so EVERY interno reservation is
+                # anchored regardless of how it was created, and propagate it to the customer.
+                if not booking_reference and original_room:
+                    guest_name = f"{customer_row['first_name'] or ''} {customer_row['last_name'] or ''}".strip()
+                    resolved = resolve_booking_reference(
+                        original_room, reservation_date, guest_name, conn=conn
+                    )
+                    if resolved:
+                        booking_reference = resolved
+                        cursor.execute('''
+                            UPDATE beach_customers
+                            SET booking_reference = ?, updated_at = CURRENT_TIMESTAMP
+                            WHERE id = ? AND (booking_reference IS NULL OR booking_reference = '')
+                        ''', (resolved, customer_id))
 
             # Insert reservation (state_id=1 is "Confirmada" by default)
             cursor.execute('''
