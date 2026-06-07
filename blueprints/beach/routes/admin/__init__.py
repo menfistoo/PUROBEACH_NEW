@@ -10,6 +10,8 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 # Import and register routes from submodules
 from blueprints.beach.routes.admin import audit_logs
+from blueprints.beach.routes.admin import connectivity
 
 # Register all route functions on the blueprint
 audit_logs.register_routes(admin_bp)
+connectivity.register_routes(admin_bp)

@@ -49,8 +49,12 @@ def login():
         from models.user import User
         user = User(user_dict)
 
-        # Log user in
-        login_user(user, remember=form.remember_me.data)
+        # Log user in. Always issue the persistent "remember" cookie and mark the
+        # session permanent so ops tablets stay logged in across sleeps / WiFi drops
+        # (avoids the map auto-refresh getting 401 and bouncing staff to login).
+        from flask import session
+        session.permanent = True
+        login_user(user, remember=True)
 
         # Update last login timestamp
         update_last_login(user.id)

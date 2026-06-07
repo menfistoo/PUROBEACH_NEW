@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% set page_title = "Cortes de conexión" %}
+
+{% block title %}Cortes de conexión - PuroBeach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fa-solid fa-wifi"></i> Cortes de conexión</h2>
+        <p class="text-muted mb-0">Cortes de red reportados por los dispositivos (roaming WiFi)</p>
+    </div>
+</div>
+
+<!-- Resumen últimos 14 días -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fa-solid fa-chart-bar"></i> Resumen (últimos 14 días)</h5>
+    </div>
+    <div class="card-body">
+        {% if summary %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Día</th>
+                        <th class="text-end">Cortes</th>
+                        <th class="text-end">Tiempo total sin conexión</th>
+                        <th class="text-end">Duración media</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in summary %}
+                    <tr>
+                        <td>{{ row.day }}</td>
+                        <td class="text-end">{{ row.drops }}</td>
+                        <td class="text-end">{{ '%dm %ds'|format(row.total_seconds // 60, row.total_seconds % 60) }}</td>
+                        <td class="text-end">{{ row.avg_seconds }}s</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">Sin cortes registrados todavía. (Empezará a registrar en cuanto un dispositivo pierda y recupere la conexión.)</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Eventos recientes -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="fa-solid fa-list"></i> Eventos recientes</h5>
+    </div>
+    <div class="card-body">
+        {% if events %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Recuperado</th>
+                        <th>Usuario</th>
+                        <th class="text-end">Duración</th>
+                        <th>Página</th>
+                        <th>Dispositivo</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in events %}
+                    <tr>
+                        <td>{{ e.online_at or e.created_at }}</td>
+                        <td>{{ e.username or '-' }}</td>
+                        <td class="text-end">
+                            {% if e.duration_seconds is not none %}
+                                <span class="badge {{ 'bg-danger' if e.duration_seconds >= 10 else 'bg-warning text-dark' }}">{{ e.duration_seconds }}s</span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td><small>{{ e.page or '-' }}</small></td>
+                        <td><small class="text-muted">{{ (e.user_agent or '')[:60] }}</small></td>
+                        <td><small class="text-muted">{{ e.ip or '-' }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page > 1 %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('beach.admin.connectivity', page=page-1) }}">Anterior</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Página {{ page }}</span></li>
+                {% if events|length == per_page %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('beach.admin.connectivity', page=page+1) }}">Siguiente</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% else %}
+        <p class="text-muted mb-0">No hay eventos de conexión registrados.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
