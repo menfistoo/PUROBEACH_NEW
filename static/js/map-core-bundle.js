@@ -497,10 +497,43 @@ class ConnectivityManager {
     }
 
     /**
+     * Report a reconnection to the server (audit of WiFi drops).
+     * @private
+     * @param {Date} offlineSince
+     */
+    _reportReconnect(offlineSince) {
+        const onlineAt = new Date();
+        const durationSeconds = Math.round((onlineAt - offlineSince) / 1000);
+        if (durationSeconds < 3) return;  // ignore tiny blips
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]');
+            fetch('/beach/api/connectivity-log', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrf ? csrf.getAttribute('content') : ''
+                },
+                body: JSON.stringify({
+                    offline_at: offlineSince.toISOString(),
+                    online_at: onlineAt.toISOString(),
+                    duration_seconds: durationSeconds,
+                    page: location.pathname
+                }),
+                keepalive: true
+            }).catch(() => {});
+        } catch (e) { /* best effort */ }
+    }
+
+    /**
      * Notify online callbacks
      * @private
      */
     _notifyOnline() {
+        // Report how long we were offline (audit WiFi drops), then resume.
+        if (this._offlineSince) {
+            this._reportReconnect(this._offlineSince);
+            this._offlineSince = null;
+        }
         this.callbacks.online.forEach(cb => {
             try {
                 cb();
@@ -515,6 +548,7 @@ class ConnectivityManager {
      * @private
      */
     _notifyOffline() {
+        if (!this._offlineSince) this._offlineSince = new Date();
         this.callbacks.offline.forEach(cb => {
             try {
                 cb();

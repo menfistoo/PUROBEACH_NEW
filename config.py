@@ -22,13 +22,28 @@ class Config:
 
     # Security settings
     WTF_CSRF_ENABLED = True
-    WTF_CSRF_TIME_LIMIT = 3600  # CSRF token expires after 1 hour
+    # Tie the CSRF token to the session lifetime instead of expiring after 1h.
+    # Ops tablets keep the map open all shift; a 1h limit caused spurious 400s
+    # ("CSRF token expired") on long-open pages.
+    WTF_CSRF_TIME_LIMIT = None
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+    # Session lifetime covers a full shift, and rolls forward on each request so an
+    # active user is never logged out mid-shift.
     PERMANENT_SESSION_LIFETIME = timedelta(
-        hours=int(os.environ.get('SESSION_TIMEOUT_HOURS', 8))
+        hours=int(os.environ.get('SESSION_TIMEOUT_HOURS', 12))
     )
+    SESSION_REFRESH_EACH_REQUEST = True
+    # Flask-Login "remember me" cookie: persists across browser/tablet sleeps and
+    # WiFi drops so the device silently re-authenticates instead of getting 401s and
+    # bouncing staff to the login screen.
+    REMEMBER_COOKIE_DURATION = timedelta(
+        days=int(os.environ.get('REMEMBER_COOKIE_DAYS', 7))
+    )
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_SECURE = False  # Overridden in production
 
     # File upload configuration
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or 'static/uploads'
@@ -62,6 +77,7 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() == 'true'
+    REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
     WTF_CSRF_SSL_STRICT = SESSION_COOKIE_SECURE
 
     SECRET_KEY = os.environ.get('SECRET_KEY') or Config.SECRET_KEY
