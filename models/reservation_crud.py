@@ -34,7 +34,7 @@ def generate_reservation_number(reservation_date: str = None, cursor=None, max_r
     - YY = Year (2 digits)
     - MM = Month (2 digits)
     - DD = Day (2 digits)
-    - RR = Daily sequential (01-99)
+    - RR = Daily sequential (01-99, extends to 3 digits 100-999 on busy days)
 
     Example: 25011601 = First reservation on Jan 16, 2025
 
@@ -60,8 +60,12 @@ def generate_reservation_number(reservation_date: str = None, cursor=None, max_r
 
         for attempt in range(max_retries):
             # Find max sequential for the day
+            # Sequence is normally 2 digits (01-99); on very busy days it extends to
+            # 3 digits (100-999). SUBSTR(...,7) reads the WHOLE sequence so 3-digit
+            # numbers are parsed correctly (CAST takes the leading digits, so child
+            # tickets like "...05-1" still resolve to their parent sequence, 5).
             cur.execute('''
-                SELECT MAX(CAST(SUBSTR(ticket_number, 7, 2) AS INTEGER)) as max_seq
+                SELECT MAX(CAST(SUBSTR(ticket_number, 7) AS INTEGER)) as max_seq
                 FROM beach_reservations
                 WHERE ticket_number LIKE ?
             ''', (f'{date_prefix}%',))
@@ -69,10 +73,12 @@ def generate_reservation_number(reservation_date: str = None, cursor=None, max_r
             result = cur.fetchone()
             next_seq = (result['max_seq'] or 0) + 1
 
-            if next_seq > 99:
-                raise ValueError(f"Daily reservation limit (99) reached for {reservation_date}")
+            if next_seq > 999:
+                raise ValueError(f"Daily reservation limit (999) reached for {reservation_date}")
 
-            ticket_number = f"{date_prefix}{next_seq:02d}"
+            # Keep the 2-digit format for the first 99 (backward compatible), then 3 digits.
+            seq_str = f"{next_seq:02d}" if next_seq < 100 else str(next_seq)
+            ticket_number = f"{date_prefix}{seq_str}"
 
             # Verify uniqueness
             cur.execute('SELECT id FROM beach_reservations WHERE ticket_number = ?', (ticket_number,))
