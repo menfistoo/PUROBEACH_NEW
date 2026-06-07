@@ -61,6 +61,7 @@ from .booking_reference_link import (
     migrate_reservations_booking_reference
 )
 from .connectivity_log import migrate_connectivity_events_table
+from .connectivity_menu import migrate_connectivity_menu
 
 
 # Ordered list of all migrations
@@ -146,6 +147,7 @@ MIGRATIONS = [
 
     # Phase 20: Connectivity event log (audit client WiFi drops)
     ('connectivity_events_table', migrate_connectivity_events_table),
+    ('connectivity_menu', migrate_connectivity_menu),
 ]
 
 

@@ -16,7 +16,7 @@ def register_routes(bp):
 
     @bp.route('/connectivity')
     @login_required
-    @permission_required('admin.audit.view')
+    @permission_required('admin.connectivity.view')
     def connectivity():
         """Connectivity drop audit page (summary + recent events)."""
         from models.connectivity_log import (
