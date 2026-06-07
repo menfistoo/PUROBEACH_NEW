@@ -218,13 +218,22 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
 
             cursor.execute(guest_query, guest_params)
 
-            # Get existing customer room numbers to avoid duplicates.
-            # Exclude checkout-today customers: on a changeover day the room belongs to
-            # the incoming guest, so a departing beach-customer must NOT suppress the
-            # room's new in-house hotel guest from the results.
-            existing_rooms = {c['room_number'] for c in results
-                              if c.get('room_number') and c.get('customer_type') == 'interno'
-                              and not c.get('is_checkout_today')}
+            # Avoid showing the SAME person twice (once as a beach customer, once as a
+            # hotel guest). Match on person identity — room+name and booking_reference —
+            # NOT on room alone: that way a departing guest doesn't hide a DIFFERENT
+            # incoming guest in the same room on a changeover day, but their own hotel
+            # record is still suppressed.
+            def _person_key(name, room):
+                return f"{normalize_text(name or '')}|{(room or '').strip()}"
+            existing_person_keys = {
+                _person_key(f"{c.get('first_name', '')} {c.get('last_name', '')}", c.get('room_number'))
+                for c in results
+                if c.get('room_number') and c.get('customer_type') == 'interno'
+            }
+            existing_booking_refs = {
+                c.get('booking_reference') for c in results
+                if c.get('customer_type') == 'interno' and c.get('booking_reference')
+            }
             # Track rooms we've already added from hotel_guests (show only main guest per room)
             added_rooms = set()
 
@@ -232,8 +241,10 @@ def search_customers_unified(query: str, customer_type: str = None, limit: int =
             for row in cursor.fetchall():
                 guest = dict(row)
                 room = guest['room_number']
-                # Skip if already have a customer with this room number
-                if room in existing_rooms:
+                # Skip if the SAME person is already in the results as a beach customer
+                if _person_key(guest.get('guest_name'), room) in existing_person_keys:
+                    continue
+                if guest.get('booking_reference') and guest['booking_reference'] in existing_booking_refs:
                     continue
                 # Skip if we already added a guest from this room (show only main guest)
                 if room in added_rooms:
