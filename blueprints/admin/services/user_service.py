@@ -4,6 +4,7 @@ Provides validation and business rules for user/role management.
 Also includes hotel guest import functionality.
 """
 
+from flask import current_app
 from models.user import get_all_users, get_user_by_username, get_user_by_email
 from models.role import has_users
 from datetime import datetime
