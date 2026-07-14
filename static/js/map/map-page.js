@@ -407,6 +407,18 @@ document.addEventListener('DOMContentLoaded', function () {
     searchManager.on('onSelect', (result) => {
         // Highlight ALL furniture for this reservation
         if (result.furnitureIds && result.furnitureIds.length > 0) {
+            // The search spans ALL zones, but the map shows one zone at a time. If
+            // the furniture lives outside the current zone view, switch to its zone
+            // first — otherwise it stays display:none and the pan/highlight is invisible.
+            const data = map.getData();
+            const first = data?.furniture?.find(f => f.id === result.furnitureIds[0]);
+            if (first && currentZoneId && !getVisibleZoneIds(currentZoneId).has(first.zone_id)) {
+                const zone = data.zones?.find(z => z.id === first.zone_id);
+                const targetZoneId = (zone && zone.parent_zone_id) || first.zone_id;
+                if (zoneSelect) zoneSelect.value = String(targetZoneId);
+                currentZoneId = targetZoneId;
+                applyZoneView(currentZoneId);
+            }
             // Highlight first furniture and pan to it
             map.highlightAndPanToFurniture(result.furnitureIds[0]);
             // Highlight additional furniture items
