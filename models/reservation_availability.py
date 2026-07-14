@@ -426,6 +426,7 @@ def get_furniture_availability_map(
 
         reservations_query = f'''
             SELECT rf.furniture_id, rf.assignment_date, r.id as reservation_id,
+                   r.customer_id,
                    r.ticket_number, r.current_state, r.num_people, r.is_furniture_locked,
                    r.notes as reservation_notes,
                    c.first_name || ' ' || COALESCE(c.last_name, '') as customer_name,
@@ -471,8 +472,32 @@ def get_furniture_availability_map(
                 'is_furniture_locked': row['is_furniture_locked'],
                 'has_notes': bool(notes_stripped),
                 'notes_preview': notes_stripped[:80],
-                'booking_reference': row['booking_reference']
+                'booking_reference': row['booking_reference'],
+                'customer_id': row['customer_id']
             }
+
+        # ---------------------------------------------------------------
+        # Room-change flags: mark sunbeds whose guest changed hotel room on the
+        # viewed date, so staff see "Hab. 2002 → 4002" instead of being surprised.
+        # Sourced from the beach_room_changes history (fed by the import syncs).
+        # ---------------------------------------------------------------
+        room_changes_by_customer_date = {}
+        customer_ids = list({r['customer_id'] for r in reservation_map.values()
+                             if r.get('customer_id')})
+        if customer_ids:
+            placeholders_cust = ','.join('?' * len(customer_ids))
+            cursor.execute(f'''
+                SELECT customer_id, old_room, new_room, date(changed_at) AS change_date
+                FROM beach_room_changes
+                WHERE customer_id IN ({placeholders_cust})
+                  AND date(changed_at) >= ? AND date(changed_at) <= ?
+                ORDER BY changed_at ASC
+            ''', (*customer_ids, date_from, date_to))
+            for rc in cursor.fetchall():
+                # Last change of the day wins (chronological order)
+                room_changes_by_customer_date[(rc['customer_id'], rc['change_date'])] = {
+                    'old_room': rc['old_room'], 'new_room': rc['new_room']
+                }
 
         # ---------------------------------------------------------------
         # Hotel check-in / check-out markers (hotel stay dates)
@@ -559,6 +584,9 @@ def get_furniture_availability_map(
                 if key in reservation_map:
                     res_info = reservation_map[key]
                     is_checkin_today, is_checkout_today = _checkin_checkout_flags(res_info, date)
+                    room_change = room_changes_by_customer_date.get(
+                        (res_info.get('customer_id'), date)
+                    )
                     availability[furn_id][date] = {
                         'available': False,
                         'reservation_id': res_info['reservation_id'],
@@ -574,7 +602,9 @@ def get_furniture_availability_map(
                         'has_notes': res_info['has_notes'],
                         'notes_preview': res_info['notes_preview'],
                         'is_checkin_today': is_checkin_today,
-                        'is_checkout_today': is_checkout_today
+                        'is_checkout_today': is_checkout_today,
+                        'room_changed_today': bool(room_change),
+                        'previous_room': room_change['old_room'] if room_change else None
                     }
                     summary[date]['occupied'] += 1
                 else:

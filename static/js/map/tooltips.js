@@ -61,6 +61,12 @@ export class TooltipManager {
             content += `<br><small><span style="color:#F0876E;">●</span> Check-out hoy</small>`;
         }
 
+        if (availability.room_changed_today) {
+            const prev = availability.previous_room
+                ? `${this._escape(availability.previous_room)} → ` : '';
+            content += `<br><small><span style="color:#D5B49A;">⇄</span> Cambio de habitación hoy: ${prev}${this._escape(availability.room_number || '')}</small>`;
+        }
+
         if (availability.num_people) {
             const n = parseInt(availability.num_people, 10) || 0;
             content += `<br><small>${n} persona${n > 1 ? 's' : ''}</small>`;

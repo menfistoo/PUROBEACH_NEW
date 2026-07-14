@@ -1005,6 +1005,12 @@ class TooltipManager {
             content += `<br><small><span style="color:#F0876E;">●</span> Check-out hoy</small>`;
         }
 
+        if (availability.room_changed_today) {
+            const prev = availability.previous_room
+                ? `${this._escape(availability.previous_room)} → ` : '';
+            content += `<br><small><span style="color:#D5B49A;">⇄</span> Cambio de habitación hoy: ${prev}${this._escape(availability.room_number || '')}</small>`;
+        }
+
         if (availability.num_people) {
             const n = parseInt(availability.num_people, 10) || 0;
             content += `<br><small>${n} persona${n > 1 ? 's' : ''}</small>`;
@@ -3130,6 +3136,33 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
             icon.textContent = marker.glyph;
             group.appendChild(icon);
         });
+    }
+
+    // Room-change marker (bottom-right corner): the guest moved hotel room on the
+    // viewed date — details (old → new) in the tooltip.
+    if (availability && availability.room_changed_today) {
+        const rcBadge = document.createElementNS(SVG_NS, 'circle');
+        rcBadge.setAttribute('cx', width - 10);
+        rcBadge.setAttribute('cy', height - 10);
+        rcBadge.setAttribute('r', 6);
+        rcBadge.setAttribute('fill', '#A2795D');
+        rcBadge.setAttribute('stroke', '#FFFFFF');
+        rcBadge.setAttribute('stroke-width', '1.5');
+        rcBadge.setAttribute('pointer-events', 'none');
+        rcBadge.setAttribute('class', 'furniture-roomchange-indicator');
+        group.appendChild(rcBadge);
+
+        const rcIcon = document.createElementNS(SVG_NS, 'text');
+        rcIcon.setAttribute('x', width - 10);
+        rcIcon.setAttribute('y', height - 10);
+        rcIcon.setAttribute('text-anchor', 'middle');
+        rcIcon.setAttribute('dominant-baseline', 'central');
+        rcIcon.setAttribute('font-size', '8');
+        rcIcon.setAttribute('fill', '#FFFFFF');
+        rcIcon.setAttribute('font-weight', '700');
+        rcIcon.setAttribute('pointer-events', 'none');
+        rcIcon.textContent = '⇄';
+        group.appendChild(rcIcon);
     }
 
     // Event listeners

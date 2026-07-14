@@ -568,6 +568,10 @@ def sync_customer_room_by_booking(booking_reference: str, room_number: str) -> D
             SET room_number = ?, booking_reference = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id IN ({placeholders})
         ''', (room_number, booking_reference, *ids))
+        for r in stale:
+            if r['room_number']:  # skip first-assignment (no previous room)
+                log_room_change(r['id'], booking_reference, r['room_number'], room_number,
+                                source='sync', conn=conn)
         conn.commit()
 
         result['updated'] = len(stale)
@@ -869,6 +873,28 @@ def backfill_missing_anchors(conn=None) -> Dict[str, Any]:
     return summary
 
 
+def log_room_change(customer_id: int, booking_reference: Optional[str],
+                    old_room: Optional[str], new_room: str,
+                    source: str = 'sync', conn=None) -> None:
+    """
+    Record a room change in the persistent history (beach_room_changes), so staff
+    can see on the map/panel that a guest moved rooms and when.
+    """
+    def _ins(c):
+        c.execute('''
+            INSERT INTO beach_room_changes
+            (customer_id, booking_reference, old_room, new_room, source)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (customer_id, booking_reference, old_room, new_room, source))
+
+    if conn is not None:
+        _ins(conn)
+    else:
+        with get_db() as c:
+            _ins(c)
+            c.commit()
+
+
 def booking_base(ref: Optional[str]) -> Optional[str]:
     """
     Return the stable BASE of a PMS reservation number.
@@ -998,6 +1024,9 @@ def refresh_room_segments(conn=None) -> Dict[str, Any]:
                     SET room_number = ?, booking_reference = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 ''', (new_room, new_ref, cust_id))
+                if cur['room_number']:
+                    log_room_change(cust_id, new_ref, cur['room_number'], new_room,
+                                    source='segment', conn=c)
                 summary['rooms_updated'] += 1
                 summary['changes'].append({
                     'customer_id': cust_id,

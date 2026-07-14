@@ -574,6 +574,33 @@ function createFurnitureElement(item, data, selectedFurniture, colors, onFurnitu
         });
     }
 
+    // Room-change marker (bottom-right corner): the guest moved hotel room on the
+    // viewed date — details (old → new) in the tooltip.
+    if (availability && availability.room_changed_today) {
+        const rcBadge = document.createElementNS(SVG_NS, 'circle');
+        rcBadge.setAttribute('cx', width - 10);
+        rcBadge.setAttribute('cy', height - 10);
+        rcBadge.setAttribute('r', 6);
+        rcBadge.setAttribute('fill', '#A2795D');
+        rcBadge.setAttribute('stroke', '#FFFFFF');
+        rcBadge.setAttribute('stroke-width', '1.5');
+        rcBadge.setAttribute('pointer-events', 'none');
+        rcBadge.setAttribute('class', 'furniture-roomchange-indicator');
+        group.appendChild(rcBadge);
+
+        const rcIcon = document.createElementNS(SVG_NS, 'text');
+        rcIcon.setAttribute('x', width - 10);
+        rcIcon.setAttribute('y', height - 10);
+        rcIcon.setAttribute('text-anchor', 'middle');
+        rcIcon.setAttribute('dominant-baseline', 'central');
+        rcIcon.setAttribute('font-size', '8');
+        rcIcon.setAttribute('fill', '#FFFFFF');
+        rcIcon.setAttribute('font-weight', '700');
+        rcIcon.setAttribute('pointer-events', 'none');
+        rcIcon.textContent = '⇄';
+        group.appendChild(rcIcon);
+    }
+
     // Event listeners
     group.addEventListener('click', (e) => onFurnitureClick(e, item));
 
