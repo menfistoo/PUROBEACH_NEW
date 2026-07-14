@@ -221,7 +221,7 @@ def import_hotel_guests_from_excel(
     """
     from models.hotel_guest import (upsert_hotel_guest, propagate_room_change,
                                      sync_customer_room_by_booking, reconcile_absent_guests,
-                                     backfill_missing_anchors)
+                                     backfill_missing_anchors, refresh_room_segments)
 
     result = {
         'created': 0,
@@ -436,6 +436,30 @@ def import_hotel_guests_from_excel(
             )
         except Exception as e:
             current_app.logger.error(f'Anchor backfill failed: {e}', exc_info=True)
+
+        # Room-change follow-up: this PMS re-books on room changes (base-N segments),
+        # so re-anchor reservations to the segment covering their date and point each
+        # customer's room at the segment covering today. Surfaces the room changes the
+        # per-row sync can't see (new segment = new reference).
+        try:
+            seg = refresh_room_segments()
+            result['reanchored'] = seg.get('reanchored', 0)
+            result['segment_room_updates'] = seg.get('rooms_updated', 0)
+            for ch in seg.get('changes', []):
+                if 'new_room' in ch:
+                    result['room_changes'].append({
+                        'guest_name': f"cliente #{ch['customer_id']}",
+                        'old_room': ch.get('old_room'),
+                        'new_room': ch.get('new_room'),
+                        'customer_updated': True,
+                        'reservations_updated': None
+                    })
+            current_app.logger.info(
+                f"Segment refresh: {result['reanchored']} re-anchored, "
+                f"{result['segment_room_updates']} room(s) updated"
+            )
+        except Exception as e:
+            current_app.logger.error(f'Segment refresh failed: {e}', exc_info=True)
 
     except Exception as e:
         current_app.logger.error(f'Error opening import file: {e}', exc_info=True)

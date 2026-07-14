@@ -867,3 +867,148 @@ def backfill_missing_anchors(conn=None) -> Dict[str, Any]:
             _run(c)
             c.commit()
     return summary
+
+
+def booking_base(ref: Optional[str]) -> Optional[str]:
+    """
+    Return the stable BASE of a PMS reservation number.
+
+    This PMS re-books on room changes using segment suffixes: '2026-4142-1' →
+    '2026-4142-2' → '2026-4142-3' are the SAME stay in different rooms. The base
+    ('2026-4142') identifies the booking; the trailing '-N' identifies the segment.
+    """
+    if not ref:
+        return ref
+    import re
+    m = re.match(r'^(.*)-\d+$', ref)
+    return m.group(1) if m else ref
+
+
+def refresh_room_segments(conn=None) -> Dict[str, Any]:
+    """
+    Post-import pass: follow PMS re-booking segments so rooms stay correct.
+
+    When the PMS moves a guest to another room it often issues a NEW segment of the
+    same booking (base-N). Exact-ref matching then goes silently stale: the beach
+    reservation stays anchored to the old segment and the customer keeps the old
+    room. This pass, for every current/future interno reservation with an anchor:
+
+    1. Re-anchors the reservation to the segment covering ITS date (same base),
+       so per-date consumers (check-in/out markers, room sync) match again.
+       NOTE: the right segment is the one covering the date — suffix order is NOT
+       chronological in this PMS.
+    2. Updates the customer's room (and ref) to the segment covering TODAY — or,
+       if the guest hasn't arrived yet, the next upcoming segment.
+
+    Idempotent and additive; runs after every guest import.
+
+    Returns {'reanchored': n, 'rooms_updated': n, 'changes': [...]}.
+    """
+    from utils.datetime_helpers import get_today
+    today = get_today().isoformat()
+    summary = {'reanchored': 0, 'rooms_updated': 0, 'changes': []}
+
+    def _own_covers(c, ref: str, on_date: str):
+        """The anchored segment itself, if it covers on_date (then nothing to fix)."""
+        return c.execute('''
+            SELECT booking_reference, room_number FROM hotel_guests
+            WHERE booking_reference = ? AND arrival_date <= ? AND departure_date >= ?
+            LIMIT 1
+        ''', (ref, on_date, on_date)).fetchone()
+
+    def _sibling_segment(c, base: str, exclude_ref: str, on_date: str, guest_name: str):
+        """
+        The sibling segment of `base` covering on_date, ONLY if unambiguous.
+
+        base-N segments can be a sequential room change (Dean: -1 then -2, disjoint
+        dates) or several rooms booked at once by one family (overlapping dates). We
+        only follow a change when the anchored segment no longer covers the date AND
+        exactly one sibling does — or the guest's name singles one out.
+        """
+        rows = c.execute('''
+            SELECT DISTINCT booking_reference, room_number, guest_name
+            FROM hotel_guests
+            WHERE (booking_reference = ? OR booking_reference LIKE ?)
+              AND booking_reference != ?
+              AND arrival_date <= ? AND departure_date >= ?
+        ''', (base, base + '-%', exclude_ref, on_date, on_date)).fetchall()
+        refs = {r['booking_reference'] for r in rows}
+        if len(refs) == 1:
+            return rows[0]
+        if len(refs) > 1 and guest_name:
+            target = normalize_guest_name(guest_name)
+            named = [r for r in rows if normalize_guest_name(r['guest_name'] or '') == target]
+            if len({r['booking_reference'] for r in named}) == 1:
+                return named[0]
+        return None
+
+    def _run(c):
+        rows = c.execute('''
+            SELECT r.id AS rid, r.reservation_date, r.booking_reference AS ref,
+                   r.customer_id,
+                   TRIM(cu.first_name || ' ' || COALESCE(cu.last_name, '')) AS cust_name
+            FROM beach_reservations r
+            JOIN beach_customers cu ON r.customer_id = cu.id
+            WHERE cu.customer_type = 'interno'
+              AND r.end_date >= ?
+              AND r.booking_reference IS NOT NULL AND r.booking_reference != ''
+        ''', (today,)).fetchall()
+
+        customers = {}  # cust_id -> cust_name (all scanned, for the room pass)
+        for row in rows:
+            customers.setdefault(row['customer_id'], row['cust_name'])
+            # Anchor still valid for that date (covers multi-room families too).
+            if _own_covers(c, row['ref'], row['reservation_date']):
+                continue
+            base = booking_base(row['ref'])
+            seg = _sibling_segment(c, base, row['ref'], row['reservation_date'], row['cust_name'])
+            if seg:
+                c.execute('''
+                    UPDATE beach_reservations
+                    SET booking_reference = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (seg['booking_reference'], row['rid']))
+                summary['reanchored'] += 1
+                summary['changes'].append({
+                    'reservation_id': row['rid'],
+                    'old_ref': row['ref'],
+                    'new_ref': seg['booking_reference']
+                })
+
+        # Customer pass: make each customer's room follow the segment covering TODAY.
+        for cust_id, cust_name in customers.items():
+            cur = c.execute('''
+                SELECT room_number, booking_reference FROM beach_customers WHERE id = ?
+            ''', (cust_id,)).fetchone()
+            if not cur or not cur['booking_reference']:
+                continue
+            own = _own_covers(c, cur['booking_reference'], today)
+            if own:
+                # Segment unchanged; per-row sync already handles same-ref room edits.
+                new_ref, new_room = cur['booking_reference'], own['room_number']
+            else:
+                seg = _sibling_segment(c, booking_base(cur['booking_reference']),
+                                       cur['booking_reference'], today, cust_name)
+                if not seg:
+                    continue
+                new_ref, new_room = seg['booking_reference'], seg['room_number']
+            if new_room and new_room != cur['room_number']:
+                c.execute('''
+                    UPDATE beach_customers
+                    SET room_number = ?, booking_reference = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (new_room, new_ref, cust_id))
+                summary['rooms_updated'] += 1
+                summary['changes'].append({
+                    'customer_id': cust_id,
+                    'old_room': cur['room_number'],
+                    'new_room': new_room
+                })
+
+    if conn is not None:
+        _run(conn)
+    else:
+        with get_db() as c:
+            _run(c)
+            c.commit()
+    return summary
