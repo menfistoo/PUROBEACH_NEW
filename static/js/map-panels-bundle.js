@@ -2183,10 +2183,13 @@ const CustomerMixin = (Base) => class extends Base {
         }
 
         if (customer.customer_type === 'interno' && customer.room_number) {
-            // Show room guest dropdown for interno
+            // Interno: quick dropdown with the room's guests PLUS the unified search,
+            // so staff can also hand the sunbed to a guest of ANOTHER room (e.g. a
+            // family member: room 4009 case) — the dropdown alone can't reach them.
             this.showRoomGuestSelector(customer.room_number);
-        } else if (customer.customer_type === 'externo') {
-            // Show search for externo
+            this.showCustomerSearch();
+        } else {
+            // Externo (or interno without room): unified search
             this.showCustomerSearch();
         }
     }
