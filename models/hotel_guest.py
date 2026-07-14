@@ -1012,3 +1012,106 @@ def refresh_room_segments(conn=None) -> Dict[str, Any]:
             _run(c)
             c.commit()
     return summary
+
+
+def refresh_guest_identity(conn=None) -> Dict[str, Any]:
+    """
+    Post-import pass: keep guest identity aligned with the ACTIVE occupants.
+
+    Early PMS reports list a booking under the HOLDER's abbreviated name (e.g.
+    'DL GOUGH'); later reports replace it with the real occupants' full names.
+    The holder row then vanishes (reconciled as checked out) but it keeps the
+    is_main_guest flag, and any beach customer created from it keeps the stale
+    holder name — staff then see mismatched names (room 4009 case, 2026-07-14).
+
+    1. For each (booking_reference, room) whose ACTIVE rows have no main guest,
+       promote one active occupant (adults first) to is_main_guest.
+    2. Rename interno customers (with current/future reservations) whose name no
+       longer matches ANY active occupant of their anchored booking, to the
+       active occupant of their room — only when that is unambiguous.
+
+    Idempotent; runs after every guest import.
+
+    Returns {'mains_promoted': n, 'customers_renamed': n, 'changes': [...]}.
+    """
+    from utils.datetime_helpers import get_today
+    today = get_today().isoformat()
+    summary = {'mains_promoted': 0, 'customers_renamed': 0, 'changes': []}
+
+    def _run(c):
+        # 1) The main-guest flag must sit on an ACTIVE row of each (ref, room).
+        groups = c.execute('''
+            SELECT booking_reference, room_number
+            FROM hotel_guests
+            WHERE departure_date >= ?
+              AND booking_reference IS NOT NULL AND booking_reference != ''
+            GROUP BY booking_reference, room_number
+            HAVING SUM(CASE WHEN is_main_guest = 1 THEN 1 ELSE 0 END) = 0
+        ''', (today,)).fetchall()
+        for g in groups:
+            row = c.execute('''
+                SELECT id, guest_name FROM hotel_guests
+                WHERE booking_reference = ? AND room_number = ? AND departure_date >= ?
+                ORDER BY (guest_type = 'AD') DESC, id ASC LIMIT 1
+            ''', (g['booking_reference'], g['room_number'], today)).fetchone()
+            if row:
+                c.execute('''
+                    UPDATE hotel_guests SET is_main_guest = 1, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (row['id'],))
+                summary['mains_promoted'] += 1
+                summary['changes'].append({
+                    'promoted_main': row['guest_name'],
+                    'booking_reference': g['booking_reference'],
+                    'room_number': g['room_number']
+                })
+
+        # 2) Rename customers stuck with a holder/stub name.
+        custs = c.execute('''
+            SELECT DISTINCT cu.id, cu.first_name, cu.last_name, cu.room_number,
+                            cu.booking_reference
+            FROM beach_customers cu
+            JOIN beach_reservations r ON r.customer_id = cu.id
+            WHERE cu.customer_type = 'interno'
+              AND r.end_date >= ?
+              AND cu.booking_reference IS NOT NULL AND cu.booking_reference != ''
+        ''', (today,)).fetchall()
+        for cu in custs:
+            active = c.execute('''
+                SELECT guest_name, room_number FROM hotel_guests
+                WHERE booking_reference = ? AND departure_date >= ?
+            ''', (cu['booking_reference'], today)).fetchall()
+            if not active:
+                continue
+            old_name = f"{cu['first_name'] or ''} {cu['last_name'] or ''}".strip()
+            cname = normalize_guest_name(old_name)
+            if any(normalize_guest_name(a['guest_name'] or '') == cname for a in active):
+                continue  # name already matches a real occupant
+            # Candidates: active occupants of the customer's room; must be unambiguous.
+            in_room = {a['guest_name'] for a in active
+                       if a['room_number'] == cu['room_number'] and a['guest_name']}
+            if len(in_room) != 1:
+                continue
+            new_name = next(iter(in_room)).strip()
+            # Same first/last split convention as create_customer_from_hotel_guest.
+            parts = new_name.split(' ', 1)
+            c.execute('''
+                UPDATE beach_customers
+                SET first_name = ?, last_name = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (parts[0], parts[1] if len(parts) > 1 else '', cu['id']))
+            summary['customers_renamed'] += 1
+            summary['changes'].append({
+                'customer_id': cu['id'],
+                'old_name': old_name,
+                'new_name': new_name,
+                'room_number': cu['room_number']
+            })
+
+    if conn is not None:
+        _run(conn)
+    else:
+        with get_db() as c:
+            _run(c)
+            c.commit()
+    return summary

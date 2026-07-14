@@ -15,14 +15,15 @@ Designed to run as a cron job every 2-4 hours.
 
 import os
 import sys
+import base64
 import hashlib
 import logging
 import argparse
 import tempfile
+import urllib.request
+import urllib.error
 from datetime import datetime
 from pathlib import Path
-
-import requests
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -43,8 +44,9 @@ NEXTCLOUD_FILE_PATH = os.environ.get(
     'FrontOffice/PMS/GuestInHouse.xlsx'
 )
 
-# Local state file to track last imported file hash
-STATE_DIR = PROJECT_ROOT / 'data'
+# Local state file to track last imported file hash.
+# Lives under instance/ so it persists across container redeploys (db-data volume).
+STATE_DIR = PROJECT_ROOT / 'instance'
 STATE_FILE = STATE_DIR / '.pms_sync_state'
 
 # Logging
@@ -104,31 +106,25 @@ def download_file_from_nextcloud() -> tuple[bytes | None, str | None]:
     url = get_webdav_url()
     log.info(f"Downloading from: {url}")
 
+    # stdlib urllib (the production image ships no `requests`)
+    auth = base64.b64encode(f"{NEXTCLOUD_USER}:{NEXTCLOUD_PASS}".encode()).decode()
+    req = urllib.request.Request(url, headers={'Authorization': f'Basic {auth}'})
+
     try:
-        response = requests.get(
-            url,
-            auth=(NEXTCLOUD_USER, NEXTCLOUD_PASS),
-            timeout=30
-        )
-
-        if response.status_code == 200:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            content = response.read()
             etag = response.headers.get('ETag', '')
-            log.info(f"Downloaded {len(response.content)} bytes (ETag: {etag})")
-            return response.content, etag
+            log.info(f"Downloaded {len(content)} bytes (ETag: {etag})")
+            return content, etag
 
-        elif response.status_code == 404:
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
             log.warning("File not found in Nextcloud. Waiting for upload.")
-            return None, None
-
         else:
-            log.error(f"HTTP {response.status_code}: {response.text[:200]}")
-            return None, None
-
-    except requests.ConnectionError:
-        log.error("Cannot connect to Nextcloud. Is it running?")
+            log.error(f"HTTP {e.code}: {e.read()[:200]!r}")
         return None, None
-    except requests.Timeout:
-        log.error("Nextcloud request timed out.")
+    except urllib.error.URLError as e:
+        log.error(f"Cannot connect to Nextcloud ({e.reason}). Is it running?")
         return None, None
     except Exception as e:
         log.error(f"Unexpected error downloading: {e}")

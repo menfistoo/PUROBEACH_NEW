@@ -221,7 +221,8 @@ def import_hotel_guests_from_excel(
     """
     from models.hotel_guest import (upsert_hotel_guest, propagate_room_change,
                                      sync_customer_room_by_booking, reconcile_absent_guests,
-                                     backfill_missing_anchors, refresh_room_segments)
+                                     backfill_missing_anchors, refresh_room_segments,
+                                     refresh_guest_identity)
 
     result = {
         'created': 0,
@@ -460,6 +461,20 @@ def import_hotel_guests_from_excel(
             )
         except Exception as e:
             current_app.logger.error(f'Segment refresh failed: {e}', exc_info=True)
+
+        # Identity refresh: holder-stub rows (e.g. 'DL GOUGH') get replaced by the real
+        # occupants in later PMS reports — keep the main-guest flag on an active
+        # occupant and rename customers stuck with the extinct holder name.
+        try:
+            ident = refresh_guest_identity()
+            result['mains_promoted'] = ident.get('mains_promoted', 0)
+            result['customers_renamed'] = ident.get('customers_renamed', 0)
+            current_app.logger.info(
+                f"Identity refresh: {result['mains_promoted']} main(s) promoted, "
+                f"{result['customers_renamed']} customer(s) renamed"
+            )
+        except Exception as e:
+            current_app.logger.error(f'Identity refresh failed: {e}', exc_info=True)
 
     except Exception as e:
         current_app.logger.error(f'Error opening import file: {e}', exc_info=True)
