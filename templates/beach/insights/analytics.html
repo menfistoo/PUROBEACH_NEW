@@ -481,12 +481,14 @@
                             <div class="kpi-card text-center py-4 px-3">
                                 <div class="kpi-value" id="kpi-cancellation-rate">--</div>
                                 <div class="kpi-label">Tasa de Cancelación</div>
+                                <div class="kpi-subtitle" id="kpi-cancellation-count">--</div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="kpi-card text-center py-4 px-3">
                                 <div class="kpi-value" id="kpi-pattern-noshow-rate">--</div>
                                 <div class="kpi-label">Tasa de No-Show</div>
+                                <div class="kpi-subtitle" id="kpi-pattern-noshow-count">--</div>
                             </div>
                         </div>
                     </div>
@@ -519,6 +521,7 @@
                                 <thead>
                                     <tr>
                                         <th>Tipo de Cliente</th>
+                                        <th class="text-end">Canceladas</th>
                                         <th class="text-end">Tasa de Cancelación</th>
                                     </tr>
                                 </thead>
@@ -1035,6 +1038,16 @@ function renderPatternsSection(data) {
     document.getElementById('kpi-cancellation-rate').textContent = data.stats.cancellation_rate + '%';
     document.getElementById('kpi-pattern-noshow-rate').textContent = data.stats.noshow_rate + '%';
 
+    // Absolute counts under the rates ("12 de 340 reservas")
+    const totalRes = data.stats.total_reservations;
+    const fmtCount = (n) => (totalRes != null && n != null)
+        ? `${n.toLocaleString('es-ES')} de ${totalRes.toLocaleString('es-ES')} reservas`
+        : '--';
+    const cancelCountEl = document.getElementById('kpi-cancellation-count');
+    if (cancelCountEl) cancelCountEl.textContent = fmtCount(data.stats.cancellation_count);
+    const noshowCountEl = document.getElementById('kpi-pattern-noshow-count');
+    if (noshowCountEl) noshowCountEl.textContent = fmtCount(data.stats.noshow_count);
+
     // Day of Week Chart
     renderDayOfWeekChart(data.by_day_of_week);
 
@@ -1158,9 +1171,13 @@ function renderCancellationTable(data) {
     tbody.innerHTML = data.map(item => {
         const rateColor = item.rate > 20 ? chartColors.danger :
                          item.rate > 10 ? chartColors.warning : chartColors.success;
+        const counts = (item.cancelled != null && item.total != null)
+            ? `${item.cancelled.toLocaleString('es-ES')} de ${item.total.toLocaleString('es-ES')}`
+            : '--';
         return `
             <tr>
                 <td>${typeLabels[item.type] || item.type}</td>
+                <td class="text-end">${counts}</td>
                 <td class="text-end">
                     <span style="color: ${rateColor}; font-weight: 600;">${item.rate}%</span>
                 </td>

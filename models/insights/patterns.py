@@ -23,6 +23,9 @@ def get_pattern_stats(start_date: str, end_date: str) -> dict:
             - avg_lead_time: float (average days between created_at and start_date)
             - cancellation_rate: float (percentage with state 'cancelada')
             - noshow_rate: float (percentage with state 'noshow')
+            - total_reservations: int
+            - cancellation_count: int
+            - noshow_count: int
     """
     with get_db() as conn:
         # Total reservations in range
@@ -37,7 +40,10 @@ def get_pattern_stats(start_date: str, end_date: str) -> dict:
             return {
                 'avg_lead_time': 0.0,
                 'cancellation_rate': 0.0,
-                'noshow_rate': 0.0
+                'noshow_rate': 0.0,
+                'total_reservations': 0,
+                'cancellation_count': 0,
+                'noshow_count': 0
             }
 
         # Average lead time (days between created_at and start_date)
@@ -75,7 +81,10 @@ def get_pattern_stats(start_date: str, end_date: str) -> dict:
         return {
             'avg_lead_time': avg_lead_time,
             'cancellation_rate': cancellation_rate,
-            'noshow_rate': noshow_rate
+            'noshow_rate': noshow_rate,
+            'total_reservations': total_count,
+            'cancellation_count': cancel_count,
+            'noshow_count': noshow_count
         }
 
 
@@ -189,8 +198,8 @@ def get_cancellation_breakdown(start_date: str, end_date: str) -> dict:
 
     Returns:
         dict with:
-            - by_customer_type: list of {type, rate}
-            - by_lead_time: list of {bucket, name, rate}
+            - by_customer_type: list of {type, rate, cancelled, total}
+            - by_lead_time: list of {bucket, name, rate, cancelled, total}
     """
     bucket_config = [
         ('same_day', 'Mismo día', 0, 0),
@@ -222,7 +231,9 @@ def get_cancellation_breakdown(start_date: str, end_date: str) -> dict:
             rate = round((cancelled / total) * 100, 1) if total > 0 else 0.0
             by_customer_type.append({
                 'type': customer_type,
-                'rate': rate
+                'rate': rate,
+                'cancelled': cancelled,
+                'total': total
             })
 
         # By lead time bucket
@@ -259,7 +270,9 @@ def get_cancellation_breakdown(start_date: str, end_date: str) -> dict:
             by_lead_time.append({
                 'bucket': bucket_id,
                 'name': bucket_name,
-                'rate': rate
+                'rate': rate,
+                'cancelled': cancelled,
+                'total': total
             })
 
         return {
