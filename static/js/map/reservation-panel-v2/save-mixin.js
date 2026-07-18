@@ -159,7 +159,11 @@ export const SaveMixin = (Base) => class extends Base {
     async _changeDateWithoutFurniture(newDate) {
         try {
             // Call API with clear_furniture flag
-            const response = await fetch(
+            const payload = {
+                new_date: newDate,
+                clear_furniture: true
+            };
+            let response = await fetch(
                 `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
                 {
                     method: 'POST',
@@ -167,14 +171,34 @@ export const SaveMixin = (Base) => class extends Base {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': this.getCsrfToken()
                     },
-                    body: JSON.stringify({
-                        new_date: newDate,
-                        clear_furniture: true
-                    })
+                    body: JSON.stringify(payload)
                 }
             );
 
-            const result = await response.json();
+            let result = await response.json();
+
+            // Out-of-stay guard: new date is outside the guest's hotel stay.
+            // Require explicit confirmation before moving the reservation.
+            if (!result.success && result.outside_stay) {
+                const proceed = window.confirm(`${result.error}\n\n¿Cambiar la fecha de todas formas?`);
+                if (!proceed) {
+                    this.editReservationDate.value = this.state.currentDate || '';
+                    return;
+                }
+                payload.force_outside_stay = true;
+                response = await fetch(
+                    `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCsrfToken()
+                        },
+                        body: JSON.stringify(payload)
+                    }
+                );
+                result = await response.json();
+            }
 
             if (!result.success) {
                 throw new Error(result.error || 'Error al cambiar fecha');
@@ -232,7 +256,8 @@ export const SaveMixin = (Base) => class extends Base {
      */
     async _changeDateDirectly(newDate) {
         try {
-            const response = await fetch(
+            const payload = { new_date: newDate };
+            let response = await fetch(
                 `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
                 {
                     method: 'POST',
@@ -240,11 +265,36 @@ export const SaveMixin = (Base) => class extends Base {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': this.getCsrfToken()
                     },
-                    body: JSON.stringify({ new_date: newDate })
+                    body: JSON.stringify(payload)
                 }
             );
 
-            const result = await response.json();
+            let result = await response.json();
+
+            // Out-of-stay guard: new date is outside the guest's hotel stay.
+            // Require explicit confirmation before moving the reservation.
+            if (!result.success && result.outside_stay) {
+                const proceed = window.confirm(`${result.error}\n\n¿Cambiar la fecha de todas formas?`);
+                if (!proceed) {
+                    if (this.editReservationDate) {
+                        this.editReservationDate.value = this.state.currentDate || '';
+                    }
+                    return;
+                }
+                payload.force_outside_stay = true;
+                response = await fetch(
+                    `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCsrfToken()
+                        },
+                        body: JSON.stringify(payload)
+                    }
+                );
+                result = await response.json();
+            }
 
             if (!result.success) {
                 throw new Error(result.error || 'Error al cambiar fecha');

@@ -356,6 +356,8 @@ class ReservationPanelBase {
         this.customerCheckout = document.getElementById('customerCheckout');
         this.customerBookingRef = document.getElementById('customerBookingRef');
         this.customerBookingItem = document.getElementById('customerBookingItem');
+        this.customerStayWarning = document.getElementById('customerStayWarning');
+        this.customerStayWarningText = document.getElementById('customerStayWarningText');
         this.customerContact = document.getElementById('customerContact');
         this.customerPhone = document.getElementById('customerPhone');
         this.customerChangeBtn = document.getElementById('customerChangeBtn');
@@ -1524,7 +1526,11 @@ const SaveMixin = (Base) => class extends Base {
     async _changeDateWithoutFurniture(newDate) {
         try {
             // Call API with clear_furniture flag
-            const response = await fetch(
+            const payload = {
+                new_date: newDate,
+                clear_furniture: true
+            };
+            let response = await fetch(
                 `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
                 {
                     method: 'POST',
@@ -1532,14 +1538,34 @@ const SaveMixin = (Base) => class extends Base {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': this.getCsrfToken()
                     },
-                    body: JSON.stringify({
-                        new_date: newDate,
-                        clear_furniture: true
-                    })
+                    body: JSON.stringify(payload)
                 }
             );
 
-            const result = await response.json();
+            let result = await response.json();
+
+            // Out-of-stay guard: new date is outside the guest's hotel stay.
+            // Require explicit confirmation before moving the reservation.
+            if (!result.success && result.outside_stay) {
+                const proceed = window.confirm(`${result.error}\n\n¿Cambiar la fecha de todas formas?`);
+                if (!proceed) {
+                    this.editReservationDate.value = this.state.currentDate || '';
+                    return;
+                }
+                payload.force_outside_stay = true;
+                response = await fetch(
+                    `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCsrfToken()
+                        },
+                        body: JSON.stringify(payload)
+                    }
+                );
+                result = await response.json();
+            }
 
             if (!result.success) {
                 throw new Error(result.error || 'Error al cambiar fecha');
@@ -1597,7 +1623,8 @@ const SaveMixin = (Base) => class extends Base {
      */
     async _changeDateDirectly(newDate) {
         try {
-            const response = await fetch(
+            const payload = { new_date: newDate };
+            let response = await fetch(
                 `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
                 {
                     method: 'POST',
@@ -1605,11 +1632,36 @@ const SaveMixin = (Base) => class extends Base {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': this.getCsrfToken()
                     },
-                    body: JSON.stringify({ new_date: newDate })
+                    body: JSON.stringify(payload)
                 }
             );
 
-            const result = await response.json();
+            let result = await response.json();
+
+            // Out-of-stay guard: new date is outside the guest's hotel stay.
+            // Require explicit confirmation before moving the reservation.
+            if (!result.success && result.outside_stay) {
+                const proceed = window.confirm(`${result.error}\n\n¿Cambiar la fecha de todas formas?`);
+                if (!proceed) {
+                    if (this.editReservationDate) {
+                        this.editReservationDate.value = this.state.currentDate || '';
+                    }
+                    return;
+                }
+                payload.force_outside_stay = true;
+                response = await fetch(
+                    `${this.options.apiBaseUrl}/map/reservations/${this.state.reservationId}/change-date`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.getCsrfToken()
+                        },
+                        body: JSON.stringify(payload)
+                    }
+                );
+                result = await response.json();
+            }
 
             if (!result.success) {
                 throw new Error(result.error || 'Error al cambiar fecha');
@@ -2008,6 +2060,9 @@ const CustomerMixin = (Base) => class extends Base {
         if (this.customerHotelInfo) {
             this.customerHotelInfo.style.display = 'none';
         }
+        if (this.customerStayWarning) {
+            this.customerStayWarning.style.display = 'none';
+        }
         if (this.customerContact) {
             this.customerContact.style.display = 'none';
         }
@@ -2115,10 +2170,28 @@ const CustomerMixin = (Base) => class extends Base {
 
         if (!isHotelGuest) {
             this.customerHotelInfo.style.display = 'none';
+            if (this.customerStayWarning) {
+                this.customerStayWarning.style.display = 'none';
+            }
             return;
         }
 
         this.customerHotelInfo.style.display = 'flex';
+
+        // Departed-guest warning: dates/reference shown are the guest's OWN
+        // stay; flag clearly when they already left the hotel.
+        if (this.customerStayWarning && this.customerStayWarningText) {
+            if (customer.stay_status === 'departed') {
+                const out = customer.departure_date
+                    ? ` (salida ${formatDateShort(customer.departure_date)})`
+                    : '';
+                this.customerStayWarningText.textContent =
+                    `Ya no figura en el hotel${out}`;
+                this.customerStayWarning.style.display = 'block';
+            } else {
+                this.customerStayWarning.style.display = 'none';
+            }
+        }
 
         // Check-in date
         if (this.customerCheckin) {
@@ -5839,7 +5912,7 @@ class ConflictResolver {
             }
 
             const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
-            const response = await fetch(`${this.panel.options.apiBaseUrl}/map/quick-reservation`, {
+            let response = await fetch(`${this.panel.options.apiBaseUrl}/map/quick-reservation`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -5848,7 +5921,25 @@ class ConflictResolver {
                 body: JSON.stringify(payload)
             });
 
-            const result = await response.json();
+            let result = await response.json();
+
+            // Out-of-stay guard: same confirmation as panel-core.js createReservation
+            if (!result.success && result.outside_stay) {
+                const proceed = window.confirm(`${result.error}\n\n¿Crear la reserva de todas formas?`);
+                if (!proceed) {
+                    return;
+                }
+                payload.force_outside_stay = true;
+                response = await fetch(`${this.panel.options.apiBaseUrl}/map/quick-reservation`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+                result = await response.json();
+            }
 
             if (result.success) {
                 this.panel.showToast(result.message || 'Reserva creada exitosamente', 'success');
@@ -6967,7 +7058,7 @@ class NewReservationPanel {
                 payload.price_override = parseFloat(priceOverride);
             }
 
-            const response = await fetch(`${this.options.apiBaseUrl}/map/quick-reservation`, {
+            let response = await fetch(`${this.options.apiBaseUrl}/map/quick-reservation`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -6976,7 +7067,27 @@ class NewReservationPanel {
                 body: JSON.stringify(payload)
             });
 
-            const result = await response.json();
+            let result = await response.json();
+
+            // Out-of-stay guard: the guest's hotel stay doesn't cover the
+            // requested dates (e.g. already checked out). Require explicit
+            // confirmation before creating the reservation anyway.
+            if (!result.success && result.outside_stay) {
+                const proceed = window.confirm(`${result.error}\n\n¿Crear la reserva de todas formas?`);
+                if (!proceed) {
+                    return;
+                }
+                payload.force_outside_stay = true;
+                response = await fetch(`${this.options.apiBaseUrl}/map/quick-reservation`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+                result = await response.json();
+            }
 
             if (result.success) {
                 this.showToast(result.message || 'Reserva creada exitosamente', 'success');

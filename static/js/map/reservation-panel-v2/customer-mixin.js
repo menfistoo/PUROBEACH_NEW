@@ -81,6 +81,9 @@ export const CustomerMixin = (Base) => class extends Base {
         if (this.customerHotelInfo) {
             this.customerHotelInfo.style.display = 'none';
         }
+        if (this.customerStayWarning) {
+            this.customerStayWarning.style.display = 'none';
+        }
         if (this.customerContact) {
             this.customerContact.style.display = 'none';
         }
@@ -188,10 +191,28 @@ export const CustomerMixin = (Base) => class extends Base {
 
         if (!isHotelGuest) {
             this.customerHotelInfo.style.display = 'none';
+            if (this.customerStayWarning) {
+                this.customerStayWarning.style.display = 'none';
+            }
             return;
         }
 
         this.customerHotelInfo.style.display = 'flex';
+
+        // Departed-guest warning: dates/reference shown are the guest's OWN
+        // stay; flag clearly when they already left the hotel.
+        if (this.customerStayWarning && this.customerStayWarningText) {
+            if (customer.stay_status === 'departed') {
+                const out = customer.departure_date
+                    ? ` (salida ${formatDateShort(customer.departure_date)})`
+                    : '';
+                this.customerStayWarningText.textContent =
+                    `Ya no figura en el hotel${out}`;
+                this.customerStayWarning.style.display = 'block';
+            } else {
+                this.customerStayWarning.style.display = 'none';
+            }
+        }
 
         // Check-in date
         if (this.customerCheckin) {

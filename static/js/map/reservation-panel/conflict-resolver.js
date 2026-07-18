@@ -205,7 +205,7 @@ class ConflictResolver {
             }
 
             const csrfToken = document.getElementById('newPanelCsrfToken')?.value || '';
-            const response = await fetch(`${this.panel.options.apiBaseUrl}/map/quick-reservation`, {
+            let response = await fetch(`${this.panel.options.apiBaseUrl}/map/quick-reservation`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -214,7 +214,25 @@ class ConflictResolver {
                 body: JSON.stringify(payload)
             });
 
-            const result = await response.json();
+            let result = await response.json();
+
+            // Out-of-stay guard: same confirmation as panel-core.js createReservation
+            if (!result.success && result.outside_stay) {
+                const proceed = window.confirm(`${result.error}\n\n¿Crear la reserva de todas formas?`);
+                if (!proceed) {
+                    return;
+                }
+                payload.force_outside_stay = true;
+                response = await fetch(`${this.panel.options.apiBaseUrl}/map/quick-reservation`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+                result = await response.json();
+            }
 
             if (result.success) {
                 this.panel.showToast(result.message || 'Reserva creada exitosamente', 'success');

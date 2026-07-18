@@ -89,30 +89,23 @@ def register_routes(bp):
             customer = get_customer_by_id(customer_id)
             customer_preferences = get_customer_characteristics(customer_id)
 
-            # For interno customers with room number, fetch hotel guest info
-            if customer and customer.get('customer_type') == 'interno' and customer.get('room_number'):
-                from models.hotel_guest import get_guests_by_room
-                guests = get_guests_by_room(customer['room_number'], get_today())
-                if guests:
-                    # Try to find matching guest by name
-                    full_name = f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip().upper()
-                    matching_guest = None
-                    for g in guests:
-                        if g['guest_name'].upper() == full_name:
-                            matching_guest = g
-                            break
-                    # Fall back to main guest or first guest
-                    if not matching_guest:
-                        matching_guest = next((g for g in guests if g.get('is_main_guest')), guests[0])
-
-                    if matching_guest:
-                        hotel_guest_info = {
-                            'arrival_date': matching_guest.get('arrival_date'),
-                            'departure_date': matching_guest.get('departure_date'),
-                            'booking_reference': matching_guest.get('booking_reference'),
-                            'nationality': matching_guest.get('nationality'),
-                            'vip_code': matching_guest.get('vip_code')
-                        }
+            # For interno customers, show the guest's OWN hotel stay, matched
+            # via their booking segments (or room+name). Never borrow the data
+            # of whoever occupies the room today: that glued another guest's
+            # dates/reservation number under a stale customer's name
+            # (room 6103 / Bingham case, 2026-07-18).
+            if customer and customer.get('customer_type') == 'interno':
+                from models.stay_validation import get_customer_stay_summary
+                stay = get_customer_stay_summary(customer)
+                if stay:
+                    hotel_guest_info = {
+                        'arrival_date': stay['arrival'],
+                        'departure_date': stay['departure'],
+                        'booking_reference': stay['booking_reference'],
+                        'nationality': stay['nationality'],
+                        'vip_code': stay['vip_code'],
+                        'stay_status': stay['status']
+                    }
 
         # Build customer data
         customer_data = {
@@ -138,7 +131,9 @@ def register_routes(bp):
             'departure_date': _format_date_iso(hotel_guest_info.get('departure_date')),
             'booking_reference': hotel_guest_info.get('booking_reference'),
             'nationality': hotel_guest_info.get('nationality'),
-            'vip_code': hotel_guest_info.get('vip_code')
+            'vip_code': hotel_guest_info.get('vip_code'),
+            # 'current' | 'departed' | 'upcoming' | None (unknown to PMS)
+            'stay_status': hotel_guest_info.get('stay_status')
         } if customer else None
 
         # Build response

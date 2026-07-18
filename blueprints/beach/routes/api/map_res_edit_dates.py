@@ -16,6 +16,8 @@ from models.reservation import (
     check_furniture_availability_bulk,
     get_beach_reservation_by_id
 )
+from models.customer import get_customer_by_id
+from models.stay_validation import check_dates_within_stay, outside_stay_message
 from database import get_db
 
 
@@ -192,6 +194,24 @@ def register_routes(bp: Blueprint) -> None:
         # If same date, no change needed
         if new_date == current_date:
             return api_success(message='Sin cambios')
+
+        # Interno guests: the new date must fall inside the hotel stay (per
+        # PMS). Same guard as creation; force_outside_stay overrides after
+        # explicit user confirmation.
+        customer = get_customer_by_id(reservation['customer_id'])
+        if customer:
+            stay = check_dates_within_stay(customer, [new_date])
+            if (stay['applicable'] and stay['known'] and not stay['ok']
+                    and not data.get('force_outside_stay')):
+                return api_error(
+                    outside_stay_message(stay), 409,
+                    outside_stay={
+                        'uncovered_dates': stay['uncovered'],
+                        'arrival': stay['arrival'],
+                        'departure': stay['departure'],
+                        'guest_name': stay['guest_name'],
+                    }
+                )
 
         try:
             with get_db() as conn:

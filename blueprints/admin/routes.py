@@ -484,7 +484,7 @@ def hotel_guests_import():
                     else:
                         status_parts.append('cliente no encontrado')
 
-                    if change['reservations_updated'] > 0:
+                    if (change['reservations_updated'] or 0) > 0:
                         status_parts.append(f"{change['reservations_updated']} reserva(s) actualizada(s)")
 
                     status_text = ', '.join(status_parts)
@@ -492,6 +492,19 @@ def hotel_guests_import():
 
                 if room_change_count > 5:
                     flash(f"  ... y {room_change_count - 5} cambio(s) más", 'info')
+
+            # Show out-of-stay reservations: sunbeds reserved on dates the
+            # hotel booking no longer covers (guest checked out / stale customer)
+            if result.get('out_of_stay'):
+                oos = result['out_of_stay']
+                flash(f"⚠ {len(oos)} reserva(s) de playa de huéspedes que ya salieron del hotel — revisar:", 'warning')
+                for r in oos[:5]:
+                    ref = r['ticket_number'] or f"#{r['reservation_id']}"
+                    flash(f"  • {ref} {r['customer_name']} (hab. {r['room_number']}) "
+                          f"el {r['reservation_date']} — salida del hotel: {r['stay_departure']}",
+                          'warning')
+                if len(oos) > 5:
+                    flash(f"  ... y {len(oos) - 5} reserva(s) más", 'warning')
 
             # Show errors if any
             if result['errors']:

@@ -476,6 +476,40 @@ def import_hotel_guests_from_excel(
         except Exception as e:
             current_app.logger.error(f'Identity refresh failed: {e}', exc_info=True)
 
+        # Out-of-stay audit: current/future reservations whose hotel booking no
+        # longer covers the reservation date (e.g. sunbeds booked past the
+        # guest's checkout under a stale customer). Surface them here so staff
+        # reviews them proactively instead of finding the wrong guest on the map.
+        try:
+            from models.stay_validation import find_out_of_stay_reservations
+            out_of_stay = find_out_of_stay_reservations()
+            # High confidence (shown in the import UI): guest already departed
+            # per PMS but still holds current/future sunbeds. 'beyond_departure'
+            # entries often self-heal (pending room-change segment / extension),
+            # so they only go to the log.
+            departed = [r for r in out_of_stay if r['severity'] == 'departed']
+            beyond = [r for r in out_of_stay if r['severity'] != 'departed']
+            result['out_of_stay'] = departed
+            result['out_of_stay_beyond'] = len(beyond)
+            if departed:
+                detail = '; '.join(
+                    f"#{r['ticket_number'] or r['reservation_id']} "
+                    f"{r['customer_name']} (hab {r['room_number']}) "
+                    f"el {r['reservation_date']} — salida hotel {r['stay_departure']}"
+                    for r in departed[:10]
+                )
+                current_app.logger.warning(
+                    f"Out-of-stay reservations (guest departed): {len(departed)} "
+                    f"[{detail}]"
+                )
+            if beyond:
+                current_app.logger.info(
+                    f"Reservations beyond current PMS departure (may self-heal "
+                    f"on next segment): {len(beyond)}"
+                )
+        except Exception as e:
+            current_app.logger.error(f'Out-of-stay audit failed: {e}', exc_info=True)
+
     except Exception as e:
         current_app.logger.error(f'Error opening import file: {e}', exc_info=True)
         result['errors'].append("Error al abrir archivo")

@@ -763,7 +763,7 @@ class NewReservationPanel {
                 payload.price_override = parseFloat(priceOverride);
             }
 
-            const response = await fetch(`${this.options.apiBaseUrl}/map/quick-reservation`, {
+            let response = await fetch(`${this.options.apiBaseUrl}/map/quick-reservation`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -772,7 +772,27 @@ class NewReservationPanel {
                 body: JSON.stringify(payload)
             });
 
-            const result = await response.json();
+            let result = await response.json();
+
+            // Out-of-stay guard: the guest's hotel stay doesn't cover the
+            // requested dates (e.g. already checked out). Require explicit
+            // confirmation before creating the reservation anyway.
+            if (!result.success && result.outside_stay) {
+                const proceed = window.confirm(`${result.error}\n\n¿Crear la reserva de todas formas?`);
+                if (!proceed) {
+                    return;
+                }
+                payload.force_outside_stay = true;
+                response = await fetch(`${this.options.apiBaseUrl}/map/quick-reservation`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+                result = await response.json();
+            }
 
             if (result.success) {
                 this.showToast(result.message || 'Reserva creada exitosamente', 'success');

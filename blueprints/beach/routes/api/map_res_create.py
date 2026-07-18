@@ -21,6 +21,7 @@ from models.reservation import (
 )
 from models.reservation_multiday import create_linked_multiday_reservations
 from models.customer import get_customer_by_id
+from models.stay_validation import check_dates_within_stay, outside_stay_message
 from models.characteristic_assignments import set_customer_characteristics_by_codes, set_reservation_characteristics_by_codes
 from blueprints.beach.services.pricing_service import calculate_reservation_pricing
 
@@ -151,6 +152,33 @@ def register_routes(bp):
             customer = get_customer_by_id(customer_id)
             if not customer:
                 return api_error('Cliente no encontrado', 404)
+
+            # Interno guests: reservation dates must fall inside the hotel
+            # stay (per PMS). Prevents booking sunbeds under a guest who has
+            # checked out (room-changeover mistake, e.g. room 6103 on
+            # 2026-07-12). Staff can override with force_outside_stay after
+            # an explicit confirmation (e.g. stay extended at reception but
+            # the PMS import hasn't run yet).
+            force_outside_stay = bool(data.get('force_outside_stay'))
+            stay = check_dates_within_stay(customer, dates)
+            if stay['applicable'] and stay['known'] and not stay['ok']:
+                if not force_outside_stay:
+                    return api_error(
+                        outside_stay_message(stay), 409,
+                        outside_stay={
+                            'uncovered_dates': stay['uncovered'],
+                            'arrival': stay['arrival'],
+                            'departure': stay['departure'],
+                            'guest_name': stay['guest_name'],
+                        }
+                    )
+                current_app.logger.warning(
+                    'Out-of-stay reservation FORCED by %s: customer_id=%s '
+                    'dates=%s (stay %s..%s)',
+                    current_user.username if current_user else 'system',
+                    customer_id, stay['uncovered'],
+                    stay['arrival'], stay['departure']
+                )
 
             # Check furniture availability
             if furniture_by_date:

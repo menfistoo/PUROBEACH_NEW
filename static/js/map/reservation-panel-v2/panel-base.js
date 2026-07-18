@@ -155,6 +155,8 @@ export class ReservationPanelBase {
         this.customerCheckout = document.getElementById('customerCheckout');
         this.customerBookingRef = document.getElementById('customerBookingRef');
         this.customerBookingItem = document.getElementById('customerBookingItem');
+        this.customerStayWarning = document.getElementById('customerStayWarning');
+        this.customerStayWarningText = document.getElementById('customerStayWarningText');
         this.customerContact = document.getElementById('customerContact');
         this.customerPhone = document.getElementById('customerPhone');
         this.customerChangeBtn = document.getElementById('customerChangeBtn');
