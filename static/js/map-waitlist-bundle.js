@@ -1427,8 +1427,11 @@ async function markAsConverted(context, entryId, reservationId) {
 function dispatchCountUpdate(context) {
     const count = context.state.entries.filter(e => e.status === 'waiting').length;
 
-    // Dispatch event for badge updates
-    document.dispatchEvent(new CustomEvent('waitlist:countUpdate', {
+    // Dispatch event for badge updates. On `window`, not `document`: the only
+    // listener (map-page.js) is bound to window, and a CustomEvent does not
+    // bubble by default, so a document event never reached it and the toolbar
+    // badge went stale after contacted/declined/no_answer.
+    window.dispatchEvent(new CustomEvent('waitlist:countUpdate', {
         detail: { count }
     }));
 

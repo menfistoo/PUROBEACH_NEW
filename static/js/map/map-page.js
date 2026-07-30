@@ -545,9 +545,19 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==========================================================================
     const newReservationPanel = new NewReservationPanel({
         apiBaseUrl: '/beach/api',
-        onSave: (reservation) => {
-            // Refresh map after creating reservation
-            map.refreshAvailability();
+        onSave: async (reservation) => {
+            // Refresh map after creating reservation. Pause the 30s timer and
+            // await the refresh (same pattern as move mode assign/unassign) so
+            // a tick fired mid-save can't repaint pre-reservation data. The
+            // waitlist conversion is the slowest path here — it marks the entry
+            // as converted between the POST and this callback — so it had the
+            // widest window for that to happen.
+            map.pauseAutoRefresh();
+            try {
+                await map.refreshAvailability();
+            } finally {
+                map.resumeAutoRefresh();
+            }
             map.clearSelection();
             updateSelectionBar();
             updateStats(currentZoneId);

@@ -52,6 +52,14 @@ export class BeachMap {
         this.autoRefreshTimer = null;
         this._refreshPaused = false;  // Pause auto-refresh during mutations
 
+        // Ordering guard for concurrent loads. Pausing the timer is not enough
+        // on its own: a request fired BEFORE a mutation can still land after
+        // the post-mutation refresh and erase it (reservations disappearing
+        // from the map until a manual reload). Only a response newer than the
+        // last one applied is allowed to touch this.data.
+        this._refreshCounter = 0;
+        this._lastAppliedRefreshId = 0;
+
         // DOM elements
         this.svg = null;
         this.zonesLayer = null;
@@ -396,16 +404,33 @@ export class BeachMap {
         return null;
     }
 
-    async loadData() {
+    /**
+     * Fetch map data for the current date.
+     *
+     * @param {number|null} refreshId - Ordering token from refreshAvailability
+     *   or goToDate. When given, the response is discarded if a newer load has
+     *   already applied its data. Pass null to force the response through
+     *   (used by callers that must always win).
+     */
+    async loadData(refreshId = null) {
         try {
             const response = await fetch(`${this.options.apiUrl}?date=${this.currentDate}`);
             if (!response.ok) throw new Error('Error loading map data');
 
             const result = await response.json();
 
+            // Superseded while in flight: a newer load already applied fresher
+            // data, so drop this one instead of overwriting it.
+            if (refreshId !== null && refreshId <= this._lastAppliedRefreshId) {
+                return true;
+            }
+
             if (result.success) {
                 this.data = result;
                 this.isShowingCachedData = false;
+                if (refreshId !== null) {
+                    this._lastAppliedRefreshId = refreshId;
+                }
 
                 // Apply map config
                 if (result.map_config) {
@@ -429,12 +454,20 @@ export class BeachMap {
         } catch (error) {
             console.warn('Failed to load from server, trying cache:', error);
 
-            // Try to load from cache when offline
+            // Try to load from cache when offline. Same ordering rule: never
+            // let a cached snapshot overwrite data a newer load already applied.
             if (this.offlineManager) {
+                if (refreshId !== null && refreshId <= this._lastAppliedRefreshId) {
+                    return true;
+                }
+
                 const cachedData = await this.offlineManager.loadCachedData();
                 if (cachedData) {
                     this.data = cachedData;
                     this.isShowingCachedData = true;
+                    if (refreshId !== null) {
+                        this._lastAppliedRefreshId = refreshId;
+                    }
                     showToast('Mostrando datos en cache', 'info');
                     return true;
                 }
@@ -655,7 +688,9 @@ export class BeachMap {
             await this.offlineManager.setDate(dateStr);
         }
 
-        await this.loadData();
+        // Take a token too, so a refresh still in flight for the PREVIOUS date
+        // can't land afterwards and repaint the old day's data.
+        await this.loadData(++this._refreshCounter);
         this.render();
 
         if (this.callbacks.onDateChange) {
@@ -758,8 +793,18 @@ export class BeachMap {
             return true;
         }
 
+        const myRefreshId = ++this._refreshCounter;
+
         try {
-            const success = await this.loadData();
+            const success = await this.loadData(myRefreshId);
+
+            // Another refresh applied newer data while this one was in flight;
+            // it already rendered, so stay out of the way. Not a failure —
+            // returning false here would trigger a bogus "recarga" warning.
+            if (this._lastAppliedRefreshId !== myRefreshId) {
+                return true;
+            }
+
             this.render();
             return success && !this.isShowingCachedData;
         } catch (error) {
